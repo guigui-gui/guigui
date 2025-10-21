@@ -18,17 +18,28 @@ type valuer[Value comparable] interface {
 }
 
 type abstractList[Value comparable, Item valuer[Value]] struct {
-	items           []Item
-	selectedIndices []int
+	items               []Item
+	selectedIndices     []int
+	nextSelectedIndices []int
 }
 
 func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f func(index int)) {
 	guigui.RegisterEventHandler(widget, abstractListEventItemSelected, f)
 }
 
-func (a *abstractList[Value, Item]) SetItems(items []Item) {
+func (a *abstractList[Value, Item]) SetItems(widget guigui.Widget, items []Item) {
 	a.items = adjustSliceSize(items, len(items))
 	copy(a.items, items)
+
+	if len(a.nextSelectedIndices) > 0 {
+		if len(a.nextSelectedIndices) != 1 {
+			panic("basicwidget: nextSelectedIndices must have length 0 or 1 so far")
+		}
+		index := a.nextSelectedIndices[0]
+		a.selectedIndices = adjustSliceSize(a.selectedIndices, 1)
+		a.selectedIndices[0] = index
+		guigui.DispatchEventHandler(widget, abstractListEventItemSelected, index)
+	}
 }
 
 func (a *abstractList[Value, Item]) ItemCount() int {
@@ -44,11 +55,21 @@ func (a *abstractList[Value, Item]) ItemByIndex(index int) (Item, bool) {
 }
 
 func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, index int, forceFireEvents bool) bool {
-	if index < 0 || index >= len(a.items) {
+	if index < 0 {
 		if len(a.selectedIndices) == 0 {
 			return false
 		}
 		a.selectedIndices = a.selectedIndices[:0]
+		return true
+	}
+
+	if index >= len(a.items) {
+		a.selectedIndices = a.selectedIndices[:0]
+		if len(a.nextSelectedIndices) == 1 && a.nextSelectedIndices[0] == index {
+			return false
+		}
+		a.nextSelectedIndices = adjustSliceSize(a.nextSelectedIndices, 1)
+		a.nextSelectedIndices[0] = index
 		return true
 	}
 
@@ -59,6 +80,7 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, inde
 	selected := slices.Contains(a.selectedIndices, index)
 	a.selectedIndices = adjustSliceSize(a.selectedIndices, 1)
 	a.selectedIndices[0] = index
+	a.nextSelectedIndices = a.nextSelectedIndices[:0]
 	if !selected || forceFireEvents {
 		guigui.DispatchEventHandler(widget, abstractListEventItemSelected, index)
 	}

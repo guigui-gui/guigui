@@ -379,7 +379,7 @@ func (b *baseList[T]) hoveredItemIndex(context *guigui.Context) int {
 }
 
 func (b *baseList[T]) SetItems(items []baseListItem[T]) {
-	b.abstractList.SetItems(items)
+	b.abstractList.SetItems(b, items)
 }
 
 func (b *baseList[T]) SelectItemByIndex(index int) {

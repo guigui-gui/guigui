@@ -54,7 +54,7 @@ func (s *SegmentedControl[T]) SetOnItemSelected(f func(index int)) {
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
-	s.abstractList.SetItems(items)
+	s.abstractList.SetItems(s, items)
 }
 
 func (s *SegmentedControl[T]) SelectedItem() (SegmentedControlItem[T], bool) {
