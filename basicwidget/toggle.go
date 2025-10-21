@@ -55,14 +55,6 @@ func toggleMaxCount() int {
 	return ebiten.TPS() / 12
 }
 
-func (t *Toggle) Update(context *guigui.Context) error {
-	if hovered := t.isHovered(context); t.prevHovered != hovered {
-		t.prevHovered = hovered
-		guigui.RequestRedraw(t)
-	}
-	return nil
-}
-
 func (t *Toggle) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
 	if context.IsEnabled(t) && t.isHovered(context) && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		context.SetFocused(t, true)
@@ -79,6 +71,10 @@ func (t *Toggle) HandlePointingInput(context *guigui.Context) guigui.HandleInput
 func (t *Toggle) Tick(context *guigui.Context) error {
 	if t.count > 0 {
 		t.count--
+		guigui.RequestRedraw(t)
+	}
+	if hovered := t.isHovered(context); t.prevHovered != hovered {
+		t.prevHovered = hovered
 		guigui.RequestRedraw(t)
 	}
 	return nil

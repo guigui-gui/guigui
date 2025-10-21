@@ -509,7 +509,8 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.Handle
 				context.SetFocused(b, true)
 			}
 			if b.SelectedItemIndex() != index || !wasFocused || b.style == ListStyleMenu {
-				b.selectItemByIndex(index, true)
+				//b.selectItemByIndex(index, true)
+				b.selectItemByIndex(index, false)
 			}
 			b.pressStartPlus1 = c.Add(image.Pt(1, 1))
 			b.startPressingIndexPlus1 = index + 1

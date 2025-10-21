@@ -55,10 +55,8 @@ func (b *baseButton) setPressed(pressed bool) {
 	guigui.RequestRedraw(b)
 }
 
-func (b *baseButton) Update(context *guigui.Context) error {
-	// TODO: Do not call isHovered in Build (#52).
-	hovered := b.isHovered(context)
-	if b.prevHovered != hovered {
+func (b *baseButton) Tick(context *guigui.Context) error {
+	if hovered := b.isHovered(context); b.prevHovered != hovered {
 		b.prevHovered = hovered
 		guigui.RequestRedraw(b)
 	}
