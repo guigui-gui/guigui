@@ -127,7 +127,13 @@ func adjustedWheel() (float64, float64) {
 	return x, y
 }
 
-func (s *scrollOverlay) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+// handlePointingInput process pointing input for scrollOverlay as Widget.HandlePointingInput does.
+//
+// Guigui's input handling system does not invoke this method automatically.
+// Instead, handlePointingInput must be invoked from the parent widget's HandlePointingInput method.
+// This is becausethe scroll of the widget that is closest to the leaf in the tree should be handled first.
+// If scrollOverlay is treated as an independent widget, the input handling order would become counterintuitive.
+func (s *scrollOverlay) handlePointingInput(context *guigui.Context) guigui.HandleInputResult {
 	hovered := context.IsWidgetHitAtCursor(s)
 	if hovered {
 		x, y := ebiten.CursorPosition()

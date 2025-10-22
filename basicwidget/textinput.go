@@ -321,7 +321,7 @@ func (t *TextInput) HandlePointingInput(context *guigui.Context) guigui.HandleIn
 			return guigui.HandleInputByWidget(t)
 		}
 	}
-	return guigui.HandleInputResult{}
+	return t.scrollOverlay.handlePointingInput(context)
 }
 
 func (t *TextInput) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {

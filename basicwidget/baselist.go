@@ -536,12 +536,11 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.Handle
 	}
 
 	if context.IsWidgetHitAtCursor(b) {
-		return guigui.HandleInputResult{}
+		return b.scrollOverlay.handlePointingInput(context)
 	}
 
 	b.dragSrcIndexPlus1 = 0
 	b.pressStartPlus1 = image.Point{}
-
 	return guigui.HandleInputResult{}
 }
 

@@ -152,6 +152,10 @@ func (p *Panel) Layout(context *guigui.Context, widget guigui.Widget) image.Rect
 	return image.Rectangle{}
 }
 
+func (p *Panel) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+	return p.scollOverlay.handlePointingInput(context)
+}
+
 func (p *Panel) Draw(context *guigui.Context, dst *ebiten.Image) {
 	switch p.style {
 	case PanelStyleSide:
