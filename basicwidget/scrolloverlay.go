@@ -54,18 +54,17 @@ type scrollOverlay struct {
 	offsetX            float64
 	offsetY            float64
 
-	lastSize                image.Point
-	lastCursorPositionPlus1 image.Point
-	lastWheelX              float64
-	lastWheelY              float64
-	lastOffsetX             float64
-	lastOffsetY             float64
-	draggingX               bool
-	draggingY               bool
-	draggingStartPosition   image.Point
-	draggingStartOffsetX    float64
-	draggingStartOffsetY    float64
-	onceBuilt               bool
+	lastSize              image.Point
+	lastWheelX            float64
+	lastWheelY            float64
+	lastOffsetX           float64
+	lastOffsetY           float64
+	draggingX             bool
+	draggingY             bool
+	draggingStartPosition image.Point
+	draggingStartOffsetX  float64
+	draggingStartOffsetY  float64
+	onceBuilt             bool
 
 	barCount int
 }
@@ -136,13 +135,10 @@ func adjustedWheel() (float64, float64) {
 func (s *scrollOverlay) handlePointingInput(context *guigui.Context) guigui.HandleInputResult {
 	hovered := context.IsWidgetHitAtCursor(s)
 	if hovered {
-		x, y := ebiten.CursorPosition()
 		dx, dy := adjustedWheel()
-		s.lastCursorPositionPlus1 = image.Pt(x, y).Add(image.Pt(1, 1))
 		s.lastWheelX = dx
 		s.lastWheelY = dy
 	} else {
-		s.lastCursorPositionPlus1 = image.Point{}
 		s.lastWheelX = 0
 		s.lastWheelY = 0
 	}
@@ -275,12 +271,13 @@ func (s *scrollOverlay) isBarVisible(context *guigui.Context) bool {
 		return true
 	}
 
-	if s.lastCursorPositionPlus1 != (image.Point{}) {
+	if context.IsWidgetHitAtCursor(s) {
+		pt := image.Pt(ebiten.CursorPosition())
 		bounds := context.Bounds(s)
-		if s.contentSize.X > bounds.Dx() && bounds.Max.Y-UnitSize(context)/2 <= s.lastCursorPositionPlus1.Y-1 {
+		if s.contentSize.X > bounds.Dx() && bounds.Max.Y-UnitSize(context)/2 <= pt.Y-1 {
 			return true
 		}
-		if s.contentSize.Y > bounds.Dy() && bounds.Max.X-UnitSize(context)/2 <= s.lastCursorPositionPlus1.X-1 {
+		if s.contentSize.Y > bounds.Dy() && bounds.Max.X-UnitSize(context)/2 <= pt.X-1 {
 			return true
 		}
 	}
