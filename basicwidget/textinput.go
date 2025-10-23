@@ -301,14 +301,18 @@ func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context) {
 	t.prevEnd = end
 	bounds := context.Bounds(t)
 	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context)
+	bounds.Max.X -= paddingEnd
+	bounds.Min.X += paddingStart
+	bounds.Max.Y -= paddingBottom
+	bounds.Min.Y += paddingTop
 	if pos, ok := t.text.textPosition(context, end, true); ok {
-		dx := min(float64(bounds.Max.X-paddingEnd)-pos.X, 0)
-		dy := min(float64(bounds.Max.Y-paddingBottom)-pos.Bottom, 0)
+		dx := min(float64(bounds.Max.X)-pos.X, 0)
+		dy := min(float64(bounds.Max.Y)-pos.Bottom, 0)
 		t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
 	}
 	if pos, ok := t.text.textPosition(context, start, true); ok {
-		dx := max(float64(bounds.Min.X+paddingStart)-pos.X, 0)
-		dy := max(float64(bounds.Min.Y+paddingTop)-pos.Top, 0)
+		dx := max(float64(bounds.Min.X)-pos.X, 0)
+		dy := max(float64(bounds.Min.Y)-pos.Top, 0)
 		t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
 	}
 }
