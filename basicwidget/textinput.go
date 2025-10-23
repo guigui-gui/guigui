@@ -41,8 +41,6 @@ type TextInput struct {
 	paddingEnd   int
 
 	prevFocused bool
-	prevStart   int
-	prevEnd     int
 }
 
 func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
@@ -290,31 +288,15 @@ func (t *TextInput) Layout(context *guigui.Context, widget guigui.Widget) image.
 }
 
 func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context) {
-	start, end, ok := t.text.selectionToDraw(context)
-	if !ok {
-		return
-	}
-	if t.prevStart == start && t.prevEnd == end {
-		return
-	}
-	t.prevStart = start
-	t.prevEnd = end
 	bounds := context.Bounds(t)
 	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context)
 	bounds.Max.X -= paddingEnd
 	bounds.Min.X += paddingStart
 	bounds.Max.Y -= paddingBottom
 	bounds.Min.Y += paddingTop
-	if pos, ok := t.text.textPosition(context, end, true); ok {
-		dx := min(float64(bounds.Max.X)-pos.X, 0)
-		dy := min(float64(bounds.Max.Y)-pos.Bottom, 0)
-		t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
-	}
-	if pos, ok := t.text.textPosition(context, start, true); ok {
-		dx := max(float64(bounds.Min.X)-pos.X, 0)
-		dy := max(float64(bounds.Min.Y)-pos.Top, 0)
-		t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
-	}
+
+	dx, dy := t.text.adjustScrollOffset(context, bounds)
+	t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
 }
 
 func (t *TextInput) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
