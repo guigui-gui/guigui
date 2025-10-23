@@ -310,12 +310,18 @@ func (c *Context) blur(widget Widget) {
 	}
 	var unfocused bool
 	_ = traverseWidget(widget, func(w Widget) error {
-		if c.app.focusedWidgetState == w.widgetState() {
-			c.app.focusWidget(c.app.root.widgetState())
-			unfocused = true
-			return skipTraverse
+		if c.app.focusedWidgetState != w.widgetState() {
+			return nil
 		}
-		return nil
+		for ; w != nil && w.widgetState() != nil; w = w.widgetState().parent {
+			if !c.canHaveFocus(w) {
+				continue
+			}
+			c.app.focusWidget(w.widgetState())
+			break
+		}
+		unfocused = true
+		return skipTraverse
 	})
 	if unfocused {
 		// Rerender everything when a focus changes.
@@ -324,9 +330,13 @@ func (c *Context) blur(widget Widget) {
 	}
 }
 
-func (c *Context) IsFocused(widget Widget) bool {
+func (c *Context) canHaveFocus(widget Widget) bool {
 	widgetState := widget.widgetState()
-	return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible() && c.app.focusedWidgetState == widget.widgetState()
+	return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
+}
+
+func (c *Context) IsFocused(widget Widget) bool {
+	return c.canHaveFocus(widget) && c.app.focusedWidgetState == widget.widgetState()
 }
 
 func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
