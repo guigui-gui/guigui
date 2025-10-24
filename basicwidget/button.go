@@ -130,17 +130,11 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 			Size: guigui.FlexibleSize(1),
 		})
 	if b.icon.HasImage() {
-		var width guigui.Size
-		if b.text.Value() != "" {
-			width = guigui.FixedSize(defaultIconSize(context))
-		} else {
-			width = guigui.FixedSize(context.Bounds(b).Dx() - 2*r)
-		}
-		var height guigui.Size
-		if b.text.Value() != "" {
-			height = guigui.FixedSize(defaultIconSize(context))
-		} else {
-			height = guigui.FixedSize(max(defaultIconSize(context), context.Bounds(b).Dy()-2*r))
+		width := defaultIconSize(context)
+		height := defaultIconSize(context)
+		if b.text.Value() == "" {
+			width = max(width, context.Bounds(b).Dx()-2*r)
+			height = max(height, context.Bounds(b).Dy()-2*r)
 		}
 		b.layoutItems = append(b.layoutItems,
 			guigui.LinearLayoutItem{
@@ -152,14 +146,14 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 						},
 						{
 							Widget: &b.icon,
-							Size:   height,
+							Size:   guigui.FixedSize(height),
 						},
 						{
 							Size: guigui.FlexibleSize(1),
 						},
 					},
 				},
-				Size: width,
+				Size: guigui.FixedSize(width),
 			})
 	}
 	if b.icon.HasImage() && b.text.Value() != "" {
