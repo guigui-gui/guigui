@@ -174,7 +174,7 @@ func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigu
 
 	var w, h int
 	for i := range s.buttons {
-		size := s.buttons[i].defaultSize(context, constraints, true)
+		size := s.buttons[i].measure(context, constraints, true)
 		w = max(w, size.X)
 		h = max(h, size.Y)
 	}

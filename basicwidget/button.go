@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image"
 	"image/color"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -30,6 +31,8 @@ type Button struct {
 	iconAlign IconAlign
 
 	textColor color.Color
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (b *Button) SetOnDown(f func()) {
@@ -105,82 +108,88 @@ func (b *Button) Update(context *guigui.Context) error {
 }
 
 func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
-	s := context.Bounds(b).Size()
-	tw := b.text.Measure(context, guigui.FixedWidthConstraints(s.X)).X
-	imgSize := b.iconSize(context)
-	ds := b.defaultSize(context, guigui.Constraints{}, false)
+	var yOffset int
+	if b.button.isPressed(context) {
+		yOffset = int(0.5 * context.Scale())
+	} else {
+		yOffset = -int(0.5 * context.Scale())
+	}
 
 	switch widget {
 	case &b.button:
 		return context.Bounds(b)
 	case b.content:
-		contentP := context.Bounds(b).Min
-		if b.button.isPressed(context) {
-			contentP.Y += int(0.5 * context.Scale())
-		} else {
-			contentP.Y -= int(0.5 * context.Scale())
-		}
-		return image.Rectangle{
-			Min: contentP,
-			Max: contentP.Add(s),
-		}
-	case &b.text:
-		tw := b.text.Measure(context, guigui.FixedWidthConstraints(s.X)).X
-		textP := context.Bounds(b).Min
-		if b.icon.HasImage() {
-			textP.X += (s.X - ds.X) / 2
-			switch b.iconAlign {
-			case IconAlignStart:
-				textP.X += buttonEdgeAndImagePadding(context)
-				textP.X += imgSize.X + buttonTextAndImagePadding(context)
-			case IconAlignEnd:
-				textP.X += buttonEdgeAndTextPadding(context)
-			}
-		} else {
-			textP.X += (s.X - tw) / 2
-		}
-		if b.button.isPressed(context) {
-			textP.Y += int(0.5 * context.Scale())
-		} else {
-			textP.Y -= int(0.5 * context.Scale())
-		}
-		return image.Rectangle{
-			Min: textP,
-			Max: textP.Add(image.Pt(tw, s.Y)),
-		}
-	case &b.icon:
-		imgP := context.Bounds(b).Min
-		if b.text.Value() != "" {
-			imgP.X += (s.X - ds.X) / 2
-			switch b.iconAlign {
-			case IconAlignStart:
-				imgP.X += buttonEdgeAndImagePadding(context)
-			case IconAlignEnd:
-				imgP.X += buttonEdgeAndTextPadding(context)
-				imgP.X += tw + buttonTextAndImagePadding(context)
-			}
-		} else {
-			imgP.X += (s.X - imgSize.X) / 2
-		}
-		imgP.Y += (s.Y - imgSize.Y) / 2
-		if b.button.isPressed(context) {
-			imgP.Y += int(0.5 * context.Scale())
-		} else {
-			imgP.Y -= int(0.5 * context.Scale())
-		}
-		return image.Rectangle{
-			Min: imgP,
-			Max: imgP.Add(imgSize),
-		}
+		return context.Bounds(b).Add(image.Pt(0, yOffset))
 	}
-	return image.Rectangle{}
+
+	r := b.button.radius(context)
+
+	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
+	b.layoutItems = append(b.layoutItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		})
+	if b.icon.HasImage() {
+		var width guigui.Size
+		if b.text.Value() != "" {
+			width = guigui.FixedSize(defaultIconSize(context))
+		} else {
+			width = guigui.FixedSize(context.Bounds(b).Dx() - 2*r)
+		}
+		var height guigui.Size
+		if b.text.Value() != "" {
+			height = guigui.FixedSize(defaultIconSize(context))
+		} else {
+			height = guigui.FixedSize(max(defaultIconSize(context), context.Bounds(b).Dy()-2*r))
+		}
+		b.layoutItems = append(b.layoutItems,
+			guigui.LinearLayoutItem{
+				Layout: guigui.LinearLayout{
+					Direction: guigui.LayoutDirectionVertical,
+					Items: []guigui.LinearLayoutItem{
+						{
+							Size: guigui.FlexibleSize(1),
+						},
+						{
+							Widget: &b.icon,
+							Size:   height,
+						},
+						{
+							Size: guigui.FlexibleSize(1),
+						},
+					},
+				},
+				Size: width,
+			})
+	}
+	if b.icon.HasImage() && b.text.Value() != "" {
+		b.layoutItems = append(b.layoutItems,
+			guigui.LinearLayoutItem{
+				Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
+			})
+	}
+	if b.text.Value() != "" {
+		b.layoutItems = append(b.layoutItems,
+			guigui.LinearLayoutItem{
+				Widget: &b.text,
+			})
+	}
+	b.layoutItems = append(b.layoutItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		})
+
+	return (guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     b.layoutItems,
+	}).WidgetBounds(context, context.Bounds(b).Add(image.Pt(0, yOffset)), widget)
 }
 
 func (b *Button) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return b.defaultSize(context, constraints, false)
+	return b.measure(context, constraints, false)
 }
 
-func (b *Button) defaultSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
+func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
 	h := defaultButtonSize(context).Y
 	var textAndImageW int
 	if b.text.Value() != "" {
@@ -226,18 +235,6 @@ func buttonEdgeAndTextPadding(context *guigui.Context) int {
 
 func buttonEdgeAndImagePadding(context *guigui.Context) int {
 	return UnitSize(context) / 4
-}
-
-func (b *Button) iconSize(context *guigui.Context) image.Point {
-	s := context.Bounds(b).Size()
-	if b.text.Value() != "" {
-		s := min(defaultIconSize(context), s.X, s.Y)
-		return image.Pt(s, s)
-	}
-	r := b.button.radius(context)
-	w := max(0, s.X-2*r)
-	h := max(defaultIconSize(context), s.Y-2*r)
-	return image.Pt(w, h)
 }
 
 func (b *Button) setUseAccentColor(use bool) {
