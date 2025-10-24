@@ -317,6 +317,9 @@ func (t *TextInput) CursorShape(context *guigui.Context) (ebiten.CursorShapeType
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	if t.style == TextInputStyleInline {
 		start, _, end, _ := t.textInputPaddingInScrollableContent(context)
+		if fixedWidth, ok := constraints.FixedWidth(); ok {
+			constraints = guigui.FixedWidthConstraints(fixedWidth - start - end)
+		}
 		s := t.text.Measure(context, constraints)
 		w := max(s.X+start+end, UnitSize(context))
 		h := s.Y
