@@ -122,17 +122,16 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 		return context.Bounds(b).Add(image.Pt(0, yOffset))
 	}
 
-	r := b.button.radius(context)
-
 	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
 	b.layoutItems = append(b.layoutItems,
 		guigui.LinearLayoutItem{
 			Size: guigui.FlexibleSize(1),
 		})
 	if b.icon.HasImage() {
-		width := defaultIconSize(context)
-		height := defaultIconSize(context)
+		width := min(defaultIconSize(context), context.Bounds(b).Dx())
+		height := min(defaultIconSize(context), context.Bounds(b).Dy())
 		if b.text.Value() == "" {
+			r := b.button.radius(context)
 			width = max(width, context.Bounds(b).Dx()-2*r)
 			height = max(height, context.Bounds(b).Dy()-2*r)
 		}
