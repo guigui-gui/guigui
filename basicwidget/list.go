@@ -115,20 +115,39 @@ func (l *List[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Re
 	return image.Rectangle{}
 }
 
-func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	item := &l.listItemWidgets[index]
-	switch {
-	case l.list.style == ListStyleNormal && l.list.SelectedItemIndex() == index && item.selectable() && context.IsEnabled(item):
-		return DefaultActiveListItemTextColor(context)
-	case l.list.style == ListStyleSidebar && l.list.SelectedItemIndex() == index && item.selectable() && context.IsEnabled(item):
-		return DefaultActiveListItemTextColor(context)
-	case l.list.style == ListStyleMenu && l.list.isHoveringVisible() && l.list.hoveredItemIndex(context) == index && item.selectable() && context.IsEnabled(item):
-		return DefaultActiveListItemTextColor(context)
-	case item.item.TextColor != nil:
-		return item.item.TextColor
-	default:
-		return draw.TextColor(context.ColorMode(), context.IsEnabled(item))
+func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
+	index := -1
+	switch l.list.style {
+	case ListStyleNormal, ListStyleSidebar:
+		index = l.list.SelectedItemIndex()
+	case ListStyleMenu:
+		if !l.list.isHoveringVisible() {
+			return -1
+		}
+		index = l.list.hoveredItemIndex(context)
 	}
+	if index < 0 || index >= len(l.listItemWidgets) {
+		return -1
+	}
+	item := &l.listItemWidgets[index]
+	if !item.selectable() {
+		return -1
+	}
+	if !context.IsEnabled(item) {
+		return -1
+	}
+	return index
+}
+
+func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
+	if l.HighlightedItemIndex(context) == index {
+		return DefaultActiveListItemTextColor(context)
+	}
+	item := &l.listItemWidgets[index]
+	if item.item.TextColor != nil {
+		return item.item.TextColor
+	}
+	return draw.TextColor(context.ColorMode(), context.IsEnabled(item))
 }
 
 func (l *List[T]) SelectedItemIndex() int {
