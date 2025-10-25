@@ -17,25 +17,25 @@ type Toolbar struct {
 	content guigui.WidgetWithSize[*toolbarContent]
 }
 
-func (t *Toolbar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Toolbar) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.panel)
 }
 
-func (t *Toolbar) Update(context *guigui.Context) error {
+func (t *Toolbar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
 	t.panel.SetBorders(basicwidget.PanelBorder{
 		Bottom: true,
 	})
-	t.content.SetFixedSize(context.Bounds(t).Size())
+	t.content.SetFixedSize(widgetBounds.Bounds().Size())
 	t.panel.SetContent(&t.content)
 
 	return nil
 }
 
-func (t *Toolbar) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *Toolbar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.panel:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }
@@ -52,12 +52,12 @@ type toolbarContent struct {
 	rightPanelButton basicwidget.Button
 }
 
-func (t *toolbarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *toolbarContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.leftPanelButton)
 	adder.AddChild(&t.rightPanelButton)
 }
 
-func (t *toolbarContent) Update(context *guigui.Context) error {
+func (t *toolbarContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	if model.IsLeftPanelOpen() {
@@ -96,7 +96,7 @@ func (t *toolbarContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *toolbarContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
@@ -113,5 +113,5 @@ func (t *toolbarContent) Layout(context *guigui.Context, widget guigui.Widget) i
 				Size:   guigui.FixedSize(u * 3 / 2),
 			},
 		},
-	}).WidgetBounds(context, context.Bounds(t).Inset(u/4), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/4), widget)
 }

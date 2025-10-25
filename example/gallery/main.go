@@ -62,7 +62,7 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.sidebar)
 	switch r.model.Mode() {
@@ -87,15 +87,15 @@ func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	}
 }
 
-func (r *Root) Update(context *guigui.Context) error {
+func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	r.updateFontFaceSources(context)
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &r.background:
-		return context.Bounds(r)
+		return widgetBounds.Bounds()
 	}
 
 	layout := guigui.LinearLayout{
@@ -111,9 +111,9 @@ func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Recta
 		},
 	}
 	if widget == &r.sidebar {
-		return layout.WidgetBounds(context, context.Bounds(r), widget)
+		return layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
 	}
-	return layout.ItemBounds(context, context.Bounds(r), 1)
+	return layout.ItemBounds(context, widgetBounds.Bounds(), 1)
 }
 
 func main() {

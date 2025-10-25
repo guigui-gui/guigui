@@ -14,6 +14,6 @@ type Background struct {
 	guigui.DefaultWidget
 }
 
-func (b *Background) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	dst.Fill(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.95))
 }

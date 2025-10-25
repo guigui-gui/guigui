@@ -31,12 +31,12 @@ type Texts struct {
 	sampleText                      basicwidget.Text
 }
 
-func (t *Texts) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Texts) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
 }
 
-func (t *Texts) Update(context *guigui.Context) error {
+func (t *Texts) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
@@ -192,7 +192,7 @@ func (t *Texts) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *Texts) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -206,5 +206,5 @@ func (t *Texts) Layout(context *guigui.Context, widget guigui.Widget) image.Rect
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(t).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

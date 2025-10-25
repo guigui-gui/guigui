@@ -89,7 +89,7 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.isNextOffsetDelta = true
 }
 
-func (p *Panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Panel) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}
@@ -97,66 +97,66 @@ func (p *Panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.border)
 }
 
-func (p *Panel) contentSize(context *guigui.Context) image.Point {
+func (p *Panel) contentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
 	switch p.contentConstraints {
 	case PanelContentConstraintsNone:
 		return p.content.Measure(context, guigui.Constraints{})
 	case PanelContentConstraintsFixedWidth:
-		w := context.Bounds(p).Dx()
+		w := widgetBounds.Bounds().Dx()
 		return p.content.Measure(context, guigui.FixedWidthConstraints(w))
 	case PanelContentConstraintsFixedHeight:
-		h := context.Bounds(p).Dy()
+		h := widgetBounds.Bounds().Dy()
 		return p.content.Measure(context, guigui.FixedHeightConstraints(h))
 	default:
 		panic(fmt.Sprintf("basicwidget: unknown PanelContentConstraints value: %d", p.contentConstraints))
 	}
 }
 
-func (p *Panel) Update(context *guigui.Context) error {
+func (p *Panel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if p.content == nil {
 		return nil
 	}
 
-	contentSize := p.contentSize(context)
+	contentSize := p.contentSize(context, widgetBounds)
 	if p.hasNextOffset {
 		if p.isNextOffsetDelta {
-			p.scollOverlay.SetOffsetByDelta(context, contentSize, p.nextOffsetX, p.nextOffsetY)
+			p.scollOverlay.SetOffsetByDelta(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
 		} else {
-			p.scollOverlay.SetOffset(context, contentSize, p.nextOffsetX, p.nextOffsetY)
+			p.scollOverlay.SetOffset(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
 		}
 		p.hasNextOffset = false
 		p.nextOffsetX = 0
 		p.nextOffsetY = 0
 	}
 
-	p.scollOverlay.SetContentSize(context, contentSize)
+	p.scollOverlay.SetContentSize(context, widgetBounds, contentSize)
 	p.border.scrollOverlay = &p.scollOverlay
 
 	return nil
 }
 
-func (p *Panel) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (p *Panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case p.content:
 		offsetX, offsetY := p.scollOverlay.Offset()
-		pt := context.Bounds(p).Min.Add(image.Pt(int(offsetX), int(offsetY)))
+		pt := widgetBounds.Bounds().Min.Add(image.Pt(int(offsetX), int(offsetY)))
 		return image.Rectangle{
 			Min: pt,
-			Max: pt.Add(p.contentSize(context)),
+			Max: pt.Add(p.contentSize(context, widgetBounds)),
 		}
 	case &p.scollOverlay:
-		return context.Bounds(p)
+		return widgetBounds.Bounds()
 	case &p.border:
-		return context.Bounds(p)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }
 
-func (p *Panel) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
-	return p.scollOverlay.handlePointingInput(context)
+func (p *Panel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	return p.scollOverlay.handlePointingInput(context, widgetBounds)
 }
 
-func (p *Panel) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (p *Panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	switch p.style {
 	case PanelStyleSide:
 		dst.Fill(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.9))
@@ -187,14 +187,14 @@ func (b *panelBorder) SetAutoBorder(auto bool) {
 	guigui.RequestRedraw(b)
 }
 
-func (p *panelBorder) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if p.scrollOverlay == nil && p.borders == (PanelBorder{}) {
 		return
 	}
 
 	// Render borders.
 	strokeWidth := float32(1 * context.Scale())
-	bounds := context.Bounds(p)
+	bounds := widgetBounds.Bounds()
 	x0 := float32(bounds.Min.X)
 	x1 := float32(bounds.Max.X)
 	y0 := float32(bounds.Min.Y)
@@ -203,7 +203,7 @@ func (p *panelBorder) Draw(context *guigui.Context, dst *ebiten.Image) {
 	var r image.Rectangle
 	if p.scrollOverlay != nil {
 		offsetX, offsetY = p.scrollOverlay.Offset()
-		r = p.scrollOverlay.scrollRange(context)
+		r = p.scrollOverlay.scrollRange(context, widgetBounds)
 	}
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
 	if (p.scrollOverlay != nil && p.autoBorder && offsetX < float64(r.Max.X)) || p.borders.Start {

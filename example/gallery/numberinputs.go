@@ -34,12 +34,12 @@ type NumberInputs struct {
 	enabledToggle  basicwidget.Toggle
 }
 
-func (n *NumberInputs) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (n *NumberInputs) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&n.numberInputForm)
 	adder.AddChild(&n.configForm)
 }
 
-func (n *NumberInputs) Update(context *guigui.Context) error {
+func (n *NumberInputs) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(n, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
@@ -152,7 +152,7 @@ func (n *NumberInputs) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (n *NumberInputs) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -168,5 +168,5 @@ func (n *NumberInputs) Layout(context *guigui.Context, widget guigui.Widget) ima
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(n).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

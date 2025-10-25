@@ -15,12 +15,12 @@ type Image struct {
 	image *ebiten.Image
 }
 
-func (i *Image) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (i *Image) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if i.image == nil {
 		return
 	}
 
-	b := context.Bounds(i)
+	b := widgetBounds.Bounds()
 	imgScale := min(float64(b.Dx())/float64(i.image.Bounds().Dx()), float64(b.Dy())/float64(i.image.Bounds().Dy()))
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Scale(imgScale, imgScale)

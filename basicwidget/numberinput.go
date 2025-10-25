@@ -216,13 +216,13 @@ func (n *NumberInput) CommitWithCurrentInputValue() {
 	n.textInput.CommitWithCurrentInputValue()
 }
 
-func (n *NumberInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (n *NumberInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&n.textInput)
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)
 }
 
-func (n *NumberInput) Update(context *guigui.Context) error {
+func (n *NumberInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if n.nextValue != nil && !n.textInput.isFocused(context) && !context.IsFocused(n) {
 		n.abstractNumberInput.SetValueBigInt(n, n.nextValue, true)
 		n.nextValue = nil
@@ -282,12 +282,12 @@ func (n *NumberInput) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (n *NumberInput) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &n.textInput:
-		return context.Bounds(n)
+		return widgetBounds.Bounds()
 	case &n.upButton:
-		b := context.Bounds(n)
+		b := widgetBounds.Bounds()
 		return image.Rectangle{
 			Min: image.Point{
 				X: b.Max.X - UnitSize(context)*3/4,
@@ -299,7 +299,7 @@ func (n *NumberInput) Layout(context *guigui.Context, widget guigui.Widget) imag
 			},
 		}
 	case &n.downButton:
-		b := context.Bounds(n)
+		b := widgetBounds.Bounds()
 		return image.Rectangle{
 			Min: image.Point{
 				X: b.Max.X - UnitSize(context)*3/4,
@@ -311,7 +311,7 @@ func (n *NumberInput) Layout(context *guigui.Context, widget guigui.Widget) imag
 	return image.Rectangle{}
 }
 
-func (n *NumberInput) HandleButtonInput(context *guigui.Context) guigui.HandleInputResult {
+func (n *NumberInput) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if isKeyRepeating(ebiten.KeyUp) {
 		n.increment()
 		return guigui.HandleInputByWidget(n)

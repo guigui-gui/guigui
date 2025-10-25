@@ -56,14 +56,14 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.textInput)
 	adder.AddChild(&r.createButton)
 	adder.AddChild(&r.tasksPanel)
 }
 
-func (r *Root) Update(context *guigui.Context) error {
+func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	r.updateFontFaceSources(context)
 
 	r.textInput.SetOnKeyJustPressed(func(key ebiten.Key) bool {
@@ -90,10 +90,10 @@ func (r *Root) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &r.background:
-		return context.Bounds(r)
+		return widgetBounds.Bounds()
 	}
 
 	u := basicwidget.UnitSize(context)
@@ -123,7 +123,7 @@ func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Recta
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(r).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }
 
 func (r *Root) tryCreateTask(text string) {
@@ -151,12 +151,12 @@ func (t *taskWidget) SetText(text string) {
 	t.text.SetValue(text)
 }
 
-func (t *taskWidget) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *taskWidget) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.doneButton)
 	adder.AddChild(&t.text)
 }
 
-func (t *taskWidget) Update(context *guigui.Context) error {
+func (t *taskWidget) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	t.doneButton.SetText("Done")
 	t.doneButton.SetOnUp(func() {
 		guigui.DispatchEventHandler(t, taskWidgetEventDoneButtonPressed)
@@ -167,7 +167,7 @@ func (t *taskWidget) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *taskWidget) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
@@ -182,7 +182,7 @@ func (t *taskWidget) Layout(context *guigui.Context, widget guigui.Widget) image
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(t), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds(), widget)
 }
 
 func (t *taskWidget) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -203,7 +203,7 @@ func (t *tasksPanelContent) SetOnDeleted(f func(id int)) {
 	guigui.RegisterEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
-func (t *tasksPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *tasksPanelContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	model := context.Model(t, modelKeyModel).(*Model)
 	if model.TaskCount() > len(t.taskWidgets) {
 		t.taskWidgets = slices.Grow(t.taskWidgets, model.TaskCount()-len(t.taskWidgets))[:model.TaskCount()]
@@ -215,7 +215,7 @@ func (t *tasksPanelContent) AddChildren(context *guigui.Context, adder *guigui.C
 	}
 }
 
-func (t *tasksPanelContent) Update(context *guigui.Context) error {
+func (t *tasksPanelContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
@@ -227,7 +227,7 @@ func (t *tasksPanelContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *tasksPanelContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -235,14 +235,14 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widget guigui.Widget
 	}
 	layout.Items = make([]guigui.LinearLayoutItem, len(t.taskWidgets))
 	for i := range t.taskWidgets {
-		w := context.Bounds(t).Dx()
+		w := widgetBounds.Bounds().Dx()
 		h := t.taskWidgets[i].Measure(context, guigui.FixedWidthConstraints(w)).Y
 		layout.Items[i] = guigui.LinearLayoutItem{
 			Widget: &t.taskWidgets[i],
 			Size:   guigui.FixedSize(h),
 		}
 	}
-	return layout.WidgetBounds(context, context.Bounds(t), widget)
+	return layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
 }
 
 func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

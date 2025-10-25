@@ -55,7 +55,7 @@ func (b *baseButton) setPressed(pressed bool) {
 	guigui.RequestRedraw(b)
 }
 
-func (b *baseButton) Tick(context *guigui.Context) error {
+func (b *baseButton) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if hovered := b.isHovered(context); b.prevHovered != hovered {
 		b.prevHovered = hovered
 		guigui.RequestRedraw(b)
@@ -63,7 +63,7 @@ func (b *baseButton) Tick(context *guigui.Context) error {
 	return nil
 }
 
-func (b *baseButton) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if b.isHovered(context) {
 		// IsMouseButtonJustPressed and IsMouseButtonJustReleased can be true at the same time as of Ebitengine v2.9.
 		// Check both.
@@ -103,19 +103,19 @@ func (b *baseButton) HandlePointingInput(context *guigui.Context) guigui.HandleI
 	return guigui.HandleInputResult{}
 }
 
-func (b *baseButton) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {
+func (b *baseButton) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	if (b.canPress(context) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && !b.keepPressed {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
 }
 
-func (b *baseButton) radius(context *guigui.Context) int {
-	size := context.Bounds(b).Size()
+func (b *baseButton) radius(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
+	size := widgetBounds.Bounds().Size()
 	return min(RoundedCornerRadius(context), size.X/4, size.Y/4)
 }
 
-func (b *baseButton) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	cm := context.ColorMode()
 	backgroundColor := draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
@@ -130,12 +130,12 @@ func (b *baseButton) Draw(context *guigui.Context, dst *ebiten.Image) {
 		}
 	}
 
-	r := b.radius(context)
+	r := b.radius(context, widgetBounds)
 	border := !b.borderInvisible
 	if context.IsEnabled(b) && (b.isHovered(context) || b.keepPressed) {
 		border = true
 	}
-	bounds := context.Bounds(b)
+	bounds := widgetBounds.Bounds()
 	if border || b.isPressed(context) {
 		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, backgroundColor, r, b.sharpenCorners)
 	}

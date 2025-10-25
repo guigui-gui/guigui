@@ -79,7 +79,7 @@ func (t *Table[T]) updateTableItems() {
 	t.list.SetItems(t.baseListItems)
 }
 
-func (t *Table[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Table[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.list)
 	for i := range t.columnTexts {
 		adder.AddChild(&t.columnTexts[i])
@@ -87,7 +87,7 @@ func (t *Table[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder
 	adder.AddChild(&t.tableHeader)
 }
 
-func (t *Table[T]) Update(context *guigui.Context) error {
+func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
@@ -115,7 +115,7 @@ func (t *Table[T]) Update(context *guigui.Context) error {
 		},
 	}
 	for i := range t.columnWidthsInPixels {
-		t.columnWidthsInPixels[i] = layout.ItemBounds(context, context.Bounds(t), i).Dx()
+		t.columnWidthsInPixels[i] = layout.ItemBounds(context, widgetBounds.Bounds(), i).Dx()
 		t.columnWidthsInPixels[i] = max(t.columnWidthsInPixels[i], t.columns[i].MinWidth)
 	}
 	var contentWidth int
@@ -137,16 +137,16 @@ func (t *Table[T]) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *Table[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.list:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	case &t.tableHeader:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	}
 
 	offsetX, _ := t.list.ScrollOffset()
-	pt := context.Bounds(t).Min
+	pt := widgetBounds.Bounds().Min
 	pt.X += int(offsetX)
 	pt.X += listItemPadding(context)
 	for i := range t.columnTexts {
@@ -243,7 +243,7 @@ func (t *tableItemWidget[T]) setListItem(listItem TableItem[T]) {
 	t.item = listItem
 }
 
-func (t *tableItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *tableItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	for _, content := range t.item.Contents {
 		if content != nil {
 			adder.AddChild(content)
@@ -251,8 +251,8 @@ func (t *tableItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.
 	}
 }
 
-func (t *tableItemWidget[T]) Update(context *guigui.Context) error {
-	b := context.Bounds(t)
+func (t *tableItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	b := widgetBounds.Bounds()
 	x := b.Min.X
 	clear(t.contentBounds)
 	if t.contentBounds == nil {
@@ -274,7 +274,7 @@ func (t *tableItemWidget[T]) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *tableItemWidget[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *tableItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	return t.contentBounds[widget]
 }
 
@@ -317,12 +317,12 @@ type tableHeader[T comparable] struct {
 	table *Table[T]
 }
 
-func (t *tableHeader[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if len(t.table.columnWidthsInPixels) <= 1 {
 		return
 	}
 	u := UnitSize(context)
-	b := context.Bounds(t)
+	b := widgetBounds.Bounds()
 	x := b.Min.X + listItemPadding(context)
 	offsetX, _ := t.table.list.ScrollOffset()
 	x += int(offsetX)

@@ -36,12 +36,12 @@ type TextInputs struct {
 	enabledToggle                   basicwidget.Toggle
 }
 
-func (t *TextInputs) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *TextInputs) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.textInputForm)
 	adder.AddChild(&t.configForm)
 }
 
-func (t *TextInputs) Update(context *guigui.Context) error {
+func (t *TextInputs) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
@@ -235,7 +235,7 @@ func (t *TextInputs) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *TextInputs) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -251,7 +251,7 @@ func (t *TextInputs) Layout(context *guigui.Context, widget guigui.Widget) image
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(t).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }
 
 type inlineTextInputContainer struct {
@@ -266,29 +266,29 @@ func (c *inlineTextInputContainer) SetHorizontalAlign(align basicwidget.Horizont
 	c.textInput.SetHorizontalAlign(align)
 }
 
-func (c *inlineTextInputContainer) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (c *inlineTextInputContainer) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&c.textInput)
 }
 
-func (c *inlineTextInputContainer) Update(context *guigui.Context) error {
+func (c *inlineTextInputContainer) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
 	return nil
 }
 
-func (c *inlineTextInputContainer) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (c *inlineTextInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &c.textInput:
 		size := c.textInput.Measure(context, guigui.Constraints{})
-		if size.X > context.Bounds(c).Dx() {
-			size = c.textInput.Measure(context, guigui.FixedHeightConstraints(context.Bounds(c).Dx()))
+		if size.X > widgetBounds.Bounds().Dx() {
+			size = c.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))
 		}
-		pos := context.Bounds(c).Min
+		pos := widgetBounds.Bounds().Min
 		switch c.horizontalAlign {
 		case basicwidget.HorizontalAlignStart:
 		case basicwidget.HorizontalAlignCenter:
-			pos.X += (context.Bounds(c).Dx() - size.X) / 2
+			pos.X += (widgetBounds.Bounds().Dx() - size.X) / 2
 		case basicwidget.HorizontalAlignEnd:
-			pos.X += context.Bounds(c).Dx() - size.X
+			pos.X += widgetBounds.Bounds().Dx() - size.X
 		}
 		return image.Rectangle{
 			Min: pos,

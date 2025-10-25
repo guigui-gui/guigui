@@ -19,35 +19,35 @@ func (*DefaultWidget) Model(key any) any {
 	return nil
 }
 
-func (*DefaultWidget) AddChildren(context *Context, adder *ChildAdder) {
+func (*DefaultWidget) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
 }
 
-func (*DefaultWidget) Update(context *Context) error {
+func (*DefaultWidget) Update(context *Context, widgetBounds *WidgetBounds) error {
 	return nil
 }
 
-func (*DefaultWidget) Layout(context *Context, widget Widget) image.Rectangle {
+func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
 	// TODO: Return appropriate bounds for the child widgets.
 	return image.Rectangle{}
 }
 
-func (*DefaultWidget) HandlePointingInput(context *Context) HandleInputResult {
+func (*DefaultWidget) HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {
 	return HandleInputResult{}
 }
 
-func (*DefaultWidget) HandleButtonInput(context *Context) HandleInputResult {
+func (*DefaultWidget) HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {
 	return HandleInputResult{}
 }
 
-func (*DefaultWidget) Tick(context *Context) error {
+func (*DefaultWidget) Tick(context *Context, widgetBounds *WidgetBounds) error {
 	return nil
 }
 
-func (*DefaultWidget) CursorShape(context *Context) (ebiten.CursorShapeType, bool) {
+func (*DefaultWidget) CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool) {
 	return 0, false
 }
 
-func (*DefaultWidget) Draw(context *Context, dst *ebiten.Image) {
+func (*DefaultWidget) Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image) {
 }
 
 func (*DefaultWidget) ZDelta() int {

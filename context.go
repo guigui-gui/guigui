@@ -202,38 +202,20 @@ func (c *Context) AppBounds() image.Rectangle {
 	return c.app.bounds()
 }
 
+// Deprecated: Use [WidgetBounds.Bounds] instead.
 func (c *Context) Bounds(widget Widget) image.Rectangle {
-	return widget.widgetState().bounds
+	return (&WidgetBounds{
+		context: c,
+		widget:  widget,
+	}).Bounds()
 }
 
+// Deprecated: Use [WidgetBounds.VisibleBounds] instead.
 func (c *Context) VisibleBounds(widget Widget) image.Rectangle {
-	state := widget.widgetState()
-	if state.hasVisibleBoundsCache {
-		return state.visibleBoundsCache
-	}
-
-	parent := widget.widgetState().parent
-	if parent == nil {
-		b := c.app.bounds()
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-	if widget.ZDelta() != 0 {
-		b := widget.widgetState().bounds
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-
-	var b image.Rectangle
-	parentVB := c.VisibleBounds(parent)
-	if !parentVB.Empty() {
-		b = parentVB.Intersect(widget.widgetState().bounds)
-	}
-	state.hasVisibleBoundsCache = true
-	state.visibleBoundsCache = b
-	return b
+	return (&WidgetBounds{
+		context: c,
+		widget:  widget,
+	}).VisibleBounds()
 }
 
 func (c *Context) SetVisible(widget Widget, visible bool) {
@@ -376,7 +358,7 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 }
 
 func (c *Context) IsWidgetHitAtCursor(widget Widget) bool {
-	return c.app.isWidgetHit(widget)
+	return c.app.isWidgetHitAtCursor(widget)
 }
 
 func (c *Context) SetCustomDraw(widget Widget, customDraw CustomDrawFunc) {

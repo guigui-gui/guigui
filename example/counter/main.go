@@ -26,7 +26,7 @@ type Root struct {
 	counter int
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.counterText)
 	adder.AddChild(&r.resetButton)
@@ -34,7 +34,7 @@ func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.incButton)
 }
 
-func (r *Root) Update(context *guigui.Context) error {
+func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	r.counterText.SetSelectable(true)
 	r.counterText.SetBold(true)
 	r.counterText.SetHorizontalAlign(basicwidget.HorizontalAlignCenter)
@@ -61,10 +61,10 @@ func (r *Root) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &r.background:
-		return context.Bounds(r)
+		return widgetBounds.Bounds()
 	}
 
 	u := basicwidget.UnitSize(context)
@@ -101,7 +101,7 @@ func (r *Root) Layout(context *guigui.Context, widget guigui.Widget) image.Recta
 			},
 		},
 		Gap: u,
-	}).WidgetBounds(context, context.Bounds(r).Inset(u), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u), widget)
 }
 
 func main() {

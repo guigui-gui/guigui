@@ -30,12 +30,12 @@ type Tables struct {
 	tableItemWidgets []guigui.Widget
 }
 
-func (t *Tables) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Tables) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.table)
 	adder.AddChild(&t.configForm)
 }
 
-func (t *Tables) Update(context *guigui.Context) error {
+func (t *Tables) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
@@ -161,7 +161,7 @@ func (t *Tables) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *Tables) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -176,5 +176,5 @@ func (t *Tables) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 				Widget: &t.configForm,
 			},
 		},
-	}).WidgetBounds(context, context.Bounds(t).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

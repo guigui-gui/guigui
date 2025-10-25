@@ -40,7 +40,7 @@ func (f *Form) SetItems(items []FormItem) {
 	f.items = append(f.items, items...)
 }
 
-func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (f *Form) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	for _, item := range f.items {
 		if item.PrimaryWidget != nil {
 			adder.AddChild(item.PrimaryWidget)
@@ -51,15 +51,15 @@ func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	}
 }
 
-func (f *Form) Update(context *guigui.Context) error {
+func (f *Form) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	f.cachedItemBounds = slices.Delete(f.cachedItemBounds, 0, len(f.cachedItemBounds))
 	clear(f.cachedContentBounds)
-	pt := context.Bounds(f).Min
-	f.cachedItemBounds, f.cachedContentBounds = f.appendItemBounds(f.cachedItemBounds, f.cachedContentBounds, context, pt, context.Bounds(f).Dx())
+	pt := widgetBounds.Bounds().Min
+	f.cachedItemBounds, f.cachedContentBounds = f.appendItemBounds(context, f.cachedItemBounds, f.cachedContentBounds, pt, widgetBounds.Bounds().Dx())
 	return nil
 }
 
-func (f *Form) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (f *Form) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	return f.cachedContentBounds[widget]
 }
 
@@ -68,7 +68,7 @@ func (f *Form) isItemOmitted(context *guigui.Context, item FormItem) bool {
 		(item.SecondaryWidget == nil || !context.IsVisible(item.SecondaryWidget))
 }
 
-func (f *Form) appendItemBounds(itemBounds []image.Rectangle, contentBounds map[guigui.Widget]image.Rectangle, context *guigui.Context, point image.Point, width int) ([]image.Rectangle, map[guigui.Widget]image.Rectangle) {
+func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rectangle, contentBounds map[guigui.Widget]image.Rectangle, point image.Point, width int) ([]image.Rectangle, map[guigui.Widget]image.Rectangle) {
 	if contentBounds == nil {
 		contentBounds = map[guigui.Widget]image.Rectangle{}
 	}
@@ -140,11 +140,11 @@ func (f *Form) appendItemBounds(itemBounds []image.Rectangle, contentBounds map[
 	return itemBounds, contentBounds
 }
 
-func (f *Form) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (f *Form) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bgClr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0), 1/32.0)
 	borderClr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0), 2/32.0)
 
-	bounds := context.Bounds(f)
+	bounds := widgetBounds.Bounds()
 	draw.DrawRoundedRect(context, dst, bounds, bgClr, RoundedCornerRadius(context))
 
 	// Render borders between items.
@@ -203,7 +203,7 @@ func (f *Form) Measure(context *guigui.Context, constraints guigui.Constraints) 
 	f.cachedItemBoundsForMeasure = slices.Delete(f.cachedItemBoundsForMeasure, 0, len(f.cachedItemBoundsForMeasure))
 	clear(f.cachedContentBoundsForMeasure)
 	// As only the size matters, the point can be zero.
-	f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure = f.appendItemBounds(f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure, context, image.Point{}, w)
+	f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure = f.appendItemBounds(context, f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure, image.Point{}, w)
 	if len(f.cachedItemBoundsForMeasure) == 0 {
 		return image.Pt(w, 0)
 	}

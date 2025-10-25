@@ -34,12 +34,12 @@ type Buttons struct {
 	enabledToggle basicwidget.Toggle
 }
 
-func (b *Buttons) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Buttons) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.buttonsForm)
 	adder.AddChild(&b.configForm)
 }
 
-func (b *Buttons) Update(context *guigui.Context) error {
+func (b *Buttons) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(b, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
@@ -154,7 +154,7 @@ func (b *Buttons) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (b *Buttons) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -170,5 +170,5 @@ func (b *Buttons) Layout(context *guigui.Context, widget guigui.Widget) image.Re
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(b).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

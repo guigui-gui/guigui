@@ -17,25 +17,25 @@ type LeftPanel struct {
 	content guigui.WidgetWithSize[*leftPanelContent]
 }
 
-func (l *LeftPanel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *LeftPanel) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.panel)
 }
 
-func (l *LeftPanel) Update(context *guigui.Context) error {
+func (l *LeftPanel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	l.panel.SetStyle(basicwidget.PanelStyleSide)
 	l.panel.SetBorders(basicwidget.PanelBorder{
 		End: true,
 	})
-	l.content.SetFixedSize(context.Bounds(l).Size())
+	l.content.SetFixedSize(widgetBounds.Bounds().Size())
 	l.panel.SetContent(&l.content)
 
 	return nil
 }
 
-func (l *LeftPanel) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (l *LeftPanel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &l.panel:
-		return context.Bounds(l)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }
@@ -46,22 +46,22 @@ type leftPanelContent struct {
 	text basicwidget.Text
 }
 
-func (l *leftPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *leftPanelContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.text)
 }
 
-func (l *leftPanelContent) Update(context *guigui.Context) error {
+func (l *leftPanelContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	l.text.SetValue("Left panel: " + dummyText)
 	l.text.SetAutoWrap(true)
 	l.text.SetSelectable(true)
 	return nil
 }
 
-func (l *leftPanelContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (l *leftPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &l.text:
 		u := basicwidget.UnitSize(context)
-		return context.Bounds(l).Inset(u / 2)
+		return widgetBounds.Bounds().Inset(u / 2)
 	}
 	return image.Rectangle{}
 }

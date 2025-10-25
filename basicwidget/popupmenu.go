@@ -40,18 +40,18 @@ func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
 	p.list.Widget().SetCheckmarkIndex(index)
 }
 
-func (p *PopupMenu[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *PopupMenu[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.popup)
 }
 
-func (p *PopupMenu[T]) Update(context *guigui.Context) error {
+func (p *PopupMenu[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
 	list.list.SetOnItemSelected(func(index int) {
 		p.popup.SetOpen(false)
 		guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
 	})
-	p.list.SetFixedSize(p.contentBounds(context).Size())
+	p.list.SetFixedSize(p.contentBounds(context, widgetBounds).Size())
 
 	p.popup.SetContent(&p.list)
 	p.popup.SetCloseByClickingOutside(true)
@@ -59,16 +59,16 @@ func (p *PopupMenu[T]) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (p *PopupMenu[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (p *PopupMenu[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &p.popup:
-		return p.contentBounds(context)
+		return p.contentBounds(context, widgetBounds)
 	}
 	return image.Rectangle{}
 }
 
-func (p *PopupMenu[T]) contentBounds(context *guigui.Context) image.Rectangle {
-	pos := context.Bounds(p).Min
+func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	pos := widgetBounds.Bounds().Min
 	// List size can dynamically change based on the items. Use the default size.
 	s := p.list.Widget().Measure(context, guigui.Constraints{})
 	s.Y = min(s.Y, 24*UnitSize(context))

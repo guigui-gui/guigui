@@ -23,7 +23,10 @@ type bounds3D struct {
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
-	bounds := context.VisibleBounds(widget)
+	bounds := (&WidgetBounds{
+		context: context,
+		widget:  widget,
+	}).VisibleBounds()
 	if bounds.Empty() {
 		return bounds3D{}, false
 	}

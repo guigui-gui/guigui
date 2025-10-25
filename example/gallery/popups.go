@@ -34,7 +34,7 @@ type Popups struct {
 	contextMenuPopupPosition image.Point
 }
 
-func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Popups) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	for i := range p.forms {
 		adder.AddChild(&p.forms[i])
 	}
@@ -42,7 +42,7 @@ func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) 
 	adder.AddChild(&p.contextMenuPopup)
 }
 
-func (p *Popups) Update(context *guigui.Context) error {
+func (p *Popups) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	p.blurBackgroundText.SetValue("Blur background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
@@ -112,7 +112,7 @@ func (p *Popups) contentSize(context *guigui.Context) image.Point {
 	return image.Pt(int(12*u), int(6*u))
 }
 
-func (p *Popups) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &p.simplePopup:
 		appBounds := context.AppBounds()
@@ -144,11 +144,11 @@ func (p *Popups) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(p).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 
 }
 
-func (p *Popups) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (p *Popups) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		if context.IsWidgetHitAtCursor(&p.contextMenuPopupClickHereText) {
 			p.contextMenuPopupPosition = image.Pt(ebiten.CursorPosition())
@@ -172,12 +172,12 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 	s.popup = popup
 }
 
-func (s *simplePopupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *simplePopupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.titleText)
 	adder.AddChild(&s.closeButton)
 }
 
-func (s *simplePopupContent) Update(context *guigui.Context) error {
+func (s *simplePopupContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	s.titleText.SetValue("Hello!")
 	s.titleText.SetBold(true)
 
@@ -189,7 +189,7 @@ func (s *simplePopupContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (s *simplePopupContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -213,5 +213,5 @@ func (s *simplePopupContent) Layout(context *guigui.Context, widget guigui.Widge
 				},
 			},
 		},
-	}).WidgetBounds(context, context.Bounds(s).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

@@ -57,12 +57,12 @@ func (d *DropdownList[T]) updateButtonContent(context *guigui.Context) {
 	d.button.SetContent(&d.buttonContent)
 }
 
-func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (d *DropdownList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&d.button)
 	adder.AddChild(&d.popupMenu)
 }
 
-func (d *DropdownList[T]) Update(context *guigui.Context) error {
+func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	d.updateButtonContent(context)
 
 	d.button.SetOnDown(func() {
@@ -81,20 +81,20 @@ func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (d *DropdownList[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (d *DropdownList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &d.button:
-		p := context.Bounds(d).Min
+		p := widgetBounds.Bounds().Min
 		return image.Rectangle{
 			Min: p,
 			Max: p.Add(d.button.Measure(context, guigui.Constraints{})),
 		}
 	case &d.popupMenu:
-		p := context.Bounds(d).Min
+		p := widgetBounds.Bounds().Min
 		p.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 		p.X = max(p.X, 0)
 		p.Y -= RoundedCornerRadius(context)
-		p.Y += int((float64(context.Bounds(d).Dy()) - LineHeight(context)) / 2)
+		p.Y += int((float64(widgetBounds.Bounds().Dy()) - LineHeight(context)) / 2)
 		p.Y -= max(0, d.popupMenu.SelectedItemIndex()) * int(LineHeight(context)+2*listItemTextPadding(context))
 		p.Y = max(p.Y, 0)
 		return image.Rectangle{
@@ -182,7 +182,7 @@ func (d *dropdownListButtonContent) SetText(text string) {
 	d.text.SetValue(text)
 }
 
-func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if d.content != nil {
 		adder.AddChild(d.content)
 	}
@@ -190,7 +190,7 @@ func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *
 	adder.AddChild(&d.image)
 }
 
-func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
+func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	img, err := theResourceImages.Get("unfold_more", context.ColorMode())
 	if err != nil {
 		return err
@@ -199,8 +199,8 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (d *dropdownListButtonContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
-	bounds := context.Bounds(d)
+func (d *dropdownListButtonContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+	bounds := widgetBounds.Bounds()
 	paddingStartX := buttonEdgeAndTextPadding(context)
 
 	switch widget {

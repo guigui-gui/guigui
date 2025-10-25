@@ -55,7 +55,7 @@ func toggleMaxCount() int {
 	return ebiten.TPS() / 12
 }
 
-func (t *Toggle) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (t *Toggle) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if context.IsEnabled(t) && t.isHovered(context) && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		context.SetFocused(t, true)
 		t.pressed = true
@@ -68,7 +68,7 @@ func (t *Toggle) HandlePointingInput(context *guigui.Context) guigui.HandleInput
 	return guigui.HandleInputResult{}
 }
 
-func (t *Toggle) Tick(context *guigui.Context) error {
+func (t *Toggle) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.count > 0 {
 		t.count--
 		guigui.RequestRedraw(t)
@@ -80,17 +80,17 @@ func (t *Toggle) Tick(context *guigui.Context) error {
 	return nil
 }
 
-func (t *Toggle) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {
+func (t *Toggle) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	if t.canPress(context) || t.pressed {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
 }
 
-func (t *Toggle) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	rate := 1 - float64(t.count)/float64(toggleMaxCount())
 
-	bounds := context.Bounds(t)
+	bounds := widgetBounds.Bounds()
 
 	cm := context.ColorMode()
 	backgroundColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)

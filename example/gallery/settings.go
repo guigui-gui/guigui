@@ -26,11 +26,11 @@ type Settings struct {
 
 var hongKongChinese = language.MustParse("zh-HK")
 
-func (s *Settings) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *Settings) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.form)
 }
 
-func (s *Settings) Update(context *guigui.Context) error {
+func (s *Settings) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	lightModeImg, err := theImageCache.GetMonochrome("light_mode", context.ColorMode())
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (s *Settings) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (s *Settings) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -189,7 +189,7 @@ func (s *Settings) Layout(context *guigui.Context, widget guigui.Widget) image.R
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(s).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }
 
 type textWithSubText struct {
@@ -199,12 +199,12 @@ type textWithSubText struct {
 	subText basicwidget.Text
 }
 
-func (t *textWithSubText) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *textWithSubText) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.text)
 	adder.AddChild(&t.subText)
 }
 
-func (t *textWithSubText) Update(context *guigui.Context) error {
+func (t *textWithSubText) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	t.subText.SetScale(0.875)
 	t.subText.SetMultiline(true)
 	t.subText.SetAutoWrap(true)
@@ -212,16 +212,16 @@ func (t *textWithSubText) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *textWithSubText) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.text:
-		pt := context.Bounds(t).Min
+		pt := widgetBounds.Bounds().Min
 		return image.Rectangle{
 			Min: pt,
 			Max: pt.Add(t.text.Measure(context, guigui.Constraints{})),
 		}
 	case &t.subText:
-		pt := context.Bounds(t).Min
+		pt := widgetBounds.Bounds().Min
 		pt.Y += t.text.Measure(context, guigui.Constraints{}).Y
 		return image.Rectangle{
 			Min: pt,

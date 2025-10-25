@@ -87,7 +87,7 @@ func (b *Button) setKeepPressed(keep bool) {
 	b.button.setKeepPressed(keep)
 }
 
-func (b *Button) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Button) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.button)
 	if b.content != nil {
 		adder.AddChild(b.content)
@@ -96,7 +96,7 @@ func (b *Button) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) 
 	adder.AddChild(&b.icon)
 }
 
-func (b *Button) Update(context *guigui.Context) error {
+func (b *Button) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
 	} else {
@@ -107,7 +107,7 @@ func (b *Button) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	var yOffset int
 	if b.button.isPressed(context) {
 		yOffset = int(0.5 * context.Scale())
@@ -117,9 +117,9 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 
 	switch widget {
 	case &b.button:
-		return context.Bounds(b)
+		return widgetBounds.Bounds()
 	case b.content:
-		return context.Bounds(b).Add(image.Pt(0, yOffset))
+		return widgetBounds.Bounds().Add(image.Pt(0, yOffset))
 	}
 
 	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
@@ -128,12 +128,13 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 			Size: guigui.FlexibleSize(1),
 		})
 	if b.icon.HasImage() {
-		width := min(defaultIconSize(context), context.Bounds(b).Dx())
-		height := min(defaultIconSize(context), context.Bounds(b).Dy())
+		width := min(defaultIconSize(context), widgetBounds.Bounds().Dx())
+		height := min(defaultIconSize(context), widgetBounds.Bounds().Dy())
 		if b.text.Value() == "" {
-			r := b.button.radius(context)
-			width = max(width, context.Bounds(b).Dx()-2*r)
-			height = max(height, context.Bounds(b).Dy()-2*r)
+			// The bounds for Button and baseButton are the same, so it's ok to pass widgetBounds here.
+			r := b.button.radius(context, widgetBounds)
+			width = max(width, widgetBounds.Bounds().Dx()-2*r)
+			height = max(height, widgetBounds.Bounds().Dy()-2*r)
 		}
 		b.layoutItems = append(b.layoutItems,
 			guigui.LinearLayoutItem{
@@ -175,7 +176,7 @@ func (b *Button) Layout(context *guigui.Context, widget guigui.Widget) image.Rec
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items:     b.layoutItems,
-	}).WidgetBounds(context, context.Bounds(b).Add(image.Pt(0, yOffset)), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Add(image.Pt(0, yOffset)), widget)
 }
 
 func (b *Button) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

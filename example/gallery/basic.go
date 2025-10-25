@@ -28,11 +28,11 @@ type Basic struct {
 	list            basicwidget.List[int]
 }
 
-func (b *Basic) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Basic) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.form)
 }
 
-func (b *Basic) Update(context *guigui.Context) error {
+func (b *Basic) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	b.buttonText.SetValue("Button")
 	b.button.SetText("Click me!")
 	b.toggleText.SetValue("Toggle")
@@ -75,7 +75,7 @@ func (b *Basic) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (b *Basic) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (b *Basic) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -85,5 +85,5 @@ func (b *Basic) Layout(context *guigui.Context, widget guigui.Widget) image.Rect
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(b).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

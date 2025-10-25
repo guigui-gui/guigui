@@ -13,14 +13,14 @@ import (
 
 type Widget interface {
 	Model(key any) any
-	AddChildren(context *Context, adder *ChildAdder)
-	Update(context *Context) error
-	Layout(context *Context, widget Widget) image.Rectangle
-	HandlePointingInput(context *Context) HandleInputResult
-	HandleButtonInput(context *Context) HandleInputResult
-	Tick(context *Context) error
-	CursorShape(context *Context) (ebiten.CursorShapeType, bool)
-	Draw(context *Context, dst *ebiten.Image)
+	AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder)
+	Update(context *Context, widgetBounds *WidgetBounds) error
+	Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle
+	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
+	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
+	Tick(context *Context, widgetBounds *WidgetBounds) error
+	CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool)
+	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
 	ZDelta() int
 	Measure(context *Context, constraints Constraints) image.Point
 	PassThrough() bool
@@ -96,14 +96,14 @@ func (w *WidgetWithSize[T]) Widget() T {
 	return w.widget
 }
 
-func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
+func (w *WidgetWithSize[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 
-func (w *WidgetWithSize[T]) Layout(context *Context, widget Widget) image.Rectangle {
+func (w *WidgetWithSize[T]) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
 	if widget == Widget(w.Widget()) {
 		// WidgetWithSize overwrites Measure, but doesn't overwrite Layout.
-		return context.Bounds(w)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }

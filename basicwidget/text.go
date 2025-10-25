@@ -174,13 +174,13 @@ func (t *Text) resetAutoWrapCachedTextSize() {
 	t.cachedTextSizePlus1[newTextSizeCacheKey(true, true)] = image.Point{}
 }
 
-func (t *Text) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Text) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if t.selectable || t.editable {
 		adder.AddChild(&t.cursor)
 	}
 }
 
-func (t *Text) Update(context *guigui.Context) error {
+func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if f := t.face(context, false); t.lastFace != f {
 		t.lastFace = f
 		t.resetCachedTextSize()
@@ -189,8 +189,8 @@ func (t *Text) Update(context *guigui.Context) error {
 		t.lastScale = context.Scale()
 		t.resetCachedTextSize()
 	}
-	if t.autoWrap && t.lastWidth != context.Bounds(t).Dx() {
-		t.lastWidth = context.Bounds(t).Dx()
+	if t.autoWrap && t.lastWidth != widgetBounds.Bounds().Dx() {
+		t.lastWidth = widgetBounds.Bounds().Dx()
 		t.resetAutoWrapCachedTextSize()
 	}
 
@@ -221,13 +221,13 @@ func (t *Text) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *Text) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.cursor:
-		vb := context.VisibleBounds(t)
+		vb := widgetBounds.VisibleBounds()
 		vb.Min.X -= textCursorWidth(context) / 2
 		vb.Max.X += textCursorWidth(context) / 2
-		return t.cursorBounds(context).Intersect(vb)
+		return t.cursorBounds(context, widgetBounds).Intersect(vb)
 	}
 	return image.Rectangle{}
 }
@@ -527,7 +527,7 @@ func (t *Text) lineHeight(context *guigui.Context) float64 {
 	return LineHeight(context) * (t.scaleMinus1 + 1)
 }
 
-func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if !t.selectable && !t.editable {
 		return guigui.HandleInputResult{}
 	}
@@ -535,7 +535,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 	cursorPosition := image.Pt(ebiten.CursorPosition())
 	if t.dragging {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			idx := t.textIndexFromPosition(context, context.Bounds(t), cursorPosition, false)
+			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), cursorPosition, false)
 			start, end := idx, idx
 			if t.selectionDragStartPlus1-1 >= 0 {
 				start = min(start, t.selectionDragStartPlus1-1)
@@ -560,7 +560,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if context.IsWidgetHitAtCursor(t) {
-			t.handleClick(context, context.Bounds(t), cursorPosition)
+			t.handleClick(context, widgetBounds.Bounds(), cursorPosition)
 			return guigui.HandleInputByWidget(t)
 		}
 		context.SetFocused(t, false)
@@ -582,8 +582,8 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 	return guigui.HandleInputResult{}
 }
 
-func (t *Text) handleClick(context *guigui.Context, bounds image.Rectangle, cursorPosition image.Point) {
-	idx := t.textIndexFromPosition(context, bounds, cursorPosition, false)
+func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, cursorPosition image.Point) {
+	idx := t.textIndexFromPosition(context, textBounds, cursorPosition, false)
 
 	if ebiten.Tick()-t.lastClickTick < int64(doubleClickLimitInTicks()) && t.lastClickTextIndex == idx {
 		t.clickCount++
@@ -670,7 +670,7 @@ func (t *Text) compositionSelectionToDraw(context *guigui.Context) (uStart, cSta
 	return s, s + cs, s + ce, s + l, true
 }
 
-func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResult {
+func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	// Handle a key input by user-setting callback, unless IME is working.
 	if t.field.UncommittedTextLengthInBytes() == 0 && guigui.IsEventHandlerRegistered(t, textEventKeyJustPressed) {
 		var handled bool
@@ -691,7 +691,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 		origText := t.field.Text()
 		start, _ := t.field.Selection()
 		var processed bool
-		if pos, ok := t.textPosition(context, context.Bounds(t), start, false); ok {
+		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
 			var err error
 			processed, err = t.field.HandleInputWithBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
 			if err != nil {
@@ -837,9 +837,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 			idx = end
 			moveEnd = true
 		}
-		if pos, ok := t.textPosition(context, context.Bounds(t), idx, false); ok {
+		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 - lh
-			idx := t.textIndexFromPosition(context, context.Bounds(t), image.Pt(int(pos.X), int(y)), false)
+			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveEnd {
 					t.setTextAndSelection(t.field.Text(), start, idx, idx, true)
@@ -862,9 +862,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 			idx = start
 			moveStart = true
 		}
-		if pos, ok := t.textPosition(context, context.Bounds(t), idx, false); ok {
+		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 + lh
-			idx := t.textIndexFromPosition(context, context.Bounds(t), image.Pt(int(pos.X), int(y)), false)
+			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveStart {
 					t.setTextAndSelection(t.field.Text(), idx, end, idx, true)
@@ -951,9 +951,9 @@ func (t *Text) commit() {
 	t.nextTextSet = false
 }
 
-func (t *Text) Draw(context *guigui.Context, dst *ebiten.Image) {
-	textBounds := t.textContentBounds(context, context.Bounds(t))
-	if !textBounds.Overlaps(context.VisibleBounds(t)) {
+func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	textBounds := t.textContentBounds(context, widgetBounds.Bounds())
+	if !textBounds.Overlaps(widgetBounds.VisibleBounds()) {
 		return
 	}
 
@@ -1032,14 +1032,14 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	return s
 }
 
-func (t *Text) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {
+func (t *Text) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	if t.selectable || t.editable {
 		return ebiten.CursorShapeText, true
 	}
 	return 0, false
 }
 
-func (t *Text) cursorPosition(context *guigui.Context) (position textutil.TextPosition, ok bool) {
+func (t *Text) cursorPosition(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (position textutil.TextPosition, ok bool) {
 	if !context.IsFocused(t) {
 		return textutil.TextPosition{}, false
 	}
@@ -1059,11 +1059,11 @@ func (t *Text) cursorPosition(context *guigui.Context) (position textutil.TextPo
 		return textutil.TextPosition{}, false
 	}
 
-	return t.textPosition(context, context.Bounds(t), e, true)
+	return t.textPosition(context, widgetBounds.Bounds(), e, true)
 }
 
-func (t *Text) textIndexFromPosition(context *guigui.Context, bounds image.Rectangle, position image.Point, showComposition bool) int {
-	textContentBounds := t.textContentBounds(context, bounds)
+func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
+	textContentBounds := t.textContentBounds(context, textBounds)
 	if position.Y < textContentBounds.Min.Y {
 		return 0
 	}
@@ -1119,8 +1119,8 @@ func textCursorWidth(context *guigui.Context) int {
 	return int(2 * context.Scale())
 }
 
-func (t *Text) cursorBounds(context *guigui.Context) image.Rectangle {
-	pos, ok := t.cursorPosition(context)
+func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	pos, ok := t.cursorPosition(context, widgetBounds)
 	if !ok {
 		return image.Rectangle{}
 	}
@@ -1165,8 +1165,8 @@ func (t *textCursor) resetCounter() {
 	t.counter = 0
 }
 
-func (t *textCursor) Tick(context *guigui.Context) error {
-	pos, ok := t.text.cursorPosition(context)
+func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	pos, ok := t.text.cursorPosition(context, widgetBounds)
 	if t.prevPos != pos {
 		t.resetCounter()
 	}
@@ -1174,7 +1174,7 @@ func (t *textCursor) Tick(context *guigui.Context) error {
 	t.prevOK = ok
 
 	t.counter++
-	if r := t.shouldRenderCursor(context, t.text); t.prevShown != r {
+	if r := t.shouldRenderCursor(context, widgetBounds, t.text); t.prevShown != r {
 		t.prevShown = r
 		// TODO: This is not efficient. Improve this.
 		guigui.RequestRedraw(t)
@@ -1182,12 +1182,12 @@ func (t *textCursor) Tick(context *guigui.Context) error {
 	return nil
 }
 
-func (t *textCursor) shouldRenderCursor(context *guigui.Context, text *Text) bool {
+func (t *textCursor) shouldRenderCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text *Text) bool {
 	offset := ebiten.TPS() / 2
 	if t.counter > offset && (t.counter-offset)%ebiten.TPS() >= ebiten.TPS()/2 {
 		return false
 	}
-	if _, ok := text.cursorPosition(context); !ok {
+	if _, ok := text.cursorPosition(context, widgetBounds); !ok {
 		return false
 	}
 	s, e, ok := text.selectionToDraw(context)
@@ -1200,11 +1200,11 @@ func (t *textCursor) shouldRenderCursor(context *guigui.Context, text *Text) boo
 	return true
 }
 
-func (t *textCursor) Draw(context *guigui.Context, dst *ebiten.Image) {
-	if !t.shouldRenderCursor(context, t.text) {
+func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	if !t.shouldRenderCursor(context, widgetBounds, t.text) {
 		return
 	}
-	b := t.text.cursorBounds(context)
+	b := widgetBounds.Bounds()
 	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
 }
 

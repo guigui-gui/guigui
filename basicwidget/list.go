@@ -92,11 +92,11 @@ func (l *List[T]) updateListItems() {
 	l.list.SetItems(l.baseListItems)
 }
 
-func (l *List[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *List[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.list)
 }
 
-func (l *List[T]) Update(context *guigui.Context) error {
+func (l *List[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
@@ -107,10 +107,10 @@ func (l *List[T]) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (l *List[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &l.list:
-		return context.Bounds(l)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }
@@ -243,7 +243,7 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.style = style
 }
 
-func (l *listItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *listItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if l.item.Content != nil {
 		adder.AddChild(l.item.Content)
 		return
@@ -251,16 +251,16 @@ func (l *listItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.C
 	adder.AddChild(&l.text)
 }
 
-func (l *listItemWidget[T]) Update(context *guigui.Context) error {
+func (l *listItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	l.text.SetValue(l.item.Text)
 	l.text.SetVerticalAlign(VerticalAlignMiddle)
 	return nil
 }
 
-func (l *listItemWidget[T]) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &l.text, l.item.Content:
-		b := context.Bounds(l)
+		b := widgetBounds.Bounds()
 		s := widget.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
 		if l.style != ListStyleMenu {
 			s.X = b.Dx()
@@ -278,9 +278,9 @@ func (l *listItemWidget[T]) Layout(context *guigui.Context, widget guigui.Widget
 	return image.Rectangle{}
 }
 
-func (l *listItemWidget[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if l.item.Border {
-		b := context.Bounds(l)
+		b := widgetBounds.Bounds()
 		x0 := float32(b.Min.X)
 		x1 := float32(b.Max.X)
 		y := float32(b.Min.Y) + float32(b.Dy())/2
@@ -289,7 +289,7 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
 		return
 	}
 	/*if l.item.Header {
-		bounds := context.Bounds(l)
+		bounds := widgetBounds.Bounds()
 		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), RoundedCornerRadius(context))
 	}*/
 }

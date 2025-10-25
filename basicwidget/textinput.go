@@ -140,12 +140,12 @@ func (t *TextInput) SetIcon(icon *ebiten.Image) {
 	t.icon.SetImage(icon)
 }
 
-func (t *TextInput) textInputPaddingInScrollableContent(context *guigui.Context) (start, top, end, bottom int) {
+func (t *TextInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (start, top, end, bottom int) {
 	var x, y int
 	switch t.style {
 	case TextInputStyleNormal:
 		x = UnitSize(context) / 2
-		y = int(float64(min(context.Bounds(t).Dy(), UnitSize(context)))-LineHeight(context)*(t.text.scaleMinus1+1)) / 2
+		y = int(float64(min(widgetBounds.Bounds().Dy(), UnitSize(context)))-LineHeight(context)*(t.text.scaleMinus1+1)) / 2
 	case TextInputStyleInline:
 		x = UnitSize(context) / 4
 	}
@@ -159,9 +159,9 @@ func (t *TextInput) textInputPaddingInScrollableContent(context *guigui.Context)
 	return
 }
 
-func (t *TextInput) scrollContentSize(context *guigui.Context) image.Point {
-	start, top, end, bottom := t.textInputPaddingInScrollableContent(context)
-	w := context.Bounds(t).Dx() - start - end
+func (t *TextInput) scrollContentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
+	start, top, end, bottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	w := widgetBounds.Bounds().Dx() - start - end
 	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(start+end, top+bottom))
 }
 
@@ -169,7 +169,7 @@ func (t *TextInput) isFocused(context *guigui.Context) bool {
 	return context.IsFocused(t) || context.IsFocused(&t.text)
 }
 
-func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *TextInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {
@@ -183,9 +183,9 @@ func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdde
 	}
 }
 
-func (t *TextInput) textBounds(context *guigui.Context) image.Rectangle {
-	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context)
-	bt := context.Bounds(t)
+func (t *TextInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	bt := widgetBounds.Bounds()
 	pt := bt.Min
 	s := t.text.Measure(context, guigui.FixedWidthConstraints(bt.Dx()-paddingStart-paddingEnd))
 	s.X = max(s.X, bt.Dx()-paddingStart-paddingEnd)
@@ -205,13 +205,13 @@ func (t *TextInput) textBounds(context *guigui.Context) image.Rectangle {
 	return b
 }
 
-func (t *TextInput) Update(context *guigui.Context) error {
+func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.prevFocused != (context.IsFocused(t) || context.IsFocused(&t.text)) {
 		t.prevFocused = (context.IsFocused(t) || context.IsFocused(&t.text))
 		guigui.RequestRedraw(t)
 	}
 
-	t.scrollOverlay.SetContentSize(context, t.scrollContentSize(context))
+	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
 
 	t.background.textInput = t
 
@@ -221,12 +221,12 @@ func (t *TextInput) Update(context *guigui.Context) error {
 	t.text.setKeepTailingSpace(!t.text.autoWrap)
 
 	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	t.adjustScrollOffsetIfNeeded(context)
+	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
 
-	if draw.OverlapsWithRoundedCorner(context.Bounds(t), RoundedCornerRadius(context), t.textBounds(context)) {
+	if draw.OverlapsWithRoundedCorner(widgetBounds.Bounds(), RoundedCornerRadius(context), t.textBounds(context, widgetBounds)) {
 		// CustomDraw might be too generic and overkill for this case.
 		context.SetCustomDraw(&t.text, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-			draw.DrawInRoundedCornerRect(context, dst, context.Bounds(t), RoundedCornerRadius(context), widgetImage, op)
+			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
 		})
 	} else {
 		context.SetCustomDraw(&t.text, nil)
@@ -250,14 +250,14 @@ func (t *TextInput) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (t *TextInput) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.background:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	case &t.text:
-		return t.textBounds(context)
+		return t.textBounds(context, widgetBounds)
 	case &t.iconBackground, &t.icon:
-		b := context.Bounds(t)
+		b := widgetBounds.Bounds()
 		iconSize := defaultIconSize(context)
 		var imgBounds image.Rectangle
 		imgBounds.Min = b.Min.Add(image.Point{
@@ -273,13 +273,13 @@ func (t *TextInput) Layout(context *guigui.Context, widget guigui.Widget) image.
 		imgBgBounds.Max.X = imgBounds.Max.X + UnitSize(context)/4
 		return imgBgBounds
 	case &t.frame:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	case &t.scrollOverlay:
-		return context.Bounds(t)
+		return widgetBounds.Bounds()
 	case &t.focus:
 		w := textInputFocusBorderWidth(context)
-		p := context.Bounds(t).Min.Add(image.Pt(-w, -w))
-		s := context.Bounds(t).Size().Add(image.Pt(2*textInputFocusBorderWidth(context), 2*textInputFocusBorderWidth(context)))
+		p := widgetBounds.Bounds().Min.Add(image.Pt(-w, -w))
+		s := widgetBounds.Bounds().Size().Add(image.Pt(2*textInputFocusBorderWidth(context), 2*textInputFocusBorderWidth(context)))
 		return image.Rectangle{
 			Min: p,
 			Max: p.Add(s),
@@ -288,36 +288,37 @@ func (t *TextInput) Layout(context *guigui.Context, widget guigui.Widget) image.
 	return image.Rectangle{}
 }
 
-func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context) {
-	bounds := context.Bounds(t)
-	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context)
+func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	bounds := widgetBounds.Bounds()
+	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	bounds.Max.X -= paddingEnd
 	bounds.Min.X += paddingStart
 	bounds.Max.Y -= paddingBottom
 	bounds.Min.Y += paddingTop
 
-	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context))
-	t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
+	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context, widgetBounds))
+	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
 }
 
-func (t *TextInput) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (t *TextInput) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	cp := image.Pt(ebiten.CursorPosition())
 	if context.IsWidgetHitAtCursor(t) {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			t.text.handleClick(context, t.textBounds(context), cp)
+			t.text.handleClick(context, t.textBounds(context, widgetBounds), cp)
 			return guigui.HandleInputByWidget(t)
 		}
 	}
-	return t.scrollOverlay.handlePointingInput(context)
+	return t.scrollOverlay.handlePointingInput(context, widgetBounds)
 }
 
-func (t *TextInput) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {
-	return t.text.CursorShape(context)
+func (t *TextInput) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	return t.text.CursorShape(context, nil)
 }
 
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	if t.style == TextInputStyleInline {
-		start, _, end, _ := t.textInputPaddingInScrollableContent(context)
+		// WidgetBounds is not needed for inline text input.
+		start, _, end, _ := t.textInputPaddingInScrollableContent(context, nil)
 		if fixedWidth, ok := constraints.FixedWidth(); ok {
 			constraints = guigui.FixedWidthConstraints(fixedWidth - start - end)
 		}
@@ -338,8 +339,8 @@ type textInputBackground struct {
 	textInput *TextInput
 }
 
-func (t *textInputBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := context.Bounds(t)
+func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	bounds := widgetBounds.Bounds()
 	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
 	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
@@ -350,8 +351,8 @@ type textInputIconBackground struct {
 	textInput *TextInput
 }
 
-func (t *textInputIconBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := context.Bounds(t)
+func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	bounds := widgetBounds.Bounds()
 	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
 	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
@@ -360,8 +361,8 @@ type textInputFrame struct {
 	guigui.DefaultWidget
 }
 
-func (t *textInputFrame) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := context.Bounds(t)
+func (t *textInputFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	bounds := widgetBounds.Bounds()
 	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset, false)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 }
@@ -380,8 +381,8 @@ type textInputFocus struct {
 	textInput *TextInput
 }
 
-func (t *textInputFocus) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := context.Bounds(t)
+func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	bounds := widgetBounds.Bounds()
 	w := textInputFocusBorderWidth(context)
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), draw.RoundedRectBorderTypeRegular)

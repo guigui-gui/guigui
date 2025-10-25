@@ -40,12 +40,12 @@ type Lists struct {
 	dropdownListItems []basicwidget.DropdownListItem[int]
 }
 
-func (l *Lists) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *Lists) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.listFormPanel)
 	adder.AddChild(&l.configForm)
 }
 
-func (l *Lists) Update(context *guigui.Context) error {
+func (l *Lists) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(l, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
@@ -179,7 +179,7 @@ func (l *Lists) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (l *Lists) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	u := basicwidget.UnitSize(context)
 	return (guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -193,5 +193,5 @@ func (l *Lists) Layout(context *guigui.Context, widget guigui.Widget) image.Rect
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, context.Bounds(l).Inset(u/2), widget)
+	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
 }

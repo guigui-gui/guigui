@@ -17,24 +17,24 @@ type Sidebar struct {
 	panelContent sidebarContent
 }
 
-func (s *Sidebar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *Sidebar) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.panel)
 }
 
-func (s *Sidebar) Update(context *guigui.Context) error {
+func (s *Sidebar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	s.panel.SetStyle(basicwidget.PanelStyleSide)
 	s.panel.SetBorders(basicwidget.PanelBorder{
 		End: true,
 	})
-	s.panelContent.setSize(context.Bounds(s).Size())
+	s.panelContent.setSize(widgetBounds.Bounds().Size())
 	s.panel.SetContent(&s.panelContent)
 	return nil
 }
 
-func (s *Sidebar) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (s *Sidebar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &s.panel:
-		return context.Bounds(s)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }
@@ -51,11 +51,11 @@ func (s *sidebarContent) setSize(size image.Point) {
 	s.size = size
 }
 
-func (s *sidebarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *sidebarContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.list)
 }
 
-func (s *sidebarContent) Update(context *guigui.Context) error {
+func (s *sidebarContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	model := context.Model(s, modelKeyModel).(*Model)
 
 	s.list.SetStyle(basicwidget.ListStyleSidebar)
@@ -114,10 +114,10 @@ func (s *sidebarContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (s *sidebarContent) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
+func (s *sidebarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &s.list:
-		return context.Bounds(s)
+		return widgetBounds.Bounds()
 	}
 	return image.Rectangle{}
 }

@@ -155,15 +155,15 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 	s.abstractNumberInput.SetMaximumValueUint64(s, maximum)
 }
 
-func (s *Slider) Update(context *guigui.Context) error {
-	if hovered := s.isThumbHovered(context); s.prevThumbHovered != hovered {
+func (s *Slider) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if hovered := s.isThumbHovered(context, widgetBounds); s.prevThumbHovered != hovered {
 		s.prevThumbHovered = hovered
 		guigui.RequestRedraw(s)
 	}
 	return nil
 }
 
-func (s *Slider) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+func (s *Slider) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	max := s.abstractNumberInput.MaximumValueBigInt()
 	min := s.abstractNumberInput.MinimumValueBigInt()
 	if max == nil || min == nil {
@@ -172,8 +172,8 @@ func (s *Slider) HandlePointingInput(context *guigui.Context) guigui.HandleInput
 
 	if context.IsEnabled(s) && context.IsWidgetHitAtCursor(s) && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) && !s.dragging {
 		context.SetFocused(s, true)
-		if !s.isThumbHovered(context) {
-			s.setValueFromCursor(context)
+		if !s.isThumbHovered(context, widgetBounds) {
+			s.setValueFromCursor(context, widgetBounds)
 		}
 		s.dragging = true
 		x, _ := ebiten.CursorPosition()
@@ -194,29 +194,29 @@ func (s *Slider) HandlePointingInput(context *guigui.Context) guigui.HandleInput
 	}
 
 	if context.IsEnabled(s) && s.dragging && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		s.setValueFromCursorDelta(context)
+		s.setValueFromCursorDelta(context, widgetBounds)
 		return guigui.HandleInputByWidget(s)
 	}
 
 	return guigui.HandleInputResult{}
 }
 
-func (s *Slider) setValueFromCursorDelta(context *guigui.Context) {
-	s.setValue(context, &s.draggingStartValue, s.draggingStartX)
+func (s *Slider) setValueFromCursorDelta(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	s.setValue(context, widgetBounds, &s.draggingStartValue, s.draggingStartX)
 }
 
-func (s *Slider) setValueFromCursor(context *guigui.Context) {
+func (s *Slider) setValueFromCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 	min := s.abstractNumberInput.MinimumValueBigInt()
 	if min == nil {
 		return
 	}
 
-	b := context.Bounds(s)
-	minX := b.Min.X + (b.Dx()-s.barWidth(context))/2
-	s.setValue(context, min, minX)
+	b := widgetBounds.Bounds()
+	minX := b.Min.X + (b.Dx()-s.barWidth(context, widgetBounds))/2
+	s.setValue(context, widgetBounds, min, minX)
 }
 
-func (s *Slider) setValue(context *guigui.Context, originValue *big.Int, originX int) {
+func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBounds, originValue *big.Int, originX int) {
 	max := s.abstractNumberInput.MaximumValueBigInt()
 	min := s.abstractNumberInput.MinimumValueBigInt()
 	if max == nil || min == nil {
@@ -227,7 +227,7 @@ func (s *Slider) setValue(context *guigui.Context, originValue *big.Int, originX
 	var v big.Int
 	v.Sub(max, min)
 	v.Mul(&v, (&big.Int{}).SetInt64(int64(c.X-originX)))
-	v.Div(&v, (&big.Int{}).SetInt64(int64(s.barWidth(context))))
+	v.Div(&v, (&big.Int{}).SetInt64(int64(s.barWidth(context, widgetBounds))))
 	v.Add(&v, originValue)
 	changed := v.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(s, &v, true)
@@ -236,8 +236,8 @@ func (s *Slider) setValue(context *guigui.Context, originValue *big.Int, originX
 	}
 }
 
-func (s *Slider) barWidth(context *guigui.Context) int {
-	w := context.Bounds(s).Dx()
+func (s *Slider) barWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
+	w := widgetBounds.Bounds().Dx()
 	return w - 2*sliderThumbRadius(context)
 }
 
@@ -245,34 +245,34 @@ func sliderThumbRadius(context *guigui.Context) int {
 	return int(UnitSize(context) * 7 / 16)
 }
 
-func (s *Slider) thumbBounds(context *guigui.Context) image.Rectangle {
+func (s *Slider) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	rate := s.abstractNumberInput.Rate()
 	if math.IsNaN(rate) {
 		return image.Rectangle{}
 	}
-	bounds := context.Bounds(s)
-	x := bounds.Min.X + int(rate*float64(s.barWidth(context)))
+	bounds := widgetBounds.Bounds()
+	x := bounds.Min.X + int(rate*float64(s.barWidth(context, widgetBounds)))
 	y := bounds.Min.Y + (bounds.Dy()-2*sliderThumbRadius(context))/2
 	w := 2 * sliderThumbRadius(context)
 	h := 2 * sliderThumbRadius(context)
 	return image.Rect(x, y, x+w, y+h)
 }
 
-func (s *Slider) CursorShape(context *guigui.Context) (ebiten.CursorShapeType, bool) {
-	if s.canPress(context) || s.dragging {
+func (s *Slider) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	if s.canPress(context, widgetBounds) || s.dragging {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
 }
 
-func (s *Slider) Draw(context *guigui.Context, dst *ebiten.Image) {
+func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	rate := s.abstractNumberInput.Rate()
 
-	b := context.Bounds(s)
+	b := widgetBounds.Bounds()
 	x0 := b.Min.X + sliderThumbRadius(context)
 	x1 := x0
 	if !math.IsNaN(rate) {
-		x1 += int(float64(s.barWidth(context)) * float64(rate))
+		x1 += int(float64(s.barWidth(context, widgetBounds)) * float64(rate))
 	}
 	x2 := b.Max.X - sliderThumbRadius(context)
 	strokeWidth := int(5 * context.Scale())
@@ -304,12 +304,12 @@ func (s *Slider) Draw(context *guigui.Context, dst *ebiten.Image) {
 		draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 	}
 
-	if thumbBounds := s.thumbBounds(context); !thumbBounds.Empty() {
+	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
 		cm := context.ColorMode()
 		thumbColor := draw.ThumbColor(context.ColorMode(), context.IsEnabled(s))
-		if s.isActive(context) {
+		if s.isActive(context, widgetBounds) {
 			thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
-		} else if s.canPress(context) {
+		} else if s.canPress(context, widgetBounds) {
 			thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.575)
 		}
 		thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
@@ -319,16 +319,16 @@ func (s *Slider) Draw(context *guigui.Context, dst *ebiten.Image) {
 	}
 }
 
-func (s *Slider) canPress(context *guigui.Context) bool {
-	return context.IsEnabled(s) && s.isThumbHovered(context) && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !s.dragging
+func (s *Slider) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(s) && s.isThumbHovered(context, widgetBounds) && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !s.dragging
 }
 
-func (s *Slider) isThumbHovered(context *guigui.Context) bool {
-	return context.IsWidgetHitAtCursor(s) && image.Pt(ebiten.CursorPosition()).In(s.thumbBounds(context))
+func (s *Slider) isThumbHovered(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsWidgetHitAtCursor(s) && image.Pt(ebiten.CursorPosition()).In(s.thumbBounds(context, widgetBounds))
 }
 
-func (s *Slider) isActive(context *guigui.Context) bool {
-	return context.IsEnabled(s) && s.isThumbHovered(context) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.dragging
+func (s *Slider) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(s) && s.isThumbHovered(context, widgetBounds) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && s.dragging
 }
 
 func (s *Slider) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
