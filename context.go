@@ -198,10 +198,6 @@ func (c *Context) SetAppLocales(locales []language.Tag) {
 	c.app.requestRedraw(c.app.bounds())
 }
 
-func (c *Context) AppSize() image.Point {
-	return c.app.bounds().Size()
-}
-
 func (c *Context) AppBounds() image.Rectangle {
 	return c.app.bounds()
 }
