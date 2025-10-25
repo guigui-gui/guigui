@@ -224,7 +224,7 @@ func (c *Context) VisibleBounds(widget Widget) image.Rectangle {
 		return b
 	}
 	if widget.ZDelta() != 0 {
-		b := c.Bounds(widget)
+		b := widget.widgetState().bounds
 		state.hasVisibleBoundsCache = true
 		state.visibleBoundsCache = b
 		return b
@@ -233,7 +233,7 @@ func (c *Context) VisibleBounds(widget Widget) image.Rectangle {
 	var b image.Rectangle
 	parentVB := c.VisibleBounds(parent)
 	if !parentVB.Empty() {
-		b = parentVB.Intersect(c.Bounds(widget))
+		b = parentVB.Intersect(widget.widgetState().bounds)
 	}
 	state.hasVisibleBoundsCache = true
 	state.visibleBoundsCache = b
