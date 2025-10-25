@@ -195,7 +195,7 @@ func (p *Popup) IsWidgetOrBackgroundHitAtCursor(context *guigui.Context, target 
 	if context.IsWidgetHitAtCursor(target) {
 		return true
 	}
-	if context.IsWidgetHitAtCursor(&p.background) && image.Pt(ebiten.CursorPosition()).In(context.VisibleBounds(target)) {
+	if image.Pt(ebiten.CursorPosition()).In(context.VisibleBounds(target)) {
 		return true
 	}
 	return false
