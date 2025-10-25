@@ -105,6 +105,7 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, contentSize image.Poi
 	if s.onceBuilt {
 		s.showBars(context)
 	}
+	guigui.RequestRedraw(s)
 }
 
 func (s *scrollOverlay) setDragging(draggingX, draggingY bool) {

@@ -146,7 +146,7 @@ func (t *Table[T]) Layout(context *guigui.Context, widget guigui.Widget) image.R
 	}
 
 	offsetX, _ := t.list.ScrollOffset()
-	pt := context.Bounds(&t.list).Min
+	pt := context.Bounds(t).Min
 	pt.X += int(offsetX)
 	pt.X += listItemPadding(context)
 	for i := range t.columnTexts {

@@ -310,9 +310,11 @@ func (b *baseList[T]) Update(context *guigui.Context) error {
 	b.scrollOverlay.SetContentSize(context, cs)
 
 	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
-		y := b.itemYFromIndex(context, idx) - b.headerHeight - RoundedCornerRadius(context)
-		b.scrollOverlay.SetOffset(context, cs, 0, float64(-y))
-		b.indexToJumpPlus1 = 0
+		if y, ok := b.itemYFromIndex(context, idx); ok {
+			y -= b.headerHeight + RoundedCornerRadius(context)
+			b.scrollOverlay.SetOffset(context, cs, 0, float64(-y))
+			b.indexToJumpPlus1 = 0
+		}
 	}
 
 	return nil
@@ -360,22 +362,13 @@ func (b *baseList[T]) hoveredItemIndex(context *guigui.Context) int {
 		return -1
 	}
 	_, y := ebiten.CursorPosition()
-	_, offsetY := b.scrollOverlay.Offset()
-	y -= RoundedCornerRadius(context) + b.headerHeight
-	y -= context.Bounds(b).Min.Y
-	y -= int(offsetY)
-	index := -1
-	var cy int
 	for i := range b.visibleItems() {
-		item, _ := b.abstractList.ItemByIndex(i)
-		h := context.Bounds(item.Content).Dy()
-		if cy <= y && y < cy+h {
-			index = i
-			break
+		bounds := b.itemBoundsForLayoutFromIndex[i]
+		if y >= bounds.Min.Y && y < bounds.Max.Y {
+			return i
 		}
-		cy += h
 	}
-	return index
+	return -1
 }
 
 func (b *baseList[T]) SetItems(items []baseListItem[T]) {
@@ -544,17 +537,19 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.Handle
 	return guigui.HandleInputResult{}
 }
 
-func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) int {
-	y := RoundedCornerRadius(context) + b.headerHeight
-	for i := range b.visibleItems() {
-		if i == index {
-			break
-		}
-		item, _ := b.abstractList.ItemByIndex(i)
-		y += context.Bounds(item.Content).Dy()
+func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
+	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) {
+		return 0, false
 	}
-	y = b.adjustItemY(context, y)
-	return y
+
+	var itemY int
+	if index == len(b.itemBoundsForLayoutFromIndex) {
+		itemY = b.itemBoundsForLayoutFromIndex[index-1].Max.Y
+	} else {
+		itemY = b.itemBoundsForLayoutFromIndex[index].Min.Y
+	}
+	_, offsetY := b.scrollOverlay.Offset()
+	return itemY - context.Bounds(b).Min.Y - int(offsetY), true
 }
 
 func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
@@ -699,10 +694,12 @@ func (b *baseList[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
 		x1 := x0 + float32(b.contentSize(context).X)
 		x1 -= 2 * float32(RoundedCornerRadius(context))
 		y := float32(p.Y)
-		y += float32(b.itemYFromIndex(context, b.dragDstIndexPlus1-1))
-		_, offsetY := b.scrollOverlay.Offset()
-		y += float32(offsetY)
-		vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
+		if itemY, ok := b.itemYFromIndex(context, b.dragDstIndexPlus1-1); ok {
+			y += float32(itemY)
+			_, offsetY := b.scrollOverlay.Offset()
+			y += float32(offsetY)
+			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
+		}
 	}
 }
 

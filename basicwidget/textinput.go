@@ -279,9 +279,10 @@ func (t *TextInput) Layout(context *guigui.Context, widget guigui.Widget) image.
 	case &t.focus:
 		w := textInputFocusBorderWidth(context)
 		p := context.Bounds(t).Min.Add(image.Pt(-w, -w))
+		s := context.Bounds(t).Size().Add(image.Pt(2*textInputFocusBorderWidth(context), 2*textInputFocusBorderWidth(context)))
 		return image.Rectangle{
 			Min: p,
-			Max: p.Add(t.focus.Measure(context, guigui.Constraints{})),
+			Max: p.Add(s),
 		}
 	}
 	return image.Rectangle{}
@@ -380,19 +381,14 @@ type textInputFocus struct {
 }
 
 func (t *textInputFocus) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := context.Bounds(t.textInput)
+	bounds := context.Bounds(t)
 	w := textInputFocusBorderWidth(context)
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
-	bounds = bounds.Inset(-w)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), draw.RoundedRectBorderTypeRegular)
 }
 
 func (t *textInputFocus) ZDelta() int {
 	return 1
-}
-
-func (t *textInputFocus) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return context.Bounds(t.textInput).Size().Add(image.Pt(2*textInputFocusBorderWidth(context), 2*textInputFocusBorderWidth(context)))
 }
 
 func (t *textInputFocus) PassThrough() bool {
