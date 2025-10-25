@@ -700,12 +700,9 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 }
 
 func (a *app) isWidgetHit(widget Widget) bool {
-	// Now this condition is removed temporarily.
-	// For example, this affects a detection of hovering a child widget in a parent widget.
-	// TODO: Revisit this condition.
-	/*if !widget.widgetState().isInTree(a.buildCount) {
+	if !widget.widgetState().isInTree(a.buildCount) {
 		return false
-	}*/
+	}
 
 	// hitWidgets are ordered by descending z values.
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
