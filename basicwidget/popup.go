@@ -42,10 +42,10 @@ const (
 type Popup struct {
 	guigui.DefaultWidget
 
-	background popupBackground
-	shadow     popupShadow
-	content    popupContent
-	frame      popupFrame
+	blurredBackground popupBlurredBackground
+	shadow            popupShadow
+	content           popupContent
+	frame             popupFrame
 
 	openingCount           int
 	showing                bool
@@ -107,7 +107,9 @@ func (p *Popup) SetOnClosed(f func(reason PopupClosedReason)) {
 
 func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.openingRate() > 0 {
-		adder.AddChild(&p.background)
+		if p.backgroundBlurred {
+			adder.AddChild(&p.blurredBackground)
+		}
 		adder.AddChild(&p.shadow)
 		adder.AddChild(&p.content)
 		adder.AddChild(&p.frame)
@@ -124,26 +126,43 @@ func (p *Popup) Update(context *guigui.Context) error {
 		p.hasNextContentPosition = false
 	}
 
-	p.background.popup = p
-	p.shadow.popup = p
-	p.content.popup = p
-	p.frame.popup = p
+	p.shadow.SetContentBounds(p.contentBounds(context))
 
 	return nil
 }
 
 func (p *Popup) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
 	switch widget {
-	case &p.background:
+	case &p.blurredBackground:
 		return context.AppBounds()
 	case &p.shadow:
 		return context.AppBounds()
 	case &p.content:
 		return p.contentBounds(context)
 	case &p.frame:
-		return context.AppBounds()
+		return p.contentBounds(context)
 	}
 	return image.Rectangle{}
+}
+
+func (p *Popup) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+	if p.showing || p.hiding {
+		return guigui.AbortHandlingInputByWidget(p)
+	}
+
+	if !p.closeByClickingOutside {
+		return guigui.AbortHandlingInputByWidget(p)
+	}
+
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		p.close(PopupClosedReasonClickOutside)
+		// Continue handling inputs so that clicking a right button can be handled by other widgets.
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+			return guigui.HandleInputResult{}
+		}
+	}
+
+	return guigui.AbortHandlingInputByWidget(p)
 }
 
 func (p *Popup) SetOpen(open bool) {
@@ -241,7 +260,9 @@ func (p *Popup) Tick(context *guigui.Context) error {
 		}
 	}
 
-	// SetOpacity cannot be called for p.background so far.
+	p.blurredBackground.SetOpeningRate(p.openingRate())
+
+	// SetOpacity cannot be called for p.blurredBackground so far.
 	// If opacity is less than 1, the dst argument of Draw will an empty image in the current implementation.
 	// TODO: This is too tricky. Refactor this.
 	context.SetOpacity(&p.shadow, p.openingRate())
@@ -261,8 +282,6 @@ func (p *Popup) PassThrough() bool {
 
 type popupContent struct {
 	guigui.DefaultWidget
-
-	popup *Popup
 
 	content guigui.Widget
 }
@@ -304,57 +323,35 @@ func (p *popupContent) ZDelta() int {
 
 type popupFrame struct {
 	guigui.DefaultWidget
-
-	popup *Popup
 }
 
 func (p *popupFrame) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := p.popup.contentBounds(context)
+	bounds := context.Bounds(p)
 	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeOutset)
-}
-
-func (p *popupFrame) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return p.popup.Measure(context, constraints)
 }
 
 func (p *popupFrame) ZDelta() int {
 	return 1
 }
 
-type popupBackground struct {
+type popupBlurredBackground struct {
 	guigui.DefaultWidget
 
-	popup *Popup
-
 	backgroundCache *ebiten.Image
+
+	openingRate float64
 }
 
-func (p *popupBackground) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
-	if p.popup.showing || p.popup.hiding {
-		return guigui.AbortHandlingInputByWidget(p)
-	}
-
-	if context.IsWidgetHitAtCursor(p) {
-		if p.popup.closeByClickingOutside {
-			if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-				p.popup.close(PopupClosedReasonClickOutside)
-				// Continue handling inputs so that clicking a right button can be handled by other widgets.
-				if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-					return guigui.HandleInputResult{}
-				}
-			}
-		}
-	}
-
-	return guigui.AbortHandlingInputByWidget(p)
-}
-
-func (p *popupBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
-	if !p.popup.backgroundBlurred {
+func (p *popupBlurredBackground) SetOpeningRate(rate float64) {
+	if p.openingRate == rate {
 		return
 	}
+	p.openingRate = rate
+	guigui.RequestRedraw(p)
+}
 
+func (p *popupBlurredBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
 	bounds := context.Bounds(p)
 	if p.backgroundCache != nil && !bounds.In(p.backgroundCache.Bounds()) {
 		p.backgroundCache.Deallocate()
@@ -364,7 +361,7 @@ func (p *popupBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
 		p.backgroundCache = ebiten.NewImageWithOptions(bounds, nil)
 	}
 
-	rate := p.popup.openingRate()
+	rate := p.openingRate
 
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
@@ -374,32 +371,32 @@ func (p *popupBackground) Draw(context *guigui.Context, dst *ebiten.Image) {
 	draw.DrawBlurredImage(context, dst, p.backgroundCache, rate)
 }
 
-func (p *popupBackground) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return p.popup.Measure(context, constraints)
-}
-
-func (p *popupBackground) ZDelta() int {
+func (p *popupBlurredBackground) ZDelta() int {
 	return 1
 }
 
 type popupShadow struct {
 	guigui.DefaultWidget
 
-	popup *Popup
+	contentBounds image.Rectangle
+}
+
+func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
+	if p.contentBounds == bounds {
+		return
+	}
+	p.contentBounds = bounds
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupShadow) Draw(context *guigui.Context, dst *ebiten.Image) {
-	bounds := p.popup.contentBounds(context)
+	bounds := p.contentBounds
 	bounds.Min.X -= int(16 * context.Scale())
 	bounds.Max.X += int(16 * context.Scale())
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
 	clr := draw.ScaleAlpha(color.Black, 0.2)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
-}
-
-func (p *popupShadow) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return p.popup.Measure(context, constraints)
 }
 
 func (p *popupShadow) ZDelta() int {
