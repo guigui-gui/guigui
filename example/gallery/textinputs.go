@@ -299,5 +299,6 @@ func (c *inlineTextInputContainer) Layout(context *guigui.Context, widget guigui
 }
 
 func (c *inlineTextInputContainer) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
 	return c.textInput.Measure(context, constraints)
 }
