@@ -152,7 +152,8 @@ func (p *Popups) HandlePointingInput(context *guigui.Context) guigui.HandleInput
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		// Use IsWidgetOrBackgroundHitAtCursor. context.IsWidgetHitAtCursor doesn't work when a popup's transparent background exists.
 		// This matters especially when reopening a popup menu by right-clicking the same place.
-		if p.contextMenuPopup.IsWidgetOrBackgroundHitAtCursor(context, &p.contextMenuPopupClickHereText) {
+		if context.IsWidgetHitAtCursor(&p.contextMenuPopupClickHereText) ||
+			image.Pt(ebiten.CursorPosition()).In(context.VisibleBounds(&p.contextMenuPopupClickHereText)) {
 			p.contextMenuPopupPosition = image.Pt(ebiten.CursorPosition())
 			p.contextMenuPopup.SetOpen(true)
 			return guigui.HandleInputByWidget(p)

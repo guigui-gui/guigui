@@ -210,16 +210,6 @@ func (p *Popup) close(reason PopupClosedReason) {
 	p.openAfterClose = false
 }
 
-func (p *Popup) IsWidgetOrBackgroundHitAtCursor(context *guigui.Context, target guigui.Widget) bool {
-	if context.IsWidgetHitAtCursor(target) {
-		return true
-	}
-	if image.Pt(ebiten.CursorPosition()).In(context.VisibleBounds(target)) {
-		return true
-	}
-	return false
-}
-
 func (p *Popup) Tick(context *guigui.Context) error {
 	if p.showing {
 		context.SetFocused(p, true)
