@@ -1218,10 +1218,6 @@ func (t *textCursor) ZDelta() int {
 	return 1
 }
 
-func (t *textCursor) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return t.text.cursorBounds(context).Size()
-}
-
 func (t *textCursor) PassThrough() bool {
 	return true
 }
