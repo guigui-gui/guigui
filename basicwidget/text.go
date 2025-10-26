@@ -1204,8 +1204,14 @@ func (t *textCursor) Draw(context *guigui.Context, dst *ebiten.Image) {
 	if !t.shouldRenderCursor(context, t.text) {
 		return
 	}
-	b := context.Bounds(t)
-	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
+	b := t.text.cursorBounds(context)
+	tb := context.VisibleBounds(t.text)
+	tb.Min.X -= textCursorWidth(context) / 2
+	tb.Max.X += textCursorWidth(context) / 2
+	if !b.Overlaps(tb) {
+		return
+	}
+	vector.FillRect(dst.SubImage(tb).(*ebiten.Image), float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
 }
 
 func (t *textCursor) ZDelta() int {
