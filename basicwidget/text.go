@@ -1211,7 +1211,7 @@ func (t *textCursor) Draw(context *guigui.Context, dst *ebiten.Image) {
 	if !b.Overlaps(tb) {
 		return
 	}
-	vector.DrawFilledRect(dst.SubImage(tb).(*ebiten.Image), float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
+	vector.FillRect(dst.SubImage(tb).(*ebiten.Image), float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
 }
 
 func (t *textCursor) ZDelta() int {
