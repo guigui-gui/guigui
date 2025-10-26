@@ -224,7 +224,10 @@ func (t *Text) Update(context *guigui.Context) error {
 func (t *Text) Layout(context *guigui.Context, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &t.cursor:
-		return t.cursorBounds(context)
+		vb := context.VisibleBounds(t)
+		vb.Min.X -= textCursorWidth(context) / 2
+		vb.Max.X += textCursorWidth(context) / 2
+		return t.cursorBounds(context).Intersect(vb)
 	}
 	return image.Rectangle{}
 }
@@ -1205,13 +1208,7 @@ func (t *textCursor) Draw(context *guigui.Context, dst *ebiten.Image) {
 		return
 	}
 	b := t.text.cursorBounds(context)
-	tb := context.VisibleBounds(t.text)
-	tb.Min.X -= textCursorWidth(context) / 2
-	tb.Max.X += textCursorWidth(context) / 2
-	if !b.Overlaps(tb) {
-		return
-	}
-	vector.FillRect(dst.SubImage(tb).(*ebiten.Image), float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
+	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
 }
 
 func (t *textCursor) ZDelta() int {
