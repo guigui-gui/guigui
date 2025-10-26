@@ -1090,9 +1090,6 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, bounds image.Recta
 
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
 	textBounds := t.textContentBounds(context, bounds)
-	if !textBounds.Overlaps(context.VisibleBounds(t)) && t.textToDraw(context, showComposition) != "" {
-		return textutil.TextPosition{}, false
-	}
 	txt := t.textToDraw(context, showComposition)
 	op := &textutil.Options{
 		AutoWrap:         t.autoWrap,
