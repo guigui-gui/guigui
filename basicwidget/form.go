@@ -54,7 +54,8 @@ func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 func (f *Form) Update(context *guigui.Context) error {
 	f.cachedItemBounds = slices.Delete(f.cachedItemBounds, 0, len(f.cachedItemBounds))
 	clear(f.cachedContentBounds)
-	f.cachedItemBounds, f.cachedContentBounds = f.appendItemBounds(f.cachedItemBounds, f.cachedContentBounds, context, context.Bounds(f).Dx())
+	pt := context.Bounds(f).Min
+	f.cachedItemBounds, f.cachedContentBounds = f.appendItemBounds(f.cachedItemBounds, f.cachedContentBounds, context, pt, context.Bounds(f).Dx())
 	return nil
 }
 
@@ -67,12 +68,11 @@ func (f *Form) isItemOmitted(context *guigui.Context, item FormItem) bool {
 		(item.SecondaryWidget == nil || !context.IsVisible(item.SecondaryWidget))
 }
 
-func (f *Form) appendItemBounds(itemBounds []image.Rectangle, contentBounds map[guigui.Widget]image.Rectangle, context *guigui.Context, width int) ([]image.Rectangle, map[guigui.Widget]image.Rectangle) {
+func (f *Form) appendItemBounds(itemBounds []image.Rectangle, contentBounds map[guigui.Widget]image.Rectangle, context *guigui.Context, point image.Point, width int) ([]image.Rectangle, map[guigui.Widget]image.Rectangle) {
 	if contentBounds == nil {
 		contentBounds = map[guigui.Widget]image.Rectangle{}
 	}
 
-	bounds := context.Bounds(f)
 	paddingS := formItemPadding(context)
 
 	var y int
@@ -90,17 +90,16 @@ func (f *Form) appendItemBounds(itemBounds []image.Rectangle, contentBounds map[
 		if item.SecondaryWidget != nil {
 			secondaryS = item.SecondaryWidget.Measure(context, guigui.Constraints{})
 		}
-		newLine := item.PrimaryWidget != nil && primaryS.X+secondaryS.X+2*paddingS.X > bounds.Dx()
+		newLine := item.PrimaryWidget != nil && primaryS.X+secondaryS.X+2*paddingS.X > width
 		var baseH int
 		if newLine {
 			baseH = max(primaryS.Y+paddingS.Y+secondaryS.Y, minFormItemHeight(context)) + 2*paddingS.Y
 		} else {
 			baseH = max(primaryS.Y, secondaryS.Y, minFormItemHeight(context)) + 2*paddingS.Y
 		}
-		p := bounds.Min
 		b := image.Rectangle{
-			Min: p.Add(image.Pt(0, y)),
-			Max: p.Add(image.Pt(width, y+baseH)),
+			Min: point.Add(image.Pt(0, y)),
+			Max: point.Add(image.Pt(width, y+baseH)),
 		}
 		itemBounds = append(itemBounds, b)
 
@@ -203,7 +202,8 @@ func (f *Form) Measure(context *guigui.Context, constraints guigui.Constraints) 
 
 	f.cachedItemBoundsForMeasure = slices.Delete(f.cachedItemBoundsForMeasure, 0, len(f.cachedItemBoundsForMeasure))
 	clear(f.cachedContentBoundsForMeasure)
-	f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure = f.appendItemBounds(f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure, context, w)
+	// As only the size matters, the point can be zero.
+	f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure = f.appendItemBounds(f.cachedItemBoundsForMeasure, f.cachedContentBoundsForMeasure, context, image.Point{}, w)
 	if len(f.cachedItemBoundsForMeasure) == 0 {
 		return image.Pt(w, 0)
 	}
