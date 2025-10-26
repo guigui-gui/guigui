@@ -296,7 +296,7 @@ func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context) {
 	bounds.Max.Y -= paddingBottom
 	bounds.Min.Y += paddingTop
 
-	dx, dy := t.text.adjustScrollOffset(context, bounds)
+	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context))
 	t.scrollOverlay.SetOffsetByDelta(context, t.scrollContentSize(context), dx, dy)
 }
 
@@ -304,7 +304,7 @@ func (t *TextInput) HandlePointingInput(context *guigui.Context) guigui.HandleIn
 	cp := image.Pt(ebiten.CursorPosition())
 	if context.IsWidgetHitAtCursor(t) {
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			t.text.handleClick(context, cp)
+			t.text.handleClick(context, t.textBounds(context), cp)
 			return guigui.HandleInputByWidget(t)
 		}
 	}

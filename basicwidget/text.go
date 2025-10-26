@@ -479,8 +479,8 @@ func (t *Text) setKeepTailingSpace(keep bool) {
 	guigui.RequestRedraw(t)
 }
 
-func (t *Text) actualTextBounds(context *guigui.Context) image.Rectangle {
-	b := context.Bounds(t)
+func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
+	b := bounds
 	ts := t.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
 
 	switch t.vAlign {
@@ -532,7 +532,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 	cursorPosition := image.Pt(ebiten.CursorPosition())
 	if t.dragging {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-			idx := t.textIndexFromPosition(context, cursorPosition, false)
+			idx := t.textIndexFromPosition(context, context.Bounds(t), cursorPosition, false)
 			start, end := idx, idx
 			if t.selectionDragStartPlus1-1 >= 0 {
 				start = min(start, t.selectionDragStartPlus1-1)
@@ -557,7 +557,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		if context.IsWidgetHitAtCursor(t) {
-			t.handleClick(context, cursorPosition)
+			t.handleClick(context, context.Bounds(t), cursorPosition)
 			return guigui.HandleInputByWidget(t)
 		}
 		context.SetFocused(t, false)
@@ -579,8 +579,8 @@ func (t *Text) HandlePointingInput(context *guigui.Context) guigui.HandleInputRe
 	return guigui.HandleInputResult{}
 }
 
-func (t *Text) handleClick(context *guigui.Context, cursorPosition image.Point) {
-	idx := t.textIndexFromPosition(context, cursorPosition, false)
+func (t *Text) handleClick(context *guigui.Context, bounds image.Rectangle, cursorPosition image.Point) {
+	idx := t.textIndexFromPosition(context, bounds, cursorPosition, false)
 
 	if ebiten.Tick()-t.lastClickTick < int64(doubleClickLimitInTicks()) && t.lastClickTextIndex == idx {
 		t.clickCount++
@@ -688,7 +688,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 		origText := t.field.Text()
 		start, _ := t.field.Selection()
 		var processed bool
-		if pos, ok := t.textPosition(context, start, false); ok {
+		if pos, ok := t.textPosition(context, context.Bounds(t), start, false); ok {
 			var err error
 			processed, err = t.field.HandleInputWithBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
 			if err != nil {
@@ -834,9 +834,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 			idx = end
 			moveEnd = true
 		}
-		if pos, ok := t.textPosition(context, idx, false); ok {
+		if pos, ok := t.textPosition(context, context.Bounds(t), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 - lh
-			idx := t.textIndexFromPosition(context, image.Pt(int(pos.X), int(y)), false)
+			idx := t.textIndexFromPosition(context, context.Bounds(t), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveEnd {
 					t.setTextAndSelection(t.field.Text(), start, idx, idx, true)
@@ -859,9 +859,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context) guigui.HandleInputResu
 			idx = start
 			moveStart = true
 		}
-		if pos, ok := t.textPosition(context, idx, false); ok {
+		if pos, ok := t.textPosition(context, context.Bounds(t), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 + lh
-			idx := t.textIndexFromPosition(context, image.Pt(int(pos.X), int(y)), false)
+			idx := t.textIndexFromPosition(context, context.Bounds(t), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveStart {
 					t.setTextAndSelection(t.field.Text(), idx, end, idx, true)
@@ -949,7 +949,7 @@ func (t *Text) commit() {
 }
 
 func (t *Text) Draw(context *guigui.Context, dst *ebiten.Image) {
-	textBounds := t.actualTextBounds(context)
+	textBounds := t.textContentBounds(context, context.Bounds(t))
 	if !textBounds.Overlaps(context.VisibleBounds(t)) {
 		return
 	}
@@ -1056,16 +1056,16 @@ func (t *Text) cursorPosition(context *guigui.Context) (position textutil.TextPo
 		return textutil.TextPosition{}, false
 	}
 
-	return t.textPosition(context, e, true)
+	return t.textPosition(context, context.Bounds(t), e, true)
 }
 
-func (t *Text) textIndexFromPosition(context *guigui.Context, position image.Point, showComposition bool) int {
-	textBounds := t.actualTextBounds(context)
-	if position.Y < textBounds.Min.Y {
+func (t *Text) textIndexFromPosition(context *guigui.Context, bounds image.Rectangle, position image.Point, showComposition bool) int {
+	textContentBounds := t.textContentBounds(context, bounds)
+	if position.Y < textContentBounds.Min.Y {
 		return 0
 	}
 	txt := t.textToDraw(context, showComposition)
-	if position.Y >= textBounds.Max.Y {
+	if position.Y >= textContentBounds.Max.Y {
 		return len(txt)
 	}
 	op := &textutil.Options{
@@ -1077,16 +1077,16 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, position image.Poi
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 	}
-	position = position.Sub(textBounds.Min)
-	idx := textutil.TextIndexFromPosition(textBounds.Dx(), position, txt, op)
+	position = position.Sub(textContentBounds.Min)
+	idx := textutil.TextIndexFromPosition(textContentBounds.Dx(), position, txt, op)
 	if idx < 0 || idx > len(txt) {
 		return -1
 	}
 	return idx
 }
 
-func (t *Text) textPosition(context *guigui.Context, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
-	textBounds := t.actualTextBounds(context)
+func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
+	textBounds := t.textContentBounds(context, bounds)
 	if !textBounds.Overlaps(context.VisibleBounds(t)) && t.textToDraw(context, showComposition) != "" {
 		return textutil.TextPosition{}, false
 	}
@@ -1128,7 +1128,7 @@ func (t *Text) cursorBounds(context *guigui.Context) image.Rectangle {
 	return image.Rect(int(pos.X)-w/2, int(pos.Top), int(pos.X)+w/2, int(pos.Bottom))
 }
 
-func (t *Text) adjustScrollOffset(context *guigui.Context, bounds image.Rectangle) (dx, dy float64) {
+func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.Rectangle, textBounds image.Rectangle) (dx, dy float64) {
 	start, end, ok := t.selectionToDraw(context)
 	if !ok {
 		return
@@ -1139,13 +1139,13 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, bounds image.Rectangl
 	t.prevStart = start
 	t.prevEnd = end
 
-	if pos, ok := t.textPosition(context, end, true); ok {
-		dx += min(float64(bounds.Max.X)-pos.X, 0)
-		dy += min(float64(bounds.Max.Y)-pos.Bottom, 0)
+	if pos, ok := t.textPosition(context, textBounds, end, true); ok {
+		dx += min(float64(contentBounds.Max.X)-pos.X, 0)
+		dy += min(float64(contentBounds.Max.Y)-pos.Bottom, 0)
 	}
-	if pos, ok := t.textPosition(context, start, true); ok {
-		dx += max(float64(bounds.Min.X)-pos.X, 0)
-		dy += max(float64(bounds.Min.Y)-pos.Top, 0)
+	if pos, ok := t.textPosition(context, textBounds, start, true); ok {
+		dx += max(float64(contentBounds.Min.X)-pos.X, 0)
+		dy += max(float64(contentBounds.Min.Y)-pos.Top, 0)
 	}
 	return dx, dy
 }
