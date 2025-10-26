@@ -705,12 +705,14 @@ func (b *baseList[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
 
 func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	// Measure is mainly for a menu list.
-	cw := b.contentWidth(context)
+	var itemConstraints guigui.Constraints
+	if fixedWidth, ok := constraints.FixedWidth(); ok {
+		itemConstraints = guigui.FixedWidthConstraints(fixedWidth - 2*listItemPadding(context))
+	}
 	var size image.Point
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
-		itemW := cw - 2*listItemPadding(context) - item.IndentLevel*listItemIndentSize(context)
-		s := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW))
+		s := item.Content.Measure(context, itemConstraints)
 		size.X = max(size.X, s.X+item.IndentLevel*listItemIndentSize(context))
 		size.Y += s.Y
 	}
