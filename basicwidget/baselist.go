@@ -423,21 +423,18 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.Handle
 			if hovered {
 				b.hoveredItemIndexPlus1 = i + 1
 			}
-
-			if b.checkmarkIndexPlus1 == i+1 {
-				colorMode := context.ColorMode()
-				if hovered {
-					colorMode = guigui.ColorModeDark
-				}
-
-				checkImg, err := theResourceImages.Get("check", colorMode)
-				if err != nil {
-					panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
-				}
-				b.checkmark.SetImage(checkImg)
-			}
 		}
 	}
+
+	colorMode := context.ColorMode()
+	if b.hoveredItemIndexPlus1 == b.checkmarkIndexPlus1 {
+		colorMode = guigui.ColorModeDark
+	}
+	checkImg, err := theResourceImages.Get("check", colorMode)
+	if err != nil {
+		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
+	}
+	b.checkmark.SetImage(checkImg)
 
 	if b.isHoveringVisible() || b.hasMovableItems() {
 		if b.lastHoveredItemIndexPlus1 != b.hoveredItemIndexPlus1 {
