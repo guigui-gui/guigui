@@ -157,6 +157,7 @@ func (p *Popup) HandlePointingInput(context *guigui.Context) guigui.HandleInputR
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		p.close(PopupClosedReasonClickOutside)
 		// Continue handling inputs so that clicking a right button can be handled by other widgets.
+		// This is a little tricky, but this is needed to reopen context menu popups.
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 			return guigui.HandleInputResult{}
 		}
@@ -177,6 +178,7 @@ func (p *Popup) SetOpen(open bool) {
 		}
 		p.showing = true
 		p.hiding = false
+		p.shadow.SetPassThrough(p.backgroundPassThrough())
 	} else {
 		p.close(PopupClosedReasonFuncCall)
 	}
@@ -208,6 +210,11 @@ func (p *Popup) close(reason PopupClosedReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
+	p.shadow.SetPassThrough(p.backgroundPassThrough())
+}
+
+func (p *Popup) backgroundPassThrough() bool {
+	return p.openingCount == 0 || p.showing || p.hiding
 }
 
 func (p *Popup) Tick(context *guigui.Context) error {
@@ -250,6 +257,7 @@ func (p *Popup) Tick(context *guigui.Context) error {
 		}
 	}
 
+	p.shadow.SetPassThrough(p.backgroundPassThrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
 
 	// SetOpacity cannot be called for p.blurredBackground so far.
@@ -369,6 +377,8 @@ type popupShadow struct {
 	guigui.DefaultWidget
 
 	contentBounds image.Rectangle
+
+	passThrough bool
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
@@ -377,6 +387,10 @@ func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
 	}
 	p.contentBounds = bounds
 	guigui.RequestRedraw(p)
+}
+
+func (p *popupShadow) SetPassThrough(passThrough bool) {
+	p.passThrough = passThrough
 }
 
 func (p *popupShadow) Draw(context *guigui.Context, dst *ebiten.Image) {
@@ -391,4 +405,8 @@ func (p *popupShadow) Draw(context *guigui.Context, dst *ebiten.Image) {
 
 func (p *popupShadow) ZDelta() int {
 	return 1
+}
+
+func (p *popupShadow) PassThrough() bool {
+	return p.passThrough
 }

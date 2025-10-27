@@ -70,11 +70,13 @@ type app struct {
 	buildCount int64
 	skipBuild  bool
 
-	// hitWidgets are widgets and their z values at the cursor position.
-	// hitWidgets are ordered by descending z values.
+	// maybeHitWidgets are widgets and their z values at the cursor position.
+	// maybeHitWidgets are ordered by descending z values.
 	//
 	// Z values are fixed values just after a tree construction, so they are not changed during buildWidgets.
-	hitWidgets []widgetAndZ
+	//
+	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
+	maybeHitWidgets []widgetAndZ
 
 	invalidatedRegions image.Rectangle
 
@@ -479,9 +481,9 @@ func (a *app) updateHitWidgets() {
 	}
 	a.lastCursorPosition = pt
 
-	a.hitWidgets = slices.Delete(a.hitWidgets, 0, len(a.hitWidgets))
-	a.hitWidgets = a.appendWidgetsAt(a.hitWidgets, pt, a.root, true)
-	slices.SortStableFunc(a.hitWidgets, func(a, b widgetAndZ) int {
+	a.maybeHitWidgets = slices.Delete(a.maybeHitWidgets, 0, len(a.maybeHitWidgets))
+	a.maybeHitWidgets = a.appendWidgetsAt(a.maybeHitWidgets, pt, a.root, true)
+	slices.SortStableFunc(a.maybeHitWidgets, func(a, b widgetAndZ) int {
 		return b.z - a.z
 	})
 }
@@ -548,7 +550,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 
 func (a *app) cursorShape() bool {
 	var firstZ int
-	for i, wz := range a.hitWidgets {
+	for i, wz := range a.maybeHitWidgets {
 		if i == 0 {
 			firstZ = wz.z
 		}
@@ -703,20 +705,30 @@ func (a *app) isWidgetHit(widget Widget) bool {
 	if !widget.widgetState().isInTree(a.buildCount) {
 		return false
 	}
+	if !widget.widgetState().isVisible() {
+		return false
+	}
+	if widget.PassThrough() {
+		return false
+	}
 
 	// hitWidgets are ordered by descending z values.
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
-	for _, wz := range a.hitWidgets {
+	for _, wz := range a.maybeHitWidgets {
 		z1 := wz.z
 		z2 := widget.widgetState().z
 		if z1 > z2 {
 			// w overlaps widget at point.
-			return false
+			if wz.widget.widgetState().isVisible() && !wz.widget.PassThrough() {
+				return false
+			}
+			continue
 		}
 		if z1 < z2 {
 			// The same z value no longer exists.
 			return false
 		}
+
 		if wz.widget.widgetState() == widget.widgetState() {
 			return true
 		}
@@ -725,15 +737,6 @@ func (a *app) isWidgetHit(widget Widget) bool {
 }
 
 func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Widget, parentHit bool) []widgetAndZ {
-	// Avoid (*widgetState).isVisible for performance.
-	// These check parent widget states unnecessarily.
-	if widget.widgetState().hidden {
-		return widgets
-	}
-	if widget.PassThrough() {
-		return widgets
-	}
-
 	var hit bool
 	if parentHit || widget.ZDelta() != 0 {
 		hit = point.In(a.context.VisibleBounds(widget))
