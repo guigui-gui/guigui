@@ -124,7 +124,7 @@ func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 		if !l.list.isHoveringVisible() {
 			return -1
 		}
-		index = l.list.hoveredItemIndex(context)
+		index = l.list.hoveredItemIndexPlus1 - 1
 	}
 	if index < 0 || index >= len(l.listItemWidgets) {
 		return -1

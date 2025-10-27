@@ -55,11 +55,12 @@ type baseList[T comparable] struct {
 	listFrame      listFrame[T]
 	scrollOverlay  scrollOverlay
 
-	abstractList               abstractList[T, baseListItem[T]]
-	stripeVisible              bool
-	style                      ListStyle
-	checkmarkIndexPlus1        int
-	lastHoverredItemIndexPlus1 int
+	abstractList              abstractList[T, baseListItem[T]]
+	stripeVisible             bool
+	style                     ListStyle
+	checkmarkIndexPlus1       int
+	hoveredItemIndexPlus1     int
+	lastHoveredItemIndexPlus1 int
 
 	indexToJumpPlus1        int
 	dragSrcIndexPlus1       int
@@ -207,8 +208,6 @@ func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAd
 func (b *baseList[T]) Update(context *guigui.Context) error {
 	cw := b.contentWidth(context)
 
-	// TODO: Do not call HoveredItemIndex in Build (#52).
-	hoveredItemIndex := b.hoveredItemIndex(context)
 	p := context.Bounds(b).Min
 	offsetX, offsetY := b.scrollOverlay.Offset()
 	p.X += listItemPadding(context) + int(offsetX)
@@ -227,17 +226,6 @@ func (b *baseList[T]) Update(context *guigui.Context) error {
 		contentSize := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW))
 
 		if b.checkmarkIndexPlus1 == i+1 {
-			colorMode := context.ColorMode()
-			if i == hoveredItemIndex {
-				colorMode = guigui.ColorModeDark
-			}
-
-			checkImg, err := theResourceImages.Get("check", colorMode)
-			if err != nil {
-				return err
-			}
-			b.checkmark.SetImage(checkImg)
-
 			imgSize := listItemCheckmarkSize(context)
 			imgP := p
 			imgP.X += item.IndentLevel * listItemIndentSize(context)
@@ -357,20 +345,6 @@ func (b *baseList[T]) SelectedItemIndex() int {
 	return b.abstractList.SelectedItemIndex()
 }
 
-func (b *baseList[T]) hoveredItemIndex(context *guigui.Context) int {
-	if !context.IsWidgetHitAtCursor(b) {
-		return -1
-	}
-	_, y := ebiten.CursorPosition()
-	for i := range b.visibleItems() {
-		bounds := b.itemBoundsForLayoutFromIndex[i]
-		if y >= bounds.Min.Y && y < bounds.Max.Y {
-			return i
-		}
-	}
-	return -1
-}
-
 func (b *baseList[T]) SetItems(items []baseListItem[T]) {
 	b.abstractList.SetItems(b, items)
 }
@@ -437,9 +411,37 @@ func (b *baseList[T]) calcDropDstIndex(context *guigui.Context) int {
 }
 
 func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.HandleInputResult {
+	b.hoveredItemIndexPlus1 = 0
+	if context.IsWidgetHitAtCursor(b) {
+		cp := image.Pt(ebiten.CursorPosition())
+		listBounds := context.Bounds(b)
+		for i := range b.visibleItems() {
+			bounds := b.itemBounds(context, i)
+			bounds.Min.X = listBounds.Min.X
+			bounds.Max.X = listBounds.Max.X
+			hovered := cp.In(bounds)
+			if hovered {
+				b.hoveredItemIndexPlus1 = i + 1
+			}
+
+			if b.checkmarkIndexPlus1 == i+1 {
+				colorMode := context.ColorMode()
+				if hovered {
+					colorMode = guigui.ColorModeDark
+				}
+
+				checkImg, err := theResourceImages.Get("check", colorMode)
+				if err != nil {
+					panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
+				}
+				b.checkmark.SetImage(checkImg)
+			}
+		}
+	}
+
 	if b.isHoveringVisible() || b.hasMovableItems() {
-		if hoveredItemIndex := b.hoveredItemIndex(context); b.lastHoverredItemIndexPlus1 != hoveredItemIndex+1 {
-			b.lastHoverredItemIndexPlus1 = hoveredItemIndex + 1
+		if b.lastHoveredItemIndexPlus1 != b.hoveredItemIndexPlus1 {
+			b.lastHoveredItemIndexPlus1 = b.hoveredItemIndexPlus1
 			guigui.RequestRedraw(b)
 		}
 	}
@@ -475,8 +477,7 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context) guigui.Handle
 		return guigui.HandleInputByWidget(b)
 	}
 
-	index := b.hoveredItemIndex(context)
-	if index >= 0 && index < b.abstractList.ItemCount() {
+	if index := b.hoveredItemIndexPlus1 - 1; index >= 0 && index < b.abstractList.ItemCount() {
 		c := image.Pt(ebiten.CursorPosition())
 
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
@@ -647,7 +648,7 @@ func (b *baseList[T]) Draw(context *guigui.Context, dst *ebiten.Image) {
 		}
 	}
 
-	hoveredItemIndex := b.hoveredItemIndex(context)
+	hoveredItemIndex := b.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := b.abstractList.ItemByIndex(hoveredItemIndex)
 	if ok && b.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.abstractList.ItemCount() && hoveredItem.Selectable && b.isItemVisible(hoveredItemIndex) {
 		bounds := b.itemBounds(context, hoveredItemIndex)
