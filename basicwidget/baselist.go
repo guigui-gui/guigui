@@ -73,7 +73,6 @@ type baseList[T comparable] struct {
 
 	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex  []image.Rectangle
-	itemBoundsOutOfSync           bool
 }
 
 func listItemPadding(context *guigui.Context) int {
@@ -301,7 +300,6 @@ func (b *baseList[T]) Update(context *guigui.Context) error {
 
 		p.Y += contentSize.Y
 	}
-	b.itemBoundsOutOfSync = false
 
 	if b.style != ListStyleSidebar && b.style != ListStyleMenu {
 		b.listFrame.list = b
@@ -363,10 +361,6 @@ func (b *baseList[T]) hoveredItemIndex(context *guigui.Context) int {
 	if !context.IsWidgetHitAtCursor(b) {
 		return -1
 	}
-	// itemBoundsForLayoutFromIndex might not be synced just after SetItems.
-	if b.itemBoundsOutOfSync {
-		return -1
-	}
 	_, y := ebiten.CursorPosition()
 	for i := range b.visibleItems() {
 		bounds := b.itemBoundsForLayoutFromIndex[i]
@@ -379,7 +373,6 @@ func (b *baseList[T]) hoveredItemIndex(context *guigui.Context) int {
 
 func (b *baseList[T]) SetItems(items []baseListItem[T]) {
 	b.abstractList.SetItems(b, items)
-	b.itemBoundsOutOfSync = true
 }
 
 func (b *baseList[T]) SelectItemByIndex(index int) {
