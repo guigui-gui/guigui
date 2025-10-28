@@ -185,34 +185,35 @@ func (b *Button) Measure(context *guigui.Context, constraints guigui.Constraints
 
 func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
 	h := defaultButtonSize(context).Y
-	var textAndImageW int
+	var w int
 	if b.text.Value() != "" {
-		textAndImageW += buttonEdgeAndTextPadding(context)
+		w += buttonEdgeAndTextPadding(context)
 		if forceBold {
-			textAndImageW += b.text.boldTextSize(context, guigui.Constraints{}).X
+			w += b.text.boldTextSize(context, guigui.Constraints{}).X
 		} else {
-			textAndImageW += b.text.Measure(context, guigui.Constraints{}).X
+			w += b.text.Measure(context, guigui.Constraints{}).X
 		}
 	}
 	if b.icon.HasImage() {
-		if textAndImageW == 0 {
-			textAndImageW += buttonEdgeAndImagePadding(context)
+		if w == 0 {
+			w += buttonEdgeAndImagePadding(context)
 		}
 		if b.text.Value() != "" {
-			textAndImageW += buttonTextAndImagePadding(context)
+			w += buttonTextAndImagePadding(context)
 		}
-		textAndImageW += defaultIconSize(context)
-		textAndImageW += buttonEdgeAndImagePadding(context)
+		w += defaultIconSize(context)
+		w += buttonEdgeAndImagePadding(context)
 	} else {
-		textAndImageW += buttonEdgeAndTextPadding(context)
+		w += buttonEdgeAndTextPadding(context)
 	}
 
-	var contentW int
 	if b.content != nil {
-		contentW = b.content.Measure(context, constraints).X
+		s := b.content.Measure(context, constraints)
+		w = max(w, s.X)
+		h = max(h, s.Y)
 	}
 
-	return image.Pt(max(textAndImageW, contentW), h)
+	return image.Pt(w, h)
 }
 
 func (b *Button) setSharpenCorners(sharpenCorners draw.SharpenCorners) {
