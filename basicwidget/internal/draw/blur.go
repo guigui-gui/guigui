@@ -24,17 +24,20 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	minPos := imageSrc0Origin()
 	maxPos := minPos + imageSrc0Size()
 	var sum vec4
-	var count int
+	var factorSum float
+	const sigma = float(2*blurSize)/6.0
+	const expDenom = 2.0 * sigma * sigma
 	for j := -blurSize; j <= blurSize; j++ {
 		for i := -blurSize; i <= blurSize; i++ {
 			pos := vec2(float(i), float(j)) + srcPos
 			if minPos.x <= pos.x && pos.x <= maxPos.x && minPos.y <= pos.y && pos.y <= maxPos.y {
-				sum += imageSrc0UnsafeAt(pos)
-				count++
+				factor := exp(-float(i*i+j*j) / expDenom)
+				sum += imageSrc0UnsafeAt(pos) * factor
+				factorSum += factor
 			}
 		}
 	}
-	return imageSrc0UnsafeAt(srcPos) * (1-Rate) + sum / float(count) * Rate
+	return imageSrc0UnsafeAt(srcPos) * (1-Rate) + sum / factorSum * Rate
 }
 `
 
@@ -45,7 +48,7 @@ func DrawBlurredImage(context *guigui.Context, dst *ebiten.Image, src *ebiten.Im
 		return
 	}
 
-	const baseBlurSize = 3
+	const baseBlurSize = 5
 	blurSize := int(baseBlurSize * context.Scale())
 	shader, ok := blurShaders[blurSize]
 	if !ok {
