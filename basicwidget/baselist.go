@@ -615,10 +615,8 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 			}
 			bounds := b.itemBounds(context, i)
 			// Reset the X position to ignore indentation.
-			x := widgetBounds.Bounds().Min.X
-			offsetX, _ := b.scrollOverlay.Offset()
-			x += listItemPadding(context) + int(offsetX)
-			bounds.Min.X = x
+			item, _ := b.abstractList.ItemByIndex(i)
+			bounds.Min.X -= item.IndentLevel * listItemIndentSize(context)
 			if bounds.Min.Y > vb.Max.Y {
 				break
 			}
