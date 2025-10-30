@@ -196,9 +196,6 @@ func RegisterEventHandler(widget Widget, eventName string, handler any) {
 
 func IsEventHandlerRegistered(widget Widget, eventName string) bool {
 	widgetState := widget.widgetState()
-	if widgetState.eventHandlers == nil {
-		return false
-	}
 	_, ok := widgetState.eventHandlers[eventName]
 	return ok
 }

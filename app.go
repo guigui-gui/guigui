@@ -433,6 +433,8 @@ func (a *app) buildWidgets() error {
 
 	a.root.widgetState().builtAt = a.buildCount
 
+	// Clear event handlers to prevent unexpected handlings.
+	// An event handler is often a closure capturing variables, and this might cause unexpected behaviors.
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		clear(widget.widgetState().eventHandlers)
 		return nil
