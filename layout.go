@@ -62,6 +62,8 @@ type LinearLayout struct {
 	Items     []LinearLayoutItem
 	Gap       int
 	Padding   Padding
+
+	tmpSizes []int
 }
 
 // linearLayoutItemCacheIdentity represents the identity of a cache.
@@ -121,15 +123,15 @@ type positionAndSize struct {
 }
 
 func (l *LinearLayout) appendWidgetAlongPositionAndSizes(widgetAlongPositions []positionAndSize, context *Context, alongSize, acrossSize int) []positionAndSize {
-	sizesInPixels := l.appendSizesInPixels(nil, context, alongSize, acrossSize)
+	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, alongSize, acrossSize)
 
 	var progress int
 	for i := range l.Items {
 		widgetAlongPositions = append(widgetAlongPositions, positionAndSize{
 			position: progress,
-			size:     sizesInPixels[i],
+			size:     l.tmpSizes[i],
 		})
-		progress += sizesInPixels[i] + l.Gap
+		progress += l.tmpSizes[i] + l.Gap
 	}
 
 	return widgetAlongPositions
@@ -220,9 +222,14 @@ func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context
 }
 
 func (l LinearLayout) Measure(context *Context, constraints Constraints) image.Point {
+	var contentAlongSize int
 	var contentAcrossSize int
 	switch l.Direction {
 	case LayoutDirectionHorizontal:
+		if fixedW, ok := constraints.FixedWidth(); ok {
+			contentAlongSize = fixedW - l.Padding.Start - l.Padding.End
+			contentAlongSize = max(contentAlongSize, 0)
+		}
 		if fixedH, ok := constraints.FixedHeight(); ok {
 			contentAcrossSize = fixedH - l.Padding.Top - l.Padding.Bottom
 			contentAcrossSize = max(contentAcrossSize, 0)
@@ -232,20 +239,17 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 			contentAcrossSize = fixedW - l.Padding.Start - l.Padding.End
 			contentAcrossSize = max(contentAcrossSize, 0)
 		}
+		if fixedH, ok := constraints.FixedHeight(); ok {
+			contentAlongSize = fixedH - l.Padding.Top - l.Padding.Bottom
+			contentAlongSize = max(contentAlongSize, 0)
+		}
 	}
 
-	autoAlongSize := 0
-	autoAcrossSize := 0
-	for _, item := range l.Items {
-		var s int
-		switch item.Size.typ {
-		case sizeTypeDefault:
-			s = linearLayoutItemDefaultAlongSize(context, l.Direction, &item, contentAcrossSize)
-		case sizeTypeFixed:
-			s = item.Size.value
-		case sizeTypeFlexible:
-			// Ignore this.
-		}
+	var autoAlongSize int
+	var autoAcrossSize int
+	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, contentAlongSize, contentAcrossSize)
+	for i, item := range l.Items {
+		s := l.tmpSizes[i]
 		autoAlongSize += s
 		if item.Widget != nil {
 			switch l.Direction {

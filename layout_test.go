@@ -13,10 +13,14 @@ import (
 type dummyWidget struct {
 	guigui.DefaultWidget
 
-	size image.Point
+	size     image.Point
+	sizeFunc func(constraints guigui.Constraints) image.Point
 }
 
 func (d *dummyWidget) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	if d.sizeFunc != nil {
+		return d.sizeFunc(constraints)
+	}
 	return d.size
 }
 
@@ -46,6 +50,64 @@ func TestLinearLayoutMeasure(t *testing.T) {
 			},
 		}
 		if got, want := l2.Measure(&context, guigui.Constraints{}), image.Pt(100, 200); got != want {
+			t.Errorf("dir: %v, got: %v, want: %v", dir, got, want)
+		}
+	}
+}
+
+func TestLinearLayoutFlexibleSizeMeasure(t *testing.T) {
+	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
+		l := &guigui.LinearLayout{
+			Direction: dir,
+			Gap:       10,
+			Items: []guigui.LinearLayoutItem{
+				{
+					Widget: &dummyWidget{
+						sizeFunc: func(constraints guigui.Constraints) image.Point {
+							if fixedWidth, ok := constraints.FixedWidth(); ok {
+								return image.Pt(fixedWidth, fixedWidth)
+							}
+							if fixedHeight, ok := constraints.FixedHeight(); ok {
+								return image.Pt(fixedHeight, fixedHeight)
+							}
+							return image.Pt(10, 10)
+						},
+					},
+					Size: guigui.FlexibleSize(1),
+				},
+				{
+					Widget: &dummyWidget{
+						sizeFunc: func(constraints guigui.Constraints) image.Point {
+							if fixedWidth, ok := constraints.FixedWidth(); ok {
+								return image.Pt(fixedWidth, fixedWidth)
+							}
+							if fixedHeight, ok := constraints.FixedHeight(); ok {
+								return image.Pt(fixedHeight, fixedHeight)
+							}
+							return image.Pt(10, 10)
+						},
+					},
+					Size: guigui.FlexibleSize(1),
+				},
+			},
+		}
+		var context guigui.Context
+		var constraints guigui.Constraints
+		switch dir {
+		case guigui.LayoutDirectionHorizontal:
+			constraints = guigui.FixedWidthConstraints(210)
+		case guigui.LayoutDirectionVertical:
+			constraints = guigui.FixedHeightConstraints(210)
+		}
+		got := l.Measure(&context, constraints)
+		var want image.Point
+		switch dir {
+		case guigui.LayoutDirectionHorizontal:
+			want = image.Pt(210, 100)
+		case guigui.LayoutDirectionVertical:
+			want = image.Pt(100, 210)
+		}
+		if got != want {
 			t.Errorf("dir: %v, got: %v, want: %v", dir, got, want)
 		}
 	}
