@@ -202,22 +202,6 @@ func (c *Context) AppBounds() image.Rectangle {
 	return c.app.bounds()
 }
 
-// Deprecated: Use [WidgetBounds.Bounds] instead.
-func (c *Context) Bounds(widget Widget) image.Rectangle {
-	return (&WidgetBounds{
-		context: c,
-		widget:  widget,
-	}).Bounds()
-}
-
-// Deprecated: Use [WidgetBounds.VisibleBounds] instead.
-func (c *Context) VisibleBounds(widget Widget) image.Rectangle {
-	return (&WidgetBounds{
-		context: c,
-		widget:  widget,
-	}).VisibleBounds()
-}
-
 func (c *Context) SetVisible(widget Widget, visible bool) {
 	widgetState := widget.widgetState()
 	if widgetState.hidden == !visible {
