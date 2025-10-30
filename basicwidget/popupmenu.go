@@ -176,3 +176,7 @@ func (p *PopupMenu[T]) SelectItemByValue(value T) {
 func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
 	return p.list.Widget().ItemTextColor(context, index)
 }
+
+func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
+	return p.list.Widget().list.itemYFromIndexForMenu(context, index)
+}

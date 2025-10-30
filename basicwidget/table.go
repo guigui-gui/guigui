@@ -117,13 +117,13 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		t.columnTexts[i].SetHorizontalAlign(column.HeaderTextHorizontalAlign)
 		t.columnTexts[i].SetVerticalAlign(VerticalAlignMiddle)
 	}
+	// TODO: Use this at Layout. The issue is that the current LinearLayout cannot treat MinWidth well.
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items:     t.columnLayoutItems,
-		Gap:       tableColumnGap(context),
 		Padding: guigui.Padding{
-			Start: listItemPadding(context),
-			End:   listItemPadding(context),
+			Start: RoundedCornerRadius(context),
+			End:   RoundedCornerRadius(context),
 		},
 	}
 	t.tmpItemBounds = layout.AppendItemBounds(t.tmpItemBounds[:0], context, widgetBounds.Bounds())
@@ -132,12 +132,10 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		t.columnWidthsInPixels[i] = max(t.columnWidthsInPixels[i], t.columns[i].MinWidth)
 	}
 	var contentWidth int
-	if len(t.columnWidthsInPixels) > 0 {
-		for _, width := range t.columnWidthsInPixels {
-			contentWidth += width
-		}
-		contentWidth += (len(t.columnWidthsInPixels)-1)*tableColumnGap(context) + 2*listItemPadding(context)
+	for _, width := range t.columnWidthsInPixels {
+		contentWidth += width
 	}
+	contentWidth += 2 * RoundedCornerRadius(context)
 	t.list.SetContentWidth(contentWidth)
 
 	for i := range t.tableRowWidgets {
@@ -161,23 +159,20 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	offsetX, _ := t.list.ScrollOffset()
 	pt := widgetBounds.Bounds().Min
 	pt.X += int(offsetX)
-	pt.X += listItemPadding(context)
+	pt.X += RoundedCornerRadius(context)
 	for i := range t.columnTexts {
 		if widget == &t.columnTexts[i] {
+			pt = pt.Add(image.Pt(UnitSize(context)/4, 0))
+			w := t.columnWidthsInPixels[i] - UnitSize(context)/2
 			return image.Rectangle{
 				Min: pt,
-				Max: pt.Add(image.Pt(t.columnWidthsInPixels[i], tableHeaderHeight(context))),
+				Max: pt.Add(image.Pt(w, tableHeaderHeight(context))),
 			}
 		}
-		pt.X += t.columnWidthsInPixels[i] + tableColumnGap(context)
+		pt.X += t.columnWidthsInPixels[i]
 	}
 
 	return image.Rectangle{}
-}
-
-func tableColumnGap(context *guigui.Context) int {
-	u := UnitSize(context)
-	return u / 2
 }
 
 func tableHeaderHeight(context *guigui.Context) int {
@@ -288,23 +283,35 @@ func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *g
 func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	l := &guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Gap:       tableColumnGap(context),
-		Padding: guigui.Padding{
-			Top:    int(listItemTextPadding(context)),
-			Bottom: int(listItemTextPadding(context)),
-		},
 	}
 	for i := range t.table.columnWidthsInPixels {
-		var widget guigui.Widget
 		if t.row.Cells[i].Content != nil {
-			widget = t.row.Cells[i].Content
+			l.Items = append(l.Items, guigui.LinearLayoutItem{
+				Widget: t.row.Cells[i].Content,
+				Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
+			})
 		} else {
-			widget = &t.texts[i]
+			l.Items = append(l.Items,
+				guigui.LinearLayoutItem{
+					Layout: guigui.LinearLayout{
+						Direction: guigui.LayoutDirectionHorizontal,
+						Items: []guigui.LinearLayoutItem{
+							{
+								Widget: &t.texts[i],
+								Size:   guigui.FlexibleSize(1),
+							},
+						},
+						Padding: guigui.Padding{
+							Start:  UnitSize(context) / 4,
+							Top:    int(listItemTextVerticalPadding(context)),
+							End:    UnitSize(context) / 4,
+							Bottom: int(listItemTextVerticalPadding(context)),
+						},
+					},
+					Size: guigui.FixedSize(t.table.columnWidthsInPixels[i]),
+				})
 		}
-		l.Items = append(l.Items, guigui.LinearLayoutItem{
-			Widget: widget,
-			Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
-		})
+
 	}
 	t.layout = l
 	return nil
@@ -323,17 +330,14 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 		if cell.Content != nil {
 			s = cell.Content.Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 		} else {
+			// Assume that every item can use a bold font.
 			s = t.texts[i].Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
-		}
-		// s.X is not reliable because the content might return an arbitrary value.
-		if i > 0 {
-			w += tableColumnGap(context)
+			s = s.Add(image.Pt(2*UnitSize(context)/4, int(2*listItemTextVerticalPadding(context))))
 		}
 		w += t.table.columnWidthsInPixels[i]
 		h = max(h, s.Y)
 	}
 	h = max(h, int(LineHeight(context)))
-	h += int(2 * listItemTextPadding(context))
 	return image.Pt(w, h)
 }
 
@@ -362,12 +366,12 @@ func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	}
 	u := UnitSize(context)
 	b := widgetBounds.Bounds()
-	x := b.Min.X + listItemPadding(context)
+	x := b.Min.X + RoundedCornerRadius(context)
 	offsetX, _ := t.table.list.ScrollOffset()
 	x += int(offsetX)
 	for _, width := range t.table.columnWidthsInPixels[:len(t.table.columnWidthsInPixels)-1] {
 		x += width
-		x0 := float32(x + tableColumnGap(context)/2)
+		x0 := float32(x)
 		x1 := x0
 		y0 := float32(b.Min.Y + u/4)
 		y1 := float32(b.Min.Y + tableHeaderHeight(context) - u/4)
@@ -376,6 +380,5 @@ func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
-		x += tableColumnGap(context)
 	}
 }

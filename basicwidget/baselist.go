@@ -76,10 +76,6 @@ type baseList[T comparable] struct {
 	itemBoundsForLayoutFromIndex  []image.Rectangle
 }
 
-func listItemPadding(context *guigui.Context) int {
-	return RoundedCornerRadius(context) + UnitSize(context)/4
-}
-
 func (b *baseList[T]) SetOnItemSelected(f func(index int)) {
 	b.abstractList.SetOnItemSelected(b, f)
 }
@@ -210,7 +206,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 
 	p := widgetBounds.Bounds().Min
 	offsetX, offsetY := b.scrollOverlay.Offset()
-	p.X += listItemPadding(context) + int(offsetX)
+	p.X += RoundedCornerRadius(context) + int(offsetX)
 	p.Y += RoundedCornerRadius(context) + b.headerHeight + int(offsetY)
 	origY := p.Y
 	clear(b.itemBoundsForLayoutFromWidget)
@@ -221,7 +217,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
-		itemW := cw - 2*listItemPadding(context)
+		itemW := cw - 2*RoundedCornerRadius(context)
 		itemW -= item.IndentLevel * listItemIndentSize(context)
 		contentSize := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW))
 
@@ -229,6 +225,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 			imgSize := listItemCheckmarkSize(context)
 			imgP := p
 			imgP.X += item.IndentLevel * listItemIndentSize(context)
+			imgP.X += UnitSize(context) / 4
 			itemH := contentSize.Y
 			imgP.Y += (itemH - imgSize) * 3 / 4
 			imgP.Y = b.adjustItemY(context, imgP.Y)
@@ -261,7 +258,6 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 			expanderP := p
 			expanderP.X += (item.IndentLevel - 1) * listItemIndentSize(context)
 			// Adjust the position a bit for better appearance.
-			expanderP.X -= UnitSize(context) / 4
 			expanderP.Y += UnitSize(context) / 16
 			s := image.Pt(
 				listItemIndentSize(context),
@@ -539,6 +535,9 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 }
 
 // itemYFromIndex returns the Y position of the item at the given index relative to the top of the baseList widget.
+// itemYFromIndex returns the same value whatever the baseList position is.
+//
+// itemYFromIndex is available after Update is called, so do not use this from a parent widget.
 func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
 	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) || len(b.itemBoundsForLayoutFromIndex) == 0 {
 		return 0, false
@@ -553,6 +552,28 @@ func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, b
 	}
 	head := RoundedCornerRadius(context) + b.headerHeight
 	return itemRelY + head, true
+}
+
+// itemYFromIndexForMenu returns the Y position of the item at the given index relative to the top of the baseList widget.
+// itemYFromIndexForMenu returns the same value whatever the baseList position is.
+//
+// itemYFromIndexForMenu is available anytime even before Update is called.
+func (b *baseList[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
+	y := RoundedCornerRadius(context) + b.headerHeight
+	for i := range b.visibleItems() {
+		if i == index {
+			return y, true
+		}
+		if i > index {
+			break
+		}
+		item, _ := b.abstractList.ItemByIndex(i)
+		// Use a free constraints to measure the item height for menu.
+		contentSize := item.Content.Measure(context, guigui.Constraints{})
+		y += contentSize.Y
+	}
+
+	return 0, false
 }
 
 func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
@@ -625,8 +646,6 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 			if bounds.Min.Y > vb.Max.Y {
 				break
 			}
-			bounds.Min.X -= RoundedCornerRadius(context)
-			bounds.Max.X += RoundedCornerRadius(context)
 			if !bounds.Overlaps(vb) {
 				continue
 			}
@@ -638,8 +657,6 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	// Draw the selected item background.
 	if clr := b.selectedItemColor(context); clr != nil && b.SelectedItemIndex() >= 0 && b.SelectedItemIndex() < b.abstractList.ItemCount() && b.isItemVisible(b.SelectedItemIndex()) {
 		bounds := b.itemBounds(context, b.SelectedItemIndex())
-		bounds.Min.X -= RoundedCornerRadius(context)
-		bounds.Max.X += RoundedCornerRadius(context)
 		if b.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
@@ -652,8 +669,6 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	hoveredItem, ok := b.abstractList.ItemByIndex(hoveredItemIndex)
 	if ok && b.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.abstractList.ItemCount() && hoveredItem.Selectable && b.isItemVisible(hoveredItemIndex) {
 		bounds := b.itemBounds(context, hoveredItemIndex)
-		bounds.Min.X -= RoundedCornerRadius(context)
-		bounds.Max.X += RoundedCornerRadius(context)
 		if b.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
@@ -678,7 +693,7 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 			op.GeoM.Scale(s, s)
 			bounds := b.itemBounds(context, hoveredItemIndex)
 			p := bounds.Min
-			p.X = widgetBounds.Bounds().Min.X + listItemPadding(context)
+			p.X = widgetBounds.Bounds().Min.X + RoundedCornerRadius(context)
 			op.GeoM.Translate(float64(p.X-2*RoundedCornerRadius(context)), float64(p.Y)+(float64(bounds.Dy())-float64(img.Bounds().Dy())*s)/2)
 			op.ColorScale.ScaleAlpha(0.5)
 			op.Filter = ebiten.FilterLinear
@@ -708,7 +723,7 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 	// Measure is mainly for a menu list.
 	var itemConstraints guigui.Constraints
 	if fixedWidth, ok := constraints.FixedWidth(); ok {
-		itemConstraints = guigui.FixedWidthConstraints(fixedWidth - 2*listItemPadding(context))
+		itemConstraints = guigui.FixedWidthConstraints(fixedWidth - 2*RoundedCornerRadius(context))
 	}
 	var size image.Point
 	for i := range b.visibleItems() {
@@ -721,7 +736,7 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 	if b.checkmarkIndexPlus1 > 0 {
 		size.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 	}
-	size.X += 2 * listItemPadding(context)
+	size.X += 2 * RoundedCornerRadius(context)
 	size.Y += 2 * RoundedCornerRadius(context)
 	return size
 }

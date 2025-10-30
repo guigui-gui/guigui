@@ -93,9 +93,10 @@ func (d *DropdownList[T]) Layout(context *guigui.Context, widgetBounds *guigui.W
 		p := widgetBounds.Bounds().Min
 		p.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 		p.X = max(p.X, 0)
-		p.Y -= RoundedCornerRadius(context)
-		p.Y += int((float64(widgetBounds.Bounds().Dy()) - LineHeight(context)) / 2)
-		p.Y -= max(0, d.popupMenu.SelectedItemIndex()) * int(LineHeight(context)+2*listItemTextPadding(context))
+		// TODO: The item content in a button and a dropdown list might have different heights. Handle this case properly.
+		if y, ok := d.popupMenu.itemYFromIndexForMenu(context, max(0, d.popupMenu.SelectedItemIndex())); ok {
+			p.Y -= y
+		}
 		p.Y = max(p.Y, 0)
 		return image.Rectangle{
 			Min: p,
