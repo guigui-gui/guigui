@@ -127,6 +127,7 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		guigui.LinearLayoutItem{
 			Size: guigui.FlexibleSize(1),
 		})
+	var iconLayoutItem guigui.LinearLayoutItem
 	if b.icon.HasImage() {
 		width := min(defaultIconSize(context), widgetBounds.Bounds().Dx())
 		height := min(defaultIconSize(context), widgetBounds.Bounds().Dy())
@@ -136,31 +137,34 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			width = max(width, widgetBounds.Bounds().Dx()-2*r)
 			height = max(height, widgetBounds.Bounds().Dy()-2*r)
 		}
-		b.layoutItems = append(b.layoutItems,
-			guigui.LinearLayoutItem{
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionVertical,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &b.icon,
-							Size:   guigui.FixedSize(height),
-						},
-						{
-							Size: guigui.FlexibleSize(1),
-						},
+		iconLayoutItem = guigui.LinearLayoutItem{
+			Layout: guigui.LinearLayout{
+				Direction: guigui.LayoutDirectionVertical,
+				Items: []guigui.LinearLayoutItem{
+					{
+						Size: guigui.FlexibleSize(1),
+					},
+					{
+						Widget: &b.icon,
+						Size:   guigui.FixedSize(height),
+					},
+					{
+						Size: guigui.FlexibleSize(1),
 					},
 				},
-				Size: guigui.FixedSize(width),
-			})
+			},
+			Size: guigui.FixedSize(width),
+		}
 	}
-	if b.icon.HasImage() && b.text.Value() != "" {
-		b.layoutItems = append(b.layoutItems,
-			guigui.LinearLayoutItem{
-				Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
-			})
+
+	if b.icon.HasImage() && b.iconAlign == IconAlignStart {
+		b.layoutItems = append(b.layoutItems, iconLayoutItem)
+		if b.text.Value() != "" {
+			b.layoutItems = append(b.layoutItems,
+				guigui.LinearLayoutItem{
+					Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
+				})
+		}
 	}
 	if b.text.Value() != "" {
 		b.layoutItems = append(b.layoutItems,
@@ -168,6 +172,16 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 				Widget: &b.text,
 			})
 	}
+	if b.icon.HasImage() && b.iconAlign == IconAlignEnd {
+		if b.text.Value() != "" {
+			b.layoutItems = append(b.layoutItems,
+				guigui.LinearLayoutItem{
+					Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
+				})
+		}
+		b.layoutItems = append(b.layoutItems, iconLayoutItem)
+	}
+
 	b.layoutItems = append(b.layoutItems,
 		guigui.LinearLayoutItem{
 			Size: guigui.FlexibleSize(1),
