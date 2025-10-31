@@ -112,3 +112,47 @@ func TestLinearLayoutFlexibleSizeMeasure(t *testing.T) {
 		}
 	}
 }
+
+func TestLinearLayoutFlexibleSizeMeasure2(t *testing.T) {
+	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
+		var opDir guigui.LayoutDirection
+		if dir == guigui.LayoutDirectionHorizontal {
+			opDir = guigui.LayoutDirectionVertical
+		} else {
+			opDir = guigui.LayoutDirectionHorizontal
+		}
+		l := &guigui.LinearLayout{
+			Direction: dir,
+			Gap:       10,
+			Items: []guigui.LinearLayoutItem{
+				{
+					Layout: &guigui.LinearLayout{
+						Direction: opDir,
+						Items: []guigui.LinearLayoutItem{
+							{
+								Size: guigui.FlexibleSize(1),
+							},
+							{
+								Widget: &dummyWidget{
+									size: image.Pt(100, 50),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		var context guigui.Context
+		got := l.Measure(&context, guigui.Constraints{})
+		var want image.Point
+		switch dir {
+		case guigui.LayoutDirectionHorizontal:
+			want = image.Pt(100, 50)
+		case guigui.LayoutDirectionVertical:
+			want = image.Pt(100, 50)
+		}
+		if got != want {
+			t.Errorf("dir: %v, got: %v, want: %v", dir, got, want)
+		}
+	}
+}

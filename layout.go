@@ -171,9 +171,6 @@ func linearLayoutItemDefaultAlongSize(context *Context, direction LayoutDirectio
 func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context, alongSize, acrossSize int) []int {
 	rest := alongSize
 	rest -= (len(l.Items) - 1) * l.Gap
-	if rest < 0 {
-		rest = 0
-	}
 	var denom int
 
 	origLen := len(sizesInPixels)
@@ -190,7 +187,9 @@ func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context
 		rest -= sizesInPixels[origLen+i]
 	}
 
-	if denom > 0 {
+	rest = max(rest, 0)
+
+	if denom > 0 && rest > 0 {
 		origRest := rest
 		for i, item := range l.Items {
 			if item.Size.typ != sizeTypeFlexible {
