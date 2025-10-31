@@ -294,7 +294,10 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 
 	b.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
+	b.contentHeight += b.headerHeight + b.footerHeight
 	cs := image.Pt(cw, b.contentHeight)
+	// TODO: Now scrollOverlay's widgetBounds doens't match with baseList's widgetBounds.
+	// Separate a content part and use Panel.
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
 	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
