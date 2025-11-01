@@ -5,10 +5,6 @@ package guigui
 
 import (
 	"image"
-	"slices"
-	"sync"
-
-	"github.com/hajimehoshi/ebiten/v2"
 )
 
 type Layout interface {
@@ -63,38 +59,44 @@ type LinearLayout struct {
 	Gap       int
 	Padding   Padding
 
-	tmpSizes []int
+	tmpSizes     []int
+	tmpBoundsArr []image.Rectangle
 }
 
-// linearLayoutItemCacheIdentity represents the identity of a cache.
-// If and only if two linearLayoutItemCacheIdentity values are equal, the cache can be reused.
-type linearLayoutItemCacheIdentity struct {
-	defaultSize int
-
-	// widgetState is needed to make widgetIndices valid.
-	widgetState *widgetState
-
-	size Size
+type LinearLayoutItem struct {
+	Widget Widget
+	Size   Size
+	Layout Layout
 }
 
 func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle {
-	if b, ok := theCachedLinearLayouts.widgetBounds(context, &l, bounds, widget); ok {
-		return b
+	alongSize := l.alongSize(bounds)
+	acrossSize := l.acrossSize(bounds)
+	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds, alongSize, acrossSize)
+
+	for i, item := range l.Items {
+		if item.Widget == widget {
+			return l.tmpBoundsArr[i]
+		}
 	}
+
 	for i, item := range l.Items {
 		if item.Layout == nil {
 			continue
 		}
-		b := theCachedLinearLayouts.itemBounds(context, &l, bounds, i)
-		if r := item.Layout.WidgetBounds(context, b, widget); !r.Empty() {
+		if r := item.Layout.WidgetBounds(context, l.tmpBoundsArr[i], widget); !r.Empty() {
 			return r
 		}
 	}
+
 	return image.Rectangle{}
 }
 
 func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index int) image.Rectangle {
-	return theCachedLinearLayouts.itemBounds(context, &l, bounds, index)
+	alongSize := l.alongSize(bounds)
+	acrossSize := l.acrossSize(bounds)
+	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds, alongSize, acrossSize)
+	return l.tmpBoundsArr[index]
 }
 
 func (l *LinearLayout) alongSize(bounds image.Rectangle) int {
@@ -115,26 +117,6 @@ func (l *LinearLayout) acrossSize(bounds image.Rectangle) int {
 		return bounds.Dx() - l.Padding.Start - l.Padding.End
 	}
 	return 0
-}
-
-type positionAndSize struct {
-	position int
-	size     int
-}
-
-func (l *LinearLayout) appendWidgetAlongPositionAndSizes(widgetAlongPositions []positionAndSize, context *Context, alongSize, acrossSize int) []positionAndSize {
-	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, alongSize, acrossSize)
-
-	var progress int
-	for i := range l.Items {
-		widgetAlongPositions = append(widgetAlongPositions, positionAndSize{
-			position: progress,
-			size:     l.tmpSizes[i],
-		})
-		progress += l.tmpSizes[i] + l.Gap
-	}
-
-	return widgetAlongPositions
 }
 
 func linearLayoutItemDefaultAlongSize(context *Context, direction LayoutDirection, item *LinearLayoutItem, acrossSize int) int {
@@ -312,156 +294,32 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 	return image.Point{}
 }
 
-type LinearLayoutItem struct {
-	Widget Widget
-	Size   Size
-	Layout Layout
+func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle, alongSize, acrossSize int) []image.Rectangle {
+	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, alongSize, acrossSize)
+	var progress int
+	for i := range l.Items {
+		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, l.tmpSizes[i]))
+		progress += l.tmpSizes[i] + l.Gap
+	}
+	return boundsArr
 }
 
-func (l *LinearLayoutItem) cacheIdentity(context *Context, direction LayoutDirection, acrossSize int) linearLayoutItemCacheIdentity {
-	identity := linearLayoutItemCacheIdentity{
-		size: l.Size,
-	}
-	if l.Widget != nil {
-		identity.widgetState = l.Widget.widgetState()
-		if l.Size.typ == sizeTypeDefault {
-			identity.defaultSize = linearLayoutItemDefaultAlongSize(context, direction, l, acrossSize)
-		}
-	}
-	return identity
-}
-
-type cachedLinearLayoutValues struct {
-	itemAlongPositionAndSizes []positionAndSize
-	widgetIndices             map[Widget]int
-
-	direction  LayoutDirection
-	alongSize  int
-	acrossSize int
-	items      []linearLayoutItemCacheIdentity
-	gap        int
-
-	atime int64
-}
-
-func (c *cachedLinearLayoutValues) matches(context *Context, linearLayout *LinearLayout, alongSize, acrossSize int) bool {
-	if c.alongSize != alongSize {
-		return false
-	}
-	if c.acrossSize != acrossSize {
-		return false
-	}
-	if c.direction != linearLayout.Direction {
-		return false
-	}
-	if len(c.items) != len(linearLayout.Items) {
-		return false
-	}
-	for i, item := range linearLayout.Items {
-		if c.items[i] != item.cacheIdentity(context, linearLayout.Direction, acrossSize) {
-			return false
-		}
-	}
-	if c.gap != linearLayout.Gap {
-		return false
-	}
-	return true
-}
-
-type cachedLinearLayouts struct {
-	values []*cachedLinearLayoutValues
-
-	m sync.Mutex
-}
-
-var theCachedLinearLayouts cachedLinearLayouts
-
-func (c *cachedLinearLayouts) itemBounds(context *Context, linearLayout *LinearLayout, bounds image.Rectangle, index int) image.Rectangle {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	v := c.get(context, linearLayout, bounds)
-	ps := v.itemAlongPositionAndSizes[index]
-	return positionAndSizeToBounds(linearLayout, bounds, ps)
-}
-
-func (c *cachedLinearLayouts) widgetBounds(context *Context, linearLayout *LinearLayout, bounds image.Rectangle, widget Widget) (image.Rectangle, bool) {
-	c.m.Lock()
-	defer c.m.Unlock()
-
-	v := c.get(context, linearLayout, bounds)
-	idx, ok := v.widgetIndices[widget]
-	if !ok {
-		return image.Rectangle{}, false
-	}
-	ps := v.itemAlongPositionAndSizes[idx]
-	return positionAndSizeToBounds(linearLayout, bounds, ps), true
-}
-
-func positionAndSizeToBounds(linearLayout *LinearLayout, bounds image.Rectangle, ps positionAndSize) image.Rectangle {
-	pt := bounds.Min.Add(image.Pt(linearLayout.Padding.Start, linearLayout.Padding.Top))
-	acrossSize := linearLayout.acrossSize(bounds)
-	switch linearLayout.Direction {
+func (l *LinearLayout) positionAndSizeToBounds(bounds image.Rectangle, position int, size int) image.Rectangle {
+	pt := bounds.Min.Add(image.Pt(l.Padding.Start, l.Padding.Top))
+	acrossSize := l.acrossSize(bounds)
+	switch l.Direction {
 	case LayoutDirectionHorizontal:
-		pt.X += ps.position
+		pt.X += position
 		return image.Rectangle{
 			Min: pt,
-			Max: pt.Add(image.Pt(ps.size, acrossSize)),
+			Max: pt.Add(image.Pt(size, acrossSize)),
 		}
 	case LayoutDirectionVertical:
-		pt.Y += ps.position
+		pt.Y += position
 		return image.Rectangle{
 			Min: pt,
-			Max: pt.Add(image.Pt(acrossSize, ps.size)),
+			Max: pt.Add(image.Pt(acrossSize, size)),
 		}
 	}
 	return image.Rectangle{}
-}
-
-func (c *cachedLinearLayouts) get(context *Context, linearLayout *LinearLayout, bounds image.Rectangle) *cachedLinearLayoutValues {
-	alongSize := linearLayout.alongSize(bounds)
-	acrossSize := linearLayout.acrossSize(bounds)
-
-	for _, v := range c.values {
-		if !v.matches(context, linearLayout, alongSize, acrossSize) {
-			continue
-		}
-		v.atime = ebiten.Tick()
-		return v
-	}
-
-	// GC old results.
-	now := ebiten.Tick()
-	for i := len(c.values) - 1; i >= 0; i-- {
-		if now-c.values[i].atime > int64(ebiten.TPS()) {
-			c.values = slices.Delete(c.values, i, i+1)
-		}
-	}
-
-	v := &cachedLinearLayoutValues{
-		alongSize:  alongSize,
-		acrossSize: acrossSize,
-		direction:  linearLayout.Direction,
-		gap:        linearLayout.Gap,
-		atime:      now,
-	}
-
-	if len(linearLayout.Items) > 0 {
-		v.items = make([]linearLayoutItemCacheIdentity, len(linearLayout.Items))
-		for i, item := range linearLayout.Items {
-			v.items[i] = item.cacheIdentity(context, linearLayout.Direction, alongSize)
-			if item.Widget != nil {
-				if v.widgetIndices == nil {
-					v.widgetIndices = map[Widget]int{}
-				}
-				v.widgetIndices[item.Widget] = i
-			}
-		}
-
-		v.itemAlongPositionAndSizes = make([]positionAndSize, 0, len(linearLayout.Items))
-		v.itemAlongPositionAndSizes = linearLayout.appendWidgetAlongPositionAndSizes(v.itemAlongPositionAndSizes, context, alongSize, acrossSize)
-	}
-	c.values = append(c.values, v)
-
-	return v
 }
