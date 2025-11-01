@@ -37,7 +37,7 @@ type TableColumn struct {
 }
 
 type TableRow[T comparable] struct {
-	Contents     []guigui.Widget
+	Cells        []TableCell
 	Unselectable bool
 	Movable      bool
 	Value        T
@@ -45,6 +45,15 @@ type TableRow[T comparable] struct {
 
 func (t *TableRow[T]) selectable() bool {
 	return !t.Unselectable
+}
+
+type TableCell struct {
+	Text                string
+	TextColor           color.Color
+	TextHorizontalAlign HorizontalAlign
+	TextBold            bool
+	TextTabular         bool
+	Content             guigui.Widget
 }
 
 func (t *Table[T]) SetColumns(columns []TableColumn) {
@@ -235,6 +244,7 @@ type tableRowWidget[T comparable] struct {
 
 	row   TableRow[T]
 	table *Table[T]
+	texts []Text
 
 	contentBounds map[guigui.Widget]image.Rectangle
 }
@@ -243,10 +253,29 @@ func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
 	t.row = row
 }
 
+func (t *tableRowWidget[T]) ensureTexts() {
+	t.texts = adjustSliceSize(t.texts, len(t.row.Cells))
+	for i, cell := range t.row.Cells {
+		if cell.Content != nil {
+			continue
+		}
+		t.texts[i].SetValue(cell.Text)
+		t.texts[i].SetColor(cell.TextColor)
+		t.texts[i].SetHorizontalAlign(cell.TextHorizontalAlign)
+		t.texts[i].SetVerticalAlign(VerticalAlignTop)
+		t.texts[i].SetBold(cell.TextBold)
+		t.texts[i].SetTabular(cell.TextTabular)
+		t.texts[i].SetAutoWrap(true)
+	}
+}
+
 func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
-	for _, content := range t.row.Contents {
-		if content != nil {
-			adder.AddChild(content)
+	t.ensureTexts()
+	for i, cell := range t.row.Cells {
+		if cell.Content != nil {
+			adder.AddChild(cell.Content)
+		} else {
+			adder.AddChild(&t.texts[i])
 		}
 	}
 }
@@ -258,16 +287,20 @@ func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui
 	if t.contentBounds == nil {
 		t.contentBounds = map[guigui.Widget]image.Rectangle{}
 	}
-	for i, content := range t.row.Contents {
-		if content != nil {
-			w := t.table.columnWidthsInPixels[i]
-			pt := image.Pt(x, b.Min.Y)
-			pt.Y += int(listItemTextPadding(context))
-			s := image.Pt(w, content.Measure(context, guigui.FixedHeightConstraints(w)).Y)
-			t.contentBounds[content] = image.Rectangle{
-				Min: pt,
-				Max: pt.Add(s),
-			}
+	for i, cell := range t.row.Cells {
+		w := t.table.columnWidthsInPixels[i]
+		pt := image.Pt(x, b.Min.Y)
+		pt.Y += int(listItemTextPadding(context))
+		var widget guigui.Widget
+		if cell.Content != nil {
+			widget = cell.Content
+		} else {
+			widget = &t.texts[i]
+		}
+		s := image.Pt(w, widget.Measure(context, guigui.FixedHeightConstraints(w)).Y)
+		t.contentBounds[widget] = image.Rectangle{
+			Min: pt,
+			Max: pt.Add(s),
 		}
 		x += t.table.columnWidthsInPixels[i] + tableColumnGap(context)
 	}
@@ -279,12 +312,16 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 }
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	t.ensureTexts()
+
 	var w, h int
-	for i, content := range t.row.Contents {
-		if content == nil {
-			continue
+	for i, cell := range t.row.Cells {
+		var s image.Point
+		if cell.Content != nil {
+			s = cell.Content.Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
+		} else {
+			s = t.texts[i].Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 		}
-		s := content.Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 		// s.X is not reliable because the content might return an arbitrary value.
 		if i > 0 {
 			w += tableColumnGap(context)
@@ -293,7 +330,6 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 		h = max(h, s.Y)
 	}
 	h = max(h, int(LineHeight(context)))
-	// As TableItem.Text doesn't exist unlike ListItem.Text, always add padding.
 	h += int(2 * listItemTextPadding(context))
 	return image.Pt(w, h)
 }
