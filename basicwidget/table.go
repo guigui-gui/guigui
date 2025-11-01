@@ -247,7 +247,8 @@ type tableRowWidget[T comparable] struct {
 	table *Table[T]
 	texts []Text
 
-	contentBounds map[guigui.Widget]image.Rectangle
+	//contentBounds map[guigui.Widget]image.Rectangle
+	layout guigui.Layout
 }
 
 func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
@@ -282,34 +283,32 @@ func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *g
 }
 
 func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	b := widgetBounds.Bounds()
-	x := b.Min.X
-	clear(t.contentBounds)
-	if t.contentBounds == nil {
-		t.contentBounds = map[guigui.Widget]image.Rectangle{}
+	l := &guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Gap:       tableColumnGap(context),
+		Padding: guigui.Padding{
+			Top:    int(listItemTextPadding(context)),
+			Bottom: int(listItemTextPadding(context)),
+		},
 	}
-	for i, cell := range t.row.Cells {
-		w := t.table.columnWidthsInPixels[i]
-		pt := image.Pt(x, b.Min.Y)
-		pt.Y += int(listItemTextPadding(context))
+	for i := range t.table.columnWidthsInPixels {
 		var widget guigui.Widget
-		if cell.Content != nil {
-			widget = cell.Content
+		if t.row.Cells[i].Content != nil {
+			widget = t.row.Cells[i].Content
 		} else {
 			widget = &t.texts[i]
 		}
-		s := image.Pt(w, widget.Measure(context, guigui.FixedHeightConstraints(w)).Y)
-		t.contentBounds[widget] = image.Rectangle{
-			Min: pt,
-			Max: pt.Add(s),
-		}
-		x += t.table.columnWidthsInPixels[i] + tableColumnGap(context)
+		l.Items = append(l.Items, guigui.LinearLayoutItem{
+			Widget: widget,
+			Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
+		})
 	}
+	t.layout = l
 	return nil
 }
 
 func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	return t.contentBounds[widget]
+	return t.layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
 }
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
