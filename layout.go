@@ -70,12 +70,13 @@ type LinearLayoutItem struct {
 }
 
 func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle {
-	alongSize := l.alongSize(bounds)
-	acrossSize := l.acrossSize(bounds)
-	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds, alongSize, acrossSize)
+	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds)
 
 	for i, item := range l.Items {
-		if item.Widget == widget {
+		if item.Widget == nil {
+			continue
+		}
+		if item.Widget.widgetState() == widget.widgetState() {
 			return l.tmpBoundsArr[i]
 		}
 	}
@@ -92,10 +93,12 @@ func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, wid
 	return image.Rectangle{}
 }
 
+func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
+	return l.appendWidgetBounds(boundsArr, context, bounds)
+}
+
 func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index int) image.Rectangle {
-	alongSize := l.alongSize(bounds)
-	acrossSize := l.acrossSize(bounds)
-	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds, alongSize, acrossSize)
+	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds)
 	return l.tmpBoundsArr[index]
 }
 
@@ -294,7 +297,9 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 	return image.Point{}
 }
 
-func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle, alongSize, acrossSize int) []image.Rectangle {
+func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
+	alongSize := l.alongSize(bounds)
+	acrossSize := l.acrossSize(bounds)
 	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, alongSize, acrossSize)
 	var progress int
 	for i := range l.Items {

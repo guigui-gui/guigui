@@ -27,6 +27,8 @@ type Table[T comparable] struct {
 	columns              []TableColumn
 	columnLayoutItems    []guigui.LinearLayoutItem
 	columnWidthsInPixels []int
+
+	tmpItemBounds []image.Rectangle
 }
 
 type TableColumn struct {
@@ -124,8 +126,9 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			End:   listItemPadding(context),
 		},
 	}
+	t.tmpItemBounds = layout.AppendItemBounds(t.tmpItemBounds[:0], context, widgetBounds.Bounds())
 	for i := range t.columnWidthsInPixels {
-		t.columnWidthsInPixels[i] = layout.ItemBounds(context, widgetBounds.Bounds(), i).Dx()
+		t.columnWidthsInPixels[i] = t.tmpItemBounds[i].Dx()
 		t.columnWidthsInPixels[i] = max(t.columnWidthsInPixels[i], t.columns[i].MinWidth)
 	}
 	var contentWidth int
