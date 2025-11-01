@@ -17,12 +17,12 @@ import (
 type Table[T comparable] struct {
 	guigui.DefaultWidget
 
-	list             baseList[T]
-	baseListItems    []baseListItem[T]
-	tableItems       []TableRow[T]
-	tableItemWidgets []tableRowWidget[T]
-	columnTexts      []Text
-	tableHeader      tableHeader[T]
+	list            baseList[T]
+	baseListItems   []baseListItem[T]
+	tableRows       []TableRow[T]
+	tableRowWidgets []tableRowWidget[T]
+	columnTexts     []Text
+	tableHeader     tableHeader[T]
 
 	columns              []TableColumn
 	columnLayoutItems    []guigui.LinearLayoutItem
@@ -68,13 +68,13 @@ func (t *Table[T]) SetFooterHeight(height int) {
 	t.list.SetFooterHeight(height)
 }
 
-func (t *Table[T]) updateTableItems() {
-	t.tableItemWidgets = adjustSliceSize(t.tableItemWidgets, len(t.tableItems))
-	t.baseListItems = adjustSliceSize(t.baseListItems, len(t.tableItems))
+func (t *Table[T]) updateTableRows() {
+	t.tableRowWidgets = adjustSliceSize(t.tableRowWidgets, len(t.tableRows))
+	t.baseListItems = adjustSliceSize(t.baseListItems, len(t.tableRows))
 
-	for i, item := range t.tableItems {
-		t.tableItemWidgets[i].setListItem(item)
-		t.baseListItems[i] = t.tableItemWidgets[i].listItem()
+	for i, row := range t.tableRows {
+		t.tableRowWidgets[i].setTableRow(row)
+		t.baseListItems[i] = t.tableRowWidgets[i].listItem()
 	}
 	t.list.SetItems(t.baseListItems)
 }
@@ -92,7 +92,7 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
 
-	t.updateTableItems()
+	t.updateTableRows()
 
 	t.columnWidthsInPixels = adjustSliceSize(t.columnWidthsInPixels, len(t.columns))
 	t.columnLayoutItems = adjustSliceSize(t.columnLayoutItems, len(t.columns))
@@ -127,9 +127,9 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	}
 	t.list.SetContentWidth(contentWidth)
 
-	for i := range t.tableItemWidgets {
-		item := &t.tableItemWidgets[i]
-		item.table = t
+	for i := range t.tableRowWidgets {
+		row := &t.tableRowWidgets[i]
+		row.table = t
 	}
 
 	t.tableHeader.table = t
@@ -173,7 +173,7 @@ func tableHeaderHeight(context *guigui.Context) int {
 }
 
 func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	item := &t.tableItemWidgets[index]
+	item := &t.tableRowWidgets[index]
 	switch {
 	case t.list.SelectedItemIndex() == index && item.selectable():
 		return DefaultActiveListItemTextColor(context)
@@ -187,31 +187,31 @@ func (t *Table[T]) SelectedItemIndex() int {
 }
 
 func (t *Table[T]) SelectedItem() (TableRow[T], bool) {
-	if t.list.SelectedItemIndex() < 0 || t.list.SelectedItemIndex() >= len(t.tableItemWidgets) {
+	if t.list.SelectedItemIndex() < 0 || t.list.SelectedItemIndex() >= len(t.tableRowWidgets) {
 		return TableRow[T]{}, false
 	}
-	return t.tableItemWidgets[t.list.SelectedItemIndex()].item, true
+	return t.tableRowWidgets[t.list.SelectedItemIndex()].row, true
 }
 
 func (t *Table[T]) ItemByIndex(index int) (TableRow[T], bool) {
-	if index < 0 || index >= len(t.tableItemWidgets) {
+	if index < 0 || index >= len(t.tableRowWidgets) {
 		return TableRow[T]{}, false
 	}
-	return t.tableItemWidgets[index].item, true
+	return t.tableRowWidgets[index].row, true
 }
 
 func (t *Table[T]) SetItems(items []TableRow[T]) {
-	t.tableItems = adjustSliceSize(t.tableItems, len(items))
-	copy(t.tableItems, items)
-	t.updateTableItems()
+	t.tableRows = adjustSliceSize(t.tableRows, len(items))
+	copy(t.tableRows, items)
+	t.updateTableRows()
 }
 
 func (t *Table[T]) ItemsCount() int {
-	return len(t.tableItemWidgets)
+	return len(t.tableRowWidgets)
 }
 
 func (t *Table[T]) ID(index int) any {
-	return t.tableItemWidgets[index].item.Value
+	return t.tableRowWidgets[index].row.Value
 }
 
 func (t *Table[T]) SelectItemByIndex(index int) {
@@ -233,18 +233,18 @@ func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constrain
 type tableRowWidget[T comparable] struct {
 	guigui.DefaultWidget
 
-	item  TableRow[T]
+	row   TableRow[T]
 	table *Table[T]
 
 	contentBounds map[guigui.Widget]image.Rectangle
 }
 
-func (t *tableRowWidget[T]) setListItem(listItem TableRow[T]) {
-	t.item = listItem
+func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
+	t.row = row
 }
 
 func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
-	for _, content := range t.item.Contents {
+	for _, content := range t.row.Contents {
 		if content != nil {
 			adder.AddChild(content)
 		}
@@ -258,7 +258,7 @@ func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui
 	if t.contentBounds == nil {
 		t.contentBounds = map[guigui.Widget]image.Rectangle{}
 	}
-	for i, content := range t.item.Contents {
+	for i, content := range t.row.Contents {
 		if content != nil {
 			w := t.table.columnWidthsInPixels[i]
 			pt := image.Pt(x, b.Min.Y)
@@ -280,7 +280,7 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	var w, h int
-	for i, content := range t.item.Contents {
+	for i, content := range t.row.Contents {
 		if content == nil {
 			continue
 		}
@@ -299,15 +299,15 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 }
 
 func (t *tableRowWidget[T]) selectable() bool {
-	return t.item.selectable()
+	return t.row.selectable()
 }
 
 func (t *tableRowWidget[T]) listItem() baseListItem[T] {
 	return baseListItem[T]{
 		Content:    t,
 		Selectable: t.selectable(),
-		Movable:    t.item.Movable,
-		Value:      t.item.Value,
+		Movable:    t.row.Movable,
+		Value:      t.row.Value,
 	}
 }
 
