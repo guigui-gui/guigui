@@ -51,6 +51,7 @@ type TableCell struct {
 	Text                string
 	TextColor           color.Color
 	TextHorizontalAlign HorizontalAlign
+	TextVerticalAlign   VerticalAlign
 	TextBold            bool
 	TextTabular         bool
 	Content             guigui.Widget
@@ -262,7 +263,7 @@ func (t *tableRowWidget[T]) ensureTexts() {
 		t.texts[i].SetValue(cell.Text)
 		t.texts[i].SetColor(cell.TextColor)
 		t.texts[i].SetHorizontalAlign(cell.TextHorizontalAlign)
-		t.texts[i].SetVerticalAlign(VerticalAlignTop)
+		t.texts[i].SetVerticalAlign(cell.TextVerticalAlign)
 		t.texts[i].SetBold(cell.TextBold)
 		t.texts[i].SetTabular(cell.TextTabular)
 		t.texts[i].SetAutoWrap(true)
