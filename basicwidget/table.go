@@ -20,7 +20,7 @@ type Table[T comparable] struct {
 	list             baseList[T]
 	baseListItems    []baseListItem[T]
 	tableItems       []TableRow[T]
-	tableItemWidgets []tableItemWidget[T]
+	tableItemWidgets []tableRowWidget[T]
 	columnTexts      []Text
 	tableHeader      tableHeader[T]
 
@@ -230,7 +230,7 @@ func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constrain
 	return image.Pt(12*UnitSize(context), 6*UnitSize(context))
 }
 
-type tableItemWidget[T comparable] struct {
+type tableRowWidget[T comparable] struct {
 	guigui.DefaultWidget
 
 	item  TableRow[T]
@@ -239,11 +239,11 @@ type tableItemWidget[T comparable] struct {
 	contentBounds map[guigui.Widget]image.Rectangle
 }
 
-func (t *tableItemWidget[T]) setListItem(listItem TableRow[T]) {
+func (t *tableRowWidget[T]) setListItem(listItem TableRow[T]) {
 	t.item = listItem
 }
 
-func (t *tableItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	for _, content := range t.item.Contents {
 		if content != nil {
 			adder.AddChild(content)
@@ -251,7 +251,7 @@ func (t *tableItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *
 	}
 }
 
-func (t *tableItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	b := widgetBounds.Bounds()
 	x := b.Min.X
 	clear(t.contentBounds)
@@ -274,11 +274,11 @@ func (t *tableItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigu
 	return nil
 }
 
-func (t *tableItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	return t.contentBounds[widget]
 }
 
-func (t *tableItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	var w, h int
 	for i, content := range t.item.Contents {
 		if content == nil {
@@ -298,11 +298,11 @@ func (t *tableItemWidget[T]) Measure(context *guigui.Context, constraints guigui
 	return image.Pt(w, h)
 }
 
-func (t *tableItemWidget[T]) selectable() bool {
+func (t *tableRowWidget[T]) selectable() bool {
 	return t.item.selectable()
 }
 
-func (t *tableItemWidget[T]) listItem() baseListItem[T] {
+func (t *tableRowWidget[T]) listItem() baseListItem[T] {
 	return baseListItem[T]{
 		Content:    t,
 		Selectable: t.selectable(),
