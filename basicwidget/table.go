@@ -19,7 +19,7 @@ type Table[T comparable] struct {
 
 	list             baseList[T]
 	baseListItems    []baseListItem[T]
-	tableItems       []TableItem[T]
+	tableItems       []TableRow[T]
 	tableItemWidgets []tableItemWidget[T]
 	columnTexts      []Text
 	tableHeader      tableHeader[T]
@@ -36,14 +36,14 @@ type TableColumn struct {
 	MinWidth                  int
 }
 
-type TableItem[T comparable] struct {
+type TableRow[T comparable] struct {
 	Contents     []guigui.Widget
 	Unselectable bool
 	Movable      bool
 	Value        T
 }
 
-func (t *TableItem[T]) selectable() bool {
+func (t *TableRow[T]) selectable() bool {
 	return !t.Unselectable
 }
 
@@ -186,21 +186,21 @@ func (t *Table[T]) SelectedItemIndex() int {
 	return t.list.SelectedItemIndex()
 }
 
-func (t *Table[T]) SelectedItem() (TableItem[T], bool) {
+func (t *Table[T]) SelectedItem() (TableRow[T], bool) {
 	if t.list.SelectedItemIndex() < 0 || t.list.SelectedItemIndex() >= len(t.tableItemWidgets) {
-		return TableItem[T]{}, false
+		return TableRow[T]{}, false
 	}
 	return t.tableItemWidgets[t.list.SelectedItemIndex()].item, true
 }
 
-func (t *Table[T]) ItemByIndex(index int) (TableItem[T], bool) {
+func (t *Table[T]) ItemByIndex(index int) (TableRow[T], bool) {
 	if index < 0 || index >= len(t.tableItemWidgets) {
-		return TableItem[T]{}, false
+		return TableRow[T]{}, false
 	}
 	return t.tableItemWidgets[index].item, true
 }
 
-func (t *Table[T]) SetItems(items []TableItem[T]) {
+func (t *Table[T]) SetItems(items []TableRow[T]) {
 	t.tableItems = adjustSliceSize(t.tableItems, len(items))
 	copy(t.tableItems, items)
 	t.updateTableItems()
@@ -233,13 +233,13 @@ func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constrain
 type tableItemWidget[T comparable] struct {
 	guigui.DefaultWidget
 
-	item  TableItem[T]
+	item  TableRow[T]
 	table *Table[T]
 
 	contentBounds map[guigui.Widget]image.Rectangle
 }
 
-func (t *tableItemWidget[T]) setListItem(listItem TableItem[T]) {
+func (t *tableItemWidget[T]) setListItem(listItem TableRow[T]) {
 	t.item = listItem
 }
 

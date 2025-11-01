@@ -26,7 +26,7 @@ type Tables struct {
 	enabledText      basicwidget.Text
 	enabledToggle    basicwidget.Toggle
 
-	tableItems       []basicwidget.TableItem[int]
+	tableItems       []basicwidget.TableRow[int]
 	tableItemWidgets []guigui.Widget
 }
 
@@ -100,7 +100,7 @@ func (t *Tables) Update(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		text.SetHorizontalAlign(basicwidget.HorizontalAlignRight)
 		text.SetTabular(true)
 
-		t.tableItems = append(t.tableItems, basicwidget.TableItem[int]{
+		t.tableItems = append(t.tableItems, basicwidget.TableRow[int]{
 			Contents: t.tableItemWidgets[n*i : n*(i+1)],
 			Movable:  model.Tables().Movable(),
 			Value:    item.ID,
