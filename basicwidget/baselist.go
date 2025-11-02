@@ -301,7 +301,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
 	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
-		if y, ok := b.itemYFromIndex(context, widgetBounds, idx); ok {
+		if y, ok := b.itemYFromIndex(context, idx); ok {
 			y -= b.headerHeight + RoundedCornerRadius(context)
 			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
 			b.indexToJumpPlus1 = 0
@@ -538,19 +538,22 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 	return guigui.HandleInputResult{}
 }
 
-func (b *baseList[T]) itemYFromIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) (int, bool) {
-	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) {
+// itemYFromIndex returns the Y position of the item at the given index relative to the top of the baseList widget.
+func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
+	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) || len(b.itemBoundsForLayoutFromIndex) == 0 {
 		return 0, false
 	}
 
-	var itemY int
+	baseY := b.itemBoundsForLayoutFromIndex[0].Min.Y
+	var itemRelY int
 	if index == len(b.itemBoundsForLayoutFromIndex) {
-		itemY = b.itemBoundsForLayoutFromIndex[index-1].Max.Y
+		itemRelY = b.itemBoundsForLayoutFromIndex[index-1].Max.Y - baseY
 	} else {
-		itemY = b.itemBoundsForLayoutFromIndex[index].Min.Y
+		itemRelY = b.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
 	}
+	head := RoundedCornerRadius(context) + b.headerHeight
 	_, offsetY := b.scrollOverlay.Offset()
-	return itemY - widgetBounds.Bounds().Min.Y - int(offsetY), true
+	return itemRelY + head - int(offsetY), true
 }
 
 func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
@@ -693,7 +696,7 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 		x1 := x0 + float32(b.contentSize(context, widgetBounds).X)
 		x1 -= 2 * float32(RoundedCornerRadius(context))
 		y := float32(p.Y)
-		if itemY, ok := b.itemYFromIndex(context, widgetBounds, b.dragDstIndexPlus1-1); ok {
+		if itemY, ok := b.itemYFromIndex(context, b.dragDstIndexPlus1-1); ok {
 			y += float32(itemY)
 			_, offsetY := b.scrollOverlay.Offset()
 			y += float32(offsetY)
