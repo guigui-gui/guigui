@@ -552,8 +552,7 @@ func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, b
 		itemRelY = b.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
 	}
 	head := RoundedCornerRadius(context) + b.headerHeight
-	_, offsetY := b.scrollOverlay.Offset()
-	return itemRelY + head - int(offsetY), true
+	return itemRelY + head, true
 }
 
 func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
