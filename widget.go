@@ -127,3 +127,49 @@ func (w *WidgetWithSize[T]) Measure(context *Context, constraints Constraints) i
 	}
 	return w.Widget().Measure(context, constraints)
 }
+
+type WidgetWithPadding[T Widget] struct {
+	DefaultWidget
+
+	widget  T
+	padding Padding
+
+	initOnce sync.Once
+}
+
+func (w *WidgetWithPadding[T]) SetPadding(padding Padding) {
+	w.padding = padding
+}
+
+func (w *WidgetWithPadding[T]) Widget() T {
+	w.initOnce.Do(func() {
+		t := reflect.TypeFor[T]()
+		if t.Kind() == reflect.Ptr {
+			w.widget = reflect.New(t.Elem()).Interface().(T)
+		}
+	})
+	return w.widget
+}
+
+func (w *WidgetWithPadding[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
+	adder.AddChild(w.Widget())
+}
+
+func (w *WidgetWithPadding[T]) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
+	if widget == Widget(w.Widget()) {
+		b := widgetBounds.Bounds()
+		b.Min.X += w.padding.Start
+		b.Min.Y += w.padding.Top
+		b.Max.X -= w.padding.End
+		b.Max.Y -= w.padding.Bottom
+		return b
+	}
+	return image.Rectangle{}
+}
+
+func (w *WidgetWithPadding[T]) Measure(context *Context, constraints Constraints) image.Point {
+	s := w.Widget().Measure(context, constraints)
+	s.X += w.padding.Start + w.padding.End
+	s.Y += w.padding.Top + w.padding.Bottom
+	return s
+}
