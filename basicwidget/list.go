@@ -271,7 +271,7 @@ func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 		offY := (b.Dy() - s.Y) / 2
 		pt := b.Min.Add(image.Pt(0, offY))
 		if widget == &l.text {
-			pt.X += UnitSize(context) / 4
+			pt.X += ListItemTextPadding(context).Start
 		}
 		return image.Rectangle{
 			Min: pt,
@@ -304,7 +304,8 @@ func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.
 	} else {
 		// Assume that every item can use a bold font.
 		s = l.text.boldTextSize(context, constraints)
-		s = s.Add(image.Pt(2*UnitSize(context)/4, int(2*listItemTextVerticalPadding(context))))
+		p := ListItemTextPadding(context)
+		s = s.Add(image.Pt(p.Start+p.End, p.Top+p.Bottom))
 	}
 
 	if l.style != ListStyleMenu || l.item.Border {
@@ -338,6 +339,12 @@ func (l *listItemWidget[T]) listItem() baseListItem[T] {
 	}
 }
 
-func listItemTextVerticalPadding(context *guigui.Context) float64 {
-	return context.Scale()
+func ListItemTextPadding(context *guigui.Context) guigui.Padding {
+	u := UnitSize(context)
+	return guigui.Padding{
+		Start:  u / 4,
+		Top:    int(context.Scale()),
+		End:    u / 4,
+		Bottom: int(context.Scale()),
+	}
 }
