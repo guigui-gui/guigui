@@ -301,7 +301,8 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
 	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
-		if y, ok := b.itemYFromIndex(context, widgetBounds, idx); ok {
+		if y, ok := b.itemYFromIndex(idx); ok {
+			y -= widgetBounds.Bounds().Min.Y
 			y -= b.headerHeight + RoundedCornerRadius(context)
 			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
 			b.indexToJumpPlus1 = 0
@@ -538,8 +539,8 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 	return guigui.HandleInputResult{}
 }
 
-func (b *baseList[T]) itemYFromIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) (int, bool) {
-	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) {
+func (b *baseList[T]) itemYFromIndex(index int) (int, bool) {
+	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) || len(b.itemBoundsForLayoutFromIndex) == 0 {
 		return 0, false
 	}
 
@@ -550,7 +551,7 @@ func (b *baseList[T]) itemYFromIndex(context *guigui.Context, widgetBounds *guig
 		itemY = b.itemBoundsForLayoutFromIndex[index].Min.Y
 	}
 	_, offsetY := b.scrollOverlay.Offset()
-	return itemY - widgetBounds.Bounds().Min.Y - int(offsetY), true
+	return itemY - int(offsetY), true
 }
 
 func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
@@ -693,8 +694,8 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 		x1 := x0 + float32(b.contentSize(context, widgetBounds).X)
 		x1 -= 2 * float32(RoundedCornerRadius(context))
 		y := float32(p.Y)
-		if itemY, ok := b.itemYFromIndex(context, widgetBounds, b.dragDstIndexPlus1-1); ok {
-			y += float32(itemY)
+		if itemY, ok := b.itemYFromIndex(b.dragDstIndexPlus1 - 1); ok {
+			y += float32(itemY - widgetBounds.Bounds().Min.Y)
 			_, offsetY := b.scrollOverlay.Offset()
 			y += float32(offsetY)
 			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
