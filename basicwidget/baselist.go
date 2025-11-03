@@ -277,7 +277,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 		itemP.Y = b.adjustItemY(context, itemP.Y)
 		r := image.Rectangle{
 			Min: itemP,
-			Max: itemP.Add(contentSize),
+			Max: itemP.Add(image.Pt(itemW, contentSize.Y)),
 		}
 		b.itemBoundsForLayoutFromWidget[item.Content] = r
 		b.itemBoundsForLayoutFromIndex[i] = r
