@@ -168,6 +168,13 @@ func (w *WidgetWithPadding[T]) Layout(context *Context, widgetBounds *WidgetBoun
 }
 
 func (w *WidgetWithPadding[T]) Measure(context *Context, constraints Constraints) image.Point {
+	// TODO: What if constraints can have fixed width and height at the same time?
+	if fixedWidth, ok := constraints.FixedWidth(); ok {
+		constraints = FixedWidthConstraints(fixedWidth - w.padding.Start - w.padding.End)
+	}
+	if fixedHeight, ok := constraints.FixedHeight(); ok {
+		constraints = FixedHeightConstraints(fixedHeight - w.padding.Top - w.padding.Bottom)
+	}
 	s := w.Widget().Measure(context, constraints)
 	s.X += w.padding.Start + w.padding.End
 	s.Y += w.padding.Top + w.padding.Bottom
