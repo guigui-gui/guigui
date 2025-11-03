@@ -57,7 +57,7 @@ func (d *DropdownList[T]) updateButtonContent(context *guigui.Context) {
 	d.button.SetContent(&d.buttonContent)
 }
 
-func (d *DropdownList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&d.button)
 	adder.AddChild(&d.popupMenu)
 }
@@ -183,7 +183,7 @@ func (d *dropdownListButtonContent) SetText(text string) {
 	d.text.SetValue(text)
 }
 
-func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if d.content != nil {
 		adder.AddChild(d.content)
 	}

@@ -105,7 +105,7 @@ func (p *Popup) SetOnClosed(f func(reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
-func (p *Popup) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -288,7 +288,7 @@ func (p *popupContent) setContent(widget guigui.Widget) {
 	p.content = widget
 }
 
-func (p *popupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}

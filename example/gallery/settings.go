@@ -26,7 +26,7 @@ type Settings struct {
 
 var hongKongChinese = language.MustParse("zh-HK")
 
-func (s *Settings) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (s *Settings) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.form)
 }
 
@@ -199,7 +199,7 @@ type textWithSubText struct {
 	subText basicwidget.Text
 }
 
-func (t *textWithSubText) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *textWithSubText) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.text)
 	adder.AddChild(&t.subText)
 }

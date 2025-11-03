@@ -62,7 +62,7 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.sidebar)
 	switch r.model.Mode() {

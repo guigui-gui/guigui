@@ -174,7 +174,7 @@ func (t *Text) resetAutoWrapCachedTextSize() {
 	t.cachedTextSizePlus1[newTextSizeCacheKey(true, true)] = image.Point{}
 }
 
-func (t *Text) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Text) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if t.selectable || t.editable {
 		adder.AddChild(&t.cursor)
 	}

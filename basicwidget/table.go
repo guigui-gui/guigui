@@ -92,7 +92,7 @@ func (t *Table[T]) updateTableRows() {
 	t.list.SetItems(t.baseListItems)
 }
 
-func (t *Table[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Table[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.list)
 	for i := range t.columnTexts {
 		adder.AddChild(&t.columnTexts[i])
@@ -270,7 +270,7 @@ func (t *tableRowWidget[T]) ensureTexts() {
 	}
 }
 
-func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	t.ensureTexts()
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {

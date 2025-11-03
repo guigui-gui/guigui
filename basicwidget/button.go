@@ -87,7 +87,7 @@ func (b *Button) setKeepPressed(keep bool) {
 	b.button.setKeepPressed(keep)
 }
 
-func (b *Button) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *Button) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.button)
 	if b.content != nil {
 		adder.AddChild(b.content)

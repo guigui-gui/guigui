@@ -31,7 +31,7 @@ type Texts struct {
 	sampleText                      basicwidget.Text
 }
 
-func (t *Texts) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Texts) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
 }

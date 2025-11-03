@@ -34,7 +34,7 @@ type Buttons struct {
 	enabledToggle basicwidget.Toggle
 }
 
-func (b *Buttons) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *Buttons) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.buttonsForm)
 	adder.AddChild(&b.configForm)
 }

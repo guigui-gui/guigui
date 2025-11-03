@@ -40,7 +40,7 @@ type Lists struct {
 	dropdownListItems []basicwidget.DropdownListItem[int]
 }
 
-func (l *Lists) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (l *Lists) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.listFormPanel)
 	adder.AddChild(&l.configForm)
 }

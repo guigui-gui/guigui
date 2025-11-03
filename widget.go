@@ -13,7 +13,7 @@ import (
 
 type Widget interface {
 	Model(key any) any
-	AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder)
+	AddChildren(context *Context, adder *ChildAdder)
 	Update(context *Context, widgetBounds *WidgetBounds) error
 	Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
@@ -96,7 +96,7 @@ func (w *WidgetWithSize[T]) Widget() T {
 	return w.widget
 }
 
-func (w *WidgetWithSize[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
+func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 
@@ -151,7 +151,7 @@ func (w *WidgetWithPadding[T]) Widget() T {
 	return w.widget
 }
 
-func (w *WidgetWithPadding[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
+func (w *WidgetWithPadding[T]) AddChildren(context *Context, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 

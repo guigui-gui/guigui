@@ -456,13 +456,13 @@ func (a *app) buildWidgets() error {
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
 		adder.app = a
 		adder.widget = widget
+		widget.AddChildren(&a.context, &adder)
+
+		// Call Update.
 		bounds := WidgetBounds{
 			context: &a.context,
 			widget:  widget,
 		}
-		widget.AddChildren(&a.context, &bounds, &adder)
-
-		// Call Update.
 		if err := widget.Update(&a.context, &bounds); err != nil {
 			return err
 		}

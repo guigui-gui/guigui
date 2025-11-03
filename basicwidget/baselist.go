@@ -144,7 +144,7 @@ func (b *baseList[T]) ItemYFromIndexForMenu(context *guigui.Context, index int) 
 	return b.content.itemYFromIndexForMenu(context, index)
 }
 
-func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.content)
 	adder.AddChild(&b.frame)
 }
@@ -283,7 +283,7 @@ func (b *baseListContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (b *baseListContent[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *baseListContent[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	b.expanderImages = adjustSliceSize(b.expanderImages, b.abstractList.ItemCount())
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
