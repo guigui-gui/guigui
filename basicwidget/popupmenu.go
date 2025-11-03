@@ -178,5 +178,5 @@ func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.C
 }
 
 func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
-	return p.list.Widget().list.itemYFromIndexForMenu(context, index)
+	return p.list.Widget().list.ItemYFromIndexForMenu(context, index)
 }

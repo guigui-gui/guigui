@@ -86,7 +86,7 @@ func (l *List[T]) updateListItems() {
 	for i, item := range l.listItems {
 		l.listItemWidgets[i].setListItem(item)
 		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
-		l.listItemWidgets[i].setStyle(l.list.style)
+		l.listItemWidgets[i].setStyle(l.list.Style())
 		l.baseListItems[i] = l.listItemWidgets[i].listItem()
 	}
 	l.list.SetItems(l.baseListItems)
@@ -100,7 +100,7 @@ func (l *List[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
-		item.text.SetBold(item.item.Header || l.list.style == ListStyleSidebar && l.SelectedItemIndex() == i)
+		item.text.SetBold(item.item.Header || l.list.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		context.SetEnabled(item, !item.item.Disabled)
 	}
@@ -117,14 +117,14 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 
 func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 	index := -1
-	switch l.list.style {
+	switch l.list.Style() {
 	case ListStyleNormal, ListStyleSidebar:
 		index = l.list.SelectedItemIndex()
 	case ListStyleMenu:
-		if !l.list.isHoveringVisible() {
+		if !l.list.IsHoveringVisible() {
 			return -1
 		}
-		index = l.list.hoveredItemIndexPlus1 - 1
+		index = l.list.HoveredItemIndex()
 	}
 	if index < 0 || index >= len(l.listItemWidgets) {
 		return -1

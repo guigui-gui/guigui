@@ -50,53 +50,27 @@ func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
 type baseList[T comparable] struct {
 	guigui.DefaultWidget
 
-	checkmark      Image
-	expanderImages []Image
-	frame          baseListFrame
-	scrollOverlay  scrollOverlay
+	content baseListContent[T]
+	frame   baseListFrame
 
-	abstractList              abstractList[T, baseListItem[T]]
-	stripeVisible             bool
-	style                     ListStyle
-	checkmarkIndexPlus1       int
-	hoveredItemIndexPlus1     int
-	lastHoveredItemIndexPlus1 int
-
-	indexToJumpPlus1        int
-	dragSrcIndexPlus1       int
-	dragDstIndexPlus1       int
-	pressStartPlus1         image.Point
-	startPressingIndexPlus1 int
-	headerHeight            int
-	footerHeight            int
-	contentWidthPlus1       int
-	contentHeight           int
-
-	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
-	itemBoundsForLayoutFromIndex  []image.Rectangle
+	headerHeight int
+	footerHeight int
 }
 
 func (b *baseList[T]) SetOnItemSelected(f func(index int)) {
-	b.abstractList.SetOnItemSelected(b, f)
+	b.content.SetOnItemSelected(f)
 }
 
 func (b *baseList[T]) SetOnItemsMoved(f func(from, count, to int)) {
-	guigui.RegisterEventHandler(b, baseListEventItemsMoved, f)
+	b.content.SetOnItemsMoved(f)
 }
 
 func (b *baseList[T]) SetOnItemExpanderToggled(f func(index int, expanded bool)) {
-	guigui.RegisterEventHandler(b, baseListEventItemExpanderToggled, f)
+	b.content.SetOnItemExpanderToggled(f)
 }
 
 func (b *baseList[T]) SetCheckmarkIndex(index int) {
-	if index < 0 {
-		index = -1
-	}
-	if b.checkmarkIndexPlus1 == index+1 {
-		return
-	}
-	b.checkmarkIndexPlus1 = index + 1
-	guigui.RequestRedraw(b)
+	b.content.SetCheckmarkIndex(index)
 }
 
 func (b *baseList[T]) SetHeaderHeight(height int) {
@@ -118,6 +92,130 @@ func (b *baseList[T]) SetFooterHeight(height int) {
 }
 
 func (b *baseList[T]) SetContentWidth(width int) {
+	b.content.SetContentWidth(width)
+}
+
+func (b *baseList[T]) Style() ListStyle {
+	return b.content.Style()
+}
+
+func (b *baseList[T]) SetStyle(style ListStyle) {
+	b.content.SetStyle(style)
+	b.frame.SetStyle(style)
+}
+
+func (b *baseList[T]) ScrollOffset() (float64, float64) {
+	return b.content.ScrollOffset()
+}
+
+func (b *baseList[T]) SetItems(items []baseListItem[T]) {
+	b.content.SetItems(items)
+}
+
+func (b *baseList[T]) SelectedItemIndex() int {
+	return b.content.SelectedItemIndex()
+}
+
+func (b *baseList[T]) SelectItemByIndex(index int) {
+	b.content.SelectItemByIndex(index)
+}
+
+func (b *baseList[T]) SelectItemByValue(value T) {
+	b.content.SelectItemByValue(value)
+}
+
+func (b *baseList[T]) JumpToItemIndex(index int) {
+	b.content.JumpToItemIndex(index)
+}
+
+func (b *baseList[T]) SetStripeVisible(visible bool) {
+	b.content.SetStripeVisible(visible)
+}
+
+func (b *baseList[T]) IsHoveringVisible() bool {
+	return b.content.IsHoveringVisible()
+}
+
+func (b *baseList[T]) HoveredItemIndex() int {
+	return b.content.hoveredItemIndexPlus1 - 1
+}
+
+func (b *baseList[T]) ItemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
+	return b.content.itemYFromIndexForMenu(context, index)
+}
+
+func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+	adder.AddChild(&b.content)
+	adder.AddChild(&b.frame)
+}
+
+func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+	switch widget {
+	case &b.content:
+		bounds := widgetBounds.Bounds()
+		bounds.Min.Y += b.headerHeight
+		bounds.Max.Y -= b.footerHeight
+		return bounds
+	case &b.frame:
+		return widgetBounds.Bounds()
+	}
+	return image.Rectangle{}
+}
+
+func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return b.content.Measure(context, constraints)
+}
+
+type baseListContent[T comparable] struct {
+	guigui.DefaultWidget
+
+	checkmark      Image
+	expanderImages []Image
+	scrollOverlay  scrollOverlay
+
+	abstractList              abstractList[T, baseListItem[T]]
+	stripeVisible             bool
+	style                     ListStyle
+	checkmarkIndexPlus1       int
+	hoveredItemIndexPlus1     int
+	lastHoveredItemIndexPlus1 int
+
+	indexToJumpPlus1        int
+	dragSrcIndexPlus1       int
+	dragDstIndexPlus1       int
+	pressStartPlus1         image.Point
+	startPressingIndexPlus1 int
+	contentWidthPlus1       int
+	contentHeight           int
+
+	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
+	itemBoundsForLayoutFromIndex  []image.Rectangle
+}
+
+func (b *baseListContent[T]) SetOnItemSelected(f func(index int)) {
+	b.abstractList.SetOnItemSelected(b, f)
+}
+
+func (b *baseListContent[T]) SetOnItemsMoved(f func(from, count, to int)) {
+	guigui.RegisterEventHandler(b, baseListEventItemsMoved, f)
+}
+
+func (b *baseListContent[T]) SetOnItemExpanderToggled(f func(index int, expanded bool)) {
+	guigui.RegisterEventHandler(b, baseListEventItemExpanderToggled, f)
+}
+
+func (b *baseListContent[T]) SetCheckmarkIndex(index int) {
+	if index < 0 {
+		index = -1
+	}
+	if b.checkmarkIndexPlus1 == index+1 {
+		return
+	}
+	b.checkmarkIndexPlus1 = index + 1
+	guigui.RequestRedraw(b)
+}
+
+func (b *baseListContent[T]) SetContentWidth(width int) {
 	if b.contentWidthPlus1 == width+1 {
 		return
 	}
@@ -125,19 +223,19 @@ func (b *baseList[T]) SetContentWidth(width int) {
 	guigui.RequestRedraw(b)
 }
 
-func (b *baseList[T]) contentWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
+func (b *baseListContent[T]) contentWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
 	if b.contentWidthPlus1 > 0 {
 		return b.contentWidthPlus1 - 1
 	}
 	return widgetBounds.Bounds().Dx()
 }
 
-func (b *baseList[T]) contentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
+func (b *baseListContent[T]) contentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
 	w := b.contentWidth(context, widgetBounds)
 	return image.Pt(w, b.contentHeight)
 }
 
-func (b *baseList[T]) visibleItems() iter.Seq2[int, baseListItem[T]] {
+func (b *baseListContent[T]) visibleItems() iter.Seq2[int, baseListItem[T]] {
 	return func(yield func(int, baseListItem[T]) bool) {
 		var lastCollapsedIndentLevel int
 		for i := range b.abstractList.ItemCount() {
@@ -157,7 +255,7 @@ func (b *baseList[T]) visibleItems() iter.Seq2[int, baseListItem[T]] {
 	}
 }
 
-func (b *baseList[T]) isItemVisible(index int) bool {
+func (b *baseListContent[T]) isItemVisible(index int) bool {
 	item, ok := b.abstractList.ItemByIndex(index)
 	if !ok {
 		return false
@@ -185,7 +283,7 @@ func (b *baseList[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *baseListContent[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	b.expanderImages = adjustSliceSize(b.expanderImages, b.abstractList.ItemCount())
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
@@ -197,19 +295,16 @@ func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.
 		}
 		adder.AddChild(item.Content)
 	}
-	if b.style != ListStyleSidebar && b.style != ListStyleMenu {
-		adder.AddChild(&b.frame)
-	}
 	adder.AddChild(&b.scrollOverlay)
 }
 
-func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	cw := b.contentWidth(context, widgetBounds)
 
 	p := widgetBounds.Bounds().Min
 	offsetX, offsetY := b.scrollOverlay.Offset()
 	p.X += RoundedCornerRadius(context) + int(offsetX)
-	p.Y += RoundedCornerRadius(context) + b.headerHeight + int(offsetY)
+	p.Y += RoundedCornerRadius(context) + int(offsetY)
 	origY := p.Y
 	clear(b.itemBoundsForLayoutFromWidget)
 	if b.itemBoundsForLayoutFromWidget == nil {
@@ -288,7 +383,6 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 
 	b.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
-	b.contentHeight += b.headerHeight + b.footerHeight
 	cs := image.Pt(cw, b.contentHeight)
 	// TODO: Now scrollOverlay's widgetBounds doens't match with baseList's widgetBounds.
 	// Separate a content part and use Panel.
@@ -296,7 +390,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 
 	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
 		if y, ok := b.itemYFromIndex(context, idx); ok {
-			y -= b.headerHeight + RoundedCornerRadius(context)
+			y -= RoundedCornerRadius(context)
 			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
 			b.indexToJumpPlus1 = 0
 		}
@@ -305,15 +399,10 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	return nil
 }
 
-func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
-	case &b.frame:
-		return widgetBounds.Bounds()
 	case &b.scrollOverlay:
-		bounds := widgetBounds.Bounds()
-		bounds.Min.Y += b.headerHeight
-		bounds.Max.Y -= b.footerHeight
-		return bounds
+		return widgetBounds.Bounds()
 	}
 	if r, ok := b.itemBoundsForLayoutFromWidget[widget]; ok {
 		return r
@@ -321,7 +410,7 @@ func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 	return image.Rectangle{}
 }
 
-func (b *baseList[T]) hasMovableItems() bool {
+func (b *baseListContent[T]) hasMovableItems() bool {
 	for i := range b.visibleItems() {
 		item, ok := b.abstractList.ItemByIndex(i)
 		if !ok {
@@ -334,42 +423,42 @@ func (b *baseList[T]) hasMovableItems() bool {
 	return false
 }
 
-func (b *baseList[T]) ItemByIndex(index int) (baseListItem[T], bool) {
+func (b *baseListContent[T]) ItemByIndex(index int) (baseListItem[T], bool) {
 	return b.abstractList.ItemByIndex(index)
 }
 
-func (b *baseList[T]) SelectedItemIndex() int {
+func (b *baseListContent[T]) SelectedItemIndex() int {
 	return b.abstractList.SelectedItemIndex()
 }
 
-func (b *baseList[T]) SetItems(items []baseListItem[T]) {
+func (b *baseListContent[T]) SetItems(items []baseListItem[T]) {
 	b.abstractList.SetItems(b, items)
 }
 
-func (b *baseList[T]) SelectItemByIndex(index int) {
+func (b *baseListContent[T]) SelectItemByIndex(index int) {
 	b.selectItemByIndex(index, false)
 }
 
-func (b *baseList[T]) selectItemByIndex(index int, forceFireEvents bool) {
+func (b *baseListContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
 	if b.abstractList.SelectItemByIndex(b, index, forceFireEvents) {
 		guigui.RequestRedraw(b)
 	}
 }
 
-func (b *baseList[T]) SelectItemByValue(value T) {
+func (b *baseListContent[T]) SelectItemByValue(value T) {
 	if b.abstractList.SelectItemByValue(b, value, false) {
 		guigui.RequestRedraw(b)
 	}
 }
 
-func (b *baseList[T]) JumpToItemIndex(index int) {
+func (b *baseListContent[T]) JumpToItemIndex(index int) {
 	if index < 0 || index >= b.abstractList.ItemCount() {
 		return
 	}
 	b.indexToJumpPlus1 = index + 1
 }
 
-func (b *baseList[T]) SetStripeVisible(visible bool) {
+func (b *baseListContent[T]) SetStripeVisible(visible bool) {
 	if b.stripeVisible == visible {
 		return
 	}
@@ -377,28 +466,27 @@ func (b *baseList[T]) SetStripeVisible(visible bool) {
 	guigui.RequestRedraw(b)
 }
 
-func (b *baseList[T]) isHoveringVisible() bool {
+func (b *baseListContent[T]) IsHoveringVisible() bool {
 	return b.style == ListStyleMenu
 }
 
-func (b *baseList[T]) Style() ListStyle {
+func (b *baseListContent[T]) Style() ListStyle {
 	return b.style
 }
 
-func (b *baseList[T]) SetStyle(style ListStyle) {
+func (b *baseListContent[T]) SetStyle(style ListStyle) {
 	if b.style == style {
 		return
 	}
 	b.style = style
-	b.frame.SetStyle(style)
 	guigui.RequestRedraw(b)
 }
 
-func (b *baseList[T]) ScrollOffset() (float64, float64) {
+func (b *baseListContent[T]) ScrollOffset() (float64, float64) {
 	return b.scrollOverlay.Offset()
 }
 
-func (b *baseList[T]) calcDropDstIndex(context *guigui.Context) int {
+func (b *baseListContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	_, y := ebiten.CursorPosition()
 	for i := range b.visibleItems() {
 		if b := b.itemBounds(context, i); y < (b.Min.Y+b.Max.Y)/2 {
@@ -408,7 +496,7 @@ func (b *baseList[T]) calcDropDstIndex(context *guigui.Context) int {
 	return b.abstractList.ItemCount()
 }
 
-func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	b.hoveredItemIndexPlus1 = 0
 	if context.IsWidgetHitAtCursor(b) {
 		cp := image.Pt(ebiten.CursorPosition())
@@ -434,7 +522,7 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 	}
 	b.checkmark.SetImage(checkImg)
 
-	if b.isHoveringVisible() || b.hasMovableItems() {
+	if b.IsHoveringVisible() || b.hasMovableItems() {
 		if b.lastHoveredItemIndexPlus1 != b.hoveredItemIndexPlus1 {
 			b.lastHoveredItemIndexPlus1 = b.hoveredItemIndexPlus1
 			guigui.RequestRedraw(b)
@@ -446,7 +534,7 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			_, y := ebiten.CursorPosition()
 			p := widgetBounds.Bounds().Min
-			h := widgetBounds.Bounds().Dy() - (b.headerHeight + b.footerHeight)
+			h := widgetBounds.Bounds().Dy()
 			var dy float64
 			if upperY := p.Y + UnitSize(context); y < upperY {
 				dy = float64(upperY-y) / 4
@@ -537,7 +625,7 @@ func (b *baseList[T]) HandlePointingInput(context *guigui.Context, widgetBounds 
 // itemYFromIndex returns the same value whatever the baseList position is.
 //
 // itemYFromIndex is available after Update is called, so do not use this from a parent widget.
-func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
+func (b *baseListContent[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
 	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) || len(b.itemBoundsForLayoutFromIndex) == 0 {
 		return 0, false
 	}
@@ -549,7 +637,7 @@ func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, b
 	} else {
 		itemRelY = b.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
 	}
-	head := RoundedCornerRadius(context) + b.headerHeight
+	head := RoundedCornerRadius(context)
 	return itemRelY + head, true
 }
 
@@ -557,8 +645,8 @@ func (b *baseList[T]) itemYFromIndex(context *guigui.Context, index int) (int, b
 // itemYFromIndexForMenu returns the same value whatever the baseList position is.
 //
 // itemYFromIndexForMenu is available anytime even before Update is called.
-func (b *baseList[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
-	y := RoundedCornerRadius(context) + b.headerHeight
+func (b *baseListContent[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
+	y := RoundedCornerRadius(context)
 	for i := range b.visibleItems() {
 		if i == index {
 			return y, true
@@ -575,7 +663,7 @@ func (b *baseList[T]) itemYFromIndexForMenu(context *guigui.Context, index int) 
 	return 0, false
 }
 
-func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
+func (b *baseListContent[T]) adjustItemY(context *guigui.Context, y int) int {
 	// Adjust the bounds based on the list style (inset or outset).
 	switch b.style {
 	case ListStyleNormal:
@@ -586,7 +674,7 @@ func (b *baseList[T]) adjustItemY(context *guigui.Context, y int) int {
 	return y
 }
 
-func (b *baseList[T]) itemBounds(context *guigui.Context, index int) image.Rectangle {
+func (b *baseListContent[T]) itemBounds(context *guigui.Context, index int) image.Rectangle {
 	if index < 0 || index >= len(b.itemBoundsForLayoutFromIndex) {
 		return image.Rectangle{}
 	}
@@ -597,7 +685,7 @@ func (b *baseList[T]) itemBounds(context *guigui.Context, index int) image.Recta
 	return r
 }
 
-func (b *baseList[T]) selectedItemColor(context *guigui.Context) color.Color {
+func (b *baseListContent[T]) selectedItemColor(context *guigui.Context) color.Color {
 	if b.SelectedItemIndex() < 0 || b.SelectedItemIndex() >= b.abstractList.ItemCount() {
 		return nil
 	}
@@ -613,7 +701,7 @@ func (b *baseList[T]) selectedItemColor(context *guigui.Context) color.Color {
 	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.5)
 }
 
-func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (b *baseListContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	var clr color.Color
 	switch b.style {
 	case ListStyleSidebar:
@@ -666,7 +754,7 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 	hoveredItemIndex := b.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := b.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && b.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.abstractList.ItemCount() && hoveredItem.Selectable && b.isItemVisible(hoveredItemIndex) {
+	if ok && b.IsHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.abstractList.ItemCount() && hoveredItem.Selectable && b.isItemVisible(hoveredItemIndex) {
 		bounds := b.itemBounds(context, hoveredItemIndex)
 		if b.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
@@ -718,7 +806,7 @@ func (b *baseList[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	}
 }
 
-func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+func (b *baseListContent[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	// Measure is mainly for a menu list.
 	var itemConstraints guigui.Constraints
 	if fixedWidth, ok := constraints.FixedWidth(); ok {
@@ -748,47 +836,51 @@ type baseListFrame struct {
 	style        ListStyle
 }
 
-func (l *baseListFrame) SetHeaderHeight(height int) {
-	if l.headerHeight == height {
+func (b *baseListFrame) SetHeaderHeight(height int) {
+	if b.headerHeight == height {
 		return
 	}
-	l.headerHeight = height
-	guigui.RequestRedraw(l)
+	b.headerHeight = height
+	guigui.RequestRedraw(b)
 }
 
-func (l *baseListFrame) SetFooterHeight(height int) {
-	if l.footerHeight == height {
+func (b *baseListFrame) SetFooterHeight(height int) {
+	if b.footerHeight == height {
 		return
 	}
-	l.footerHeight = height
-	guigui.RequestRedraw(l)
+	b.footerHeight = height
+	guigui.RequestRedraw(b)
 }
 
-func (l *baseListFrame) SetStyle(style ListStyle) {
-	if l.style == style {
+func (b *baseListFrame) SetStyle(style ListStyle) {
+	if b.style == style {
 		return
 	}
-	l.style = style
-	guigui.RequestRedraw(l)
+	b.style = style
+	guigui.RequestRedraw(b)
 }
 
-func (l *baseListFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (b *baseListFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Max.Y = bounds.Min.Y + l.headerHeight
+	bounds.Max.Y = bounds.Min.Y + b.headerHeight
 	return bounds
 }
 
-func (l *baseListFrame) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (b *baseListFrame) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Min.Y = bounds.Max.Y - l.footerHeight
+	bounds.Min.Y = bounds.Max.Y - b.footerHeight
 	return bounds
 }
 
-func (l *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	if b.style == ListStyleSidebar || b.style == ListStyleMenu {
+		return
+	}
+
 	// Draw a header.
-	if l.headerHeight > 0 {
-		bounds := l.headerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.SharpenCorners{
+	if b.headerHeight > 0 {
+		bounds := b.headerBounds(context, widgetBounds)
+		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), draw.SharpenCorners{
 			UpperStart: false,
 			UpperEnd:   false,
 			LowerStart: true,
@@ -800,16 +892,16 @@ func (l *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 		y0 := float32(bounds.Max.Y)
 		y1 := float32(bounds.Max.Y)
 		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
-		if !context.IsEnabled(l) {
+		if !context.IsEnabled(b) {
 			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}
 
 	// Draw a footer.
-	if l.footerHeight > 0 {
-		bounds := l.footerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.SharpenCorners{
+	if b.footerHeight > 0 {
+		bounds := b.footerBounds(context, widgetBounds)
+		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), draw.SharpenCorners{
 			UpperStart: true,
 			UpperEnd:   true,
 			LowerStart: false,
@@ -821,7 +913,7 @@ func (l *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 		y0 := float32(bounds.Min.Y)
 		y1 := float32(bounds.Min.Y)
 		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
-		if !context.IsEnabled(l) {
+		if !context.IsEnabled(b) {
 			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
@@ -829,7 +921,7 @@ func (l *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 
 	bounds := widgetBounds.Bounds()
 	border := draw.RoundedRectBorderTypeInset
-	if l.style != ListStyleNormal {
+	if b.style != ListStyleNormal {
 		border = draw.RoundedRectBorderTypeOutset
 	}
 	clr1, clr2 := draw.BorderColors(context.ColorMode(), border, false)
