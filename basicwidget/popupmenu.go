@@ -48,7 +48,7 @@ func (p *PopupMenu[T]) Update(context *guigui.Context, widgetBounds *guigui.Widg
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
 	list.list.SetOnItemSelected(func(index int) {
-		p.popup.SetOpen(false)
+		p.popup.SetOpen(context, false)
 		guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
 	})
 	p.list.SetFixedSize(p.contentBounds(context, widgetBounds).Size())
@@ -98,8 +98,8 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 	return r
 }
 
-func (p *PopupMenu[T]) SetOpen(open bool) {
-	p.popup.SetOpen(open)
+func (p *PopupMenu[T]) SetOpen(context *guigui.Context, open bool) {
+	p.popup.SetOpen(context, open)
 }
 
 func (p *PopupMenu[T]) IsOpen() bool {

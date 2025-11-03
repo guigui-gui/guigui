@@ -127,6 +127,7 @@ func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	}
 
 	p.shadow.SetContentBounds(p.contentBounds(context, widgetBounds))
+	context.SetPassThrough(p, !p.IsOpen())
 
 	return nil
 }
@@ -155,7 +156,7 @@ func (p *Popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		p.close(PopupClosedReasonClickOutside)
+		p.close(context, PopupClosedReasonClickOutside)
 		// Continue handling inputs so that clicking a right button can be handled by other widgets.
 		// This is a little tricky, but this is needed to reopen context menu popups.
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
@@ -166,21 +167,21 @@ func (p *Popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 	return guigui.AbortHandlingInputByWidget(p)
 }
 
-func (p *Popup) SetOpen(open bool) {
+func (p *Popup) SetOpen(context *guigui.Context, open bool) {
 	if open {
 		if p.showing {
 			return
 		}
 		if p.openingCount > 0 {
-			p.close(PopupClosedReasonReopen)
+			p.close(context, PopupClosedReasonReopen)
 			p.openAfterClose = true
 			return
 		}
 		p.showing = true
 		p.hiding = false
-		p.shadow.SetPassThrough(p.backgroundPassThrough())
+		// p.shadow.SetPassThrough(p.backgroundPassThrough())
 	} else {
-		p.close(PopupClosedReasonFuncCall)
+		p.close(context, PopupClosedReasonFuncCall)
 	}
 }
 
@@ -197,7 +198,7 @@ func (p *Popup) setClosedReason(reason PopupClosedReason) {
 	p.closedReason = reason
 }
 
-func (p *Popup) close(reason PopupClosedReason) {
+func (p *Popup) close(context *guigui.Context, reason PopupClosedReason) {
 	if p.hiding {
 		p.setClosedReason(reason)
 		return
@@ -210,7 +211,7 @@ func (p *Popup) close(reason PopupClosedReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
-	p.shadow.SetPassThrough(p.backgroundPassThrough())
+	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 }
 
 func (p *Popup) backgroundPassThrough() bool {
@@ -251,13 +252,13 @@ func (p *Popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 					p.contentPosition = p.nextContentPosition
 					p.hasNextContentPosition = false
 				}
-				p.SetOpen(true)
+				p.SetOpen(context, true)
 				p.openAfterClose = false
 			}
 		}
 	}
 
-	p.shadow.SetPassThrough(p.backgroundPassThrough())
+	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
 
 	// SetOpacity cannot be called for p.blurredBackground so far.
@@ -272,10 +273,6 @@ func (p *Popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 func (p *Popup) ZDelta() int {
 	return popupZ
-}
-
-func (p *Popup) PassThrough() bool {
-	return !p.IsOpen()
 }
 
 type popupContent struct {
@@ -377,8 +374,6 @@ type popupShadow struct {
 	guigui.DefaultWidget
 
 	contentBounds image.Rectangle
-
-	passThrough bool
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
@@ -387,10 +382,6 @@ func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
 	}
 	p.contentBounds = bounds
 	guigui.RequestRedraw(p)
-}
-
-func (p *popupShadow) SetPassThrough(passThrough bool) {
-	p.passThrough = passThrough
 }
 
 func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -405,8 +396,4 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 func (p *popupShadow) ZDelta() int {
 	return 1
-}
-
-func (p *popupShadow) PassThrough() bool {
-	return p.passThrough
 }

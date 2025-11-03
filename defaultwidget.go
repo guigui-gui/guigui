@@ -70,10 +70,6 @@ func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image
 	return s
 }
 
-func (*DefaultWidget) PassThrough() bool {
-	return false
-}
-
 func (d *DefaultWidget) widgetState() *widgetState {
 	return &d.s
 }

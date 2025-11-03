@@ -518,7 +518,7 @@ func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 }
 
 func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle int) HandleInputResult {
-	if widget.PassThrough() {
+	if widget.widgetState().passThrough {
 		return HandleInputResult{}
 	}
 
@@ -746,7 +746,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	if !widget.widgetState().isVisible() {
 		return false
 	}
-	if widget.PassThrough() {
+	if widget.widgetState().passThrough {
 		return false
 	}
 
@@ -757,7 +757,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 		z2 := widget.widgetState().z
 		if z1 > z2 {
 			// w overlaps widget at point.
-			if wz.widget.widgetState().isVisible() && !wz.widget.PassThrough() {
+			if wz.widget.widgetState().isVisible() && !wz.widget.widgetState().passThrough {
 				return false
 			}
 			continue

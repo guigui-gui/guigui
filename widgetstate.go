@@ -34,7 +34,7 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 		bounds:      bounds,
 		zDelta:      widget.ZDelta(),
 		visible:     widget.widgetState().isVisible(),
-		passThrough: widget.PassThrough(),
+		passThrough: widget.widgetState().passThrough,
 	}, true
 }
 
@@ -97,6 +97,7 @@ type widgetState struct {
 
 	hidden          bool
 	disabled        bool
+	passThrough     bool
 	transparency    float64
 	customDraw      CustomDrawFunc
 	eventHandlers   map[string]any

@@ -214,6 +214,7 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	})
 	t.prevFocused = context.IsFocused(t)
 
+	context.SetPassThrough(&t.cursor, true)
 	if t.selectable || t.editable {
 		t.cursor.text = t
 	}
@@ -1210,10 +1211,6 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 
 func (t *textCursor) ZDelta() int {
 	return 1
-}
-
-func (t *textCursor) PassThrough() bool {
-	return true
 }
 
 func replaceNewLinesWithSpace(text string, start, end, shiftIndex int) (string, int, int, int) {

@@ -247,6 +247,9 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 		t.focus.textInput = t
 	}
 
+	context.SetPassThrough(&t.frame, true)
+	context.SetPassThrough(&t.focus, true)
+
 	return nil
 }
 
@@ -367,10 +370,6 @@ func (t *textInputFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 }
 
-func (t *textInputFrame) PassThrough() bool {
-	return true
-}
-
 func textInputFocusBorderWidth(context *guigui.Context) int {
 	return int(4 * context.Scale())
 }
@@ -390,8 +389,4 @@ func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 
 func (t *textInputFocus) ZDelta() int {
 	return 1
-}
-
-func (t *textInputFocus) PassThrough() bool {
-	return true
 }

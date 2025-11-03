@@ -357,3 +357,16 @@ func (c *Context) Model(widget Widget, key any) any {
 	}
 	return nil
 }
+
+func (c *Context) PassThrough(widget Widget) bool {
+	return widget.widgetState().passThrough
+}
+
+func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
+	widgetState := widget.widgetState()
+	if widgetState.passThrough == passThrough {
+		return
+	}
+	widgetState.passThrough = passThrough
+	RequestRedraw(widget)
+}

@@ -66,7 +66,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.W
 	d.updateButtonContent(context)
 
 	d.button.SetOnDown(func() {
-		d.popupMenu.SetOpen(true)
+		d.popupMenu.SetOpen(context, true)
 	})
 	d.button.setKeepPressed(d.popupMenu.IsOpen())
 	d.button.SetIconAlign(IconAlignEnd)

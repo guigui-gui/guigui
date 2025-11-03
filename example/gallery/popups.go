@@ -47,7 +47,7 @@ func (p *Popups) Update(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
 	p.showButton.SetOnUp(func() {
-		p.simplePopup.SetOpen(true)
+		p.simplePopup.SetOpen(context, true)
 	})
 
 	p.forms[0].SetItems([]basicwidget.FormItem{
@@ -152,7 +152,7 @@ func (p *Popups) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		if context.IsWidgetHitAtCursor(&p.contextMenuPopupClickHereText) {
 			p.contextMenuPopupPosition = image.Pt(ebiten.CursorPosition())
-			p.contextMenuPopup.SetOpen(true)
+			p.contextMenuPopup.SetOpen(context, true)
 			return guigui.HandleInputByWidget(p)
 		}
 	}
@@ -183,7 +183,7 @@ func (s *simplePopupContent) Update(context *guigui.Context, widgetBounds *guigu
 
 	s.closeButton.SetText("Close")
 	s.closeButton.SetOnUp(func() {
-		s.popup.SetOpen(false)
+		s.popup.SetOpen(context, false)
 	})
 
 	return nil

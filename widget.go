@@ -23,7 +23,6 @@ type Widget interface {
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
 	ZDelta() int
 	Measure(context *Context, constraints Constraints) image.Point
-	PassThrough() bool
 
 	widgetState() *widgetState
 }
