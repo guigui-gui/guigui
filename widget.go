@@ -53,12 +53,10 @@ func (r *HandleInputResult) shouldRaise() bool {
 type WidgetWithSize[T Widget] struct {
 	DefaultWidget
 
-	widget T
+	widget lazyWidget[T]
 
 	measure        func(context *Context, constraints Constraints) image.Point
 	fixedSizePlus1 image.Point
-
-	initOnce sync.Once
 }
 
 func (w *WidgetWithSize[T]) SetMeasureFunc(f func(context *Context, constraints Constraints) image.Point) {
@@ -87,13 +85,7 @@ func (w *WidgetWithSize[T]) SetIntrinsicSize() {
 }
 
 func (w *WidgetWithSize[T]) Widget() T {
-	w.initOnce.Do(func() {
-		t := reflect.TypeFor[T]()
-		if t.Kind() == reflect.Ptr {
-			w.widget = reflect.New(t.Elem()).Interface().(T)
-		}
-	})
-	return w.widget
+	return w.widget.Widget()
 }
 
 func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
@@ -131,10 +123,8 @@ func (w *WidgetWithSize[T]) Measure(context *Context, constraints Constraints) i
 type WidgetWithPadding[T Widget] struct {
 	DefaultWidget
 
-	widget  T
+	widget  lazyWidget[T]
 	padding Padding
-
-	initOnce sync.Once
 }
 
 func (w *WidgetWithPadding[T]) SetPadding(padding Padding) {
@@ -142,13 +132,7 @@ func (w *WidgetWithPadding[T]) SetPadding(padding Padding) {
 }
 
 func (w *WidgetWithPadding[T]) Widget() T {
-	w.initOnce.Do(func() {
-		t := reflect.TypeFor[T]()
-		if t.Kind() == reflect.Ptr {
-			w.widget = reflect.New(t.Elem()).Interface().(T)
-		}
-	})
-	return w.widget
+	return w.widget.Widget()
 }
 
 func (w *WidgetWithPadding[T]) AddChildren(context *Context, adder *ChildAdder) {
@@ -179,4 +163,19 @@ func (w *WidgetWithPadding[T]) Measure(context *Context, constraints Constraints
 	s.X += w.padding.Start + w.padding.End
 	s.Y += w.padding.Top + w.padding.Bottom
 	return s
+}
+
+type lazyWidget[T Widget] struct {
+	widget T
+	once   sync.Once
+}
+
+func (l *lazyWidget[T]) Widget() T {
+	l.once.Do(func() {
+		t := reflect.TypeFor[T]()
+		if t.Kind() == reflect.Ptr {
+			l.widget = reflect.New(t.Elem()).Interface().(T)
+		}
+	})
+	return l.widget
 }
