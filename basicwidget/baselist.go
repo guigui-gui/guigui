@@ -52,7 +52,7 @@ type baseList[T comparable] struct {
 
 	checkmark      Image
 	expanderImages []Image
-	listFrame      baseListFrame[T]
+	frame          baseListFrame
 	scrollOverlay  scrollOverlay
 
 	abstractList              abstractList[T, baseListItem[T]]
@@ -104,6 +104,7 @@ func (b *baseList[T]) SetHeaderHeight(height int) {
 		return
 	}
 	b.headerHeight = height
+	b.frame.SetHeaderHeight(height)
 	guigui.RequestRedraw(b)
 }
 
@@ -112,6 +113,7 @@ func (b *baseList[T]) SetFooterHeight(height int) {
 		return
 	}
 	b.footerHeight = height
+	b.frame.SetFooterHeight(height)
 	guigui.RequestRedraw(b)
 }
 
@@ -196,7 +198,7 @@ func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.
 		adder.AddChild(item.Content)
 	}
 	if b.style != ListStyleSidebar && b.style != ListStyleMenu {
-		adder.AddChild(&b.listFrame)
+		adder.AddChild(&b.frame)
 	}
 	adder.AddChild(&b.scrollOverlay)
 }
@@ -285,10 +287,6 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 		p.Y += contentSize.Y
 	}
 
-	if b.style != ListStyleSidebar && b.style != ListStyleMenu {
-		b.listFrame.list = b
-	}
-
 	b.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
 	b.contentHeight += b.headerHeight + b.footerHeight
 	cs := image.Pt(cw, b.contentHeight)
@@ -309,7 +307,7 @@ func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.Widge
 
 func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
-	case &b.listFrame:
+	case &b.frame:
 		return widgetBounds.Bounds()
 	case &b.scrollOverlay:
 		bounds := widgetBounds.Bounds()
@@ -392,6 +390,7 @@ func (b *baseList[T]) SetStyle(style ListStyle) {
 		return
 	}
 	b.style = style
+	b.frame.SetStyle(style)
 	guigui.RequestRedraw(b)
 }
 
@@ -741,27 +740,53 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 	return size
 }
 
-type baseListFrame[T comparable] struct {
+type baseListFrame struct {
 	guigui.DefaultWidget
 
-	list *baseList[T]
+	headerHeight int
+	footerHeight int
+	style        ListStyle
 }
 
-func (l *baseListFrame[T]) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (l *baseListFrame) SetHeaderHeight(height int) {
+	if l.headerHeight == height {
+		return
+	}
+	l.headerHeight = height
+	guigui.RequestRedraw(l)
+}
+
+func (l *baseListFrame) SetFooterHeight(height int) {
+	if l.footerHeight == height {
+		return
+	}
+	l.footerHeight = height
+	guigui.RequestRedraw(l)
+}
+
+func (l *baseListFrame) SetStyle(style ListStyle) {
+	if l.style == style {
+		return
+	}
+	l.style = style
+	guigui.RequestRedraw(l)
+}
+
+func (l *baseListFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Max.Y = bounds.Min.Y + l.list.headerHeight
+	bounds.Max.Y = bounds.Min.Y + l.headerHeight
 	return bounds
 }
 
-func (l *baseListFrame[T]) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (l *baseListFrame) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Min.Y = bounds.Max.Y - l.list.footerHeight
+	bounds.Min.Y = bounds.Max.Y - l.footerHeight
 	return bounds
 }
 
-func (l *baseListFrame[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (l *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	// Draw a header.
-	if l.list.headerHeight > 0 {
+	if l.headerHeight > 0 {
 		bounds := l.headerBounds(context, widgetBounds)
 		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.SharpenCorners{
 			UpperStart: false,
@@ -782,7 +807,7 @@ func (l *baseListFrame[T]) Draw(context *guigui.Context, widgetBounds *guigui.Wi
 	}
 
 	// Draw a footer.
-	if l.list.footerHeight > 0 {
+	if l.footerHeight > 0 {
 		bounds := l.footerBounds(context, widgetBounds)
 		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.SharpenCorners{
 			UpperStart: true,
@@ -804,7 +829,7 @@ func (l *baseListFrame[T]) Draw(context *guigui.Context, widgetBounds *guigui.Wi
 
 	bounds := widgetBounds.Bounds()
 	border := draw.RoundedRectBorderTypeInset
-	if l.list.style != ListStyleNormal {
+	if l.style != ListStyleNormal {
 		border = draw.RoundedRectBorderTypeOutset
 	}
 	clr1, clr2 := draw.BorderColors(context.ColorMode(), border, false)
