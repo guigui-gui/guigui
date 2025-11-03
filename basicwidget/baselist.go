@@ -52,7 +52,7 @@ type baseList[T comparable] struct {
 
 	checkmark      Image
 	expanderImages []Image
-	listFrame      listFrame[T]
+	listFrame      baseListFrame[T]
 	scrollOverlay  scrollOverlay
 
 	abstractList              abstractList[T, baseListItem[T]]
@@ -741,25 +741,25 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 	return size
 }
 
-type listFrame[T comparable] struct {
+type baseListFrame[T comparable] struct {
 	guigui.DefaultWidget
 
 	list *baseList[T]
 }
 
-func (l *listFrame[T]) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (l *baseListFrame[T]) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Max.Y = bounds.Min.Y + l.list.headerHeight
 	return bounds
 }
 
-func (l *listFrame[T]) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (l *baseListFrame[T]) footerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y = bounds.Max.Y - l.list.footerHeight
 	return bounds
 }
 
-func (l *listFrame[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (l *baseListFrame[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	// Draw a header.
 	if l.list.headerHeight > 0 {
 		bounds := l.headerBounds(context, widgetBounds)
