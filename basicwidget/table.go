@@ -326,8 +326,9 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 			s = cell.Content.Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 		} else {
 			// Assume that every item can use a bold font.
-			s = t.texts[i].Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 			p := ListItemTextPadding(context)
+			w := t.table.columnWidthsInPixels[i] - p.Start - p.End
+			s = t.texts[i].Measure(context, guigui.FixedWidthConstraints(w))
 			s = s.Add(image.Pt(p.Start+p.End, p.Top+p.Bottom))
 		}
 		w += t.table.columnWidthsInPixels[i]

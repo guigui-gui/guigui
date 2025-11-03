@@ -303,8 +303,14 @@ func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.
 		s = l.item.Content.Measure(context, constraints)
 	} else {
 		// Assume that every item can use a bold font.
-		s = l.text.boldTextSize(context, constraints)
 		p := ListItemTextPadding(context)
+		if fixedWidth, ok := constraints.FixedWidth(); ok {
+			constraints = guigui.FixedWidthConstraints(fixedWidth - p.Start - p.End)
+		}
+		if fixedHeight, ok := constraints.FixedHeight(); ok {
+			constraints = guigui.FixedHeightConstraints(fixedHeight - p.Top - p.Bottom)
+		}
+		s = l.text.boldTextSize(context, constraints)
 		s = s.Add(image.Pt(p.Start+p.End, p.Top+p.Bottom))
 	}
 
