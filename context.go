@@ -370,3 +370,16 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 	widgetState.passThrough = passThrough
 	RequestRedraw(widget)
 }
+
+func (c *Context) ZDelta(widget Widget) int {
+	return widget.widgetState().zDelta
+}
+
+func (c *Context) SetZDelta(widget Widget, zDelta int) {
+	widgetState := widget.widgetState()
+	if widgetState.zDelta == zDelta {
+		return
+	}
+	widgetState.zDelta = zDelta
+	RequestRedraw(widget)
+}

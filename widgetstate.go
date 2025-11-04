@@ -32,7 +32,7 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	}
 	return bounds3D{
 		bounds:      bounds,
-		zDelta:      widget.ZDelta(),
+		zDelta:      widget.widgetState().zDelta,
 		visible:     widget.widgetState().isVisible(),
 		passThrough: widget.widgetState().passThrough,
 	}, true
@@ -98,6 +98,7 @@ type widgetState struct {
 	hidden          bool
 	disabled        bool
 	passThrough     bool
+	zDelta          int
 	transparency    float64
 	customDraw      CustomDrawFunc
 	eventHandlers   map[string]any
@@ -108,9 +109,6 @@ type widgetState struct {
 
 	dirty   bool
 	dirtyAt string
-
-	// z value can be changed during Build.
-	z int
 
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
@@ -157,6 +155,13 @@ func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 		w.offscreen = ebiten.NewImageWithOptions(bounds, nil)
 	}
 	return w.offscreen.SubImage(bounds).(*ebiten.Image)
+}
+
+func (w *widgetState) z() int {
+	if w.parent == nil {
+		return w.zDelta
+	}
+	return w.parent.widgetState().z() + w.zDelta
 }
 
 var skipTraverse = errors.New("skip traverse")

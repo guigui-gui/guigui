@@ -27,7 +27,7 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
-	if w.widget.ZDelta() != 0 {
+	if w.widget.widgetState().zDelta != 0 {
 		b := state.bounds
 		state.hasVisibleBoundsCache = true
 		state.visibleBoundsCache = b

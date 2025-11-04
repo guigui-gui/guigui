@@ -215,6 +215,8 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	t.prevFocused = context.IsFocused(t)
 
 	context.SetPassThrough(&t.cursor, true)
+	context.SetZDelta(&t.cursor, 1)
+
 	if t.selectable || t.editable {
 		t.cursor.text = t
 	}
@@ -1207,10 +1209,6 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	}
 	b := widgetBounds.Bounds()
 	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
-}
-
-func (t *textCursor) ZDelta() int {
-	return 1
 }
 
 func replaceNewLinesWithSpace(text string, start, end, shiftIndex int) (string, int, int, int) {

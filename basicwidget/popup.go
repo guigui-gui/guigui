@@ -79,6 +79,7 @@ func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 
 func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	context.SetPassThrough(&p.popup, !p.IsOpen())
+	context.SetZDelta(&p.popup, popupZ)
 	return nil
 }
 
@@ -321,11 +322,12 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	context.SetOpacity(&p.content, p.openingRate())
 	context.SetOpacity(&p.frame, p.openingRate())
 
-	return nil
-}
+	context.SetZDelta(&p.blurredBackground, 1)
+	context.SetZDelta(&p.shadow, 1)
+	context.SetZDelta(&p.content, 1)
+	context.SetZDelta(&p.frame, 1)
 
-func (p *popup) ZDelta() int {
-	return popupZ
+	return nil
 }
 
 type popupContent struct {
@@ -365,10 +367,6 @@ func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.Widget
 	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
-func (p *popupContent) ZDelta() int {
-	return 1
-}
-
 type popupFrame struct {
 	guigui.DefaultWidget
 }
@@ -377,10 +375,6 @@ func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	bounds := widgetBounds.Bounds()
 	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeOutset)
-}
-
-func (p *popupFrame) ZDelta() int {
-	return 1
 }
 
 type popupBlurredBackground struct {
@@ -419,10 +413,6 @@ func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *gui
 	draw.DrawBlurredImage(context, dst, p.backgroundCache, rate)
 }
 
-func (p *popupBlurredBackground) ZDelta() int {
-	return 1
-}
-
 type popupShadow struct {
 	guigui.DefaultWidget
 
@@ -445,8 +435,4 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Max.Y += int(16 * context.Scale())
 	clr := draw.ScaleAlpha(color.Black, 0.2)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
-}
-
-func (p *popupShadow) ZDelta() int {
-	return 1
 }

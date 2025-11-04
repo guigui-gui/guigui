@@ -21,7 +21,6 @@ type Widget interface {
 	Tick(context *Context, widgetBounds *WidgetBounds) error
 	CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool)
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
-	ZDelta() int
 	Measure(context *Context, constraints Constraints) image.Point
 
 	widgetState() *widgetState

@@ -410,7 +410,7 @@ func (a *app) requestRedrawWidget(widget Widget) {
 }
 
 func (a *app) requestRedrawIfDifferentParentZ(widget Widget) {
-	if widget.ZDelta() != 0 {
+	if widget.widgetState().zDelta != 0 {
 		a.requestRedrawWidget(widget)
 		return
 	}
@@ -444,11 +444,6 @@ func (a *app) buildWidgets() error {
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 
-		if parent := widgetState.parent; parent != nil {
-			widgetState.z = parent.widgetState().z + widget.ZDelta()
-		} else {
-			widgetState.z = 0
-		}
 		widgetState.hasVisibleBoundsCache = false
 		widgetState.visibleBoundsCache = image.Rectangle{}
 
@@ -472,7 +467,7 @@ func (a *app) buildWidgets() error {
 			child.widgetState().bounds = widget.Layout(&a.context, &bounds, child)
 		}
 
-		a.visitedZs[widgetState.z] = struct{}{}
+		a.visitedZs[widgetState.z()] = struct{}{}
 
 		return nil
 	}); err != nil {
@@ -546,7 +541,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 		}
 	}
 
-	if zToHandle != widget.widgetState().z {
+	if zToHandle != widget.widgetState().z() {
 		return HandleInputResult{}
 	}
 
@@ -571,7 +566,7 @@ func (a *app) cursorShape() bool {
 		if i == 0 {
 			firstZ = wz.z
 		}
-		if wz.widget.widgetState().z < firstZ {
+		if wz.widget.widgetState().z() < firstZ {
 			break
 		}
 		if !wz.widget.widgetState().isEnabled() {
@@ -622,7 +617,7 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		widgetState.prev.redrawIfDifferentParentZ(a)
 		for _, child := range widgetState.children {
-			if child.ZDelta() != 0 {
+			if child.widgetState().zDelta != 0 {
 				a.requestRedraw((&WidgetBounds{
 					context: &a.context,
 					widget:  child,
@@ -677,7 +672,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 		widget:  widget,
 	}).VisibleBounds()
 	var origDst *ebiten.Image
-	renderCurrent := zToRender == widget.widgetState().z && !vb.Empty()
+	renderCurrent := zToRender == widget.widgetState().z() && !vb.Empty()
 	if renderCurrent {
 		if useOffscreen {
 			origDst = dst
@@ -754,7 +749,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
 	for _, wz := range a.maybeHitWidgets {
 		z1 := wz.z
-		z2 := widget.widgetState().z
+		z2 := widget.widgetState().z()
 		if z1 > z2 {
 			// w overlaps widget at point.
 			if wz.widget.widgetState().isVisible() && !wz.widget.widgetState().passThrough {
@@ -776,7 +771,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 
 func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Widget, parentHit bool) []widgetAndZ {
 	var hit bool
-	if parentHit || widget.ZDelta() != 0 {
+	if parentHit || widget.widgetState().zDelta != 0 {
 		hit = point.In((&WidgetBounds{
 			context: &a.context,
 			widget:  widget,
@@ -795,7 +790,7 @@ func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Wi
 
 	widgets = append(widgets, widgetAndZ{
 		widget: widget,
-		z:      widget.widgetState().z,
+		z:      widget.widgetState().z(),
 	})
 	return widgets
 }

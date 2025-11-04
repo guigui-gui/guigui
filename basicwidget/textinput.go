@@ -249,6 +249,7 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 	context.SetPassThrough(&t.frame, true)
 	context.SetPassThrough(&t.focus, true)
+	context.SetZDelta(&t.focus, 1)
 
 	return nil
 }
@@ -385,8 +386,4 @@ func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	w := textInputFocusBorderWidth(context)
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
 	draw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), draw.RoundedRectBorderTypeRegular)
-}
-
-func (t *textInputFocus) ZDelta() int {
-	return 1
 }
