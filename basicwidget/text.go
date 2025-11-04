@@ -1022,7 +1022,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	}
 
 	key := newTextSizeCacheKey(t.autoWrap, t.bold || forceBold)
-	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) && (constraintWidth == math.MaxInt || size.X-1 <= constraintWidth) {
+	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) && size.X-1 <= constraintWidth {
 		return size.Sub(image.Pt(1, 1))
 	}
 
