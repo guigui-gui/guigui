@@ -1021,13 +1021,14 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		constraintWidth = w
 	}
 
-	key := newTextSizeCacheKey(t.autoWrap, t.bold || forceBold)
+	bold := t.bold || forceBold
+	key := newTextSizeCacheKey(t.autoWrap, bold)
 	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) && size.X-1 <= constraintWidth {
 		return size.Sub(image.Pt(1, 1))
 	}
 
 	txt := t.textToDraw(context, true)
-	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, t.bold || forceBold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
+	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its cursor is rendered.
 	// Force to set a positive number as the width.
 	w = max(w, 1)
