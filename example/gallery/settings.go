@@ -212,27 +212,24 @@ func (t *textWithSubText) Update(context *guigui.Context, widgetBounds *guigui.W
 	return nil
 }
 
-func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &t.text:
-		pt := widgetBounds.Bounds().Min
-		return image.Rectangle{
-			Min: pt,
-			Max: pt.Add(t.text.Measure(context, guigui.Constraints{})),
-		}
-	case &t.subText:
-		pt := widgetBounds.Bounds().Min
-		pt.Y += t.text.Measure(context, guigui.Constraints{}).Y
-		return image.Rectangle{
-			Min: pt,
-			Max: pt.Add(t.subText.Measure(context, guigui.Constraints{})),
-		}
+func (t *textWithSubText) layout() guigui.LinearLayout {
+	return guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items: []guigui.LinearLayoutItem{
+			{
+				Widget: &t.text,
+			},
+			{
+				Widget: &t.subText,
+			},
+		},
 	}
-	return image.Rectangle{}
+}
+
+func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+	return t.layout().WidgetBounds(context, widgetBounds.Bounds(), widget)
 }
 
 func (t *textWithSubText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	s1 := t.text.Measure(context, constraints)
-	s2 := t.subText.Measure(context, constraints)
-	return image.Pt(max(s1.X, s2.X), s1.Y+s2.Y)
+	return t.layout().Measure(context, constraints)
 }
