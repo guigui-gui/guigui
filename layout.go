@@ -5,6 +5,7 @@ package guigui
 
 import (
 	"image"
+	"sync"
 )
 
 type Layout interface {
@@ -58,10 +59,20 @@ type LinearLayout struct {
 	Items     []LinearLayoutItem
 	Gap       int
 	Padding   Padding
-
-	tmpSizes     []int
-	tmpBoundsArr []image.Rectangle
 }
+
+var (
+	theLinearLayoutSizesPool = sync.Pool{
+		New: func() any {
+			return []int{}
+		},
+	}
+	theLinearLayoutBoundsPool = sync.Pool{
+		New: func() any {
+			return []image.Rectangle{}
+		},
+	}
+)
 
 type LinearLayoutItem struct {
 	Widget Widget
@@ -70,14 +81,19 @@ type LinearLayoutItem struct {
 }
 
 func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle {
-	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds)
+	tmpBoundsArr := theLinearLayoutBoundsPool.Get().([]image.Rectangle)
+	defer func() {
+		tmpBoundsArr = tmpBoundsArr[:0]
+		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
+	}()
+	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds)
 
 	for i, item := range l.Items {
 		if item.Widget == nil {
 			continue
 		}
 		if item.Widget.widgetState() == widget.widgetState() {
-			return l.tmpBoundsArr[i]
+			return tmpBoundsArr[i]
 		}
 	}
 
@@ -85,7 +101,7 @@ func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, wid
 		if item.Layout == nil {
 			continue
 		}
-		if r := item.Layout.WidgetBounds(context, l.tmpBoundsArr[i], widget); !r.Empty() {
+		if r := item.Layout.WidgetBounds(context, tmpBoundsArr[i], widget); !r.Empty() {
 			return r
 		}
 	}
@@ -98,8 +114,13 @@ func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Con
 }
 
 func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index int) image.Rectangle {
-	l.tmpBoundsArr = l.appendWidgetBounds(l.tmpBoundsArr[:0], context, bounds)
-	return l.tmpBoundsArr[index]
+	tmpBoundsArr := theLinearLayoutBoundsPool.Get().([]image.Rectangle)
+	defer func() {
+		tmpBoundsArr = tmpBoundsArr[:0]
+		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
+	}()
+	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds)
+	return tmpBoundsArr[index]
 }
 
 func (l *LinearLayout) alongSize(bounds image.Rectangle) int {
@@ -231,9 +252,14 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 
 	var autoAlongSize int
 	var autoAcrossSize int
-	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, contentAlongSize, contentAcrossSize)
+	tmpSizes := theLinearLayoutSizesPool.Get().([]int)
+	defer func() {
+		tmpSizes = tmpSizes[:0]
+		theLinearLayoutSizesPool.Put(tmpSizes)
+	}()
+	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, contentAlongSize, contentAcrossSize)
 	for i, item := range l.Items {
-		s := l.tmpSizes[i]
+		s := tmpSizes[i]
 		autoAlongSize += s
 		if item.Widget != nil {
 			switch l.Direction {
@@ -300,11 +326,16 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
 	alongSize := l.alongSize(bounds)
 	acrossSize := l.acrossSize(bounds)
-	l.tmpSizes = l.appendSizesInPixels(l.tmpSizes[:0], context, alongSize, acrossSize)
+	tmpSizes := theLinearLayoutSizesPool.Get().([]int)
+	defer func() {
+		tmpSizes = tmpSizes[:0]
+		theLinearLayoutSizesPool.Put(tmpSizes)
+	}()
+	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, alongSize, acrossSize)
 	var progress int
 	for i := range l.Items {
-		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, l.tmpSizes[i]))
-		progress += l.tmpSizes[i] + l.Gap
+		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, tmpSizes[i]))
+		progress += tmpSizes[i] + l.Gap
 	}
 	return boundsArr
 }
