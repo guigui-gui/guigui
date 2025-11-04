@@ -131,15 +131,22 @@ type Text struct {
 
 	tmpClipboard string
 
-	cachedTextSizePlus1 [4]image.Point
-	lastFace            text.Face
-	lastScale           float64
-	lastWidth           int
+	cachedTextSizes [4][4]cachedTextSizeEntry
+	lastFace        text.Face
+	lastScale       float64
+	lastWidth       int
 
 	tmpLocales []language.Tag
 
 	prevStart int
 	prevEnd   int
+}
+
+type cachedTextSizeEntry struct {
+	// 0 indicates that the entry is invalid.
+	constraintWidth int
+
+	size image.Point
 }
 
 type textSizeCacheKey int
@@ -164,14 +171,12 @@ func (t *Text) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
 }
 
 func (t *Text) resetCachedTextSize() {
-	for i := range t.cachedTextSizePlus1 {
-		t.cachedTextSizePlus1[i] = image.Point{}
-	}
+	clear(t.cachedTextSizes[:])
 }
 
 func (t *Text) resetAutoWrapCachedTextSize() {
-	t.cachedTextSizePlus1[newTextSizeCacheKey(true, false)] = image.Point{}
-	t.cachedTextSizePlus1[newTextSizeCacheKey(true, true)] = image.Point{}
+	clear(t.cachedTextSizes[newTextSizeCacheKey(true, false)][:])
+	clear(t.cachedTextSizes[newTextSizeCacheKey(true, true)][:])
 }
 
 func (t *Text) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
@@ -1020,11 +1025,16 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	if w, ok := constraints.FixedWidth(); ok {
 		constraintWidth = w
 	}
+	if constraintWidth == 0 {
+		constraintWidth = 1
+	}
 
 	bold := t.bold || forceBold
 	key := newTextSizeCacheKey(t.autoWrap, bold)
-	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) && size.X-1 <= constraintWidth {
-		return size.Sub(image.Pt(1, 1))
+	for _, entry := range t.cachedTextSizes[key] {
+		if entry.constraintWidth > 0 && entry.constraintWidth == constraintWidth {
+			return entry.size
+		}
 	}
 
 	txt := t.textToDraw(context, true)
@@ -1034,8 +1044,12 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	w = max(w, 1)
 
 	s := image.Pt(int(math.Ceil(w)), int(math.Ceil(h)))
-	if constraintWidth == math.MaxInt {
-		t.cachedTextSizePlus1[key] = s.Add(image.Pt(1, 1))
+
+	// Put the new entry at the head.
+	copy(t.cachedTextSizes[key][1:], t.cachedTextSizes[key][:])
+	t.cachedTextSizes[key][0] = cachedTextSizeEntry{
+		constraintWidth: constraintWidth,
+		size:            s,
 	}
 
 	return s
