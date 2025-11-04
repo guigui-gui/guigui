@@ -35,10 +35,7 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 	}
 
 	var b image.Rectangle
-	parentVB := (&WidgetBounds{
-		context: w.context,
-		widget:  parent,
-	}).VisibleBounds()
+	parentVB := widgetBoundsFromWidget(w.context, parent).VisibleBounds()
 	if !parentVB.Empty() {
 		b = parentVB.Intersect(state.bounds)
 	}

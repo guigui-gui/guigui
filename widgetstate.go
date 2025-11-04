@@ -23,10 +23,7 @@ type bounds3D struct {
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
-	bounds := (&WidgetBounds{
-		context: context,
-		widget:  widget,
-	}).VisibleBounds()
+	bounds := widgetBoundsFromWidget(context, widget).VisibleBounds()
 	if bounds.Empty() {
 		return bounds3D{}, false
 	}
@@ -113,6 +110,8 @@ type widgetState struct {
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
 
+	widgetBounds_ WidgetBounds
+
 	_ noCopy
 }
 
@@ -162,6 +161,13 @@ func (w *widgetState) z() int {
 		return w.zDelta
 	}
 	return w.parent.widgetState().z() + w.zDelta
+}
+
+func widgetBoundsFromWidget(context *Context, widget Widget) *WidgetBounds {
+	wb := &widget.widgetState().widgetBounds_
+	wb.widget = widget
+	wb.context = context
+	return wb
 }
 
 var skipTraverse = errors.New("skip traverse")

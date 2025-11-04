@@ -207,10 +207,7 @@ func (a *app) updateInvalidatedRegions() {
 		if !widget.widgetState().dirty {
 			return nil
 		}
-		vb := (&WidgetBounds{
-			context: &a.context,
-			widget:  widget,
-		}).VisibleBounds()
+		vb := widgetBoundsFromWidget(&a.context, widget).VisibleBounds()
 		if vb.Empty() {
 			return nil
 		}
@@ -400,10 +397,7 @@ func (a *app) requestRedraw(region image.Rectangle) {
 }
 
 func (a *app) requestRedrawWidget(widget Widget) {
-	a.requestRedraw((&WidgetBounds{
-		context: &a.context,
-		widget:  widget,
-	}).VisibleBounds())
+	a.requestRedraw(widgetBoundsFromWidget(&a.context, widget).VisibleBounds())
 	for _, child := range widget.widgetState().children {
 		a.requestRedrawIfDifferentParentZ(child)
 	}
@@ -454,17 +448,14 @@ func (a *app) buildWidgets() error {
 		widget.AddChildren(&a.context, &adder)
 
 		// Call Update.
-		bounds := WidgetBounds{
-			context: &a.context,
-			widget:  widget,
-		}
-		if err := widget.Update(&a.context, &bounds); err != nil {
+		bounds := widgetBoundsFromWidget(&a.context, widget)
+		if err := widget.Update(&a.context, bounds); err != nil {
 			return err
 		}
 
 		// Call Layout.
 		for _, child := range widget.widgetState().children {
-			child.widgetState().bounds = widget.Layout(&a.context, &bounds, child)
+			child.widgetState().bounds = widget.Layout(&a.context, bounds, child)
 		}
 
 		a.visitedZs[widgetState.z()] = struct{}{}
@@ -545,16 +536,13 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 		return HandleInputResult{}
 	}
 
-	bounds := WidgetBounds{
-		context: &a.context,
-		widget:  widget,
-	}
+	bounds := widgetBoundsFromWidget(&a.context, widget)
 
 	switch typ {
 	case handleInputTypePointing:
-		return widget.HandlePointingInput(&a.context, &bounds)
+		return widget.HandlePointingInput(&a.context, bounds)
 	case handleInputTypeButton:
-		return widget.HandleButtonInput(&a.context, &bounds)
+		return widget.HandleButtonInput(&a.context, bounds)
 	default:
 		panic(fmt.Sprintf("guigui: unknown handleInputType: %d", typ))
 	}
@@ -572,11 +560,8 @@ func (a *app) cursorShape() bool {
 		if !wz.widget.widgetState().isEnabled() {
 			return false
 		}
-		bounds := WidgetBounds{
-			context: &a.context,
-			widget:  wz.widget,
-		}
-		shape, ok := wz.widget.CursorShape(&a.context, &bounds)
+		bounds := widgetBoundsFromWidget(&a.context, wz.widget)
+		shape, ok := wz.widget.CursorShape(&a.context, bounds)
 		if !ok {
 			continue
 		}
@@ -587,12 +572,9 @@ func (a *app) cursorShape() bool {
 }
 
 func (a *app) tickWidgets(widget Widget) error {
-	bounds := WidgetBounds{
-		context: &a.context,
-		widget:  widget,
-	}
+	bounds := widgetBoundsFromWidget(&a.context, widget)
 	widgetState := widget.widgetState()
-	if err := widget.Tick(&a.context, &bounds); err != nil {
+	if err := widget.Tick(&a.context, bounds); err != nil {
 		return err
 	}
 
@@ -609,19 +591,13 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	widgetState := widget.widgetState()
 	// If the children and/or children's bounds are changed, request redraw.
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
-		a.requestRedraw((&WidgetBounds{
-			context: &a.context,
-			widget:  widget,
-		}).VisibleBounds())
+		a.requestRedraw(widgetBoundsFromWidget(&a.context, widget).VisibleBounds())
 
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		widgetState.prev.redrawIfDifferentParentZ(a)
 		for _, child := range widgetState.children {
 			if child.widgetState().zDelta != 0 {
-				a.requestRedraw((&WidgetBounds{
-					context: &a.context,
-					widget:  child,
-				}).VisibleBounds())
+				a.requestRedraw(widgetBoundsFromWidget(&a.context, child).VisibleBounds())
 			}
 		}
 	}
@@ -667,10 +643,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 	customDraw := widgetState.customDraw
 	useOffscreen := (widgetState.opacity() < 1 || customDraw != nil) && !dst.Bounds().Empty()
 
-	vb := (&WidgetBounds{
-		context: &a.context,
-		widget:  widget,
-	}).VisibleBounds()
+	vb := widgetBoundsFromWidget(&a.context, widget).VisibleBounds()
 	var origDst *ebiten.Image
 	renderCurrent := zToRender == widget.widgetState().z() && !vb.Empty()
 	if renderCurrent {
@@ -679,11 +652,8 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 			dst = widgetState.ensureOffscreen(dst.Bounds())
 			dst.Clear()
 		}
-		bounds := WidgetBounds{
-			context: &a.context,
-			widget:  widget,
-		}
-		widget.Draw(&a.context, &bounds, dst.SubImage(vb).(*ebiten.Image))
+		bounds := widgetBoundsFromWidget(&a.context, widget)
+		widget.Draw(&a.context, bounds, dst.SubImage(vb).(*ebiten.Image))
 	}
 
 	for _, child := range widgetState.children {
@@ -772,10 +742,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Widget, parentHit bool) []widgetAndZ {
 	var hit bool
 	if parentHit || widget.widgetState().zDelta != 0 {
-		hit = point.In((&WidgetBounds{
-			context: &a.context,
-			widget:  widget,
-		}).VisibleBounds())
+		hit = point.In(widgetBoundsFromWidget(&a.context, widget).VisibleBounds())
 	}
 
 	children := widget.widgetState().children
