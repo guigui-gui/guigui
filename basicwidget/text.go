@@ -134,7 +134,6 @@ type Text struct {
 	cachedTextSizes [4][4]cachedTextSizeEntry
 	lastFace        text.Face
 	lastScale       float64
-	lastWidth       int
 
 	tmpLocales []language.Tag
 
@@ -174,11 +173,6 @@ func (t *Text) resetCachedTextSize() {
 	clear(t.cachedTextSizes[:])
 }
 
-func (t *Text) resetAutoWrapCachedTextSize() {
-	clear(t.cachedTextSizes[newTextSizeCacheKey(true, false)][:])
-	clear(t.cachedTextSizes[newTextSizeCacheKey(true, true)][:])
-}
-
 func (t *Text) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if t.selectable || t.editable {
 		adder.AddChild(&t.cursor)
@@ -193,10 +187,6 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	if t.lastScale != context.Scale() {
 		t.lastScale = context.Scale()
 		t.resetCachedTextSize()
-	}
-	if t.autoWrap && t.lastWidth != widgetBounds.Bounds().Dx() {
-		t.lastWidth = widgetBounds.Bounds().Dx()
-		t.resetAutoWrapCachedTextSize()
 	}
 
 	if !t.prevFocused {
