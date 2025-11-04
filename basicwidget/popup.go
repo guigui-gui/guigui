@@ -42,6 +42,61 @@ const (
 type Popup struct {
 	guigui.DefaultWidget
 
+	popup popup
+}
+
+func (p *Popup) SetOpen(context *guigui.Context, open bool) {
+	p.popup.SetOpen(context, open)
+}
+
+func (p *Popup) IsOpen() bool {
+	return p.popup.IsOpen()
+}
+
+func (p *Popup) SetOnClosed(f func(reason PopupClosedReason)) {
+	p.popup.SetOnClosed(f)
+}
+
+func (p *Popup) SetContent(widget guigui.Widget) {
+	p.popup.SetContent(widget)
+}
+
+func (p *Popup) SetBackgroundBlurred(blurBackground bool) {
+	p.popup.SetBackgroundBlurred(blurBackground)
+}
+
+func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
+	p.popup.SetCloseByClickingOutside(closeByClickingOutside)
+}
+
+func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
+	p.popup.SetAnimationDuringFade(animateOnFading)
+}
+
+func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(&p.popup)
+}
+
+func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	context.SetPassThrough(&p.popup, !p.IsOpen())
+	return nil
+}
+
+func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+	switch widget {
+	case &p.popup:
+		return widgetBounds.Bounds()
+	}
+	return image.Rectangle{}
+}
+
+func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return p.popup.Measure(context, constraints)
+}
+
+type popup struct {
+	guigui.DefaultWidget
+
 	blurredBackground popupBlurredBackground
 	shadow            popupShadow
 	content           popupContent
@@ -60,19 +115,19 @@ type Popup struct {
 	openAfterClose         bool
 }
 
-func (p *Popup) IsOpen() bool {
+func (p *popup) IsOpen() bool {
 	return p.showing || p.hiding || p.openingCount > 0
 }
 
-func (p *Popup) SetContent(widget guigui.Widget) {
+func (p *popup) SetContent(widget guigui.Widget) {
 	p.content.setContent(widget)
 }
 
-func (p *Popup) openingRate() float64 {
+func (p *popup) openingRate() float64 {
 	return easeOutQuad(float64(p.openingCount) / float64(popupMaxOpeningCount()))
 }
 
-func (p *Popup) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	if p.content.content == nil {
 		return image.Rectangle{}
 	}
@@ -88,24 +143,24 @@ func (p *Popup) contentBounds(context *guigui.Context, widgetBounds *guigui.Widg
 	}
 }
 
-func (p *Popup) SetBackgroundBlurred(blurBackground bool) {
+func (p *popup) SetBackgroundBlurred(blurBackground bool) {
 	p.backgroundBlurred = blurBackground
 }
 
-func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
+func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.closeByClickingOutside = closeByClickingOutside
 }
 
-func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
+func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 	// TODO: Rename Popup to basePopup and create Popup with animateOnFading true.
 	p.animateOnFading = animateOnFading
 }
 
-func (p *Popup) SetOnClosed(f func(reason PopupClosedReason)) {
+func (p *popup) SetOnClosed(f func(reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
-func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -116,7 +171,7 @@ func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	}
 }
 
-func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if (p.showing || p.hiding) && p.openingCount > 0 {
 		p.nextContentPosition = widgetBounds.Bounds().Min
 		p.hasNextContentPosition = true
@@ -127,12 +182,11 @@ func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	}
 
 	p.shadow.SetContentBounds(p.contentBounds(context, widgetBounds))
-	context.SetPassThrough(p, !p.IsOpen())
 
 	return nil
 }
 
-func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
 	switch widget {
 	case &p.blurredBackground:
 		return context.AppBounds()
@@ -146,7 +200,7 @@ func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return image.Rectangle{}
 }
 
-func (p *Popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if p.showing || p.hiding {
 		return guigui.AbortHandlingInputByWidget(p)
 	}
@@ -167,7 +221,7 @@ func (p *Popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 	return guigui.AbortHandlingInputByWidget(p)
 }
 
-func (p *Popup) SetOpen(context *guigui.Context, open bool) {
+func (p *popup) SetOpen(context *guigui.Context, open bool) {
 	if open {
 		if p.showing {
 			return
@@ -179,13 +233,12 @@ func (p *Popup) SetOpen(context *guigui.Context, open bool) {
 		}
 		p.showing = true
 		p.hiding = false
-		context.SetPassThrough(p, p.backgroundPassThrough())
 	} else {
 		p.close(context, PopupClosedReasonFuncCall)
 	}
 }
 
-func (p *Popup) setClosedReason(reason PopupClosedReason) {
+func (p *popup) setClosedReason(reason PopupClosedReason) {
 	if p.closedReason == PopupClosedReasonNone {
 		p.closedReason = reason
 		return
@@ -198,7 +251,7 @@ func (p *Popup) setClosedReason(reason PopupClosedReason) {
 	p.closedReason = reason
 }
 
-func (p *Popup) close(context *guigui.Context, reason PopupClosedReason) {
+func (p *popup) close(context *guigui.Context, reason PopupClosedReason) {
 	if p.hiding {
 		p.setClosedReason(reason)
 		return
@@ -214,11 +267,11 @@ func (p *Popup) close(context *guigui.Context, reason PopupClosedReason) {
 	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 }
 
-func (p *Popup) backgroundPassThrough() bool {
+func (p *popup) backgroundPassThrough() bool {
 	return p.openingCount == 0 || p.showing || p.hiding
 }
 
-func (p *Popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if p.showing {
 		context.SetFocused(p, true)
 		if p.openingCount < popupMaxOpeningCount() {
@@ -271,7 +324,7 @@ func (p *Popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	return nil
 }
 
-func (p *Popup) ZDelta() int {
+func (p *popup) ZDelta() int {
 	return popupZ
 }
 
