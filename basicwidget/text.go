@@ -1016,23 +1016,26 @@ func (t *Text) boldTextSize(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
+	constraintWidth := math.MaxInt
+	if w, ok := constraints.FixedWidth(); ok {
+		constraintWidth = w
+	}
+
 	key := newTextSizeCacheKey(t.autoWrap, t.bold || forceBold)
-	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) {
+	if size := t.cachedTextSizePlus1[key]; size != (image.Point{}) && (constraintWidth == math.MaxInt || size.X-1 <= constraintWidth) {
 		return size.Sub(image.Pt(1, 1))
 	}
 
 	txt := t.textToDraw(context, true)
-	width := math.MaxInt
-	if w, ok := constraints.FixedWidth(); ok {
-		width = w
-	}
-	w, h := textutil.Measure(width, txt, t.autoWrap, t.face(context, forceBold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
+	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, t.bold || forceBold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its cursor is rendered.
 	// Force to set a positive number as the width.
 	w = max(w, 1)
 
 	s := image.Pt(int(math.Ceil(w)), int(math.Ceil(h)))
-	t.cachedTextSizePlus1[key] = s.Add(image.Pt(1, 1))
+	if constraintWidth == math.MaxInt {
+		t.cachedTextSizePlus1[key] = s.Add(image.Pt(1, 1))
+	}
 
 	return s
 }
