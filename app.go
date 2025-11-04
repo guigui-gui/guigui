@@ -549,13 +549,12 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 }
 
 func (a *app) cursorShape() bool {
-	var firstZ int
-	for i, wz := range a.maybeHitWidgets {
-		if i == 0 {
-			firstZ = wz.z
+	for _, wz := range a.maybeHitWidgets {
+		if wz.widget.widgetState().passThrough {
+			continue
 		}
-		if wz.widget.widgetState().z() < firstZ {
-			break
+		if !wz.widget.widgetState().isVisible() {
+			continue
 		}
 		if !wz.widget.widgetState().isEnabled() {
 			return false
