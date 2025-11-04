@@ -1031,10 +1031,19 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 
 	bold := t.bold || forceBold
 	key := newTextSizeCacheKey(t.autoWrap, bold)
-	for _, entry := range t.cachedTextSizes[key] {
-		if entry.constraintWidth > 0 && entry.constraintWidth == constraintWidth {
-			return entry.size
+	for i, entry := range t.cachedTextSizes[key] {
+		if entry.constraintWidth == 0 {
+			continue
 		}
+		if entry.constraintWidth != constraintWidth {
+			continue
+		}
+		// Move the used entry to the head.
+		if i != 0 {
+			copy(t.cachedTextSizes[key][1:i+1], t.cachedTextSizes[key][:i])
+			t.cachedTextSizes[key][0] = entry
+		}
+		return entry.size
 	}
 
 	txt := t.textToDraw(context, true)
