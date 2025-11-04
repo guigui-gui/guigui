@@ -316,14 +316,14 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 		item, _ := b.abstractList.ItemByIndex(i)
 		itemW := cw - 2*RoundedCornerRadius(context)
 		itemW -= item.IndentLevel * listItemIndentSize(context)
-		contentSize := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW))
+		contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
 
 		if b.checkmarkIndexPlus1 == i+1 {
 			imgSize := listItemCheckmarkSize(context)
 			imgP := p
 			imgP.X += item.IndentLevel * listItemIndentSize(context)
 			imgP.X += UnitSize(context) / 4
-			itemH := contentSize.Y
+			itemH := contentH
 			imgP.Y += (itemH - imgSize) * 3 / 4
 			imgP.Y = b.adjustItemY(context, imgP.Y)
 			b.itemBoundsForLayoutFromWidget[&b.checkmark] = image.Rectangle{
@@ -358,7 +358,7 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 			expanderP.Y += UnitSize(context) / 16
 			s := image.Pt(
 				listItemIndentSize(context),
-				contentSize.Y,
+				contentH,
 			)
 			b.itemBoundsForLayoutFromWidget[&b.expanderImages[i]] = image.Rectangle{
 				Min: expanderP,
@@ -374,12 +374,12 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 		itemP.Y = b.adjustItemY(context, itemP.Y)
 		r := image.Rectangle{
 			Min: itemP,
-			Max: itemP.Add(image.Pt(itemW, contentSize.Y)),
+			Max: itemP.Add(image.Pt(itemW, contentH)),
 		}
 		b.itemBoundsForLayoutFromWidget[item.Content] = r
 		b.itemBoundsForLayoutFromIndex[i] = r
 
-		p.Y += contentSize.Y
+		p.Y += contentH
 	}
 
 	b.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
@@ -656,8 +656,7 @@ func (b *baseListContent[T]) itemYFromIndexForMenu(context *guigui.Context, inde
 		}
 		item, _ := b.abstractList.ItemByIndex(i)
 		// Use a free constraints to measure the item height for menu.
-		contentSize := item.Content.Measure(context, guigui.Constraints{})
-		y += contentSize.Y
+		y += item.Content.Measure(context, guigui.Constraints{}).Y
 	}
 
 	return 0, false
