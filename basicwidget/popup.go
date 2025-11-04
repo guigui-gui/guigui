@@ -179,7 +179,7 @@ func (p *Popup) SetOpen(context *guigui.Context, open bool) {
 		}
 		p.showing = true
 		p.hiding = false
-		// p.shadow.SetPassThrough(p.backgroundPassThrough())
+		context.SetPassThrough(p, p.backgroundPassThrough())
 	} else {
 		p.close(context, PopupClosedReasonFuncCall)
 	}
