@@ -200,18 +200,20 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 	}
 
-	guigui.RegisterFocusChangedEventHandler(t, func(focused bool) {
-		if focused {
-			t.field.Focus()
-			t.cursor.resetCounter()
-			start, end := t.field.Selection()
-			if start < 0 || end < 0 {
-				t.selectAll()
+	if t.editable {
+		guigui.RegisterFocusChangedEventHandler(t, func(focused bool) {
+			if focused {
+				t.field.Focus()
+				t.cursor.resetCounter()
+				start, end := t.field.Selection()
+				if start < 0 || end < 0 {
+					t.selectAll()
+				}
+			} else {
+				t.commit()
 			}
-		} else {
-			t.commit()
-		}
-	})
+		})
+	}
 	t.prevFocused = context.IsFocused(t)
 
 	context.SetPassThrough(&t.cursor, true)
