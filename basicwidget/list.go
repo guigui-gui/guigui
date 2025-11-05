@@ -201,7 +201,7 @@ func (l *List[T]) SelectItemByValue(value T) {
 	l.list.SelectItemByValue(value)
 }
 
-func (l *List[T]) JumpToItemIndex(index int) {
+func (l *List[T]) JumpToItemByIndex(index int) {
 	l.list.JumpToItemByIndex(index)
 }
 
