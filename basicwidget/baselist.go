@@ -410,8 +410,8 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 		}
 		if y, ok := b.itemYFromIndex(context, idx); ok {
 			y -= RoundedCornerRadius(context)
-			if _, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
-				b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
+			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
+				b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
 			}
 		}
 		b.indexToEnsureVisiblePlus1 = 0
