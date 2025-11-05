@@ -402,19 +402,18 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	}
 	if idx := b.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
 		if y, ok := b.itemYFromIndex(context, idx+1); ok {
-			y -= widgetBounds.Bounds().Dx()
+			y -= widgetBounds.Bounds().Dy()
 			y += RoundedCornerRadius(context)
-			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
+			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) > -offsetY {
 				b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
 			}
 		}
-		/*if y, ok := b.itemYFromIndex(context, idx); ok {
+		if y, ok := b.itemYFromIndex(context, idx); ok {
 			y -= RoundedCornerRadius(context)
-			//y2, _ := b.itemYFromIndex(context, idx+1)
-			if _, offsetY := b.scrollOverlay.Offset(); float64(y) > -offsetY {
+			if _, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
 				b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
 			}
-		}*/
+		}
 		b.indexToEnsureVisiblePlus1 = 0
 	}
 
