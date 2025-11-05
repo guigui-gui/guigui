@@ -388,7 +388,7 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	// Separate a content part and use Panel.
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
-	if idx := b.indexToJumpPlus1 - 1; idx >= 0 {
+	if idx := b.indexToJumpPlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
 		if y, ok := b.itemYFromIndex(context, idx); ok {
 			y -= RoundedCornerRadius(context)
 			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
@@ -452,7 +452,7 @@ func (b *baseListContent[T]) SelectItemByValue(value T) {
 }
 
 func (b *baseListContent[T]) JumpToItemIndex(index int) {
-	if index < 0 || index >= b.abstractList.ItemCount() {
+	if index < 0 {
 		return
 	}
 	b.indexToJumpPlus1 = index + 1
