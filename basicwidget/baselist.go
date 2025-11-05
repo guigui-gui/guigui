@@ -186,6 +186,7 @@ type baseListContent[T comparable] struct {
 
 	indexToJumpPlus1          int
 	indexToEnsureVisiblePlus1 int
+	jumpTick                  int64
 	dragSrcIndexPlus1         int
 	dragDstIndexPlus1         int
 	pressStartPlus1           image.Point
@@ -393,30 +394,6 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	// Separate a content part and use Panel.
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
-	if idx := b.indexToJumpPlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
-		if y, ok := b.itemYFromIndex(context, idx); ok {
-			y -= RoundedCornerRadius(context)
-			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
-		}
-		b.indexToJumpPlus1 = 0
-	}
-	if idx := b.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
-		if y, ok := b.itemYFromIndex(context, idx+1); ok {
-			y -= widgetBounds.Bounds().Dy()
-			y += RoundedCornerRadius(context)
-			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) > -offsetY {
-				b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
-			}
-		}
-		if y, ok := b.itemYFromIndex(context, idx); ok {
-			y -= RoundedCornerRadius(context)
-			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
-				b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
-			}
-		}
-		b.indexToEnsureVisiblePlus1 = 0
-	}
-
 	return nil
 }
 
@@ -478,6 +455,7 @@ func (b *baseListContent[T]) JumpToItemByIndex(index int) {
 	}
 	b.indexToJumpPlus1 = index + 1
 	b.indexToEnsureVisiblePlus1 = 0
+	b.jumpTick = ebiten.Tick() + 1
 }
 
 func (b *baseListContent[T]) EnsureItemVisibleByIndex(index int) {
@@ -486,6 +464,7 @@ func (b *baseListContent[T]) EnsureItemVisibleByIndex(index int) {
 	}
 	b.indexToEnsureVisiblePlus1 = index + 1
 	b.indexToJumpPlus1 = 0
+	b.jumpTick = ebiten.Tick() + 1
 }
 
 func (b *baseListContent[T]) SetStripeVisible(visible bool) {
@@ -649,6 +628,39 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 	b.dragSrcIndexPlus1 = 0
 	b.pressStartPlus1 = image.Point{}
 	return guigui.HandleInputResult{}
+}
+
+func (b *baseListContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Jump to the item if requested.
+	// This is done in Tick to wait for the list items are updated, or an item cannot be measured correctly.
+	if b.jumpTick > 0 && ebiten.Tick() >= b.jumpTick {
+		cs := b.contentSize(context, widgetBounds)
+		if idx := b.indexToJumpPlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
+			if y, ok := b.itemYFromIndex(context, idx); ok {
+				y -= RoundedCornerRadius(context)
+				b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
+			}
+			b.indexToJumpPlus1 = 0
+		}
+		if idx := b.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
+			if y, ok := b.itemYFromIndex(context, idx+1); ok {
+				y -= widgetBounds.Bounds().Dy()
+				y += RoundedCornerRadius(context)
+				if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) > -offsetY {
+					b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
+				}
+			}
+			if y, ok := b.itemYFromIndex(context, idx); ok {
+				y -= RoundedCornerRadius(context)
+				if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
+					b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
+				}
+			}
+			b.indexToEnsureVisiblePlus1 = 0
+		}
+		b.jumpTick = 0
+	}
+	return nil
 }
 
 // itemYFromIndex returns the Y position of the item at the given index relative to the top of the baseList widget.
