@@ -185,7 +185,7 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 	l.updateListItems()
 }
 
-func (l *List[T]) ItemsCount() int {
+func (l *List[T]) ItemCount() int {
 	return len(l.listItemWidgets)
 }
 

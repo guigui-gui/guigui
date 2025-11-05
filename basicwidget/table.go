@@ -215,7 +215,7 @@ func (t *Table[T]) SetItems(items []TableRow[T]) {
 	t.updateTableRows()
 }
 
-func (t *Table[T]) ItemsCount() int {
+func (t *Table[T]) ItemCount() int {
 	return len(t.tableRowWidgets)
 }
 
