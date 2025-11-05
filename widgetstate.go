@@ -191,7 +191,7 @@ func RequestRedraw(widget Widget) {
 func requestRedraw(widgetState *widgetState) {
 	widgetState.dirty = true
 	if theDebugMode.showRenderingRegions {
-		_, file, line, ok := runtime.Caller(1)
+		_, file, line, ok := runtime.Caller(2)
 		if ok {
 			widgetState.dirtyAt = fmt.Sprintf("%s:%d", file, line)
 		}
