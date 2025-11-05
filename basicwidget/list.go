@@ -202,7 +202,7 @@ func (l *List[T]) SelectItemByValue(value T) {
 }
 
 func (l *List[T]) JumpToItemIndex(index int) {
-	l.list.JumpToItemIndex(index)
+	l.list.JumpToItemByIndex(index)
 }
 
 func (l *List[T]) SetStyle(style ListStyle) {

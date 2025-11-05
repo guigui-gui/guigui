@@ -231,8 +231,8 @@ func (t *Table[T]) SelectItemByValue(value T) {
 	t.list.SelectItemByValue(value)
 }
 
-func (t *Table[T]) JumpToItemIndex(index int) {
-	t.list.JumpToItemIndex(index)
+func (t *Table[T]) JumpToItemByIndex(index int) {
+	t.list.JumpToItemByIndex(index)
 }
 
 func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

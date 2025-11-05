@@ -124,8 +124,8 @@ func (b *baseList[T]) SelectItemByValue(value T) {
 	b.content.SelectItemByValue(value)
 }
 
-func (b *baseList[T]) JumpToItemIndex(index int) {
-	b.content.JumpToItemIndex(index)
+func (b *baseList[T]) JumpToItemByIndex(index int) {
+	b.content.JumpToItemByIndex(index)
 }
 
 func (b *baseList[T]) SetStripeVisible(visible bool) {
@@ -451,7 +451,7 @@ func (b *baseListContent[T]) SelectItemByValue(value T) {
 	}
 }
 
-func (b *baseListContent[T]) JumpToItemIndex(index int) {
+func (b *baseListContent[T]) JumpToItemByIndex(index int) {
 	if index < 0 {
 		return
 	}
