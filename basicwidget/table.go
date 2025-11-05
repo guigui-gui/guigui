@@ -235,6 +235,10 @@ func (t *Table[T]) JumpToItemByIndex(index int) {
 	t.list.JumpToItemByIndex(index)
 }
 
+func (t *Table[T]) EnsureItemVisibleByIndex(index int) {
+	t.list.EnsureItemVisibleByIndex(index)
+}
+
 func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return image.Pt(12*UnitSize(context), 6*UnitSize(context))
 }

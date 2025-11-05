@@ -301,18 +301,28 @@ type ListsModel struct {
 	disabled      bool
 }
 
-func (l *ListsModel) AppendListItems(items []basicwidget.ListItem[int]) []basicwidget.ListItem[int] {
-	if l.listItems == nil {
-		for i := range 99 {
-			l.listItems = append(l.listItems, basicwidget.ListItem[int]{
-				Text: fmt.Sprintf("Item %d", i+1),
-			})
-		}
+func (l *ListsModel) ensureListItems() {
+	if l.listItems != nil {
+		return
 	}
+	for i := range 99 {
+		l.listItems = append(l.listItems, basicwidget.ListItem[int]{
+			Text: fmt.Sprintf("Item %d", i+1),
+		})
+	}
+}
+
+func (l *ListsModel) AppendListItems(items []basicwidget.ListItem[int]) []basicwidget.ListItem[int] {
+	l.ensureListItems()
 	for i := range l.listItems {
 		l.listItems[i].Movable = !l.unmovable
 	}
 	return append(items, l.listItems...)
+}
+
+func (l *ListsModel) ListItemCount() int {
+	l.ensureListItems()
+	return len(l.listItems)
 }
 
 func (l *ListsModel) ensureTreeItems() {

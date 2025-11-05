@@ -205,6 +205,10 @@ func (l *List[T]) JumpToItemByIndex(index int) {
 	l.list.JumpToItemByIndex(index)
 }
 
+func (l *List[T]) EnsureItemVisibleByIndex(index int) {
+	l.list.EnsureItemVisibleByIndex(index)
+}
+
 func (l *List[T]) SetStyle(style ListStyle) {
 	l.list.SetStyle(style)
 }

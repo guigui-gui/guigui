@@ -23,6 +23,11 @@ type Lists struct {
 	dropdownListText basicwidget.Text
 	dropdownList     guigui.WidgetWithSize[*basicwidget.DropdownList[int]]
 
+	jumpForm         basicwidget.Form
+	indexText        basicwidget.Text
+	indexNumberInput basicwidget.NumberInput
+	jumpButton       basicwidget.Button
+
 	configForm       basicwidget.Form
 	showStripeText   basicwidget.Text
 	showStripeToggle basicwidget.Toggle
@@ -42,6 +47,7 @@ type Lists struct {
 
 func (l *Lists) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.listFormPanel)
+	adder.AddChild(&l.jumpForm)
 	adder.AddChild(&l.configForm)
 }
 
@@ -123,6 +129,27 @@ func (l *Lists) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		},
 	})
 
+	// Jump to index
+	l.indexText.SetValue("Index")
+	l.indexNumberInput.SetMinimumValue(1)
+	l.indexNumberInput.SetMaximumValue(model.Lists().ListItemCount())
+	l.jumpButton.SetText("Ensure the item is visible")
+	l.jumpButton.SetOnDown(func() {
+		index := l.indexNumberInput.Value() - 1
+		l.list.Widget().EnsureItemVisibleByIndex(index)
+		l.list.Widget().SelectItemByIndex(index)
+	})
+
+	l.jumpForm.SetItems([]basicwidget.FormItem{
+		{
+			PrimaryWidget:   &l.indexText,
+			SecondaryWidget: &l.indexNumberInput,
+		},
+		{
+			SecondaryWidget: &l.jumpButton,
+		},
+	})
+
 	// Configurations
 	l.showStripeText.SetValue("Show stripe")
 	l.showStripeToggle.SetOnValueChanged(func(value bool) {
@@ -187,6 +214,9 @@ func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			{
 				Widget: &l.listFormPanel,
 				Size:   guigui.FlexibleSize(1),
+			},
+			{
+				Widget: &l.jumpForm,
 			},
 			{
 				Widget: &l.configForm,

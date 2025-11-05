@@ -128,6 +128,10 @@ func (b *baseList[T]) JumpToItemByIndex(index int) {
 	b.content.JumpToItemByIndex(index)
 }
 
+func (b *baseList[T]) EnsureItemVisibleByIndex(index int) {
+	b.content.EnsureItemVisibleByIndex(index)
+}
+
 func (b *baseList[T]) SetStripeVisible(visible bool) {
 	b.content.SetStripeVisible(visible)
 }
@@ -180,13 +184,14 @@ type baseListContent[T comparable] struct {
 	hoveredItemIndexPlus1     int
 	lastHoveredItemIndexPlus1 int
 
-	indexToJumpPlus1        int
-	dragSrcIndexPlus1       int
-	dragDstIndexPlus1       int
-	pressStartPlus1         image.Point
-	startPressingIndexPlus1 int
-	contentWidthPlus1       int
-	contentHeight           int
+	indexToJumpPlus1          int
+	indexToEnsureVisiblePlus1 int
+	dragSrcIndexPlus1         int
+	dragDstIndexPlus1         int
+	pressStartPlus1           image.Point
+	startPressingIndexPlus1   int
+	contentWidthPlus1         int
+	contentHeight             int
 
 	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex  []image.Rectangle
@@ -392,8 +397,25 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 		if y, ok := b.itemYFromIndex(context, idx); ok {
 			y -= RoundedCornerRadius(context)
 			b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
-			b.indexToJumpPlus1 = 0
 		}
+		b.indexToJumpPlus1 = 0
+	}
+	if idx := b.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < b.abstractList.ItemCount() {
+		if y, ok := b.itemYFromIndex(context, idx+1); ok {
+			y -= widgetBounds.Bounds().Dx()
+			y += RoundedCornerRadius(context)
+			if offsetX, offsetY := b.scrollOverlay.Offset(); float64(y) < -offsetY {
+				b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, float64(-y))
+			}
+		}
+		/*if y, ok := b.itemYFromIndex(context, idx); ok {
+			y -= RoundedCornerRadius(context)
+			//y2, _ := b.itemYFromIndex(context, idx+1)
+			if _, offsetY := b.scrollOverlay.Offset(); float64(y) > -offsetY {
+				b.scrollOverlay.SetOffset(context, widgetBounds, cs, 0, float64(-y))
+			}
+		}*/
+		b.indexToEnsureVisiblePlus1 = 0
 	}
 
 	return nil
@@ -456,6 +478,15 @@ func (b *baseListContent[T]) JumpToItemByIndex(index int) {
 		return
 	}
 	b.indexToJumpPlus1 = index + 1
+	b.indexToEnsureVisiblePlus1 = 0
+}
+
+func (b *baseListContent[T]) EnsureItemVisibleByIndex(index int) {
+	if index < 0 {
+		return
+	}
+	b.indexToEnsureVisiblePlus1 = index + 1
+	b.indexToJumpPlus1 = 0
 }
 
 func (b *baseListContent[T]) SetStripeVisible(visible bool) {
