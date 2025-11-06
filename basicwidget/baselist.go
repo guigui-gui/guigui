@@ -614,10 +614,15 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			}
 
 			wasFocused := context.IsFocusedOrHasFocusedChild(b)
-			if item, ok := b.abstractList.ItemByIndex(index); ok {
-				context.SetFocused(item.Content, true)
-			} else {
-				context.SetFocused(b, true)
+			// A popup menu should not take a focus.
+			// For example, a context menu for a text field should not take a focus from the text field.
+			// TODO: It might be better to distinguish a menu and a popup menu in the future.
+			if b.style != ListStyleMenu {
+				if item, ok := b.abstractList.ItemByIndex(index); ok {
+					context.SetFocused(item.Content, true)
+				} else {
+					context.SetFocused(b, true)
+				}
 			}
 			if b.SelectedItemIndex() != index || !wasFocused || b.style == ListStyleMenu {
 				b.selectItemByIndex(index, true)

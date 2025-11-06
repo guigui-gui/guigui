@@ -274,7 +274,6 @@ func (p *popup) backgroundPassThrough() bool {
 
 func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if p.showing {
-		context.SetFocused(p, true)
 		if p.openingCount < popupMaxOpeningCount() {
 			p.openingCount += 3
 			p.openingCount = min(p.openingCount, popupMaxOpeningCount())
@@ -297,7 +296,6 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			p.openingCount = max(p.openingCount, 0)
 		}
 		if p.openingCount == 0 {
-			context.SetFocused(p, false)
 			p.hiding = false
 			guigui.DispatchEventHandler(p, popupEventClosed, p.closedReason)
 			p.closedReason = PopupClosedReasonNone
