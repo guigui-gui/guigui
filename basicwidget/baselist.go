@@ -196,6 +196,8 @@ type baseListContent[T comparable] struct {
 
 	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex  []image.Rectangle
+
+	prevWidth int
 }
 
 func (b *baseListContent[T]) SetOnItemSelected(f func(index int)) {
@@ -305,6 +307,19 @@ func (b *baseListContent[T]) AddChildren(context *guigui.Context, adder *guigui.
 }
 
 func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Record the current position of the selected item.
+	var headToSelectedItem int
+	if idx := b.SelectedItemIndex(); idx >= 0 {
+		if y0, ok := b.itemYFromIndex(context, idx); ok {
+			_, offsetY := b.scrollOverlay.Offset()
+			y := int(-offsetY)
+			headToSelectedItem = y0 - y
+			if headToSelectedItem < 0 || headToSelectedItem >= widgetBounds.Bounds().Dy() {
+				headToSelectedItem = 0
+			}
+		}
+	}
+
 	cw := b.contentWidth(context, widgetBounds)
 
 	p := widgetBounds.Bounds().Min
@@ -393,6 +408,16 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	// TODO: Now scrollOverlay's widgetBounds doens't match with baseList's widgetBounds.
 	// Separate a content part and use Panel.
 	b.scrollOverlay.SetContentSize(context, widgetBounds, cs)
+
+	// Adjust the scroll offset to show the selected item if needed.
+	if b.prevWidth != widgetBounds.Bounds().Dx() && headToSelectedItem != 0 {
+		if y0, ok := b.itemYFromIndex(context, b.SelectedItemIndex()); ok {
+			newOffsetY := -float64(y0 - headToSelectedItem)
+			offsetX, _ := b.scrollOverlay.Offset()
+			b.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, newOffsetY)
+		}
+	}
+	b.prevWidth = widgetBounds.Bounds().Dx()
 
 	return nil
 }
