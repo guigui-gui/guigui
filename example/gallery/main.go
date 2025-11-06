@@ -119,7 +119,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 func main() {
 	op := &guigui.RunOptions{
 		Title:      "Component Gallery",
-		WindowSize: image.Pt(800, 600),
+		WindowSize: image.Pt(800, 800),
 		RunGameOptions: &ebiten.RunGameOptions{
 			ApplePressAndHoldEnabled: true,
 		},
