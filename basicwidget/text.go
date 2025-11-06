@@ -602,11 +602,19 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 
 	switch t.clickCount {
 	case 1:
-		t.dragging = leftClick
-		t.selectionDragStartPlus1 = idx + 1
-		t.selectionDragEndPlus1 = idx + 1
-		if start, end := t.field.Selection(); start != idx || end != idx {
-			t.setTextAndSelection(t.field.Text(), idx, idx, -1, false)
+		if leftClick {
+			t.dragging = true
+			t.selectionDragStartPlus1 = idx + 1
+			t.selectionDragEndPlus1 = idx + 1
+		} else {
+			t.dragging = false
+			t.selectionDragStartPlus1 = 0
+			t.selectionDragEndPlus1 = 0
+		}
+		if leftClick || !context.IsFocusedOrHasFocusedChild(t) {
+			if start, end := t.field.Selection(); start != idx || end != idx {
+				t.setTextAndSelection(t.field.Text(), idx, idx, -1, false)
+			}
 		}
 	case 2:
 		t.dragging = true
