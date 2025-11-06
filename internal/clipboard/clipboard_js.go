@@ -5,7 +5,7 @@ package clipboard
 
 import "syscall/js"
 
-func ReadAll() (string, error) {
+func readAll() (string, error) {
 	ch := make(chan string)
 	then := js.FuncOf(func(this js.Value, args []js.Value) any {
 		ch <- args[0].String()
@@ -24,7 +24,7 @@ func ReadAll() (string, error) {
 	return <-ch, nil
 }
 
-func WriteAll(text string) error {
+func writeAll(text string) error {
 	ch := make(chan struct{})
 	then := js.FuncOf(func(this js.Value, args []js.Value) any {
 		close(ch)

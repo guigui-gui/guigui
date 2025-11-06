@@ -778,27 +778,12 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyX) ||
 			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyX):
 			// Cut
-			start, end := t.field.Selection()
-			if start != end {
-				if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
-					slog.Error(err.Error())
-					return guigui.AbortHandlingInputByWidget(t)
-				}
-				text := t.field.Text()[:start] + t.field.Text()[end:]
-				t.setTextAndSelection(text, start, start, -1, true)
-			}
+			t.Cut()
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyV) ||
 			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyV):
 			// Paste
-			start, end := t.field.Selection()
-			ct, err := clipboard.ReadAll()
-			if err != nil {
-				slog.Error(err.Error())
-				return guigui.AbortHandlingInputByWidget(t)
-			}
-			text := t.field.Text()[:start] + ct + t.field.Text()[end:]
-			t.setTextAndSelection(text, start+len(ct), start+len(ct), -1, true)
+			t.Paste()
 			return guigui.HandleInputByWidget(t)
 		}
 	}
@@ -925,13 +910,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyC) ||
 		useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyC):
 		// Copy
-		start, end := t.field.Selection()
-		if start != end {
-			if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
-				slog.Error(err.Error())
-				return guigui.AbortHandlingInputByWidget(t)
-			}
-		}
+		t.Copy()
 		return guigui.HandleInputByWidget(t)
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyK):
 		// 'Kill' the text after the cursor or the selection.
@@ -1188,6 +1167,69 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 		dy += max(float64(contentBounds.Min.Y)-pos.Top, 0)
 	}
 	return dx, dy
+}
+
+func (t *Text) CanCut() bool {
+	if !t.editable {
+		return false
+	}
+	start, end := t.field.Selection()
+	return start != end
+}
+
+func (t *Text) CanCopy() bool {
+	start, end := t.field.Selection()
+	return start != end
+}
+
+func (t *Text) CanPaste() bool {
+	if !t.editable {
+		return false
+	}
+	ct, err := clipboard.ReadAll()
+	if err != nil {
+		slog.Error(err.Error())
+		return false
+	}
+	return ct != ""
+}
+
+func (t *Text) Cut() bool {
+	start, end := t.field.Selection()
+	if start == end {
+		return false
+	}
+	if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
+		slog.Error(err.Error())
+		return false
+	}
+	text := t.field.Text()[:start] + t.field.Text()[end:]
+	t.setTextAndSelection(text, start, start, -1, true)
+	return true
+}
+
+func (t *Text) Copy() bool {
+	start, end := t.field.Selection()
+	if start == end {
+		return false
+	}
+	if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
+		slog.Error(err.Error())
+		return false
+	}
+	return true
+}
+
+func (t *Text) Paste() bool {
+	start, end := t.field.Selection()
+	ct, err := clipboard.ReadAll()
+	if err != nil {
+		slog.Error(err.Error())
+		return false
+	}
+	text := t.field.Text()[:start] + ct + t.field.Text()[end:]
+	t.setTextAndSelection(text, start+len(ct), start+len(ct), -1, true)
+	return true
 }
 
 type textCursor struct {

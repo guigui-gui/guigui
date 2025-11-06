@@ -341,6 +341,30 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 	return image.Pt(6*UnitSize(context), UnitSize(context))
 }
 
+func (t *TextInput) CanCut() bool {
+	return t.text.CanCut()
+}
+
+func (t *TextInput) CanCopy() bool {
+	return t.text.CanCopy()
+}
+
+func (t *TextInput) CanPaste() bool {
+	return t.text.CanPaste()
+}
+
+func (t *TextInput) Cut() bool {
+	return t.text.Cut()
+}
+
+func (t *TextInput) Copy() bool {
+	return t.text.Copy()
+}
+
+func (t *TextInput) Paste() bool {
+	return t.text.Paste()
+}
+
 type textInputBackground struct {
 	guigui.DefaultWidget
 

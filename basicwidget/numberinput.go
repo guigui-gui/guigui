@@ -342,3 +342,27 @@ func (n *NumberInput) decrement() {
 	n.CommitWithCurrentInputValue()
 	n.abstractNumberInput.Decrement(n)
 }
+
+func (n *NumberInput) CanCut() bool {
+	return n.textInput.CanCut()
+}
+
+func (n *NumberInput) CanCopy() bool {
+	return n.textInput.CanCopy()
+}
+
+func (n *NumberInput) CanPaste() bool {
+	return n.textInput.CanPaste()
+}
+
+func (n *NumberInput) Cut() bool {
+	return n.textInput.Cut()
+}
+
+func (n *NumberInput) Copy() bool {
+	return n.textInput.Copy()
+}
+
+func (n *NumberInput) Paste() bool {
+	return n.textInput.Paste()
+}

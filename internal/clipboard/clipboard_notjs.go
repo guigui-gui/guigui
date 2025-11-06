@@ -5,12 +5,14 @@
 
 package clipboard
 
-import "github.com/atotto/clipboard"
+import (
+	"github.com/atotto/clipboard"
+)
 
-func ReadAll() (string, error) {
+func readAll() (string, error) {
 	return clipboard.ReadAll()
 }
 
-func WriteAll(text string) error {
+func writeAll(text string) error {
 	return clipboard.WriteAll(text)
 }
