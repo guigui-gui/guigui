@@ -196,7 +196,7 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}
 
 	if t.editable {
-		guigui.RegisterFocusChangedEventHandler(t, func(focused bool) {
+		guigui.SetOnFocusChanged(t, func(focused bool) {
 			if focused {
 				t.field.Focus()
 				t.cursor.resetCounter()

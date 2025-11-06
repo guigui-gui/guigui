@@ -238,10 +238,10 @@ func dispatchEventHandler(widgetState *widgetState, eventName string, args ...an
 
 const focusChangedEvent = "__focusChanged"
 
-// RegisterFocusChangedEventHandler registers a handler for focus changed events.
+// SetOnFocusChanged registers a handler for focus changed events.
 //
 // A handler can be dispatched even when the widget is not in the tree.
-func RegisterFocusChangedEventHandler(widget Widget, f func(focused bool)) {
+func SetOnFocusChanged(widget Widget, f func(focused bool)) {
 	RegisterEventHandler(widget, focusChangedEvent, f)
 }
 
