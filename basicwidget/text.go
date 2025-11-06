@@ -558,10 +558,15 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 		return guigui.AbortHandlingInputByWidget(t)
 	}
 
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+	right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
+	if left || right {
 		if context.IsWidgetHitAtCursor(t) {
-			t.handleClick(context, widgetBounds.Bounds(), cursorPosition)
-			return guigui.HandleInputByWidget(t)
+			t.handleClick(context, widgetBounds.Bounds(), cursorPosition, left)
+			if left {
+				return guigui.HandleInputByWidget(t)
+			}
+			return guigui.HandleInputResult{}
 		}
 		context.SetFocused(t, false)
 	}
@@ -582,18 +587,22 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 	return guigui.HandleInputResult{}
 }
 
-func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, cursorPosition image.Point) {
+func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, cursorPosition image.Point, leftClick bool) {
 	idx := t.textIndexFromPosition(context, textBounds, cursorPosition, false)
 
-	if ebiten.Tick()-t.lastClickTick < int64(doubleClickLimitInTicks()) && t.lastClickTextIndex == idx {
-		t.clickCount++
+	if leftClick {
+		if ebiten.Tick()-t.lastClickTick < int64(doubleClickLimitInTicks()) && t.lastClickTextIndex == idx {
+			t.clickCount++
+		} else {
+			t.clickCount = 1
+		}
 	} else {
 		t.clickCount = 1
 	}
 
 	switch t.clickCount {
 	case 1:
-		t.dragging = true
+		t.dragging = leftClick
 		t.selectionDragStartPlus1 = idx + 1
 		t.selectionDragEndPlus1 = idx + 1
 		if start, end := t.field.Selection(); start != idx || end != idx {
@@ -611,6 +620,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 	}
 
 	context.SetFocused(t, true)
+
 	t.lastClickTick = ebiten.Tick()
 	t.lastClickTextIndex = idx
 }
