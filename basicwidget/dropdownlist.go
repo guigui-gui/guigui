@@ -192,6 +192,8 @@ func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *
 }
 
 func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	d.text.SetVerticalAlign(VerticalAlignMiddle)
+
 	img, err := theResourceImages.Get("unfold_more", context.ColorMode())
 	if err != nil {
 		return err
@@ -200,60 +202,39 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds
 	return nil
 }
 
-func (d *dropdownListButtonContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	bounds := widgetBounds.Bounds()
-	paddingStartX := buttonEdgeAndTextPadding(context)
-
-	switch widget {
-	case d.content:
-		contentSize := d.content.Measure(context, guigui.Constraints{})
-		contentP := image.Point{
-			X: bounds.Min.X + paddingStartX,
-			Y: bounds.Min.Y + (bounds.Dy()-contentSize.Y)/2,
-		}
-		return image.Rectangle{
-			Min: contentP,
-			Max: contentP.Add(contentSize),
-		}
-	case &d.text:
-		textSize := d.text.Measure(context, guigui.Constraints{})
-		textP := image.Point{
-			X: bounds.Min.X + paddingStartX,
-			Y: bounds.Min.Y + (bounds.Dy()-textSize.Y)/2,
-		}
-		return image.Rectangle{
-			Min: textP,
-			Max: textP.Add(textSize),
-		}
-	case &d.image:
-		iconSize := defaultIconSize(context)
-		imgP := image.Point{
-			X: bounds.Max.X - buttonEdgeAndImagePadding(context) - iconSize,
-			Y: bounds.Min.Y + (bounds.Dy()-iconSize)/2,
-		}
-		return image.Rectangle{
-			Min: imgP,
-			Max: imgP.Add(image.Pt(iconSize, iconSize)),
-		}
+func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Layout {
+	padding := guigui.Padding{
+		End: buttonEdgeAndImagePadding(context),
 	}
-	return image.Rectangle{}
+
+	var contentWidget guigui.Widget
+	if d.content != nil {
+		contentWidget = d.content
+	} else {
+		contentWidget = &d.text
+		padding.Start = buttonEdgeAndTextPadding(context)
+	}
+	iconSize := defaultIconSize(context)
+	return guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Gap:       buttonTextAndImagePadding(context),
+		Items: []guigui.LinearLayoutItem{
+			{
+				Widget: contentWidget,
+			},
+			{
+				Widget: &d.image,
+				Size:   guigui.FixedSize(iconSize),
+			},
+		},
+		Padding: padding,
+	}
+}
+
+func (d *dropdownListButtonContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+	return d.layout(context).WidgetBounds(context, widgetBounds.Bounds(), widget)
 }
 
 func (d *dropdownListButtonContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	paddingStartX := buttonEdgeAndTextPadding(context)
-	paddingEndX := buttonEdgeAndImagePadding(context)
-
-	var contentSize image.Point
-	if d.content != nil {
-		contentSize = d.content.Measure(context, guigui.Constraints{})
-	}
-	if d.contentWidthPlus1 > 0 {
-		contentSize.X = d.contentWidthPlus1 - 1
-	}
-	textSize := d.text.Measure(context, constraints)
-	iconSize := defaultIconSize(context)
-	return image.Point{
-		X: paddingStartX + max(contentSize.X, textSize.X) + buttonTextAndImagePadding(context) + iconSize + paddingEndX,
-		Y: max(contentSize.Y, textSize.Y, iconSize),
-	}
+	return d.layout(context).Measure(context, constraints)
 }
