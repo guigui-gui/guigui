@@ -86,7 +86,7 @@ func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, wid
 		tmpBoundsArr = tmpBoundsArr[:0]
 		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
 	}()
-	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds)
+	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
 
 	for i, item := range l.Items {
 		if item.Widget == nil {
@@ -110,7 +110,7 @@ func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, wid
 }
 
 func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
-	return l.appendWidgetBounds(boundsArr, context, bounds)
+	return l.appendWidgetBounds(boundsArr, context, bounds, false)
 }
 
 func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index int) image.Rectangle {
@@ -119,7 +119,7 @@ func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index
 		tmpBoundsArr = tmpBoundsArr[:0]
 		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
 	}()
-	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds)
+	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
 	return tmpBoundsArr[index]
 }
 
@@ -174,11 +174,16 @@ func linearLayoutItemDefaultAlongSize(context *Context, direction LayoutDirectio
 	return 0
 }
 
-func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context, alongSize, acrossSize int) []int {
+func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context, alongSize, acrossSize int, measure bool) []int {
+	var noConstraintsForFlexible bool
+	if measure && alongSize <= 0 {
+		noConstraintsForFlexible = true
+	}
 	rest := alongSize
 	rest -= (len(l.Items) - 1) * l.Gap
 	var denom int
 
+	var unitSizeForFlexibleSize int
 	origLen := len(sizesInPixels)
 	for i, item := range l.Items {
 		switch item.Size.typ {
@@ -187,15 +192,29 @@ func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context
 		case sizeTypeFixed:
 			sizesInPixels = append(sizesInPixels, item.Size.value)
 		case sizeTypeFlexible:
-			sizesInPixels = append(sizesInPixels, 0)
-			denom += item.Size.value
+			if noConstraintsForFlexible {
+				sizesInPixels = append(sizesInPixels, linearLayoutItemDefaultAlongSize(context, l.Direction, &item, acrossSize))
+				unitSizeForFlexibleSize = max(unitSizeForFlexibleSize, (sizesInPixels[origLen+i]+item.Size.value-1)/item.Size.value)
+			} else {
+				sizesInPixels = append(sizesInPixels, 0)
+				denom += item.Size.value
+			}
 		}
 		rest -= sizesInPixels[origLen+i]
 	}
 
 	rest = max(rest, 0)
 
-	if denom > 0 && rest > 0 {
+	if noConstraintsForFlexible {
+		if unitSizeForFlexibleSize > 0 {
+			for i, item := range l.Items {
+				if item.Size.typ != sizeTypeFlexible {
+					continue
+				}
+				sizesInPixels[origLen+i] = unitSizeForFlexibleSize * item.Size.value
+			}
+		}
+	} else if denom > 0 && rest > 0 {
 		origRest := rest
 		for i, item := range l.Items {
 			if item.Size.typ != sizeTypeFlexible {
@@ -257,7 +276,7 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 		tmpSizes = tmpSizes[:0]
 		theLinearLayoutSizesPool.Put(&tmpSizes)
 	}()
-	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, contentAlongSize, contentAcrossSize)
+	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, contentAlongSize, contentAcrossSize, true)
 	for i, item := range l.Items {
 		s := tmpSizes[i]
 		autoAlongSize += s
@@ -323,7 +342,7 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 	return image.Point{}
 }
 
-func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
+func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle, measure bool) []image.Rectangle {
 	alongSize := l.alongSize(bounds)
 	acrossSize := l.acrossSize(bounds)
 	tmpSizes := *theLinearLayoutSizesPool.Get().(*[]int)
@@ -331,7 +350,7 @@ func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *
 		tmpSizes = tmpSizes[:0]
 		theLinearLayoutSizesPool.Put(&tmpSizes)
 	}()
-	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, alongSize, acrossSize)
+	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, alongSize, acrossSize, measure)
 	var progress int
 	for i := range l.Items {
 		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, tmpSizes[i]))

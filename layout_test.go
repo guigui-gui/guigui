@@ -55,7 +55,7 @@ func TestLinearLayoutMeasure(t *testing.T) {
 	}
 }
 
-func TestLinearLayoutFlexibleSizeMeasure(t *testing.T) {
+func TestLinearLayoutMeasureFlexibleSize(t *testing.T) {
 	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
 		l := &guigui.LinearLayout{
 			Direction: dir,
@@ -113,7 +113,7 @@ func TestLinearLayoutFlexibleSizeMeasure(t *testing.T) {
 	}
 }
 
-func TestLinearLayoutFlexibleSizeMeasure2(t *testing.T) {
+func TestLinearLayoutMeasureIgnoreFlexibleSize(t *testing.T) {
 	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
 		var opDir guigui.LayoutDirection
 		if dir == guigui.LayoutDirectionHorizontal {
@@ -154,5 +154,43 @@ func TestLinearLayoutFlexibleSizeMeasure2(t *testing.T) {
 		if got != want {
 			t.Errorf("dir: %v, got: %v, want: %v", dir, got, want)
 		}
+	}
+}
+
+func TestLinearLayoutMeasureFlexibleSizeWithWidgetWithoutConstraints(t *testing.T) {
+	l := &guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Gap:       10,
+		Items: []guigui.LinearLayoutItem{
+			{
+				Widget: &dummyWidget{
+					size: image.Pt(100, 50),
+				},
+				Size: guigui.FlexibleSize(1),
+			},
+			{
+				Widget: &dummyWidget{
+					size: image.Pt(100, 50),
+				},
+			},
+			{
+				Widget: &dummyWidget{
+					size: image.Pt(120, 60),
+				},
+				Size: guigui.FlexibleSize(2),
+			},
+			{
+				Widget: &dummyWidget{
+					size: image.Pt(140, 70),
+				},
+				Size: guigui.FlexibleSize(1),
+			},
+		},
+	}
+	var context guigui.Context
+	got := l.Measure(&context, guigui.Constraints{})
+	want := image.Pt(4*140+100+3*10, 70)
+	if got != want {
+		t.Errorf("got: %v, want: %v", got, want)
 	}
 }
