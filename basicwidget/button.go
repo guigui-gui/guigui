@@ -227,6 +227,13 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 		h = max(h, s.Y)
 	}
 
+	if fixedWidth, ok := constraints.FixedWidth(); ok {
+		w = min(w, fixedWidth)
+	}
+	if fixedHeight, ok := constraints.FixedHeight(); ok {
+		h = min(h, fixedHeight)
+	}
+
 	return image.Pt(w, h)
 }
 

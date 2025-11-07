@@ -171,9 +171,22 @@ func (s *SegmentedControl[T]) Layout(context *guigui.Context, widgetBounds *guig
 
 func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	s.updateButtons(context)
+	if s.abstractList.ItemCount() == 0 {
+		return image.Pt(0, 0)
+	}
 
 	var w, h int
 	for i := range s.buttons {
+		switch s.direction {
+		case SegmentedControlDirectionHorizontal:
+			if fixedWidth, ok := constraints.FixedWidth(); ok {
+				constraints = guigui.FixedWidthConstraints(fixedWidth / s.abstractList.ItemCount())
+			}
+		case SegmentedControlDirectionVertical:
+			if fixedHeight, ok := constraints.FixedHeight(); ok {
+				constraints = guigui.FixedHeightConstraints(fixedHeight / s.abstractList.ItemCount())
+			}
+		}
 		size := s.buttons[i].measure(context, constraints, true)
 		w = max(w, size.X)
 		h = max(h, size.Y)

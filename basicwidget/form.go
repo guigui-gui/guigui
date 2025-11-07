@@ -86,9 +86,15 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 		var secondaryS image.Point
 		if item.PrimaryWidget != nil {
 			primaryS = item.PrimaryWidget.Measure(context, guigui.Constraints{})
+			if primaryS.X > width-2*paddingS.X {
+				primaryS = item.PrimaryWidget.Measure(context, guigui.FixedWidthConstraints(width-2*paddingS.X))
+			}
 		}
 		if item.SecondaryWidget != nil {
 			secondaryS = item.SecondaryWidget.Measure(context, guigui.Constraints{})
+			if secondaryS.X > width-2*paddingS.X {
+				secondaryS = item.SecondaryWidget.Measure(context, guigui.FixedWidthConstraints(width-2*paddingS.X))
+			}
 		}
 		newLine := item.PrimaryWidget != nil && primaryS.X+secondaryS.X+2*paddingS.X > width
 		var baseH int
