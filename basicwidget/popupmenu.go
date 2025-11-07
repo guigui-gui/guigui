@@ -29,8 +29,9 @@ type PopupMenuItem[T comparable] struct {
 type PopupMenu[T comparable] struct {
 	guigui.DefaultWidget
 
-	popup Popup
-	list  guigui.WidgetWithSize[*List[T]]
+	popup     Popup
+	list      guigui.WidgetWithSize[*List[T]]
+	listItems []ListItem[T]
 }
 
 func (p *PopupMenu[T]) SetOnItemSelected(f func(index int)) {
@@ -108,9 +109,9 @@ func (p *PopupMenu[T]) IsOpen() bool {
 }
 
 func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
-	var listItems []ListItem[T]
-	for _, item := range items {
-		listItems = append(listItems, ListItem[T]{
+	p.listItems = adjustSliceSize(p.listItems, len(items))
+	for i, item := range items {
+		p.listItems[i] = ListItem[T]{
 			Text:         item.Text,
 			TextColor:    item.TextColor,
 			Header:       item.Header,
@@ -119,9 +120,9 @@ func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
 			Border:       item.Border,
 			Disabled:     item.Disabled,
 			Value:        item.Value,
-		})
+		}
 	}
-	p.list.Widget().SetItems(listItems)
+	p.list.Widget().SetItems(p.listItems)
 }
 
 func (p *PopupMenu[T]) SetItemsByStrings(items []string) {
