@@ -23,15 +23,16 @@ type bounds3D struct {
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
-	bounds := widgetBoundsFromWidget(context, widget).VisibleBounds()
+	ws := widget.widgetState()
+	bounds := widgetBoundsFromWidget(context, ws).VisibleBounds()
 	if bounds.Empty() {
 		return bounds3D{}, false
 	}
 	return bounds3D{
 		bounds:      bounds,
-		zDelta:      widget.widgetState().zDelta,
-		visible:     widget.widgetState().isVisible(),
-		passThrough: widget.widgetState().passThrough,
+		zDelta:      ws.zDelta,
+		visible:     ws.isVisible(),
+		passThrough: ws.passThrough,
 	}, true
 }
 
@@ -163,9 +164,9 @@ func (w *widgetState) z() int {
 	return w.parent.widgetState().z() + w.zDelta
 }
 
-func widgetBoundsFromWidget(context *Context, widget Widget) *WidgetBounds {
-	wb := &widget.widgetState().widgetBounds_
-	wb.widget = widget
+func widgetBoundsFromWidget(context *Context, widgetState *widgetState) *WidgetBounds {
+	wb := &widgetState.widgetBounds_
+	wb.widgetState = widgetState
 	wb.context = context
 	return wb
 }

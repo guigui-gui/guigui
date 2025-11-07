@@ -6,16 +6,16 @@ package guigui
 import "image"
 
 type WidgetBounds struct {
-	context *Context
-	widget  Widget
+	context     *Context
+	widgetState *widgetState
 }
 
 func (w *WidgetBounds) Bounds() image.Rectangle {
-	return w.widget.widgetState().bounds
+	return w.widgetState.bounds
 }
 
 func (w *WidgetBounds) VisibleBounds() image.Rectangle {
-	state := w.widget.widgetState()
+	state := w.widgetState
 	if state.hasVisibleBoundsCache {
 		return state.visibleBoundsCache
 	}
@@ -27,7 +27,7 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
-	if w.widget.widgetState().zDelta != 0 {
+	if w.widgetState.zDelta != 0 {
 		b := state.bounds
 		state.hasVisibleBoundsCache = true
 		state.visibleBoundsCache = b
@@ -35,7 +35,7 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 	}
 
 	var b image.Rectangle
-	parentVB := widgetBoundsFromWidget(w.context, parent).VisibleBounds()
+	parentVB := widgetBoundsFromWidget(w.context, parent.widgetState()).VisibleBounds()
 	if !parentVB.Empty() {
 		b = parentVB.Intersect(state.bounds)
 	}
