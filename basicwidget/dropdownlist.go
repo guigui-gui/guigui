@@ -41,9 +41,9 @@ func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
 
 func (d *DropdownList[T]) updatePopupMenuitems() {
 	var popupMenuItems []PopupMenuItem[T]
-	for i, item := range d.items {
+	for _, item := range d.items {
 		pmItem := PopupMenuItem[T](item)
-		if !d.popupMenu.IsOpen() && d.popupMenu.SelectedItemIndex() == i {
+		if !d.popupMenu.IsOpen() {
 			pmItem.Content = nil
 		}
 		popupMenuItems = append(popupMenuItems, pmItem)
