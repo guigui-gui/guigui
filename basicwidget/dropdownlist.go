@@ -31,24 +31,39 @@ type DropdownList[T comparable] struct {
 	button        Button
 	buttonContent dropdownListButtonContent
 	popupMenu     PopupMenu[T]
+
+	items []DropdownListItem[T]
 }
 
 func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
 	guigui.RegisterEventHandler(d, dropdownListEventItemSelected, f)
 }
 
-func (d *DropdownList[T]) updateButtonContent(context *guigui.Context) {
-	if item, ok := d.popupMenu.SelectedItem(); ok {
-		if item.Content != nil {
+func (d *DropdownList[T]) updatePopupMenuitems() {
+	var popupMenuItems []PopupMenuItem[T]
+	for i, item := range d.items {
+		pmItem := PopupMenuItem[T](item)
+		if !d.popupMenu.IsOpen() && d.popupMenu.SelectedItemIndex() == i {
+			pmItem.Content = nil
+		}
+		popupMenuItems = append(popupMenuItems, pmItem)
+	}
+	d.popupMenu.SetItems(popupMenuItems)
+}
+
+func (d *DropdownList[T]) updateChildren(context *guigui.Context) {
+	d.updatePopupMenuitems()
+	if index := d.popupMenu.SelectedItemIndex(); index >= 0 {
+		if content := d.items[index].Content; content != nil {
 			if d.popupMenu.IsOpen() {
-				d.buttonContent.SetContentWidth(item.Content.Measure(context, guigui.Constraints{}).X)
+				d.buttonContent.SetContentWidth(content.Measure(context, guigui.Constraints{}).X)
 			} else {
-				d.buttonContent.SetContent(item.Content)
+				d.buttonContent.SetContent(content)
 			}
 			d.buttonContent.SetText("")
 		} else {
 			d.buttonContent.SetContent(nil)
-			d.buttonContent.SetText(item.Text)
+			d.buttonContent.SetText(d.items[index].Text)
 		}
 	} else {
 		d.buttonContent.SetContent(nil)
@@ -63,7 +78,7 @@ func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.Chi
 }
 
 func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	d.updateButtonContent(context)
+	d.updateChildren(context)
 
 	d.button.SetOnDown(func() {
 		d.popupMenu.SetOpen(context, true)
@@ -107,15 +122,19 @@ func (d *DropdownList[T]) Layout(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (d *DropdownList[T]) SetItems(items []DropdownListItem[T]) {
-	var popupMenuItems []PopupMenuItem[T]
-	for _, item := range items {
-		popupMenuItems = append(popupMenuItems, PopupMenuItem[T](item))
-	}
-	d.popupMenu.SetItems(popupMenuItems)
+	d.items = adjustSliceSize(d.items, len(items))
+	copy(d.items, items)
+	d.updatePopupMenuitems()
 }
 
 func (d *DropdownList[T]) SetItemsByStrings(items []string) {
-	d.popupMenu.SetItemsByStrings(items)
+	d.items = adjustSliceSize(d.items, len(items))
+	for i, str := range items {
+		d.items[i] = DropdownListItem[T]{
+			Text: str,
+		}
+	}
+	d.updatePopupMenuitems()
 }
 
 func (d *DropdownList[T]) SelectedItem() (DropdownListItem[T], bool) {
@@ -148,7 +167,7 @@ func (d *DropdownList[T]) SelectItemByValue(value T) {
 
 func (d *DropdownList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	// Update the button content to reflect the current selected item.
-	d.updateButtonContent(context)
+	d.updateChildren(context)
 	return d.button.Measure(context, constraints)
 }
 
@@ -166,7 +185,7 @@ type dropdownListButtonContent struct {
 	content           guigui.Widget
 	contentWidthPlus1 int
 	text              Text
-	image             Image
+	icon              Image
 }
 
 func (d *dropdownListButtonContent) SetContent(content guigui.Widget) {
@@ -188,7 +207,7 @@ func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *
 		adder.AddChild(d.content)
 	}
 	adder.AddChild(&d.text)
-	adder.AddChild(&d.image)
+	adder.AddChild(&d.icon)
 }
 
 func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
@@ -198,7 +217,7 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds
 	if err != nil {
 		return err
 	}
-	d.image.SetImage(img)
+	d.icon.SetImage(img)
 	return nil
 }
 
@@ -223,7 +242,7 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Layou
 				Widget: contentWidget,
 			},
 			{
-				Widget: &d.image,
+				Widget: &d.icon,
 				Size:   guigui.FixedSize(iconSize),
 			},
 		},
