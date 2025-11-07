@@ -24,7 +24,7 @@ type bounds3D struct {
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	ws := widget.widgetState()
-	bounds := widgetBoundsFromWidget(context, ws).VisibleBounds()
+	bounds := context.visibleBounds(ws)
 	if bounds.Empty() {
 		return bounds3D{}, false
 	}
@@ -192,8 +192,7 @@ func RequestRedraw(widget Widget) {
 func requestRedraw(widgetState *widgetState) {
 	widgetState.dirty = true
 	if theDebugMode.showRenderingRegions {
-		_, file, line, ok := runtime.Caller(2)
-		if ok {
+		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.dirtyAt = fmt.Sprintf("%s:%d", file, line)
 		}
 	}

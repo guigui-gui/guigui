@@ -383,3 +383,32 @@ func (c *Context) SetZDelta(widget Widget, zDelta int) {
 	widgetState.zDelta = zDelta
 	RequestRedraw(widget)
 }
+
+func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
+	if state.hasVisibleBoundsCache {
+		return state.visibleBoundsCache
+	}
+
+	parent := state.parent
+	if parent == nil {
+		b := c.app.bounds()
+		state.hasVisibleBoundsCache = true
+		state.visibleBoundsCache = b
+		return b
+	}
+	if state.zDelta != 0 {
+		b := state.bounds
+		state.hasVisibleBoundsCache = true
+		state.visibleBoundsCache = b
+		return b
+	}
+
+	var b image.Rectangle
+	parentVB := c.visibleBounds(parent.widgetState())
+	if !parentVB.Empty() {
+		b = parentVB.Intersect(state.bounds)
+	}
+	state.hasVisibleBoundsCache = true
+	state.visibleBoundsCache = b
+	return b
+}

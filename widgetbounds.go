@@ -15,31 +15,5 @@ func (w *WidgetBounds) Bounds() image.Rectangle {
 }
 
 func (w *WidgetBounds) VisibleBounds() image.Rectangle {
-	state := w.widgetState
-	if state.hasVisibleBoundsCache {
-		return state.visibleBoundsCache
-	}
-
-	parent := state.parent
-	if parent == nil {
-		b := w.context.app.bounds()
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-	if w.widgetState.zDelta != 0 {
-		b := state.bounds
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-
-	var b image.Rectangle
-	parentVB := widgetBoundsFromWidget(w.context, parent.widgetState()).VisibleBounds()
-	if !parentVB.Empty() {
-		b = parentVB.Intersect(state.bounds)
-	}
-	state.hasVisibleBoundsCache = true
-	state.visibleBoundsCache = b
-	return b
+	return w.context.visibleBounds(w.widgetState)
 }

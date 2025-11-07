@@ -208,7 +208,7 @@ func (a *app) updateInvalidatedRegions() {
 		if !widgetState.dirty {
 			return nil
 		}
-		vb := widgetBoundsFromWidget(&a.context, widgetState).VisibleBounds()
+		vb := a.context.visibleBounds(widgetState)
 		if vb.Empty() {
 			return nil
 		}
@@ -399,7 +399,7 @@ func (a *app) requestRedraw(region image.Rectangle) {
 
 func (a *app) requestRedrawWidget(widget Widget) {
 	widgetState := widget.widgetState()
-	a.requestRedraw(widgetBoundsFromWidget(&a.context, widgetState).VisibleBounds())
+	a.requestRedraw(a.context.visibleBounds(widgetState))
 	for _, child := range widgetState.children {
 		a.requestRedrawIfDifferentParentZ(child)
 	}
@@ -594,13 +594,13 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	widgetState := widget.widgetState()
 	// If the children and/or children's bounds are changed, request redraw.
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
-		a.requestRedraw(widgetBoundsFromWidget(&a.context, widgetState).VisibleBounds())
+		a.requestRedraw(a.context.visibleBounds(widgetState))
 
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		widgetState.prev.redrawIfDifferentParentZ(a)
 		for _, child := range widgetState.children {
 			if child.widgetState().zDelta != 0 {
-				a.requestRedraw(widgetBoundsFromWidget(&a.context, child.widgetState()).VisibleBounds())
+				a.requestRedraw(a.context.visibleBounds(child.widgetState()))
 			}
 		}
 	}
@@ -646,8 +646,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 	customDraw := widgetState.customDraw
 	useOffscreen := (widgetState.opacity() < 1 || customDraw != nil) && !dst.Bounds().Empty()
 
-	widgetBounds := widgetBoundsFromWidget(&a.context, widgetState)
-	vb := widgetBounds.VisibleBounds()
+	vb := a.context.visibleBounds(widgetState)
 	var origDst *ebiten.Image
 	renderCurrent := zToRender == widgetState.z() && !vb.Empty()
 	if renderCurrent {
@@ -656,6 +655,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 			dst = widgetState.ensureOffscreen(dst.Bounds())
 			dst.Clear()
 		}
+		widgetBounds := widgetBoundsFromWidget(&a.context, widgetState)
 		widget.Draw(&a.context, widgetBounds, dst.SubImage(vb).(*ebiten.Image))
 	}
 
@@ -747,7 +747,7 @@ func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Wi
 	widgetState := widget.widgetState()
 	var hit bool
 	if parentHit || widgetState.zDelta != 0 {
-		hit = point.In(widgetBoundsFromWidget(&a.context, widgetState).VisibleBounds())
+		hit = point.In(a.context.visibleBounds(widgetState))
 	}
 
 	children := widgetState.children
