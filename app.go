@@ -646,7 +646,8 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 	customDraw := widgetState.customDraw
 	useOffscreen := (widgetState.opacity() < 1 || customDraw != nil) && !dst.Bounds().Empty()
 
-	vb := widgetBoundsFromWidget(&a.context, widgetState).VisibleBounds()
+	widgetBounds := widgetBoundsFromWidget(&a.context, widgetState)
+	vb := widgetBounds.VisibleBounds()
 	var origDst *ebiten.Image
 	renderCurrent := zToRender == widgetState.z() && !vb.Empty()
 	if renderCurrent {
@@ -655,8 +656,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 			dst = widgetState.ensureOffscreen(dst.Bounds())
 			dst.Clear()
 		}
-		bounds := widgetBoundsFromWidget(&a.context, widgetState)
-		widget.Draw(&a.context, bounds, dst.SubImage(vb).(*ebiten.Image))
+		widget.Draw(&a.context, widgetBounds, dst.SubImage(vb).(*ebiten.Image))
 	}
 
 	for _, child := range widgetState.children {
