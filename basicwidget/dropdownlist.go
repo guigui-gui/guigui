@@ -227,16 +227,18 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Layou
 	}
 
 	var contentWidget guigui.Widget
+	var gap int
 	if d.content != nil {
 		contentWidget = d.content
 	} else {
 		contentWidget = &d.text
 		padding.Start = buttonEdgeAndTextPadding(context)
+		gap = buttonTextAndImagePadding(context)
 	}
 	iconSize := defaultIconSize(context)
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Gap:       buttonTextAndImagePadding(context),
+		Gap:       gap,
 		Items: []guigui.LinearLayoutItem{
 			{
 				Widget: contentWidget,
@@ -256,4 +258,13 @@ func (d *dropdownListButtonContent) Layout(context *guigui.Context, widgetBounds
 
 func (d *dropdownListButtonContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return d.layout(context).Measure(context, constraints)
+}
+
+func DropdownListButtonTextPadding(context *guigui.Context) guigui.Padding {
+	return guigui.Padding{
+		Start:  buttonEdgeAndTextPadding(context),
+		Top:    0,
+		End:    buttonTextAndImagePadding(context),
+		Bottom: 0,
+	}
 }
