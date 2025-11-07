@@ -138,6 +138,16 @@ func adjustedWheel() (float64, float64) {
 	return x, y
 }
 
+func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if !context.IsWidgetHitAtCursor(s) {
+		return false
+	}
+	if !s.isBarVisible(context, widgetBounds) {
+		return true
+	}
+	return !s.isCursorInEdgeArea(context, widgetBounds)
+}
+
 // handlePointingInput process pointing input for scrollOverlay as Widget.HandlePointingInput does.
 //
 // Guigui's input handling system does not invoke this method automatically.
@@ -282,18 +292,21 @@ func (s *scrollOverlay) isBarVisible(context *guigui.Context, widgetBounds *guig
 	if s.lastWheelX != 0 || s.lastWheelY != 0 {
 		return true
 	}
+	return s.isCursorInEdgeArea(context, widgetBounds)
+}
 
-	if context.IsWidgetHitAtCursor(s) {
-		pt := image.Pt(ebiten.CursorPosition())
-		bounds := widgetBounds.Bounds()
-		if s.contentSize.X > bounds.Dx() && bounds.Max.Y-UnitSize(context)/2 <= pt.Y-1 {
-			return true
-		}
-		if s.contentSize.Y > bounds.Dy() && bounds.Max.X-UnitSize(context)/2 <= pt.X-1 {
-			return true
-		}
+func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if !context.IsWidgetHitAtCursor(s) {
+		return false
 	}
-
+	pt := image.Pt(ebiten.CursorPosition())
+	bounds := widgetBounds.Bounds()
+	if s.contentSize.X > bounds.Dx() && bounds.Max.Y-UnitSize(context)/2 <= pt.Y-1 {
+		return true
+	}
+	if s.contentSize.Y > bounds.Dy() && bounds.Max.X-UnitSize(context)/2 <= pt.X-1 {
+		return true
+	}
 	return false
 }
 

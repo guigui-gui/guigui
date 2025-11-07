@@ -600,7 +600,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 		right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
 		switch {
-		case (left || right) && context.IsWidgetHitAtCursor(b):
+		case (left || right) && b.scrollOverlay.isWidgetHitAtCursor(context, widgetBounds):
 			item, _ := b.abstractList.ItemByIndex(index)
 			if !item.Selectable {
 				return guigui.AbortHandlingInputByWidget(b)
@@ -636,7 +636,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			// TODO: This behavior seems a little ad-hoc. Consider a better way.
 			return guigui.HandleInputResult{}
 
-		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
+		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && b.scrollOverlay.isWidgetHitAtCursor(context, widgetBounds):
 			item, _ := b.abstractList.ItemByIndex(index)
 			if item.Movable && b.SelectedItemIndex() == index && b.startPressingIndexPlus1-1 == index && (b.pressStartPlus1 != c.Add(image.Pt(1, 1))) {
 				b.dragSrcIndexPlus1 = index + 1
