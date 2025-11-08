@@ -8,6 +8,7 @@ type ChildAdder struct {
 	widget Widget
 }
 
+// TODO: Rename this to AddWidget.
 func (c *ChildAdder) AddChild(widget Widget) {
 	widgetState := widget.widgetState()
 	widgetState.parent = c.widget

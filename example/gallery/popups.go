@@ -112,28 +112,24 @@ func (p *Popups) contentSize(context *guigui.Context) image.Point {
 	return image.Pt(int(12*u), int(6*u))
 }
 
-func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &p.simplePopup:
-		appBounds := context.AppBounds()
-		contentSize := p.contentSize(context)
-		p := image.Point{
-			X: appBounds.Min.X + (appBounds.Dx()-contentSize.X)/2,
-			Y: appBounds.Min.Y + (appBounds.Dy()-contentSize.Y)/2,
-		}
-		return image.Rectangle{
-			Min: p,
-			Max: p.Add(contentSize),
-		}
-	case &p.contextMenuPopup:
-		return image.Rectangle{
-			Min: p.contextMenuPopupPosition,
-			Max: p.contextMenuPopupPosition.Add(p.contextMenuPopup.Measure(context, guigui.Constraints{})),
-		}
+func (p *Popups) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	appBounds := context.AppBounds()
+	contentSize := p.contentSize(context)
+	center := image.Point{
+		X: appBounds.Min.X + (appBounds.Dx()-contentSize.X)/2,
+		Y: appBounds.Min.Y + (appBounds.Dy()-contentSize.Y)/2,
 	}
+	layouter.LayoutWidget(&p.simplePopup, image.Rectangle{
+		Min: center,
+		Max: center.Add(contentSize),
+	})
+	layouter.LayoutWidget(&p.contextMenuPopup, image.Rectangle{
+		Min: p.contextMenuPopupPosition,
+		Max: p.contextMenuPopupPosition.Add(p.contextMenuPopup.Measure(context, guigui.Constraints{})),
+	})
 
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -144,8 +140,7 @@ func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
-
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }
 
 func (p *Popups) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -189,9 +184,9 @@ func (s *simplePopupContent) Update(context *guigui.Context, widgetBounds *guigu
 	return nil
 }
 
-func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (s *simplePopupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -213,5 +208,5 @@ func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigu
 				},
 			},
 		},
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

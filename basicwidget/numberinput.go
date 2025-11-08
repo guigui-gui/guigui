@@ -282,33 +282,26 @@ func (n *NumberInput) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	return nil
 }
 
-func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &n.textInput:
-		return widgetBounds.Bounds()
-	case &n.upButton:
-		b := widgetBounds.Bounds()
-		return image.Rectangle{
-			Min: image.Point{
-				X: b.Max.X - UnitSize(context)*3/4,
-				Y: b.Min.Y,
-			},
-			Max: image.Point{
-				X: b.Max.X,
-				Y: b.Min.Y + b.Dy()/2,
-			},
-		}
-	case &n.downButton:
-		b := widgetBounds.Bounds()
-		return image.Rectangle{
-			Min: image.Point{
-				X: b.Max.X - UnitSize(context)*3/4,
-				Y: b.Min.Y + b.Dy()/2,
-			},
-			Max: b.Max,
-		}
-	}
-	return image.Rectangle{}
+func (n *NumberInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	b := widgetBounds.Bounds()
+	layouter.LayoutWidget(&n.textInput, b)
+	layouter.LayoutWidget(&n.upButton, image.Rectangle{
+		Min: image.Point{
+			X: b.Max.X - UnitSize(context)*3/4,
+			Y: b.Min.Y,
+		},
+		Max: image.Point{
+			X: b.Max.X,
+			Y: b.Min.Y + b.Dy()/2,
+		},
+	})
+	layouter.LayoutWidget(&n.downButton, image.Rectangle{
+		Min: image.Point{
+			X: b.Max.X - UnitSize(context)*3/4,
+			Y: b.Min.Y + b.Dy()/2,
+		},
+		Max: b.Max,
+	})
 }
 
 func (n *NumberInput) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {

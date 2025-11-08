@@ -61,12 +61,8 @@ func (p *PopupMenu[T]) Update(context *guigui.Context, widgetBounds *guigui.Widg
 	return nil
 }
 
-func (p *PopupMenu[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &p.popup:
-		return p.contentBounds(context, widgetBounds)
-	}
-	return image.Rectangle{}
+func (p *PopupMenu[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&p.popup, p.contentBounds(context, widgetBounds))
 }
 
 func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {

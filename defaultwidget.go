@@ -31,6 +31,9 @@ func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, widge
 	return image.Rectangle{}
 }
 
+func (*DefaultWidget) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+}
+
 func (*DefaultWidget) HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {
 	return HandleInputResult{}
 }

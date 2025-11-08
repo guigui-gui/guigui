@@ -126,7 +126,7 @@ func TestLinearLayoutMeasureIgnoreFlexibleSize(t *testing.T) {
 			Gap:       10,
 			Items: []guigui.LinearLayoutItem{
 				{
-					Layout: &guigui.LinearLayout{
+					Layout: guigui.LinearLayout{
 						Direction: opDir,
 						Items: []guigui.LinearLayoutItem{
 							{

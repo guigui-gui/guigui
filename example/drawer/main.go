@@ -51,13 +51,10 @@ func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.rightPanel)
 }
 
-func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &r.background:
-		return widgetBounds.Bounds()
-	}
+func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -85,7 +82,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				},
 			},
 		},
-	}).WidgetBounds(context, widgetBounds.Bounds(), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {

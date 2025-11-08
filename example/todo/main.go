@@ -90,14 +90,11 @@ func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &r.background:
-		return widgetBounds.Bounds()
-	}
+func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -123,7 +120,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }
 
 func (r *Root) tryCreateTask(text string) {
@@ -167,9 +164,9 @@ func (t *taskWidget) Update(context *guigui.Context, widgetBounds *guigui.Widget
 	return nil
 }
 
-func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *taskWidget) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -182,7 +179,7 @@ func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds(), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *taskWidget) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -227,7 +224,7 @@ func (t *tasksPanelContent) Update(context *guigui.Context, widgetBounds *guigui
 	return nil
 }
 
-func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *tasksPanelContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -242,7 +239,7 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui
 			Size:   guigui.FixedSize(h),
 		}
 	}
-	return layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
+	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

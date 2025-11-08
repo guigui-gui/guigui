@@ -154,9 +154,9 @@ func (b *Buttons) Update(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	return nil
 }
 
-func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (b *Buttons) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -170,5 +170,5 @@ func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

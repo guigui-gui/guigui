@@ -4,8 +4,6 @@
 package main
 
 import (
-	"image"
-
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
@@ -192,9 +190,9 @@ func (t *Texts) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *Texts) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -206,5 +204,5 @@ func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

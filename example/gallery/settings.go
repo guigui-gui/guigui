@@ -179,9 +179,9 @@ func (s *Settings) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	return nil
 }
 
-func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (s *Settings) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -189,7 +189,7 @@ func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }
 
 type textWithSubText struct {
@@ -226,8 +226,8 @@ func (t *textWithSubText) layout() guigui.LinearLayout {
 	}
 }
 
-func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	return t.layout().WidgetBounds(context, widgetBounds.Bounds(), widget)
+func (t *textWithSubText) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	t.layout().LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *textWithSubText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

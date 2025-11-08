@@ -4,8 +4,6 @@
 package main
 
 import (
-	"image"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -75,9 +73,9 @@ func (b *Basic) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (b *Basic) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (b *Basic) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -85,5 +83,5 @@ func (b *Basic) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

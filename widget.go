@@ -15,7 +15,11 @@ type Widget interface {
 	Model(key any) any
 	AddChildren(context *Context, adder *ChildAdder)
 	Update(context *Context, widgetBounds *WidgetBounds) error
+
+	// Deprecated: Use LayoutChildren instead.
 	Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle
+	LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
+
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	Tick(context *Context, widgetBounds *WidgetBounds) error
@@ -90,12 +94,8 @@ func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 
-func (w *WidgetWithSize[T]) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
-	if widget == Widget(w.Widget()) {
-		// WidgetWithSize overwrites Measure, but doesn't overwrite Layout.
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (w *WidgetWithSize[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+	layouter.LayoutWidget(w.Widget(), widgetBounds.Bounds())
 }
 
 func (w *WidgetWithSize[T]) Measure(context *Context, constraints Constraints) image.Point {
@@ -137,16 +137,13 @@ func (w *WidgetWithPadding[T]) AddChildren(context *Context, adder *ChildAdder) 
 	adder.AddChild(w.Widget())
 }
 
-func (w *WidgetWithPadding[T]) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
-	if widget == Widget(w.Widget()) {
-		b := widgetBounds.Bounds()
-		b.Min.X += w.padding.Start
-		b.Min.Y += w.padding.Top
-		b.Max.X -= w.padding.End
-		b.Max.Y -= w.padding.Bottom
-		return b
-	}
-	return image.Rectangle{}
+func (w *WidgetWithPadding[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+	b := widgetBounds.Bounds()
+	b.Min.X += w.padding.Start
+	b.Min.Y += w.padding.Top
+	b.Max.X -= w.padding.End
+	b.Max.Y -= w.padding.Bottom
+	layouter.LayoutWidget(w.Widget(), b)
 }
 
 func (w *WidgetWithPadding[T]) Measure(context *Context, constraints Constraints) image.Point {

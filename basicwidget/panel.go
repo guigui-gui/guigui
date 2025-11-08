@@ -135,21 +135,18 @@ func (p *Panel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (p *Panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case p.content:
+func (p *Panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	if p.content != nil {
 		offsetX, offsetY := p.scrollOverlay.Offset()
-		pt := widgetBounds.Bounds().Min.Add(image.Pt(int(offsetX), int(offsetY)))
-		return image.Rectangle{
+		pt := bounds.Min.Add(image.Pt(int(offsetX), int(offsetY)))
+		layouter.LayoutWidget(p.content, image.Rectangle{
 			Min: pt,
 			Max: pt.Add(p.contentSize(context, widgetBounds)),
-		}
-	case &p.scrollOverlay:
-		return widgetBounds.Bounds()
-	case &p.border:
-		return widgetBounds.Bounds()
+		})
 	}
-	return image.Rectangle{}
+	layouter.LayoutWidget(&p.scrollOverlay, bounds)
+	layouter.LayoutWidget(&p.border, bounds)
 }
 
 func (p *Panel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {

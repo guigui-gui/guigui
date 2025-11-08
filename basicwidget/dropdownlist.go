@@ -96,29 +96,25 @@ func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.W
 	return nil
 }
 
-func (d *DropdownList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &d.button:
-		p := widgetBounds.Bounds().Min
-		return image.Rectangle{
-			Min: p,
-			Max: p.Add(d.button.Measure(context, guigui.Constraints{})),
-		}
-	case &d.popupMenu:
-		p := widgetBounds.Bounds().Min
-		p.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
-		p.X = max(p.X, 0)
-		// TODO: The item content in a button and a dropdown list might have different heights. Handle this case properly.
-		if y, ok := d.popupMenu.itemYFromIndexForMenu(context, max(0, d.popupMenu.SelectedItemIndex())); ok {
-			p.Y -= y
-		}
-		p.Y = max(p.Y, 0)
-		return image.Rectangle{
-			Min: p,
-			Max: p.Add(d.popupMenu.Measure(context, guigui.Constraints{})),
-		}
+func (d *DropdownList[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	p := widgetBounds.Bounds().Min
+	layouter.LayoutWidget(&d.button, image.Rectangle{
+		Min: p,
+		Max: p.Add(d.button.Measure(context, guigui.Constraints{})),
+	})
+
+	p = widgetBounds.Bounds().Min
+	p.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+	p.X = max(p.X, 0)
+	// TODO: The item content in a button and a dropdown list might have different heights. Handle this case properly.
+	if y, ok := d.popupMenu.itemYFromIndexForMenu(context, max(0, d.popupMenu.SelectedItemIndex())); ok {
+		p.Y -= y
 	}
-	return image.Rectangle{}
+	p.Y = max(p.Y, 0)
+	layouter.LayoutWidget(&d.popupMenu, image.Rectangle{
+		Min: p,
+		Max: p.Add(d.popupMenu.Measure(context, guigui.Constraints{})),
+	})
 }
 
 func (d *DropdownList[T]) SetItems(items []DropdownListItem[T]) {
@@ -252,8 +248,8 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Layou
 	}
 }
 
-func (d *dropdownListButtonContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	return d.layout(context).WidgetBounds(context, widgetBounds.Bounds(), widget)
+func (d *dropdownListButtonContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	d.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (d *dropdownListButtonContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

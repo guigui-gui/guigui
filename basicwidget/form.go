@@ -59,8 +59,10 @@ func (f *Form) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (f *Form) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	return f.cachedContentBounds[widget]
+func (f *Form) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	for widget, bounds := range f.cachedContentBounds {
+		layouter.LayoutWidget(widget, bounds)
+	}
 }
 
 func (f *Form) isItemOmitted(context *guigui.Context, item FormItem) bool {

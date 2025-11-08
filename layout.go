@@ -8,8 +8,14 @@ import (
 	"sync"
 )
 
+type WidgetLayouter interface {
+	LayoutWidget(widget Widget, bounds image.Rectangle)
+}
+
 type Layout interface {
+	// Deprecated: Use LayoutChildren instead.
 	WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle
+	LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter)
 	Measure(context *Context, constraints Constraints) image.Point
 }
 
@@ -80,6 +86,7 @@ type LinearLayoutItem struct {
 	Layout Layout
 }
 
+// Deprecated: Use LayoutChildren instead.
 func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle {
 	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
 	defer func() {
@@ -107,6 +114,24 @@ func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, wid
 	}
 
 	return image.Rectangle{}
+}
+
+func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter) {
+	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
+	defer func() {
+		tmpBoundsArr = tmpBoundsArr[:0]
+		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
+	}()
+	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
+
+	for i, item := range l.Items {
+		if item.Widget != nil {
+			layouter.LayoutWidget(item.Widget, tmpBoundsArr[i])
+		}
+		if item.Layout != nil {
+			item.Layout.LayoutWidgets(context, tmpBoundsArr[i], layouter)
+		}
+	}
 }
 
 func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {

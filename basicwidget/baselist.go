@@ -153,17 +153,12 @@ func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAd
 	adder.AddChild(&b.frame)
 }
 
-func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &b.content:
-		bounds := widgetBounds.Bounds()
-		bounds.Min.Y += b.headerHeight
-		bounds.Max.Y -= b.footerHeight
-		return bounds
-	case &b.frame:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (b *baseList[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	bounds.Min.Y += b.headerHeight
+	bounds.Max.Y -= b.footerHeight
+	layouter.LayoutWidget(&b.content, bounds)
+	layouter.LayoutWidget(&b.frame, widgetBounds.Bounds())
 }
 
 func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -422,15 +417,11 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	return nil
 }
 
-func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &b.scrollOverlay:
-		return widgetBounds.Bounds()
+func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&b.scrollOverlay, widgetBounds.Bounds())
+	for widget, bounds := range b.itemBoundsForLayoutFromWidget {
+		layouter.LayoutWidget(widget, bounds)
 	}
-	if r, ok := b.itemBoundsForLayoutFromWidget[widget]; ok {
-		return r
-	}
-	return image.Rectangle{}
 }
 
 func (b *baseListContent[T]) hasMovableItems() bool {

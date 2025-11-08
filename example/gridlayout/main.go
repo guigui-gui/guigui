@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -68,11 +67,8 @@ func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &r.background:
-		return widgetBounds.Bounds()
-	}
+func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
 	var gridGap int
@@ -89,24 +85,78 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		firstRowHeight = max(firstRowHeight, r.buttons[i].Measure(context, guigui.Constraints{}).Y)
 	}
 
-	gridRowLayout := func(row int) guigui.LinearLayout {
+	center := func(widget guigui.Widget) guigui.LinearLayout {
 		return guigui.LinearLayout{
 			Direction: guigui.LayoutDirectionHorizontal,
 			Items: []guigui.LinearLayoutItem{
 				{
-					Widget: &r.buttons[4*row],
+					Size: guigui.FlexibleSize(1),
+				},
+				{
+					Layout: guigui.LinearLayout{
+						Direction: guigui.LayoutDirectionVertical,
+						Items: []guigui.LinearLayoutItem{
+							{
+								Size: guigui.FlexibleSize(1),
+							},
+							{
+								Widget: widget,
+							},
+							{
+								Size: guigui.FlexibleSize(1),
+							},
+						},
+					},
+				},
+				{
+					Size: guigui.FlexibleSize(1),
+				},
+			},
+		}
+	}
+
+	gridRowLayout := func(row int) guigui.LinearLayout {
+		if r.fill {
+			return guigui.LinearLayout{
+				Direction: guigui.LayoutDirectionHorizontal,
+				Items: []guigui.LinearLayoutItem{
+					{
+						Widget: &r.buttons[4*row],
+						Size:   guigui.FixedSize(firstColumnWidth),
+					},
+					{
+						Widget: &r.buttons[4*row+1],
+						Size:   guigui.FixedSize(200),
+					},
+					{
+						Widget: &r.buttons[4*row+2],
+						Size:   guigui.FlexibleSize(1),
+					},
+					{
+						Widget: &r.buttons[4*row+3],
+						Size:   guigui.FlexibleSize(2),
+					},
+				},
+				Gap: gridGap,
+			}
+		}
+		return guigui.LinearLayout{
+			Direction: guigui.LayoutDirectionHorizontal,
+			Items: []guigui.LinearLayoutItem{
+				{
+					Layout: center(&r.buttons[4*row]),
 					Size:   guigui.FixedSize(firstColumnWidth),
 				},
 				{
-					Widget: &r.buttons[4*row+1],
+					Layout: center(&r.buttons[4*row+1]),
 					Size:   guigui.FixedSize(200),
 				},
 				{
-					Widget: &r.buttons[4*row+2],
+					Layout: center(&r.buttons[4*row+2]),
 					Size:   guigui.FlexibleSize(1),
 				},
 				{
-					Widget: &r.buttons[4*row+3],
+					Layout: center(&r.buttons[4*row+3]),
 					Size:   guigui.FlexibleSize(2),
 				},
 			},
@@ -114,7 +164,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 	}
 
-	bounds := (guigui.LinearLayout{
+	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -147,22 +197,24 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
-
-	if !r.fill {
-		if _, ok := widget.(*basicwidget.Button); ok {
-			pt := bounds.Min
-			s := widget.Measure(context, guigui.Constraints{})
-			pt.X += (bounds.Dx() - s.X) / 2
-			pt.Y += (bounds.Dy() - s.Y) / 2
-			return image.Rectangle{
-				Min: pt,
-				Max: pt.Add(s),
-			}
-		}
 	}
+	layoutBounds := widgetBounds.Bounds().Inset(u / 2)
+	layout.LayoutWidgets(context, layoutBounds, layouter)
 
-	return bounds
+	/*if !r.fill {
+		for i := range r.buttons {
+			btn := &r.buttons[i]
+			btnBounds := layout.WidgetBounds(context, layoutBounds, btn)
+			size := btn.Measure(context, guigui.Constraints{})
+			pt := btnBounds.Min
+			pt.X += (btnBounds.Dx() - size.X) / 2
+			pt.Y += (btnBounds.Dy() - size.Y) / 2
+			layouter.LayoutWidget(btn, image.Rectangle{
+				Min: pt,
+				Max: pt.Add(size),
+			})
+		}
+	}*/
 }
 
 func main() {

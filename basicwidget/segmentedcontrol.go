@@ -147,7 +147,7 @@ func (s *SegmentedControl[T]) updateButtons(context *guigui.Context) {
 	}
 }
 
-func (s *SegmentedControl[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (s *SegmentedControl[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layoutItems = adjustSliceSize(s.layoutItems, s.abstractList.ItemCount())
 	for i := range s.abstractList.ItemCount() {
 		s.layoutItems[i] = guigui.LinearLayoutItem{
@@ -163,10 +163,10 @@ func (s *SegmentedControl[T]) Layout(context *guigui.Context, widgetBounds *guig
 	case SegmentedControlDirectionVertical:
 		direction = guigui.LayoutDirectionVertical
 	}
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: direction,
 		Items:     s.layoutItems,
-	}).WidgetBounds(context, widgetBounds.Bounds(), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

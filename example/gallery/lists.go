@@ -4,7 +4,6 @@
 package main
 
 import (
-	"image"
 	"slices"
 
 	"github.com/guigui-gui/guigui"
@@ -206,9 +205,9 @@ func (l *Lists) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (l *Lists) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -223,5 +222,5 @@ func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

@@ -221,15 +221,11 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &t.cursor:
-		vb := widgetBounds.VisibleBounds()
-		vb.Min.X -= textCursorWidth(context) / 2
-		vb.Max.X += textCursorWidth(context) / 2
-		return t.cursorBounds(context, widgetBounds).Intersect(vb)
-	}
-	return image.Rectangle{}
+func (t *Text) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	vb := widgetBounds.VisibleBounds()
+	vb.Min.X -= textCursorWidth(context) / 2
+	vb.Max.X += textCursorWidth(context) / 2
+	layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds).Intersect(vb))
 }
 
 func (t *Text) SetSelectable(selectable bool) {

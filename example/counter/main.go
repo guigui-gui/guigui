@@ -61,14 +61,11 @@ func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &r.background:
-		return widgetBounds.Bounds()
-	}
+func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -101,7 +98,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			},
 		},
 		Gap: u,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u), layouter)
 }
 
 func main() {

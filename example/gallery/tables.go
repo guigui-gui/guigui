@@ -5,7 +5,6 @@ package main
 
 import (
 	"fmt"
-	"image"
 	"slices"
 	"strconv"
 
@@ -150,9 +149,9 @@ func (t *Tables) Update(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	return nil
 }
 
-func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *Tables) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -165,5 +164,5 @@ func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 				Widget: &t.configForm,
 			},
 		},
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

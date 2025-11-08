@@ -107,12 +107,8 @@ func (l *List[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	return nil
 }
 
-func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &l.list:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (l *List[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&l.list, widgetBounds.Bounds())
 }
 
 func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
@@ -261,28 +257,31 @@ func (l *listItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigui
 	return nil
 }
 
-func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &l.text, l.item.Content:
-		b := widgetBounds.Bounds()
-		s := widget.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
-		if l.style != ListStyleMenu {
-			s.X = b.Dx()
-		}
-		if l.heightPlus1 > 0 {
-			s.Y = l.heightPlus1 - 1
-		}
-		offY := (b.Dy() - s.Y) / 2
-		pt := b.Min.Add(image.Pt(0, offY))
-		if widget == &l.text {
-			pt.X += ListItemTextPadding(context).Start
-		}
-		return image.Rectangle{
-			Min: pt,
-			Max: pt.Add(s),
-		}
+func (l *listItemWidget[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	var widget guigui.Widget
+	if l.item.Content != nil {
+		widget = l.item.Content
+	} else {
+		widget = &l.text
 	}
-	return image.Rectangle{}
+
+	b := widgetBounds.Bounds()
+	s := widget.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
+	if l.style != ListStyleMenu {
+		s.X = b.Dx()
+	}
+	if l.heightPlus1 > 0 {
+		s.Y = l.heightPlus1 - 1
+	}
+	offY := (b.Dy() - s.Y) / 2
+	pt := b.Min.Add(image.Pt(0, offY))
+	if widget == &l.text {
+		pt.X += ListItemTextPadding(context).Start
+	}
+	layouter.LayoutWidget(widget, image.Rectangle{
+		Min: pt,
+		Max: pt.Add(s),
+	})
 }
 
 func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

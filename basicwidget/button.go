@@ -107,7 +107,7 @@ func (b *Button) Update(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	return nil
 }
 
-func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	var yOffset int
 	if b.button.isPressed(context) {
 		yOffset = int(0.5 * context.Scale())
@@ -115,11 +115,9 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		yOffset = -int(0.5 * context.Scale())
 	}
 
-	switch widget {
-	case &b.button:
-		return widgetBounds.Bounds()
-	case b.content:
-		return widgetBounds.Bounds().Add(image.Pt(0, yOffset))
+	layouter.LayoutWidget(&b.button, widgetBounds.Bounds())
+	if b.content != nil {
+		layouter.LayoutWidget(b.content, widgetBounds.Bounds().Add(image.Pt(0, yOffset)))
 	}
 
 	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
@@ -187,10 +185,10 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			Size: guigui.FlexibleSize(1),
 		})
 
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items:     b.layoutItems,
-	}).WidgetBounds(context, widgetBounds.Bounds().Add(image.Pt(0, yOffset)), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Add(image.Pt(0, yOffset)), layouter)
 }
 
 func (b *Button) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

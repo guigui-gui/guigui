@@ -83,12 +83,8 @@ func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &p.popup:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (p *Popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&p.popup, widgetBounds.Bounds())
 }
 
 func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -187,18 +183,13 @@ func (p *popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	return nil
 }
 
-func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &p.blurredBackground:
-		return context.AppBounds()
-	case &p.shadow:
-		return context.AppBounds()
-	case &p.content:
-		return p.contentBounds(context, widgetBounds)
-	case &p.frame:
-		return p.contentBounds(context, widgetBounds)
-	}
-	return image.Rectangle{}
+func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	contentBounds := p.contentBounds(context, widgetBounds)
+	appBounds := context.AppBounds()
+	layouter.LayoutWidget(&p.blurredBackground, appBounds)
+	layouter.LayoutWidget(&p.shadow, appBounds)
+	layouter.LayoutWidget(&p.content, contentBounds)
+	layouter.LayoutWidget(&p.frame, contentBounds)
 }
 
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -344,12 +335,10 @@ func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildA
 	}
 }
 
-func (p *popupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case p.content:
-		return widgetBounds.Bounds()
+func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	if p.content != nil {
+		layouter.LayoutWidget(p.content, widgetBounds.Bounds())
 	}
-	return image.Rectangle{}
 }
 
 func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {

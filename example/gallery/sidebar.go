@@ -31,12 +31,8 @@ func (s *Sidebar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	return nil
 }
 
-func (s *Sidebar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &s.panel:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (s *Sidebar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&s.panel, widgetBounds.Bounds())
 }
 
 type sidebarContent struct {
@@ -114,12 +110,8 @@ func (s *sidebarContent) Update(context *guigui.Context, widgetBounds *guigui.Wi
 	return nil
 }
 
-func (s *sidebarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &s.list:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (s *sidebarContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&s.list, widgetBounds.Bounds())
 }
 
 func (s *sidebarContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

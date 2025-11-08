@@ -149,31 +149,25 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	return nil
 }
 
-func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &t.list:
-		return widgetBounds.Bounds()
-	case &t.tableHeader:
-		return widgetBounds.Bounds()
-	}
+func (t *Table[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	layouter.LayoutWidget(&t.list, bounds)
+	layouter.LayoutWidget(&t.tableHeader, bounds)
 
 	offsetX, _ := t.list.ScrollOffset()
-	pt := widgetBounds.Bounds().Min
+	pt := bounds.Min
 	pt.X += int(offsetX)
 	pt.X += RoundedCornerRadius(context)
 	for i := range t.columnTexts {
-		if widget == &t.columnTexts[i] {
-			pt = pt.Add(image.Pt(UnitSize(context)/4, 0))
-			w := t.columnWidthsInPixels[i] - UnitSize(context)/2
-			return image.Rectangle{
-				Min: pt,
-				Max: pt.Add(image.Pt(w, tableHeaderHeight(context))),
-			}
+		textMin := pt.Add(image.Pt(UnitSize(context)/4, 0))
+		width := t.columnWidthsInPixels[i] - UnitSize(context)/2
+		textBounds := image.Rectangle{
+			Min: textMin,
+			Max: textMin.Add(image.Pt(width, tableHeaderHeight(context))),
 		}
+		layouter.LayoutWidget(&t.columnTexts[i], textBounds)
 		pt.X += t.columnWidthsInPixels[i]
 	}
-
-	return image.Rectangle{}
 }
 
 func tableHeaderHeight(context *guigui.Context) int {
@@ -317,8 +311,8 @@ func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui
 	return nil
 }
 
-func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	return t.layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
+func (t *tableRowWidget[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	t.layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

@@ -32,12 +32,8 @@ func (t *Toolbar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	return nil
 }
 
-func (t *Toolbar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &t.panel:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (t *Toolbar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&t.panel, widgetBounds.Bounds())
 }
 
 func (t *Toolbar) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -96,9 +92,9 @@ func (t *toolbarContent) Update(context *guigui.Context, widgetBounds *guigui.Wi
 	return nil
 }
 
-func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *toolbarContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -113,5 +109,5 @@ func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 				Size:   guigui.FixedSize(u * 3 / 2),
 			},
 		},
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/4), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/4), layouter)
 }

@@ -4,7 +4,6 @@
 package main
 
 import (
-	"image"
 	"math"
 	"math/big"
 
@@ -152,9 +151,9 @@ func (n *NumberInputs) Update(context *guigui.Context, widgetBounds *guigui.Widg
 	return nil
 }
 
-func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (n *NumberInputs) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -168,5 +167,5 @@ func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }

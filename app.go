@@ -438,6 +438,7 @@ func (a *app) buildWidgets() error {
 	})
 
 	var adder ChildAdder
+	var layouter ChildLayouter
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 
@@ -460,6 +461,7 @@ func (a *app) buildWidgets() error {
 		for _, child := range widgetState.children {
 			child.widgetState().bounds = widget.Layout(&a.context, bounds, child)
 		}
+		widget.LayoutChildren(&a.context, bounds, &layouter)
 
 		a.visitedZs[widgetState.z()] = struct{}{}
 

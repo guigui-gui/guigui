@@ -62,28 +62,35 @@ func (r *Root) Model(key any) any {
 	}
 }
 
+func (r *Root) contentWidgeet() guigui.Widget {
+	switch r.model.Mode() {
+	case "settings":
+		return &r.settings
+	case "basic":
+		return &r.basic
+	case "buttons":
+		return &r.buttons
+	case "texts":
+		return &r.texts
+	case "textinputs":
+		return &r.textInputs
+	case "numberinputs":
+		return &r.numberInputs
+	case "lists":
+		return &r.lists
+	case "tables":
+		return &r.tables
+	case "popups":
+		return &r.popups
+	}
+	return nil
+}
+
 func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.sidebar)
-	switch r.model.Mode() {
-	case "settings":
-		adder.AddChild(&r.settings)
-	case "basic":
-		adder.AddChild(&r.basic)
-	case "buttons":
-		adder.AddChild(&r.buttons)
-	case "texts":
-		adder.AddChild(&r.texts)
-	case "textinputs":
-		adder.AddChild(&r.textInputs)
-	case "numberinputs":
-		adder.AddChild(&r.numberInputs)
-	case "lists":
-		adder.AddChild(&r.lists)
-	case "tables":
-		adder.AddChild(&r.tables)
-	case "popups":
-		adder.AddChild(&r.popups)
+	if content := r.contentWidgeet(); content != nil {
+		adder.AddChild(content)
 	}
 }
 
@@ -92,13 +99,9 @@ func (r *Root) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	return nil
 }
 
-func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &r.background:
-		return widgetBounds.Bounds()
-	}
-
-	layout := guigui.LinearLayout{
+func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -106,14 +109,11 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				Size:   guigui.FixedSize(8 * basicwidget.UnitSize(context)),
 			},
 			{
-				Size: guigui.FlexibleSize(1),
+				Widget: r.contentWidgeet(),
+				Size:   guigui.FlexibleSize(1),
 			},
 		},
-	}
-	if widget == &r.sidebar {
-		return layout.WidgetBounds(context, widgetBounds.Bounds(), widget)
-	}
-	return layout.ItemBounds(context, widgetBounds.Bounds(), 1)
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func main() {

@@ -254,42 +254,37 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 	return nil
 }
 
-func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &t.background:
-		return widgetBounds.Bounds()
-	case &t.text:
-		return t.textBounds(context, widgetBounds)
-	case &t.iconBackground, &t.icon:
-		b := widgetBounds.Bounds()
-		iconSize := defaultIconSize(context)
-		var imgBounds image.Rectangle
-		imgBounds.Min = b.Min.Add(image.Point{
-			X: UnitSize(context)/4 + int(0.5*context.Scale()),
-			Y: (b.Dy() - iconSize) / 2,
-		})
-		imgBounds.Max = imgBounds.Min.Add(image.Pt(iconSize, iconSize))
-		if widget == &t.icon {
-			return imgBounds
-		}
+func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	layouter.LayoutWidget(&t.background, bounds)
+	layouter.LayoutWidget(&t.frame, bounds)
+	layouter.LayoutWidget(&t.scrollOverlay, bounds)
+	layouter.LayoutWidget(&t.text, t.textBounds(context, widgetBounds))
 
-		imgBgBounds := b
-		imgBgBounds.Max.X = imgBounds.Max.X + UnitSize(context)/4
-		return imgBgBounds
-	case &t.frame:
-		return widgetBounds.Bounds()
-	case &t.scrollOverlay:
-		return widgetBounds.Bounds()
-	case &t.focus:
+	if t.icon.HasImage() {
+		iconSize := defaultIconSize(context)
+		iconBounds := image.Rectangle{
+			Min: bounds.Min.Add(image.Point{
+				X: UnitSize(context)/4 + int(0.5*context.Scale()),
+				Y: (bounds.Dy() - iconSize) / 2,
+			}),
+		}
+		iconBounds.Max = iconBounds.Min.Add(image.Pt(iconSize, iconSize))
+		bgBounds := bounds
+		bgBounds.Max.X = iconBounds.Max.X + UnitSize(context)/4
+		layouter.LayoutWidget(&t.iconBackground, bgBounds)
+		layouter.LayoutWidget(&t.icon, iconBounds)
+	}
+
+	if t.style != TextInputStyleInline && (context.IsFocused(t) || context.IsFocused(&t.text)) {
 		w := textInputFocusBorderWidth(context)
-		p := widgetBounds.Bounds().Min.Add(image.Pt(-w, -w))
-		s := widgetBounds.Bounds().Size().Add(image.Pt(2*textInputFocusBorderWidth(context), 2*textInputFocusBorderWidth(context)))
-		return image.Rectangle{
+		p := bounds.Min.Add(image.Pt(-w, -w))
+		s := bounds.Size().Add(image.Pt(2*w, 2*w))
+		layouter.LayoutWidget(&t.focus, image.Rectangle{
 			Min: p,
 			Max: p.Add(s),
-		}
+		})
 	}
-	return image.Rectangle{}
 }
 
 func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {

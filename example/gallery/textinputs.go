@@ -235,9 +235,9 @@ func (t *TextInputs) Update(context *guigui.Context, widgetBounds *guigui.Widget
 	return nil
 }
 
-func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
+func (t *TextInputs) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	return (guigui.LinearLayout{
+	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -251,7 +251,7 @@ func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 			},
 		},
 		Gap: u / 2,
-	}).WidgetBounds(context, widgetBounds.Bounds().Inset(u/2), widget)
+	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }
 
 type inlineTextInputContainer struct {
@@ -275,27 +275,23 @@ func (c *inlineTextInputContainer) Update(context *guigui.Context, widgetBounds 
 	return nil
 }
 
-func (c *inlineTextInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &c.textInput:
-		size := c.textInput.Measure(context, guigui.Constraints{})
-		if size.X > widgetBounds.Bounds().Dx() {
-			size = c.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))
-		}
-		pos := widgetBounds.Bounds().Min
-		switch c.horizontalAlign {
-		case basicwidget.HorizontalAlignStart:
-		case basicwidget.HorizontalAlignCenter:
-			pos.X += (widgetBounds.Bounds().Dx() - size.X) / 2
-		case basicwidget.HorizontalAlignEnd:
-			pos.X += widgetBounds.Bounds().Dx() - size.X
-		}
-		return image.Rectangle{
-			Min: pos,
-			Max: pos.Add(size),
-		}
+func (c *inlineTextInputContainer) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	size := c.textInput.Measure(context, guigui.Constraints{})
+	if size.X > widgetBounds.Bounds().Dx() {
+		size = c.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))
 	}
-	return image.Rectangle{}
+	pos := widgetBounds.Bounds().Min
+	switch c.horizontalAlign {
+	case basicwidget.HorizontalAlignStart:
+	case basicwidget.HorizontalAlignCenter:
+		pos.X += (widgetBounds.Bounds().Dx() - size.X) / 2
+	case basicwidget.HorizontalAlignEnd:
+		pos.X += widgetBounds.Bounds().Dx() - size.X
+	}
+	layouter.LayoutWidget(&c.textInput, image.Rectangle{
+		Min: pos,
+		Max: pos.Add(size),
+	})
 }
 
 func (c *inlineTextInputContainer) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

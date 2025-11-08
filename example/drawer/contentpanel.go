@@ -4,8 +4,6 @@
 package main
 
 import (
-	"image"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -27,12 +25,8 @@ func (c *ContentPanel) Update(context *guigui.Context, widgetBounds *guigui.Widg
 	return nil
 }
 
-func (c *ContentPanel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &c.panel:
-		return widgetBounds.Bounds()
-	}
-	return image.Rectangle{}
+func (c *ContentPanel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&c.panel, widgetBounds.Bounds())
 }
 
 type contentPanelContent struct {
@@ -52,11 +46,7 @@ func (c *contentPanelContent) Update(context *guigui.Context, widgetBounds *guig
 	return nil
 }
 
-func (c *contentPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, widget guigui.Widget) image.Rectangle {
-	switch widget {
-	case &c.text:
-		u := basicwidget.UnitSize(context)
-		return widgetBounds.Bounds().Inset(u / 2)
-	}
-	return image.Rectangle{}
+func (c *contentPanelContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	u := basicwidget.UnitSize(context)
+	layouter.LayoutWidget(&c.text, widgetBounds.Bounds().Inset(u/2))
 }
