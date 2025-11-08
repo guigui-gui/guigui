@@ -200,21 +200,6 @@ func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Widg
 	}
 	layoutBounds := widgetBounds.Bounds().Inset(u / 2)
 	layout.LayoutWidgets(context, layoutBounds, layouter)
-
-	/*if !r.fill {
-		for i := range r.buttons {
-			btn := &r.buttons[i]
-			btnBounds := layout.WidgetBounds(context, layoutBounds, btn)
-			size := btn.Measure(context, guigui.Constraints{})
-			pt := btnBounds.Min
-			pt.X += (btnBounds.Dx() - size.X) / 2
-			pt.Y += (btnBounds.Dy() - size.Y) / 2
-			layouter.LayoutWidget(btn, image.Rectangle{
-				Min: pt,
-				Max: pt.Add(size),
-			})
-		}
-	}*/
 }
 
 func main() {
