@@ -851,8 +851,8 @@ func (b *baseListContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			op.GeoM.Scale(s, s)
 			bounds := b.itemBounds(context, hoveredItemIndex)
 			p := bounds.Min
-			p.X = widgetBounds.Bounds().Min.X + RoundedCornerRadius(context)
-			op.GeoM.Translate(float64(p.X-2*RoundedCornerRadius(context)), float64(p.Y)+(float64(bounds.Dy())-float64(img.Bounds().Dy())*s)/2)
+			p.X = widgetBounds.Bounds().Min.X
+			op.GeoM.Translate(float64(p.X), float64(p.Y)+(float64(bounds.Dy())-float64(img.Bounds().Dy())*s)/2)
 			op.ColorScale.ScaleAlpha(0.5)
 			op.Filter = ebiten.FilterLinear
 			dst.DrawImage(img, op)
