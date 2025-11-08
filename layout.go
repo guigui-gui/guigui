@@ -13,8 +13,6 @@ type WidgetLayouter interface {
 }
 
 type Layout interface {
-	// Deprecated: Use LayoutChildren instead.
-	WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle
 	LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter)
 	Measure(context *Context, constraints Constraints) image.Point
 }
@@ -86,36 +84,6 @@ type LinearLayoutItem struct {
 	Layout Layout
 }
 
-// Deprecated: Use LayoutChildren instead.
-func (l LinearLayout) WidgetBounds(context *Context, bounds image.Rectangle, widget Widget) image.Rectangle {
-	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
-	defer func() {
-		tmpBoundsArr = tmpBoundsArr[:0]
-		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
-	}()
-	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
-
-	for i, item := range l.Items {
-		if item.Widget == nil {
-			continue
-		}
-		if item.Widget.widgetState() == widget.widgetState() {
-			return tmpBoundsArr[i]
-		}
-	}
-
-	for i, item := range l.Items {
-		if item.Layout == nil {
-			continue
-		}
-		if r := item.Layout.WidgetBounds(context, tmpBoundsArr[i], widget); !r.Empty() {
-			return r
-		}
-	}
-
-	return image.Rectangle{}
-}
-
 func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter) {
 	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
 	defer func() {
@@ -134,7 +102,6 @@ func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, la
 	}
 }
 
-// TODO: Remove this?
 func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
 	return l.appendWidgetBounds(boundsArr, context, bounds, false)
 }

@@ -26,11 +26,6 @@ func (*DefaultWidget) Update(context *Context, widgetBounds *WidgetBounds) error
 	return nil
 }
 
-func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle {
-	// TODO: Return appropriate bounds for the child widgets.
-	return image.Rectangle{}
-}
-
 func (*DefaultWidget) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
 }
 

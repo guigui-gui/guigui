@@ -15,11 +15,7 @@ type Widget interface {
 	Model(key any) any
 	AddChildren(context *Context, adder *ChildAdder)
 	Update(context *Context, widgetBounds *WidgetBounds) error
-
-	// Deprecated: Use LayoutChildren instead.
-	Layout(context *Context, widgetBounds *WidgetBounds, widget Widget) image.Rectangle
 	LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
-
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	Tick(context *Context, widgetBounds *WidgetBounds) error

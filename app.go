@@ -458,9 +458,6 @@ func (a *app) buildWidgets() error {
 		}
 
 		// Call Layout.
-		for _, child := range widgetState.children {
-			child.widgetState().bounds = widget.Layout(&a.context, bounds, child)
-		}
 		widget.LayoutChildren(&a.context, bounds, &layouter)
 
 		a.visitedZs[widgetState.z()] = struct{}{}
