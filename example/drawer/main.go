@@ -66,9 +66,9 @@ func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Widg
 			},
 		},
 	}
-	boundsArr := mainLayout.AppendItemBounds(nil, context, widgetBounds.Bounds())
-	layouter.LayoutWidget(&r.toolbar, boundsArr[0])
+	mainLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 
+	boundsArr := mainLayout.AppendItemBounds(nil, context, widgetBounds.Bounds())
 	bounds := boundsArr[1]
 	bounds.Min.X -= r.model.DefaultPanelWidth(context)
 	bounds.Min.X += r.model.LeftPanelWidth(context)
