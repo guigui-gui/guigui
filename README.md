@@ -2,7 +2,7 @@
 
 **An immediate-mode-like GUI framework for Go**
 
-> [!WARNING]
+> [!CAUTION]
 > **This project is an alpha version, and everything may change in the future.**
 
 > [!WARNING]
