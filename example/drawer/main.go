@@ -54,7 +54,7 @@ func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
-	(guigui.LinearLayout{
+	mainLayout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -63,26 +63,34 @@ func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Widg
 			},
 			{
 				Size: guigui.FlexibleSize(1),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Widget: &r.leftPanel,
-							Size:   guigui.FixedSize(r.model.LeftPanelWidth(context)),
-						},
-						{
-							Widget: &r.contentPanel,
-							Size:   guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &r.rightPanel,
-							Size:   guigui.FixedSize(r.model.RightPanelWidth(context)),
-						},
-					},
-				},
 			},
 		},
-	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	}
+	boundsArr := mainLayout.AppendItemBounds(nil, context, widgetBounds.Bounds())
+	layouter.LayoutWidget(&r.toolbar, boundsArr[0])
+
+	bounds := boundsArr[1]
+	bounds.Min.X -= r.model.DefaultPanelWidth(context)
+	bounds.Min.X += r.model.LeftPanelWidth(context)
+	bounds.Max.X += r.model.DefaultPanelWidth(context)
+	bounds.Max.X -= r.model.RightPanelWidth(context)
+	(guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items: []guigui.LinearLayoutItem{
+			{
+				Widget: &r.leftPanel,
+				Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
+			},
+			{
+				Widget: &r.contentPanel,
+				Size:   guigui.FlexibleSize(1),
+			},
+			{
+				Widget: &r.rightPanel,
+				Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
+			},
+		},
+	}).LayoutWidgets(context, bounds, layouter)
 }
 
 func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
