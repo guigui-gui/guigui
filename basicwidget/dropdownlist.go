@@ -32,7 +32,8 @@ type DropdownList[T comparable] struct {
 	buttonContent dropdownListButtonContent
 	popupMenu     PopupMenu[T]
 
-	items []DropdownListItem[T]
+	items          []DropdownListItem[T]
+	popupMenuItems []PopupMenuItem[T]
 }
 
 func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
@@ -40,15 +41,15 @@ func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
 }
 
 func (d *DropdownList[T]) updatePopupMenuitems() {
-	var popupMenuItems []PopupMenuItem[T]
-	for _, item := range d.items {
+	d.popupMenuItems = adjustSliceSize(d.popupMenuItems, len(d.items))
+	for i, item := range d.items {
 		pmItem := PopupMenuItem[T](item)
 		if !d.popupMenu.IsOpen() {
 			pmItem.Content = nil
 		}
-		popupMenuItems = append(popupMenuItems, pmItem)
+		d.popupMenuItems[i] = pmItem
 	}
-	d.popupMenu.SetItems(popupMenuItems)
+	d.popupMenu.SetItems(d.popupMenuItems)
 }
 
 func (d *DropdownList[T]) updateChildren(context *guigui.Context) {
