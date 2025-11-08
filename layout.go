@@ -85,19 +85,19 @@ type LinearLayoutItem struct {
 }
 
 func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter) {
-	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
+	tmpBoundsArr := theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
 	defer func() {
-		tmpBoundsArr = tmpBoundsArr[:0]
-		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
+		*tmpBoundsArr = (*tmpBoundsArr)[:0]
+		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
 	}()
-	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
+	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds, false)
 
 	for i, item := range l.Items {
 		if item.Widget != nil {
-			layouter.LayoutWidget(item.Widget, tmpBoundsArr[i])
+			layouter.LayoutWidget(item.Widget, (*tmpBoundsArr)[i])
 		}
 		if item.Layout != nil {
-			item.Layout.LayoutWidgets(context, tmpBoundsArr[i], layouter)
+			item.Layout.LayoutWidgets(context, (*tmpBoundsArr)[i], layouter)
 		}
 	}
 }
@@ -254,14 +254,14 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 
 	var autoAlongSize int
 	var autoAcrossSize int
-	tmpSizes := *theLinearLayoutSizesPool.Get().(*[]int)
+	tmpSizes := theLinearLayoutSizesPool.Get().(*[]int)
 	defer func() {
-		tmpSizes = tmpSizes[:0]
-		theLinearLayoutSizesPool.Put(&tmpSizes)
+		*tmpSizes = (*tmpSizes)[:0]
+		theLinearLayoutSizesPool.Put(tmpSizes)
 	}()
-	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, contentAlongSize, contentAcrossSize, true)
+	*tmpSizes = l.appendSizesInPixels((*tmpSizes)[:0], context, contentAlongSize, contentAcrossSize, true)
 	for i, item := range l.Items {
-		s := tmpSizes[i]
+		s := (*tmpSizes)[i]
 		autoAlongSize += s
 		if item.Widget != nil {
 			switch l.Direction {
@@ -328,16 +328,16 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle, measure bool) []image.Rectangle {
 	alongSize := l.alongSize(bounds)
 	acrossSize := l.acrossSize(bounds)
-	tmpSizes := *theLinearLayoutSizesPool.Get().(*[]int)
+	tmpSizes := theLinearLayoutSizesPool.Get().(*[]int)
 	defer func() {
-		tmpSizes = tmpSizes[:0]
-		theLinearLayoutSizesPool.Put(&tmpSizes)
+		*tmpSizes = (*tmpSizes)[:0]
+		theLinearLayoutSizesPool.Put(tmpSizes)
 	}()
-	tmpSizes = l.appendSizesInPixels(tmpSizes[:0], context, alongSize, acrossSize, measure)
+	*tmpSizes = l.appendSizesInPixels((*tmpSizes)[:0], context, alongSize, acrossSize, measure)
 	var progress int
 	for i := range l.Items {
-		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, tmpSizes[i]))
-		progress += tmpSizes[i] + l.Gap
+		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, (*tmpSizes)[i]))
+		progress += (*tmpSizes)[i] + l.Gap
 	}
 	return boundsArr
 }
