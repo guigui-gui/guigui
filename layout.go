@@ -134,18 +134,9 @@ func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, la
 	}
 }
 
+// TODO: Remove this?
 func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
 	return l.appendWidgetBounds(boundsArr, context, bounds, false)
-}
-
-func (l LinearLayout) ItemBounds(context *Context, bounds image.Rectangle, index int) image.Rectangle {
-	tmpBoundsArr := *theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
-	defer func() {
-		tmpBoundsArr = tmpBoundsArr[:0]
-		theLinearLayoutBoundsPool.Put(&tmpBoundsArr)
-	}()
-	tmpBoundsArr = l.appendWidgetBounds(tmpBoundsArr[:0], context, bounds, false)
-	return tmpBoundsArr[index]
 }
 
 func (l *LinearLayout) alongSize(bounds image.Rectangle) int {
