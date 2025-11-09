@@ -522,6 +522,10 @@ func (b *baseListContent[T]) calcDropDstIndex(context *guigui.Context) int {
 }
 
 func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if r := b.scrollOverlay.handlePointingInput(context, widgetBounds); r != (guigui.HandleInputResult{}) {
+		return r
+	}
+
 	b.hoveredItemIndexPlus1 = 0
 	if context.IsWidgetHitAtCursor(b) {
 		cp := image.Pt(ebiten.CursorPosition())
@@ -640,10 +644,6 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			b.startPressingIndexPlus1 = 0
 			return guigui.AbortHandlingInputByWidget(b)
 		}
-	}
-
-	if context.IsWidgetHitAtCursor(b) {
-		return b.scrollOverlay.handlePointingInput(context, widgetBounds)
 	}
 
 	b.dragSrcIndexPlus1 = 0
