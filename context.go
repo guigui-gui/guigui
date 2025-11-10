@@ -402,6 +402,21 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
+	if state.float {
+		b := state.bounds
+		for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
+			if parent.widgetState().container {
+				parentVB := c.visibleBounds(parent.widgetState())
+				if !parentVB.Empty() {
+					b = b.Intersect(parentVB)
+				}
+				break
+			}
+		}
+		state.hasVisibleBoundsCache = true
+		state.visibleBoundsCache = b
+		return b
+	}
 
 	var b image.Rectangle
 	parentVB := c.visibleBounds(parent.widgetState())
@@ -411,4 +426,12 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 	state.hasVisibleBoundsCache = true
 	state.visibleBoundsCache = b
 	return b
+}
+
+func (c *Context) SetContainer(widget Widget, container bool) {
+	widget.widgetState().container = container
+}
+
+func (c *Context) SetFloat(widget Widget, float bool) {
+	widget.widgetState().float = float
 }

@@ -153,6 +153,11 @@ func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAd
 	adder.AddChild(&b.frame)
 }
 
+func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	context.SetContainer(b, true)
+	return nil
+}
+
 func (b *baseList[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y += b.headerHeight

@@ -626,11 +626,12 @@ func (a *app) drawWidget(screen *ebiten.Image) {
 	}
 	dst := screen.SubImage(a.invalidatedRegions).(*ebiten.Image)
 	for _, z := range a.zs {
-		a.doDrawWidget(dst, a.root, z)
+		a.doDrawWidget(dst, a.root, z, false)
+		a.doDrawWidget(dst, a.root, z, true)
 	}
 }
 
-func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
+func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, float bool) {
 	// Do not skip this even when visible bounds are empty.
 	// A child widget might have a different Z value and different visible bounds.
 
@@ -647,7 +648,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 
 	vb := a.context.visibleBounds(widgetState)
 	var origDst *ebiten.Image
-	renderCurrent := zToRender == widgetState.z() && !vb.Empty()
+	renderCurrent := zToRender == widgetState.z() && !vb.Empty() && widgetState.float == float
 	if renderCurrent {
 		if useOffscreen {
 			origDst = dst
@@ -659,7 +660,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int) {
 	}
 
 	for _, child := range widgetState.children {
-		a.doDrawWidget(dst, child, zToRender)
+		a.doDrawWidget(dst, child, zToRender, float)
 	}
 
 	if renderCurrent {

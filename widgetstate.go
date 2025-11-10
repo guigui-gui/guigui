@@ -102,6 +102,8 @@ type widgetState struct {
 	eventHandlers   map[string]any
 	tmpArgs         []reflect.Value
 	eventDispatched bool
+	container       bool
+	float           bool
 
 	offscreen *ebiten.Image
 

@@ -74,6 +74,11 @@ func (p *Panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.panel)
 }
 
+func (p *Panel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	context.SetContainer(&p.panel, true)
+	return nil
+}
+
 func (p *Panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&p.panel, widgetBounds.Bounds())
 }

@@ -212,7 +212,7 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	t.prevFocused = context.IsFocused(t)
 
 	context.SetPassThrough(&t.cursor, true)
-	context.SetZDelta(&t.cursor, 1)
+	context.SetFloat(&t.cursor, true)
 
 	if t.selectable || t.editable {
 		t.cursor.text = t

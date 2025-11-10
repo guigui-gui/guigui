@@ -133,8 +133,9 @@ func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdde
 }
 
 func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
-	context.SetZDelta(&t.focus, 1)
+	context.SetFloat(&t.focus, true)
 	return nil
 }
 
