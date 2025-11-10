@@ -121,8 +121,7 @@ type Text struct {
 	// selectionShiftIndexPlus1 is the index (+1) of the selection that is moved by Shift and arrow keys.
 	selectionShiftIndexPlus1 int
 
-	dragging    bool
-	prevFocused bool
+	dragging bool
 
 	clickCount         int
 	lastClickTick      int64
@@ -190,19 +189,6 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		t.resetCachedTextSize()
 	}
 
-	if !t.prevFocused {
-		if t.nextTextSet {
-			if t.nextSelectAll {
-				t.setTextAndSelection(t.nextText, 0, len(t.nextText), -1, false)
-			} else {
-				t.setText(t.nextText)
-			}
-			t.nextTextSet = false
-			t.nextText = ""
-			t.nextSelectAll = false
-		}
-	}
-
 	if t.editable {
 		guigui.SetOnFocusChanged(t, func(focused bool) {
 			if focused {
@@ -217,7 +203,6 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			}
 		})
 	}
-	t.prevFocused = context.IsFocused(t)
 
 	context.SetPassThrough(&t.cursor, true)
 	context.SetFloat(&t.cursor, true)
@@ -646,11 +631,6 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 }
 
 func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string {
-	// context.IsFocused is not available, as this Text might not belong to a tree.
-	// TODO: This is a little tricky. Refactor this.
-	if !t.prevFocused && t.nextTextSet {
-		return t.nextText
-	}
 	if showComposition {
 		return t.field.TextForRendering()
 	}
@@ -958,6 +938,20 @@ func (t *Text) commit() {
 	guigui.DispatchEventHandler(t, textEventValueChanged, t.field.Text(), true)
 	t.nextText = ""
 	t.nextTextSet = false
+}
+
+func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if !context.IsFocused(t) && t.nextTextSet {
+		if t.nextSelectAll {
+			t.setTextAndSelection(t.nextText, 0, len(t.nextText), -1, false)
+		} else {
+			t.setText(t.nextText)
+		}
+		t.nextTextSet = false
+		t.nextText = ""
+		t.nextSelectAll = false
+	}
+	return nil
 }
 
 func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
