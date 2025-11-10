@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -143,6 +144,15 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
+	guigui.SetOnFocusChanged(t, func(focused bool) {
+		println("input!?", focused)
+		if !focused {
+			debug.PrintStack()
+		}
+		if focused {
+			context.SetFocused(&t.textInput.text, true)
+		}
+	})
 	return nil
 }
 
@@ -164,10 +174,6 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	// Focusing the text widget works only after appending it.
-	if context.IsFocused(t) {
-		context.SetFocused(&t.textInput.text, true)
-	}
 	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(&t.textInput.text))
 	return nil
 }
@@ -389,6 +395,12 @@ func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 	context.SetPassThrough(&t.frame, true)
 
+	guigui.SetOnFocusChanged(t, func(focused bool) {
+		if focused {
+			context.SetFocused(&t.text, true)
+		}
+	})
+
 	return nil
 }
 
@@ -465,10 +477,6 @@ func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	// Focusing the text widget works only after appending it.
-	if context.IsFocused(t) {
-		context.SetFocused(&t.text, true)
-	}
 	return nil
 }
 

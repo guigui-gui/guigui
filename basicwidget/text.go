@@ -94,9 +94,10 @@ func findWordBoundaries(text string, idx int) (start, end int) {
 type Text struct {
 	guigui.DefaultWidget
 
-	field       textinput.Field
-	nextText    string
-	nextTextSet bool
+	field         textinput.Field
+	nextTextSet   bool
+	nextText      string
+	nextSelectAll bool
 
 	hAlign      HorizontalAlign
 	vAlign      VerticalAlign
@@ -191,7 +192,14 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if !t.prevFocused {
 		if t.nextTextSet {
-			t.setText(t.nextText)
+			if t.nextSelectAll {
+				t.setTextAndSelection(t.nextText, 0, len(t.nextText), -1, false)
+			} else {
+				t.setText(t.nextText)
+			}
+			t.nextTextSet = false
+			t.nextText = ""
+			t.nextSelectAll = false
 		}
 	}
 
@@ -202,7 +210,7 @@ func (t *Text) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				t.cursor.resetCounter()
 				start, end := t.field.Selection()
 				if start < 0 || end < 0 {
-					t.selectAll()
+					t.doSelectAll()
 				}
 			} else {
 				t.commit()
@@ -300,6 +308,14 @@ func (t *Text) setText(text string) bool {
 }
 
 func (t *Text) selectAll() {
+	if t.nextTextSet {
+		t.nextSelectAll = true
+		return
+	}
+	t.doSelectAll()
+}
+
+func (t *Text) doSelectAll() {
 	t.setTextAndSelection(t.field.Text(), 0, len(t.field.Text()), -1, false)
 }
 
@@ -620,7 +636,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		t.selectionDragEndPlus1 = end + 1
 		t.setTextAndSelection(text, start, end, -1, false)
 	case 3:
-		t.selectAll()
+		t.doSelectAll()
 	}
 
 	context.SetFocused(t, true)
@@ -901,7 +917,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		return guigui.HandleInputByWidget(t)
 	case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyA) ||
 		useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyA):
-		t.selectAll()
+		t.doSelectAll()
 		return guigui.HandleInputByWidget(t)
 	case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyC) ||
 		useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyC):
