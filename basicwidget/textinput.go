@@ -28,6 +28,7 @@ type TextInput struct {
 	guigui.DefaultWidget
 
 	textInput textInput
+	focus     textInputFocus
 }
 
 func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
@@ -128,14 +129,39 @@ func (t *TextInput) Paste() bool {
 
 func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.textInput)
+	adder.AddChild(&t.focus)
+}
+
+func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	context.SetPassThrough(&t.focus, true)
+	context.SetZDelta(&t.focus, 1)
+	return nil
 }
 
 func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&t.textInput, widgetBounds.Bounds())
+
+	bounds := widgetBounds.Bounds()
+	w := textInputFocusBorderWidth(context)
+	p := bounds.Min.Add(image.Pt(-w, -w))
+	s := bounds.Size().Add(image.Pt(2*w, 2*w))
+	layouter.LayoutWidget(&t.focus, image.Rectangle{
+		Min: p,
+		Max: p.Add(s),
+	})
 }
 
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return t.textInput.Measure(context, constraints)
+}
+
+func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Focusing the text widget works only after appending it.
+	if context.IsFocused(t) {
+		context.SetFocused(&t.textInput.text, true)
+	}
+	context.SetVisible(&t.focus, context.IsFocused(&t.textInput.text))
+	return nil
 }
 
 func (t *TextInput) isFocused(context *guigui.Context) bool {
@@ -159,7 +185,6 @@ type textInput struct {
 	icon           Image
 	frame          textInputFrame
 	scrollOverlay  scrollOverlay
-	focus          textInputFocus
 
 	style        TextInputStyle
 	readonly     bool
@@ -302,7 +327,6 @@ func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdde
 	}
 	adder.AddChild(&t.frame)
 	adder.AddChild(&t.scrollOverlay)
-	adder.AddChild(&t.focus)
 }
 
 func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
@@ -356,8 +380,6 @@ func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
 
 	context.SetPassThrough(&t.frame, true)
-	context.SetPassThrough(&t.focus, true)
-	context.SetZDelta(&t.focus, 1)
 
 	return nil
 }
@@ -383,14 +405,6 @@ func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui
 		layouter.LayoutWidget(&t.iconBackground, bgBounds)
 		layouter.LayoutWidget(&t.icon, iconBounds)
 	}
-
-	w := textInputFocusBorderWidth(context)
-	p := bounds.Min.Add(image.Pt(-w, -w))
-	s := bounds.Size().Add(image.Pt(2*w, 2*w))
-	layouter.LayoutWidget(&t.focus, image.Rectangle{
-		Min: p,
-		Max: p.Add(s),
-	})
 }
 
 func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
@@ -447,7 +461,6 @@ func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if context.IsFocused(t) {
 		context.SetFocused(&t.text, true)
 	}
-	context.SetVisible(&t.focus, context.IsFocused(&t.text))
 	return nil
 }
 
