@@ -369,10 +369,6 @@ func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
 
-	if t.style != TextInputStyleInline && (context.IsFocused(t) || context.IsFocused(&t.text)) {
-		t.focus.textInput = t
-	}
-
 	context.SetPassThrough(&t.frame, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetZDelta(&t.focus, 1)
@@ -526,8 +522,6 @@ func textInputFocusBorderWidth(context *guigui.Context) int {
 
 type textInputFocus struct {
 	guigui.DefaultWidget
-
-	textInput *textInput
 }
 
 func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
