@@ -223,11 +223,6 @@ func (n *NumberInput) AddChildren(context *guigui.Context, adder *guigui.ChildAd
 }
 
 func (n *NumberInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if n.nextValue != nil && !n.textInput.isFocused(context) && !context.IsFocused(n) {
-		n.abstractNumberInput.SetValueBigInt(n, n.nextValue, true)
-		n.nextValue = nil
-	}
-
 	n.abstractNumberInput.SetOnValueChangedString(n, func(text string, force bool) {
 		if force {
 			n.textInput.ForceSetValue(text)
@@ -318,6 +313,14 @@ func (n *NumberInput) HandleButtonInput(context *guigui.Context, widgetBounds *g
 
 func (n *NumberInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return n.textInput.Measure(context, constraints)
+}
+
+func (n *NumberInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if n.nextValue != nil && !n.textInput.isFocused(context) && !context.IsFocused(n) {
+		n.abstractNumberInput.SetValueBigInt(n, n.nextValue, true)
+		n.nextValue = nil
+	}
+	return nil
 }
 
 func (n *NumberInput) increment() {
