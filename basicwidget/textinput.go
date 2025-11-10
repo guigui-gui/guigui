@@ -27,6 +27,132 @@ const (
 type TextInput struct {
 	guigui.DefaultWidget
 
+	textInput textInput
+}
+
+func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
+	t.textInput.SetOnValueChanged(f)
+}
+
+func (t *TextInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
+	t.textInput.SetOnKeyJustPressed(f)
+}
+
+func (t *TextInput) SetOnTextAndSelectionChanged(f func(text string, start, end int)) {
+	t.textInput.SetOnTextAndSelectionChanged(f)
+}
+
+func (t *TextInput) Value() string {
+	return t.textInput.Value()
+}
+
+func (t *TextInput) SetValue(text string) {
+	t.textInput.SetValue(text)
+}
+
+func (t *TextInput) ForceSetValue(text string) {
+	t.textInput.ForceSetValue(text)
+}
+
+func (t *TextInput) ReplaceValueAtSelection(text string) {
+	t.textInput.ReplaceValueAtSelection(text)
+}
+
+func (t *TextInput) CommitWithCurrentInputValue() {
+	t.textInput.CommitWithCurrentInputValue()
+}
+
+func (t *TextInput) SetMultiline(multiline bool) {
+	t.textInput.SetMultiline(multiline)
+}
+
+func (t *TextInput) SetHorizontalAlign(halign HorizontalAlign) {
+	t.textInput.SetHorizontalAlign(halign)
+}
+
+func (t *TextInput) SetVerticalAlign(valign VerticalAlign) {
+	t.textInput.SetVerticalAlign(valign)
+}
+
+func (t *TextInput) SetAutoWrap(autoWrap bool) {
+	t.textInput.SetAutoWrap(autoWrap)
+}
+
+func (t *TextInput) SelectAll() {
+	t.textInput.SelectAll()
+}
+
+func (t *TextInput) SetTabular(tabular bool) {
+	t.textInput.SetTabular(tabular)
+}
+
+func (t *TextInput) IsEditable() bool {
+	return t.textInput.IsEditable()
+}
+
+func (t *TextInput) SetStyle(style TextInputStyle) {
+	t.textInput.SetStyle(style)
+}
+
+func (t *TextInput) SetEditable(editable bool) {
+	t.textInput.SetEditable(editable)
+}
+
+func (t *TextInput) SetIcon(icon *ebiten.Image) {
+	t.textInput.SetIcon(icon)
+}
+
+func (t *TextInput) CanCut() bool {
+	return t.textInput.CanCut()
+}
+
+func (t *TextInput) CanCopy() bool {
+	return t.textInput.CanCopy()
+}
+
+func (t *TextInput) CanPaste() bool {
+	return t.textInput.CanPaste()
+}
+
+func (t *TextInput) Cut() bool {
+	return t.textInput.Cut()
+}
+
+func (t *TextInput) Copy() bool {
+	return t.textInput.Copy()
+}
+
+func (t *TextInput) Paste() bool {
+	return t.textInput.Paste()
+}
+
+func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(&t.textInput)
+}
+
+func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&t.textInput, widgetBounds.Bounds())
+}
+
+func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return t.textInput.Measure(context, constraints)
+}
+
+func (t *TextInput) isFocused(context *guigui.Context) bool {
+	return t.textInput.isFocused(context)
+}
+
+func (t *TextInput) setPaddingStart(padding int) {
+	t.textInput.setPaddingStart(padding)
+}
+
+func (t *TextInput) setPaddingEnd(padding int) {
+	t.textInput.setPaddingEnd(padding)
+}
+
+type textInput struct {
+	guigui.DefaultWidget
+
 	background     textInputBackground
 	text           Text
 	iconBackground textInputIconBackground
@@ -43,67 +169,67 @@ type TextInput struct {
 	prevFocused bool
 }
 
-func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
+func (t *textInput) SetOnValueChanged(f func(text string, committed bool)) {
 	t.text.SetOnValueChanged(f)
 }
 
-func (t *TextInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
+func (t *textInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
 	t.text.SetOnKeyJustPressed(f)
 }
 
-func (t *TextInput) SetOnTextAndSelectionChanged(f func(text string, start, end int)) {
+func (t *textInput) SetOnTextAndSelectionChanged(f func(text string, start, end int)) {
 	guigui.RegisterEventHandler(t, textInputEventTextAndSelectionChanged, f)
 }
 
-func (t *TextInput) Value() string {
+func (t *textInput) Value() string {
 	return t.text.Value()
 }
 
-func (t *TextInput) SetValue(text string) {
+func (t *textInput) SetValue(text string) {
 	t.text.SetValue(text)
 }
 
-func (t *TextInput) ForceSetValue(text string) {
+func (t *textInput) ForceSetValue(text string) {
 	t.text.ForceSetValue(text)
 }
 
-func (t *TextInput) ReplaceValueAtSelection(text string) {
+func (t *textInput) ReplaceValueAtSelection(text string) {
 	t.text.ReplaceValueAtSelection(text)
 }
 
-func (t *TextInput) CommitWithCurrentInputValue() {
+func (t *textInput) CommitWithCurrentInputValue() {
 	t.text.CommitWithCurrentInputValue()
 }
 
-func (t *TextInput) SetMultiline(multiline bool) {
+func (t *textInput) SetMultiline(multiline bool) {
 	t.text.SetMultiline(multiline)
 }
 
-func (t *TextInput) SetHorizontalAlign(halign HorizontalAlign) {
+func (t *textInput) SetHorizontalAlign(halign HorizontalAlign) {
 	t.text.SetHorizontalAlign(halign)
 }
 
-func (t *TextInput) SetVerticalAlign(valign VerticalAlign) {
+func (t *textInput) SetVerticalAlign(valign VerticalAlign) {
 	t.text.SetVerticalAlign(valign)
 }
 
-func (t *TextInput) SetAutoWrap(autoWrap bool) {
+func (t *textInput) SetAutoWrap(autoWrap bool) {
 	t.text.SetAutoWrap(autoWrap)
 }
 
-func (t *TextInput) SelectAll() {
+func (t *textInput) SelectAll() {
 	t.text.selectAll()
 }
 
-func (t *TextInput) SetTabular(tabular bool) {
+func (t *textInput) SetTabular(tabular bool) {
 	t.text.SetTabular(tabular)
 }
 
-func (t *TextInput) IsEditable() bool {
+func (t *textInput) IsEditable() bool {
 	return !t.readonly
 }
 
-func (t *TextInput) SetStyle(style TextInputStyle) {
+func (t *textInput) SetStyle(style TextInputStyle) {
 	if t.style == style {
 		return
 	}
@@ -111,7 +237,7 @@ func (t *TextInput) SetStyle(style TextInputStyle) {
 	guigui.RequestRedraw(t)
 }
 
-func (t *TextInput) SetEditable(editable bool) {
+func (t *textInput) SetEditable(editable bool) {
 	if t.readonly == !editable {
 		return
 	}
@@ -120,7 +246,7 @@ func (t *TextInput) SetEditable(editable bool) {
 	guigui.RequestRedraw(t)
 }
 
-func (t *TextInput) setPaddingStart(padding int) {
+func (t *textInput) setPaddingStart(padding int) {
 	if t.paddingStart == padding {
 		return
 	}
@@ -128,7 +254,7 @@ func (t *TextInput) setPaddingStart(padding int) {
 	guigui.RequestRedraw(t)
 }
 
-func (t *TextInput) setPaddingEnd(padding int) {
+func (t *textInput) setPaddingEnd(padding int) {
 	if t.paddingEnd == padding {
 		return
 	}
@@ -136,11 +262,11 @@ func (t *TextInput) setPaddingEnd(padding int) {
 	guigui.RequestRedraw(t)
 }
 
-func (t *TextInput) SetIcon(icon *ebiten.Image) {
+func (t *textInput) SetIcon(icon *ebiten.Image) {
 	t.icon.SetImage(icon)
 }
 
-func (t *TextInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (start, top, end, bottom int) {
+func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (start, top, end, bottom int) {
 	var x, y int
 	switch t.style {
 	case TextInputStyleNormal:
@@ -159,17 +285,17 @@ func (t *TextInput) textInputPaddingInScrollableContent(context *guigui.Context,
 	return
 }
 
-func (t *TextInput) scrollContentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
+func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
 	start, top, end, bottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	w := widgetBounds.Bounds().Dx() - start - end
 	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(start+end, top+bottom))
 }
 
-func (t *TextInput) isFocused(context *guigui.Context) bool {
+func (t *textInput) isFocused(context *guigui.Context) bool {
 	return context.IsFocused(t) || context.IsFocused(&t.text)
 }
 
-func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {
@@ -183,7 +309,7 @@ func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdde
 	}
 }
 
-func (t *TextInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	bt := widgetBounds.Bounds()
 	pt := bt.Min
@@ -205,7 +331,7 @@ func (t *TextInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 	return b
 }
 
-func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.prevFocused != (context.IsFocused(t) || context.IsFocused(&t.text)) {
 		t.prevFocused = (context.IsFocused(t) || context.IsFocused(&t.text))
 		guigui.RequestRedraw(t)
@@ -254,7 +380,7 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 	return nil
 }
 
-func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
@@ -287,7 +413,7 @@ func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui
 	}
 }
 
-func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 	bounds := widgetBounds.Bounds()
 	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	bounds.Max.X -= paddingEnd
@@ -299,7 +425,7 @@ func (t *TextInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBo
 	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
 }
 
-func (t *TextInput) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (t *textInput) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if context.IsWidgetHitAtCursor(t) {
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 		right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
@@ -314,11 +440,11 @@ func (t *TextInput) HandlePointingInput(context *guigui.Context, widgetBounds *g
 	return t.scrollOverlay.handlePointingInput(context, widgetBounds)
 }
 
-func (t *TextInput) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+func (t *textInput) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	return t.text.CursorShape(context, nil)
 }
 
-func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	if t.style == TextInputStyleInline {
 		// WidgetBounds is not needed for inline text input.
 		start, _, end, _ := t.textInputPaddingInScrollableContent(context, nil)
@@ -336,34 +462,34 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 	return image.Pt(6*UnitSize(context), UnitSize(context))
 }
 
-func (t *TextInput) CanCut() bool {
+func (t *textInput) CanCut() bool {
 	return t.text.CanCut()
 }
 
-func (t *TextInput) CanCopy() bool {
+func (t *textInput) CanCopy() bool {
 	return t.text.CanCopy()
 }
 
-func (t *TextInput) CanPaste() bool {
+func (t *textInput) CanPaste() bool {
 	return t.text.CanPaste()
 }
 
-func (t *TextInput) Cut() bool {
+func (t *textInput) Cut() bool {
 	return t.text.Cut()
 }
 
-func (t *TextInput) Copy() bool {
+func (t *textInput) Copy() bool {
 	return t.text.Copy()
 }
 
-func (t *TextInput) Paste() bool {
+func (t *textInput) Paste() bool {
 	return t.text.Paste()
 }
 
 type textInputBackground struct {
 	guigui.DefaultWidget
 
-	textInput *TextInput
+	textInput *textInput
 }
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -375,7 +501,7 @@ func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui
 type textInputIconBackground struct {
 	guigui.DefaultWidget
 
-	textInput *TextInput
+	textInput *textInput
 }
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -401,7 +527,7 @@ func textInputFocusBorderWidth(context *guigui.Context) int {
 type textInputFocus struct {
 	guigui.DefaultWidget
 
-	textInput *TextInput
+	textInput *textInput
 }
 
 func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
