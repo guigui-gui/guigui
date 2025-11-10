@@ -498,14 +498,14 @@ const (
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 	for i := len(a.zs) - 1; i >= 0; i-- {
 		z := a.zs[i]
-		if r := a.doHandleInputWidget(typ, a.root, z); r.shouldRaise() {
+		if r := a.doHandleInputWidget(typ, a.root, z, a.context.IsFocused(a.root)); r.shouldRaise() {
 			return r
 		}
 	}
 	return HandleInputResult{}
 }
 
-func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle int) HandleInputResult {
+func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle int, ancestorFocused bool) HandleInputResult {
 	widgetState := widget.widgetState()
 	if widgetState.passThrough {
 		return HandleInputResult{}
@@ -522,14 +522,17 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 		return HandleInputResult{}
 	}
 
-	if typ == handleInputTypeButton && !a.context.IsFocusedOrHasFocusedChild(widget) {
-		return HandleInputResult{}
+	if typ == handleInputTypeButton && !a.context.IsFocusedOrHasFocusedChild(widget) && !ancestorFocused {
+		if !ancestorFocused {
+			return HandleInputResult{}
+		}
 	}
 
 	// Iterate the children in the reverse order of rendering.
+	focused := a.context.IsFocused(widget)
 	for i := len(widgetState.children) - 1; i >= 0; i-- {
 		child := widgetState.children[i]
-		if r := a.doHandleInputWidget(typ, child, zToHandle); r.shouldRaise() {
+		if r := a.doHandleInputWidget(typ, child, zToHandle, ancestorFocused || focused); r.shouldRaise() {
 			return r
 		}
 	}
