@@ -29,6 +29,8 @@ type TextInput struct {
 
 	textInput textInput
 	focus     textInputFocus
+
+	style TextInputStyle
 }
 
 func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
@@ -92,7 +94,12 @@ func (t *TextInput) IsEditable() bool {
 }
 
 func (t *TextInput) SetStyle(style TextInputStyle) {
+	if t.style == style {
+		return
+	}
+	t.style = style
 	t.textInput.SetStyle(style)
+	guigui.RequestRedraw(t)
 }
 
 func (t *TextInput) SetEditable(editable bool) {
@@ -161,7 +168,7 @@ func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if context.IsFocused(t) {
 		context.SetFocused(&t.textInput.text, true)
 	}
-	context.SetVisible(&t.focus, context.IsFocused(&t.textInput.text))
+	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(&t.textInput.text))
 	return nil
 }
 
