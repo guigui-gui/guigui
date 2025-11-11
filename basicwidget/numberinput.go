@@ -38,7 +38,6 @@ type NumberInput struct {
 	downButton Button
 
 	abstractNumberInput abstractNumberInput
-	nextValue           *big.Int
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -70,62 +69,30 @@ func (n *NumberInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool))
 }
 
 func (n *NumberInput) Value() int {
-	if n.nextValue != nil {
-		if n.nextValue.Cmp(&maxInt) > 0 {
-			return math.MaxInt
-		}
-		if n.nextValue.Cmp(&minInt) < 0 {
-			return math.MinInt
-		}
-		if n.nextValue.IsInt64() {
-			return int(n.nextValue.Int64())
-		}
-		return 0
-	}
 	return n.abstractNumberInput.Value()
 }
 
 func (n *NumberInput) ValueBigInt() *big.Int {
-	if n.nextValue != nil {
-		return n.nextValue
-	}
 	return n.abstractNumberInput.ValueBigInt()
 }
 
 func (n *NumberInput) ValueInt64() int64 {
-	if n.nextValue != nil {
-		if n.nextValue.IsInt64() {
-			return n.nextValue.Int64()
-		}
-		if n.nextValue.Cmp(&maxInt64) > 0 {
-			return math.MaxInt64
-		}
-		return math.MinInt64
-	}
 	return n.abstractNumberInput.ValueInt64()
 }
 
 func (n *NumberInput) ValueUint64() uint64 {
-	if n.nextValue != nil {
-		if n.nextValue.Cmp(&maxUint64) > 0 {
-			return math.MaxUint64
-		}
-		if n.nextValue.Sign() < 0 {
-			return 0
-		}
-		return n.nextValue.Uint64()
-	}
 	return n.abstractNumberInput.ValueUint64()
 }
 
 func (n *NumberInput) SetValueBigInt(value *big.Int) {
-	if n.nextValue != nil && n.nextValue.Cmp(value) == 0 {
+	n.abstractNumberInput.SetValueBigInt(n, value, true)
+	/*if n.nextValue != nil && n.nextValue.Cmp(value) == 0 {
 		return
 	}
 	if n.nextValue == nil {
 		n.nextValue = &big.Int{}
 	}
-	n.nextValue.Set(value)
+	n.nextValue.Set(value)*/
 }
 
 func (n *NumberInput) SetValue(value int) {
@@ -229,7 +196,6 @@ func (n *NumberInput) Update(context *guigui.Context, widgetBounds *guigui.Widge
 		} else {
 			n.textInput.SetValue(text)
 		}
-		n.nextValue = nil
 	})
 
 	n.textInput.SetValue(n.abstractNumberInput.ValueString())
@@ -238,9 +204,6 @@ func (n *NumberInput) Update(context *guigui.Context, widgetBounds *guigui.Widge
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
 	n.textInput.SetOnValueChanged(func(text string, committed bool) {
 		n.abstractNumberInput.SetString(n, text, false, committed)
-		if committed {
-			n.nextValue = nil
-		}
 	})
 
 	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
@@ -313,14 +276,6 @@ func (n *NumberInput) HandleButtonInput(context *guigui.Context, widgetBounds *g
 
 func (n *NumberInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return n.textInput.Measure(context, constraints)
-}
-
-func (n *NumberInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if n.nextValue != nil && !n.textInput.isFocused(context) && !context.IsFocused(n) {
-		n.abstractNumberInput.SetValueBigInt(n, n.nextValue, true)
-		n.nextValue = nil
-	}
-	return nil
 }
 
 func (n *NumberInput) increment() {

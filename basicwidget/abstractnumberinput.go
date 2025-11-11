@@ -49,7 +49,7 @@ func (a *abstractNumberInput) SetOnValueChangedUint64(widget guigui.Widget, f fu
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChangedUint64, f)
 }
 
-func (a *abstractNumberInput) fireValueChangeEvents(widget guigui.Widget, force bool, committed bool) {
+func (a *abstractNumberInput) dispatchValueChangeEvents(widget guigui.Widget, force bool, committed bool) {
 	guigui.DispatchEventHandler(widget, abstractNumberInputEventValueChanged, a.Value(), committed)
 	guigui.DispatchEventHandler(widget, abstractNumberInputEventValueChangedString, a.value.String(), force)
 	guigui.DispatchEventHandler(widget, abstractNumberInputEventValueChangedBigInt, a.ValueBigInt(), committed)
@@ -142,7 +142,7 @@ func (a *abstractNumberInput) setValue(widget guigui.Widget, value *big.Int, for
 		return
 	}
 	a.value.Set(value)
-	a.fireValueChangeEvents(widget, force, committed)
+	a.dispatchValueChangeEvents(widget, force, committed)
 }
 
 func (a *abstractNumberInput) MinimumValueBigInt() *big.Int {
