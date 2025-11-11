@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"runtime/debug"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -145,10 +144,6 @@ func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
 	guigui.SetOnFocusChanged(t, func(focused bool) {
-		println("input!?", focused)
-		if !focused {
-			debug.PrintStack()
-		}
 		if focused {
 			context.SetFocused(&t.textInput.text, true)
 		}
