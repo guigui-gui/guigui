@@ -208,14 +208,12 @@ func (a *app) updateInvalidatedRegions() {
 		if !widgetState.dirty {
 			return nil
 		}
-		vb := a.context.visibleBounds(widgetState)
-		if vb.Empty() {
-			return nil
+		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
+			if theDebugMode.showRenderingRegions {
+				slog.Info("request redrawing", "requester", fmt.Sprintf("%T", widget), "at", widgetState.dirtyAt, "region", vb)
+			}
+			a.requestRedrawWidget(widget)
 		}
-		if theDebugMode.showRenderingRegions {
-			slog.Info("request redrawing", "requester", fmt.Sprintf("%T", widget), "at", widgetState.dirtyAt, "region", vb)
-		}
-		a.requestRedrawWidget(widget)
 		widgetState.dirty = false
 		widgetState.dirtyAt = ""
 		return nil
@@ -599,9 +597,10 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 		a.requestRedraw(a.context.visibleBounds(widgetState))
 
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
-		widgetState.prev.redrawIfDifferentParentZ(a)
+		// The float property is similar.
+		widgetState.prev.redrawIfNeeded(a)
 		for _, child := range widgetState.children {
-			if child.widgetState().zDelta != 0 {
+			if child.widgetState().zDelta != 0 || child.widgetState().float {
 				a.requestRedraw(a.context.visibleBounds(child.widgetState()))
 			}
 		}

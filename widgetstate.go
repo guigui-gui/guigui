@@ -16,23 +16,25 @@ import (
 )
 
 type bounds3D struct {
-	bounds      image.Rectangle
-	zDelta      int
-	visible     bool // For hit testing.
-	passThrough bool // For hit testing.
+	visibleBounds image.Rectangle
+	float         bool
+	zDelta        int
+	visible       bool // For hit testing.
+	passThrough   bool // For hit testing.
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	ws := widget.widgetState()
-	bounds := context.visibleBounds(ws)
-	if bounds.Empty() {
+	vb := context.visibleBounds(ws)
+	if vb.Empty() {
 		return bounds3D{}, false
 	}
 	return bounds3D{
-		bounds:      bounds,
-		zDelta:      ws.zDelta,
-		visible:     ws.isVisible(),
-		passThrough: ws.passThrough,
+		visibleBounds: vb,
+		float:         ws.float,
+		zDelta:        ws.zDelta,
+		visible:       ws.isVisible(),
+		passThrough:   ws.passThrough,
 	}, true
 }
 
@@ -72,10 +74,10 @@ func (w *widgetsAndVisibleBounds) equals(context *Context, currentWidgets []Widg
 	return maps.Equal(w.bounds3Ds, w.currentBounds3D)
 }
 
-func (w *widgetsAndVisibleBounds) redrawIfDifferentParentZ(app *app) {
+func (w *widgetsAndVisibleBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
-		if bounds3D.zDelta != 0 {
-			app.requestRedraw(bounds3D.bounds)
+		if bounds3D.zDelta != 0 || bounds3D.float {
+			app.requestRedraw(bounds3D.visibleBounds)
 			requestRedraw(widgetState)
 		}
 	}
