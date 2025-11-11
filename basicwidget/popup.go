@@ -335,6 +335,14 @@ func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildA
 	}
 }
 
+func (p *popupContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// CustomDraw might be too generic and overkill for this case.
+	context.SetCustomDraw(p.content, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
+		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
+	})
+	return nil
+}
+
 func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if p.content != nil {
 		layouter.LayoutWidget(p.content, widgetBounds.Bounds())
