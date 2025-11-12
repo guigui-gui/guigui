@@ -96,8 +96,7 @@ type popup struct {
 
 	blurredBackground popupBlurredBackground
 	shadow            popupShadow
-	content           popupContent
-	frame             popupFrame
+	contentAndFrame   popupContentAndFrame
 
 	openingCount           int
 	showing                bool
@@ -117,7 +116,7 @@ func (p *popup) IsOpen() bool {
 }
 
 func (p *popup) SetContent(widget guigui.Widget) {
-	p.content.setContent(widget)
+	p.contentAndFrame.setContent(widget)
 }
 
 func (p *popup) openingRate() float64 {
@@ -125,7 +124,7 @@ func (p *popup) openingRate() float64 {
 }
 
 func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	if p.content.content == nil {
+	if !p.contentAndFrame.hasContent() {
 		return image.Rectangle{}
 	}
 	pt := p.contentPosition
@@ -163,8 +162,7 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 			adder.AddChild(&p.blurredBackground)
 		}
 		adder.AddChild(&p.shadow)
-		adder.AddChild(&p.content)
-		adder.AddChild(&p.frame)
+		adder.AddChild(&p.contentAndFrame)
 	}
 }
 
@@ -188,8 +186,7 @@ func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wid
 	appBounds := context.AppBounds()
 	layouter.LayoutWidget(&p.blurredBackground, appBounds)
 	layouter.LayoutWidget(&p.shadow, appBounds)
-	layouter.LayoutWidget(&p.content, contentBounds)
-	layouter.LayoutWidget(&p.frame, contentBounds)
+	layouter.LayoutWidget(&p.contentAndFrame, contentBounds)
 }
 
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -308,15 +305,46 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	// If opacity is less than 1, the dst argument of Draw will an empty image in the current implementation.
 	// TODO: This is too tricky. Refactor this.
 	context.SetOpacity(&p.shadow, p.openingRate())
-	context.SetOpacity(&p.content, p.openingRate())
-	context.SetOpacity(&p.frame, p.openingRate())
+	context.SetOpacity(&p.contentAndFrame, p.openingRate())
 
 	context.SetZDelta(&p.blurredBackground, 1)
 	context.SetZDelta(&p.shadow, 1)
-	context.SetZDelta(&p.content, 1)
-	context.SetZDelta(&p.frame, 1)
+	context.SetZDelta(&p.contentAndFrame, 1)
 
 	return nil
+}
+
+type popupContentAndFrame struct {
+	guigui.DefaultWidget
+
+	content popupContent
+	frame   popupFrame
+}
+
+func (p *popupContentAndFrame) setContent(widget guigui.Widget) {
+	p.content.setContent(widget)
+}
+
+func (p *popupContentAndFrame) hasContent() bool {
+	return p.content.hasContent()
+}
+
+func (p *popupContentAndFrame) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(&p.content)
+	adder.AddChild(&p.frame)
+}
+
+func (p *popupContentAndFrame) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// CustomDraw might be too generic and overkill for this case.
+	context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
+		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
+	})
+	return nil
+}
+
+func (p *popupContentAndFrame) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&p.content, widgetBounds.Bounds())
+	layouter.LayoutWidget(&p.frame, widgetBounds.Bounds())
 }
 
 type popupContent struct {
@@ -329,18 +357,14 @@ func (p *popupContent) setContent(widget guigui.Widget) {
 	p.content = widget
 }
 
+func (p *popupContent) hasContent() bool {
+	return p.content != nil
+}
+
 func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}
-}
-
-func (p *popupContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	// CustomDraw might be too generic and overkill for this case.
-	context.SetCustomDraw(p.content, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
-	})
-	return nil
 }
 
 func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
