@@ -92,6 +92,7 @@ func (s *scrollOverlay) SetContentSize(context *guigui.Context, widgetBounds *gu
 
 	s.contentSize = contentSize
 	s.adjustOffset(context, widgetBounds)
+	guigui.RequestRedraw(s)
 }
 
 // SetOffsetByDelta sets the offset by adding dx and dy to the current offset.
