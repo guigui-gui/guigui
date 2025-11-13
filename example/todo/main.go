@@ -56,7 +56,7 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.textInput)
 	adder.AddChild(&r.createButton)
@@ -148,7 +148,7 @@ func (t *taskWidget) SetText(text string) {
 	t.text.SetValue(text)
 }
 
-func (t *taskWidget) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *taskWidget) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.doneButton)
 	adder.AddChild(&t.text)
 }
@@ -200,7 +200,7 @@ func (t *tasksPanelContent) SetOnDeleted(f func(id int)) {
 	guigui.RegisterEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
-func (t *tasksPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *tasksPanelContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	model := context.Model(t, modelKeyModel).(*Model)
 	if model.TaskCount() > len(t.taskWidgets) {
 		t.taskWidgets = slices.Grow(t.taskWidgets, model.TaskCount()-len(t.taskWidgets))[:model.TaskCount()]

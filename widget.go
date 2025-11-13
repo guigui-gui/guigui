@@ -13,7 +13,7 @@ import (
 
 type Widget interface {
 	Model(key any) any
-	AddChildren(context *Context, adder *ChildAdder)
+	AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder)
 	Update(context *Context, widgetBounds *WidgetBounds) error
 	LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
@@ -86,7 +86,7 @@ func (w *WidgetWithSize[T]) Widget() T {
 	return w.widget.Widget()
 }
 
-func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
+func (w *WidgetWithSize[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 
@@ -129,7 +129,7 @@ func (w *WidgetWithPadding[T]) Widget() T {
 	return w.widget.Widget()
 }
 
-func (w *WidgetWithPadding[T]) AddChildren(context *Context, adder *ChildAdder) {
+func (w *WidgetWithPadding[T]) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
 	adder.AddChild(w.Widget())
 }
 

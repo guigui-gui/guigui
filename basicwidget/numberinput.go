@@ -183,7 +183,7 @@ func (n *NumberInput) CommitWithCurrentInputValue() {
 	n.textInput.CommitWithCurrentInputValue()
 }
 
-func (n *NumberInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (n *NumberInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&n.textInput)
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)

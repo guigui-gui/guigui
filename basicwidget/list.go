@@ -92,7 +92,7 @@ func (l *List[T]) updateListItems() {
 	l.list.SetItems(l.baseListItems)
 }
 
-func (l *List[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *List[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.list)
 }
 
@@ -243,7 +243,7 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.style = style
 }
 
-func (l *listItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *listItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if l.item.Content != nil {
 		adder.AddChild(l.item.Content)
 		return

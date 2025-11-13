@@ -26,7 +26,7 @@ type Basic struct {
 	list            basicwidget.List[int]
 }
 
-func (b *Basic) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Basic) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.form)
 }
 

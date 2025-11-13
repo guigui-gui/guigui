@@ -17,7 +17,7 @@ type Toolbar struct {
 	content guigui.WidgetWithSize[*toolbarContent]
 }
 
-func (t *Toolbar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Toolbar) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.panel)
 }
 
@@ -48,7 +48,7 @@ type toolbarContent struct {
 	rightPanelButton basicwidget.Button
 }
 
-func (t *toolbarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *toolbarContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.leftPanelButton)
 	adder.AddChild(&t.rightPanelButton)
 }

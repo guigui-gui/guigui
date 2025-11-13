@@ -42,7 +42,7 @@ func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
 	p.list.Widget().SetCheckmarkIndex(index)
 }
 
-func (p *PopupMenu[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *PopupMenu[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.popup)
 }
 

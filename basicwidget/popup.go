@@ -73,7 +73,7 @@ func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.popup.SetAnimationDuringFade(animateOnFading)
 }
 
-func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Popup) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.popup)
 }
 
@@ -156,7 +156,7 @@ func (p *popup) SetOnClosed(f func(reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
-func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popup) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -329,7 +329,7 @@ func (p *popupContentAndFrame) hasContent() bool {
 	return p.content.hasContent()
 }
 
-func (p *popupContentAndFrame) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popupContentAndFrame) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.content)
 	adder.AddChild(&p.frame)
 }
@@ -361,7 +361,7 @@ func (p *popupContent) hasContent() bool {
 	return p.content != nil
 }
 
-func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}

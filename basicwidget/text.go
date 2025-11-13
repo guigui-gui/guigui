@@ -173,7 +173,7 @@ func (t *Text) resetCachedTextSize() {
 	clear(t.cachedTextSizes[:])
 }
 
-func (t *Text) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Text) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	if t.selectable || t.editable {
 		adder.AddChild(&t.cursor)
 	}

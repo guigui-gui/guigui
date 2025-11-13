@@ -445,12 +445,12 @@ func (a *app) buildWidgets() error {
 
 		// Call AddChildren.
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
+		bounds := widgetBoundsFromWidget(&a.context, widgetState)
 		adder.app = a
 		adder.widget = widget
-		widget.AddChildren(&a.context, &adder)
+		widget.AddChildren(&a.context, bounds, &adder)
 
 		// Call Update.
-		bounds := widgetBoundsFromWidget(&a.context, widgetState)
 		if err := widget.Update(&a.context, bounds); err != nil {
 			return err
 		}

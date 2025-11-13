@@ -34,7 +34,7 @@ type Popups struct {
 	contextMenuPopupPosition image.Point
 }
 
-func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Popups) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	for i := range p.forms {
 		adder.AddChild(&p.forms[i])
 	}
@@ -167,7 +167,7 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 	s.popup = popup
 }
 
-func (s *simplePopupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *simplePopupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.titleText)
 	adder.AddChild(&s.closeButton)
 }

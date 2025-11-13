@@ -134,7 +134,7 @@ func (t *TextInput) Paste() bool {
 	return t.textInput.Paste()
 }
 
-func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *TextInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 }
@@ -327,7 +327,7 @@ func (t *textInput) isFocused(context *guigui.Context) bool {
 	return context.IsFocused(t) || context.IsFocused(&t.text)
 }
 
-func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *textInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {

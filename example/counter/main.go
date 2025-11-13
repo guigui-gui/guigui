@@ -26,7 +26,7 @@ type Root struct {
 	counter int
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.counterText)
 	adder.AddChild(&r.resetButton)
