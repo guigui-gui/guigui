@@ -886,7 +886,7 @@ func (b *baseListContent[T]) Measure(context *guigui.Context, constraints guigui
 		itemConstraints = guigui.FixedWidthConstraints(fixedWidth - 2*RoundedCornerRadius(context))
 	}
 	var size image.Point
-	for i := range b.visibleItems() {
+	for i := range b.abstractList.ItemCount() {
 		item, _ := b.abstractList.ItemByIndex(i)
 		s := item.Content.Measure(context, itemConstraints)
 		size.X = max(size.X, s.X+item.IndentLevel*listItemIndentSize(context))
