@@ -197,6 +197,9 @@ type baseListContent[T comparable] struct {
 	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex  []image.Rectangle
 
+	treeItemCollapsedImage *ebiten.Image
+	treeItemExpandedImage  *ebiten.Image
+
 	prevWidth int
 }
 
@@ -307,6 +310,19 @@ func (b *baseListContent[T]) AddChildren(context *guigui.Context, widgetBounds *
 }
 
 func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	var err error
+	b.treeItemCollapsedImage, err = theResourceImages.Get("keyboard_arrow_right", context.ColorMode())
+	if err != nil {
+		return err
+	}
+	b.treeItemExpandedImage, err = theResourceImages.Get("keyboard_arrow_down", context.ColorMode())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// Record the current position of the selected item.
 	var headToSelectedItem int
 	if idx := b.SelectedItemIndex(); idx >= 0 {
@@ -360,16 +376,10 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 				hasChild = nextItem.IndentLevel > item.IndentLevel
 			}
 			if hasChild {
-				var err error
-				var imgName string
 				if item.Collapsed {
-					imgName = "keyboard_arrow_right"
+					img = b.treeItemCollapsedImage
 				} else {
-					imgName = "keyboard_arrow_down"
-				}
-				img, err = theResourceImages.Get(imgName, context.ColorMode())
-				if err != nil {
-					return err
+					img = b.treeItemExpandedImage
 				}
 			}
 			b.expanderImages[i].SetImage(img)
@@ -419,10 +429,6 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	}
 	b.prevWidth = widgetBounds.Bounds().Dx()
 
-	return nil
-}
-
-func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&b.scrollOverlay, widgetBounds.Bounds())
 	for widget, bounds := range b.itemBoundsForLayoutFromWidget {
 		layouter.LayoutWidget(widget, bounds)
