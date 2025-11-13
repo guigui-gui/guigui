@@ -361,6 +361,8 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 }
 
 func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
+
 	t.background.textInput = t
 
 	t.text.SetEditable(!t.readonly)
@@ -398,8 +400,6 @@ func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 }
 
 func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
-
 	bounds := widgetBounds.Bounds()
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
