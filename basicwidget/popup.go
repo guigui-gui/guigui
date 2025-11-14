@@ -109,6 +109,7 @@ type popup struct {
 	nextContentPosition    image.Point
 	hasNextContentPosition bool
 	openAfterClose         bool
+	onceOpen               bool
 }
 
 func (p *popup) IsOpen() bool {
@@ -167,7 +168,7 @@ func (p *popup) AddChildren(context *guigui.Context, widgetBounds *guigui.Widget
 }
 
 func (p *popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if (p.showing || p.hiding) && p.openingCount > 0 {
+	if (p.showing || p.hiding) && p.openingCount > 0 && p.onceOpen {
 		p.nextContentPosition = widgetBounds.Bounds().Min
 		p.hasNextContentPosition = true
 	} else {
@@ -272,6 +273,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.contentPosition = p.nextContentPosition
 				p.hasNextContentPosition = false
 			}
+			p.onceOpen = true
 		}
 	}
 	if p.hiding {
