@@ -68,7 +68,7 @@ type scrollOverlay struct {
 	draggingStartPosition image.Point
 	draggingStartOffsetX  float64
 	draggingStartOffsetY  float64
-	onceBuilt             bool
+	onceDraw              bool
 
 	barCount int
 }
@@ -114,7 +114,7 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.
 	}
 	s.offsetX = x
 	s.offsetY = y
-	if s.onceBuilt {
+	if s.onceDraw {
 		s.showBars(context, widgetBounds)
 	}
 	guigui.RequestRedraw(s)
@@ -318,8 +318,6 @@ func (s *scrollOverlay) Update(context *guigui.Context, widgetBounds *guigui.Wid
 		s.lastSize = cs
 	}
 
-	s.onceBuilt = true
-
 	return nil
 }
 
@@ -381,6 +379,10 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 }
 
 func (s *scrollOverlay) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	defer func() {
+		s.onceDraw = true
+	}()
+
 	alpha := scrollBarOpacity(s.barCount) * 3 / 4
 	if alpha == 0 {
 		return
