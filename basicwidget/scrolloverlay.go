@@ -311,14 +311,12 @@ func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds
 	return false
 }
 
-func (s *scrollOverlay) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *scrollOverlay) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	cs := widgetBounds.Bounds().Size()
 	if s.lastSize != cs {
 		s.adjustOffset(context, widgetBounds)
 		s.lastSize = cs
 	}
-
-	return nil
 }
 
 func (s *scrollOverlay) showBars(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {

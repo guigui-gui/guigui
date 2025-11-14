@@ -81,13 +81,13 @@ func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 	}
 }
 
-func (s *SegmentedControl[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (s *SegmentedControl[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	for i := range s.buttons {
 		adder.AddChild(&s.buttons[i])
 	}
 }
 
-func (s *SegmentedControl[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *SegmentedControl[T]) Update(context *guigui.Context) error {
 	s.updateButtons(context)
 	return nil
 }

@@ -164,7 +164,6 @@ func (s *Slider) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (s *Slider) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-
 	max := s.abstractNumberInput.MaximumValueBigInt()
 	min := s.abstractNumberInput.MinimumValueBigInt()
 	if max == nil || min == nil {

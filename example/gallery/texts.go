@@ -29,12 +29,12 @@ type Texts struct {
 	sampleText                      basicwidget.Text
 }
 
-func (t *Texts) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Texts) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
 }
 
-func (t *Texts) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *Texts) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())

@@ -87,7 +87,7 @@ func (b *Button) setKeepPressed(keep bool) {
 	b.button.setKeepPressed(keep)
 }
 
-func (b *Button) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *Button) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.button)
 	if b.content != nil {
 		adder.AddChild(b.content)
@@ -96,7 +96,7 @@ func (b *Button) AddChildren(context *guigui.Context, widgetBounds *guigui.Widge
 	adder.AddChild(&b.icon)
 }
 
-func (b *Button) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (b *Button) Update(context *guigui.Context) error {
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
 	} else {

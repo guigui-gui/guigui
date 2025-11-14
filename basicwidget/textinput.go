@@ -134,12 +134,12 @@ func (t *TextInput) Paste() bool {
 	return t.textInput.Paste()
 }
 
-func (t *TextInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 }
 
-func (t *TextInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *TextInput) Update(context *guigui.Context) error {
 	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
@@ -327,7 +327,7 @@ func (t *textInput) isFocused(context *guigui.Context) bool {
 	return context.IsFocused(t) || context.IsFocused(&t.text)
 }
 
-func (t *textInput) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {
@@ -360,27 +360,13 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 	return b
 }
 
-func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
-
+func (t *textInput) Update(context *guigui.Context) error {
 	t.background.textInput = t
 
 	t.text.SetEditable(!t.readonly)
 	t.text.SetSelectable(true)
 	t.text.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.setKeepTailingSpace(!t.text.autoWrap)
-
-	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
-
-	if draw.OverlapsWithRoundedCorner(widgetBounds.Bounds(), RoundedCornerRadius(context), t.textBounds(context, widgetBounds)) {
-		// CustomDraw might be too generic and overkill for this case.
-		context.SetCustomDraw(&t.text, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
-		})
-	} else {
-		context.SetCustomDraw(&t.text, nil)
-	}
 
 	if t.icon.HasImage() {
 		t.iconBackground.textInput = t
@@ -400,7 +386,21 @@ func (t *textInput) Update(context *guigui.Context, widgetBounds *guigui.WidgetB
 }
 
 func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
+	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
+	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
+
 	bounds := widgetBounds.Bounds()
+
+	if draw.OverlapsWithRoundedCorner(bounds, RoundedCornerRadius(context), t.textBounds(context, widgetBounds)) {
+		// CustomDraw might be too generic and overkill for this case.
+		context.SetCustomDraw(&t.text, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
+			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
+		})
+	} else {
+		context.SetCustomDraw(&t.text, nil)
+	}
+
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
 	layouter.LayoutWidget(&t.scrollOverlay, bounds)

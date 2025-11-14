@@ -73,11 +73,11 @@ func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.popup.SetAnimationDuringFade(animateOnFading)
 }
 
-func (p *Popup) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.popup)
 }
 
-func (p *Popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *Popup) Update(context *guigui.Context) error {
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
 	return nil
@@ -157,7 +157,7 @@ func (p *popup) SetOnClosed(f func(reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
-func (p *popup) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -167,8 +167,10 @@ func (p *popup) AddChildren(context *guigui.Context, widgetBounds *guigui.Widget
 	}
 }
 
-func (p *popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if (p.showing || p.hiding) && p.openingCount > 0 && p.onceOpen {
+		// When the popup is fading in/out, keep the current position.
+		// This matters especially when the same popup menu is reopened at a different position.
 		p.nextContentPosition = widgetBounds.Bounds().Min
 		p.hasNextContentPosition = true
 	} else {
@@ -176,14 +178,10 @@ func (p *popup) Update(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		p.nextContentPosition = image.Point{}
 		p.hasNextContentPosition = false
 	}
-
-	p.shadow.SetContentBounds(p.contentBounds(context, widgetBounds))
-
-	return nil
-}
-
-func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	p.contentPosition = widgetBounds.Bounds().Min
 	contentBounds := p.contentBounds(context, widgetBounds)
+	p.shadow.SetContentBounds(contentBounds)
+
 	appBounds := context.AppBounds()
 	layouter.LayoutWidget(&p.blurredBackground, appBounds)
 	layouter.LayoutWidget(&p.shadow, appBounds)
@@ -331,20 +329,16 @@ func (p *popupContentAndFrame) hasContent() bool {
 	return p.content.hasContent()
 }
 
-func (p *popupContentAndFrame) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *popupContentAndFrame) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.content)
 	adder.AddChild(&p.frame)
 }
 
-func (p *popupContentAndFrame) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *popupContentAndFrame) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// CustomDraw might be too generic and overkill for this case.
 	context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
 		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
 	})
-	return nil
-}
-
-func (p *popupContentAndFrame) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&p.content, widgetBounds.Bounds())
 	layouter.LayoutWidget(&p.frame, widgetBounds.Bounds())
 }
@@ -363,7 +357,7 @@ func (p *popupContent) hasContent() bool {
 	return p.content != nil
 }
 
-func (p *popupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}

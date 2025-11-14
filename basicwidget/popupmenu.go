@@ -42,18 +42,17 @@ func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
 	p.list.Widget().SetCheckmarkIndex(index)
 }
 
-func (p *PopupMenu[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *PopupMenu[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.popup)
 }
 
-func (p *PopupMenu[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *PopupMenu[T]) Update(context *guigui.Context) error {
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
 	list.list.SetOnItemSelected(func(index int) {
 		p.popup.SetOpen(context, false)
 		guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
 	})
-	p.list.SetFixedSize(p.contentBounds(context, widgetBounds).Size())
 
 	p.popup.SetContent(&p.list)
 	p.popup.SetCloseByClickingOutside(true)
@@ -62,7 +61,9 @@ func (p *PopupMenu[T]) Update(context *guigui.Context, widgetBounds *guigui.Widg
 }
 
 func (p *PopupMenu[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layouter.LayoutWidget(&p.popup, p.contentBounds(context, widgetBounds))
+	b := p.contentBounds(context, widgetBounds)
+	p.list.SetFixedSize(b.Size())
+	layouter.LayoutWidget(&p.popup, b)
 }
 
 func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {

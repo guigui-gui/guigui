@@ -73,12 +73,12 @@ func (d *DropdownList[T]) updateChildren(context *guigui.Context) {
 	d.button.SetContent(&d.buttonContent)
 }
 
-func (d *DropdownList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&d.button)
 	adder.AddChild(&d.popupMenu)
 }
 
-func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	d.updateChildren(context)
 
 	d.button.SetOnDown(func() {
@@ -90,9 +90,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context, widgetBounds *guigui.W
 	d.popupMenu.SetOnItemSelected(func(index int) {
 		guigui.DispatchEventHandler(d, dropdownListEventItemSelected, index)
 	})
-	if !d.popupMenu.IsOpen() {
-		d.popupMenu.SetCheckmarkIndex(d.SelectedItemIndex())
-	}
+	d.popupMenu.SetCheckmarkIndex(d.SelectedItemIndex())
 
 	return nil
 }
@@ -199,7 +197,7 @@ func (d *dropdownListButtonContent) SetText(text string) {
 	d.text.SetValue(text)
 }
 
-func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if d.content != nil {
 		adder.AddChild(d.content)
 	}
@@ -207,7 +205,7 @@ func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, widgetB
 	adder.AddChild(&d.icon)
 }
 
-func (d *dropdownListButtonContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
 	d.text.SetVerticalAlign(VerticalAlignMiddle)
 
 	img, err := theResourceImages.Get("unfold_more", context.ColorMode())

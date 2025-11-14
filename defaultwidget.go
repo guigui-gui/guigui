@@ -19,10 +19,10 @@ func (*DefaultWidget) Model(key any) any {
 	return nil
 }
 
-func (*DefaultWidget) AddChildren(context *Context, widgetBounds *WidgetBounds, adder *ChildAdder) {
+func (*DefaultWidget) AddChildren(context *Context, adder *ChildAdder) {
 }
 
-func (*DefaultWidget) Update(context *Context, widgetBounds *WidgetBounds) error {
+func (*DefaultWidget) Update(context *Context) error {
 	return nil
 }
 

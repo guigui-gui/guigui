@@ -92,7 +92,7 @@ func (t *Table[T]) updateTableRows() {
 	t.list.SetItems(t.baseListItems)
 }
 
-func (t *Table[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Table[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.list)
 	for i := range t.columnTexts {
 		adder.AddChild(&t.columnTexts[i])
@@ -100,12 +100,24 @@ func (t *Table[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.Wid
 	adder.AddChild(&t.tableHeader)
 }
 
-func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *Table[T]) Update(context *guigui.Context) error {
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
 
 	t.updateTableRows()
+
+	for i := range t.tableRowWidgets {
+		row := &t.tableRowWidgets[i]
+		row.table = t
+	}
+	t.tableHeader.table = t
+
+	return nil
+}
+
+func (t *Table[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
 
 	t.columnWidthsInPixels = adjustSliceSize(t.columnWidthsInPixels, len(t.columns))
 	t.columnLayoutItems = adjustSliceSize(t.columnLayoutItems, len(t.columns))
@@ -127,7 +139,7 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			End:   RoundedCornerRadius(context),
 		},
 	}
-	t.tmpItemBounds = layout.AppendItemBounds(t.tmpItemBounds[:0], context, widgetBounds.Bounds())
+	t.tmpItemBounds = layout.AppendItemBounds(t.tmpItemBounds[:0], context, bounds)
 	for i := range t.columnWidthsInPixels {
 		t.columnWidthsInPixels[i] = t.tmpItemBounds[i].Dx()
 		t.columnWidthsInPixels[i] = max(t.columnWidthsInPixels[i], t.columns[i].MinWidth)
@@ -139,18 +151,6 @@ func (t *Table[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	contentWidth += 2 * RoundedCornerRadius(context)
 	t.list.SetContentWidth(contentWidth)
 
-	for i := range t.tableRowWidgets {
-		row := &t.tableRowWidgets[i]
-		row.table = t
-	}
-
-	t.tableHeader.table = t
-
-	return nil
-}
-
-func (t *Table[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	bounds := widgetBounds.Bounds()
 	layouter.LayoutWidget(&t.list, bounds)
 	layouter.LayoutWidget(&t.tableHeader, bounds)
 
@@ -268,7 +268,7 @@ func (t *tableRowWidget[T]) ensureTexts() {
 	}
 }
 
-func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	t.ensureTexts()
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {
@@ -279,7 +279,7 @@ func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, widgetBounds *g
 	}
 }
 
-func (t *tableRowWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *tableRowWidget[T]) Update(context *guigui.Context) error {
 	l := &guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 	}

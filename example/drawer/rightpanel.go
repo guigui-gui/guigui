@@ -15,22 +15,22 @@ type RightPanel struct {
 	content guigui.WidgetWithSize[*rightPanelContent]
 }
 
-func (r *RightPanel) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (r *RightPanel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.panel)
 }
 
-func (r *RightPanel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (r *RightPanel) Update(context *guigui.Context) error {
 	r.panel.SetStyle(basicwidget.PanelStyleSide)
 	r.panel.SetBorders(basicwidget.PanelBorder{
 		Start: true,
 	})
-	r.content.SetFixedSize(widgetBounds.Bounds().Size())
 	r.panel.SetContent(&r.content)
 
 	return nil
 }
 
 func (r *RightPanel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	r.content.SetFixedSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&r.panel, widgetBounds.Bounds())
 }
 
@@ -40,11 +40,11 @@ type rightPanelContent struct {
 	text basicwidget.Text
 }
 
-func (r *rightPanelContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (r *rightPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&r.text)
 }
 
-func (r *rightPanelContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (r *rightPanelContent) Update(context *guigui.Context) error {
 	r.text.SetValue("Right panel: " + dummyText)
 	r.text.SetAutoWrap(true)
 	r.text.SetSelectable(true)

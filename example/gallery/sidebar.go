@@ -17,21 +17,21 @@ type Sidebar struct {
 	panelContent sidebarContent
 }
 
-func (s *Sidebar) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (s *Sidebar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.panel)
 }
 
-func (s *Sidebar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *Sidebar) Update(context *guigui.Context) error {
 	s.panel.SetStyle(basicwidget.PanelStyleSide)
 	s.panel.SetBorders(basicwidget.PanelBorder{
 		End: true,
 	})
-	s.panelContent.setSize(widgetBounds.Bounds().Size())
 	s.panel.SetContent(&s.panelContent)
 	return nil
 }
 
 func (s *Sidebar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	s.panelContent.setSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&s.panel, widgetBounds.Bounds())
 }
 
@@ -47,11 +47,11 @@ func (s *sidebarContent) setSize(size image.Point) {
 	s.size = size
 }
 
-func (s *sidebarContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (s *sidebarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.list)
 }
 
-func (s *sidebarContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *sidebarContent) Update(context *guigui.Context) error {
 	model := context.Model(s, modelKeyModel).(*Model)
 
 	s.list.SetStyle(basicwidget.ListStyleSidebar)

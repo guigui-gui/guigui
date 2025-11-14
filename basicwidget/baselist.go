@@ -148,12 +148,12 @@ func (b *baseList[T]) ItemYFromIndexForMenu(context *guigui.Context, index int) 
 	return b.content.itemYFromIndexForMenu(context, index)
 }
 
-func (b *baseList[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&b.content)
 	adder.AddChild(&b.frame)
 }
 
-func (b *baseList[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (b *baseList[T]) Update(context *guigui.Context) error {
 	context.SetContainer(b, true)
 	return nil
 }
@@ -196,6 +196,9 @@ type baseListContent[T comparable] struct {
 
 	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex  []image.Rectangle
+
+	treeItemCollapsedImage *ebiten.Image
+	treeItemExpandedImage  *ebiten.Image
 
 	prevWidth int
 }
@@ -291,7 +294,7 @@ func (b *baseListContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (b *baseListContent[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (b *baseListContent[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	b.expanderImages = adjustSliceSize(b.expanderImages, b.abstractList.ItemCount())
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
@@ -306,7 +309,20 @@ func (b *baseListContent[T]) AddChildren(context *guigui.Context, widgetBounds *
 	adder.AddChild(&b.scrollOverlay)
 }
 
-func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (b *baseListContent[T]) Update(context *guigui.Context) error {
+	var err error
+	b.treeItemCollapsedImage, err = theResourceImages.Get("keyboard_arrow_right", context.ColorMode())
+	if err != nil {
+		return err
+	}
+	b.treeItemExpandedImage, err = theResourceImages.Get("keyboard_arrow_down", context.ColorMode())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// Record the current position of the selected item.
 	var headToSelectedItem int
 	if idx := b.SelectedItemIndex(); idx >= 0 {
@@ -360,16 +376,10 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 				hasChild = nextItem.IndentLevel > item.IndentLevel
 			}
 			if hasChild {
-				var err error
-				var imgName string
 				if item.Collapsed {
-					imgName = "keyboard_arrow_right"
+					img = b.treeItemCollapsedImage
 				} else {
-					imgName = "keyboard_arrow_down"
-				}
-				img, err = theResourceImages.Get(imgName, context.ColorMode())
-				if err != nil {
-					return err
+					img = b.treeItemExpandedImage
 				}
 			}
 			b.expanderImages[i].SetImage(img)
@@ -419,10 +429,6 @@ func (b *baseListContent[T]) Update(context *guigui.Context, widgetBounds *guigu
 	}
 	b.prevWidth = widgetBounds.Bounds().Dx()
 
-	return nil
-}
-
-func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&b.scrollOverlay, widgetBounds.Bounds())
 	for widget, bounds := range b.itemBoundsForLayoutFromWidget {
 		layouter.LayoutWidget(widget, bounds)

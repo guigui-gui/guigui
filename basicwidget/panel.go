@@ -70,11 +70,11 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.panel.SetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
-func (p *Panel) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *Panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&p.panel)
 }
 
-func (p *Panel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *Panel) Update(context *guigui.Context) error {
 	context.SetContainer(&p.panel, true)
 	return nil
 }
@@ -140,7 +140,7 @@ func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.isNextOffsetDelta = true
 }
 
-func (p *panel) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}
@@ -163,37 +163,36 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 	}
 }
 
-func (p *panel) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *panel) Update(context *guigui.Context) error {
 	if p.content == nil {
 		return nil
 	}
-
-	contentSize := p.contentSize(context, widgetBounds)
-	if p.hasNextOffset {
-		if p.isNextOffsetDelta {
-			p.scrollOverlay.SetOffsetByDelta(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
-		} else {
-			p.scrollOverlay.SetOffset(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
-		}
-		p.hasNextOffset = false
-		p.nextOffsetX = 0
-		p.nextOffsetY = 0
-	}
-
-	p.scrollOverlay.SetContentSize(context, widgetBounds, contentSize)
 	p.border.scrollOverlay = &p.scrollOverlay
-
 	return nil
 }
 
 func (p *panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
+		contentSize := p.contentSize(context, widgetBounds)
+		if p.hasNextOffset {
+			if p.isNextOffsetDelta {
+				p.scrollOverlay.SetOffsetByDelta(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
+			} else {
+				p.scrollOverlay.SetOffset(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
+			}
+			p.hasNextOffset = false
+			p.nextOffsetX = 0
+			p.nextOffsetY = 0
+		}
+
+		p.scrollOverlay.SetContentSize(context, widgetBounds, contentSize)
+
 		offsetX, offsetY := p.scrollOverlay.Offset()
 		pt := bounds.Min.Add(image.Pt(int(offsetX), int(offsetY)))
 		layouter.LayoutWidget(p.content, image.Rectangle{
 			Min: pt,
-			Max: pt.Add(p.contentSize(context, widgetBounds)),
+			Max: pt.Add(contentSize),
 		})
 	}
 	layouter.LayoutWidget(&p.scrollOverlay, bounds)

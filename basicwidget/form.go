@@ -40,7 +40,7 @@ func (f *Form) SetItems(items []FormItem) {
 	f.items = append(f.items, items...)
 }
 
-func (f *Form) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	for _, item := range f.items {
 		if item.PrimaryWidget != nil {
 			adder.AddChild(item.PrimaryWidget)
@@ -51,15 +51,12 @@ func (f *Form) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetB
 	}
 }
 
-func (f *Form) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (f *Form) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	f.cachedItemBounds = slices.Delete(f.cachedItemBounds, 0, len(f.cachedItemBounds))
 	clear(f.cachedContentBounds)
 	pt := widgetBounds.Bounds().Min
 	f.cachedItemBounds, f.cachedContentBounds = f.appendItemBounds(context, f.cachedItemBounds, f.cachedContentBounds, pt, widgetBounds.Bounds().Dx())
-	return nil
-}
 
-func (f *Form) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	for widget, bounds := range f.cachedContentBounds {
 		layouter.LayoutWidget(widget, bounds)
 	}

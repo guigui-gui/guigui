@@ -28,12 +28,12 @@ type Tables struct {
 	tableRows []basicwidget.TableRow[int]
 }
 
-func (t *Tables) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Tables) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.table)
 	adder.AddChild(&t.configForm)
 }
 
-func (t *Tables) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *Tables) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)

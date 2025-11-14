@@ -445,25 +445,31 @@ func (a *app) buildWidgets() error {
 
 		// Call AddChildren.
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
-		bounds := widgetBoundsFromWidget(&a.context, widgetState)
 		adder.app = a
 		adder.widget = widget
-		widget.AddChildren(&a.context, bounds, &adder)
+		widget.AddChildren(&a.context, &adder)
 
 		// Call Update.
-		if err := widget.Update(&a.context, bounds); err != nil {
+		if err := widget.Update(&a.context); err != nil {
 			return err
 		}
-
-		// Call Layout.
-		widget.LayoutChildren(&a.context, bounds, &layouter)
-
-		a.visitedZs[widgetState.z()] = struct{}{}
 
 		return nil
 	}); err != nil {
 		return err
 	}
+
+	_ = traverseWidget(a.root, func(widget Widget) error {
+		widgetState := widget.widgetState()
+
+		// Call Layout.
+		bounds := widgetBoundsFromWidget(&a.context, widgetState)
+		widget.LayoutChildren(&a.context, bounds, &layouter)
+
+		a.visitedZs[widgetState.z()] = struct{}{}
+
+		return nil
+	})
 
 	a.zs = slices.Delete(a.zs, 0, len(a.zs))
 	a.zs = slices.AppendSeq(a.zs, maps.Keys(a.visitedZs))

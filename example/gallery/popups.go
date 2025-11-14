@@ -34,7 +34,7 @@ type Popups struct {
 	contextMenuPopupPosition image.Point
 }
 
-func (p *Popups) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	for i := range p.forms {
 		adder.AddChild(&p.forms[i])
 	}
@@ -42,7 +42,7 @@ func (p *Popups) AddChildren(context *guigui.Context, widgetBounds *guigui.Widge
 	adder.AddChild(&p.contextMenuPopup)
 }
 
-func (p *Popups) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *Popups) Update(context *guigui.Context) error {
 	p.blurBackgroundText.SetValue("Blur background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
@@ -167,12 +167,12 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 	s.popup = popup
 }
 
-func (s *simplePopupContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (s *simplePopupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&s.titleText)
 	adder.AddChild(&s.closeButton)
 }
 
-func (s *simplePopupContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *simplePopupContent) Update(context *guigui.Context) error {
 	s.titleText.SetValue("Hello!")
 	s.titleText.SetBold(true)
 

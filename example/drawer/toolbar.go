@@ -17,22 +17,22 @@ type Toolbar struct {
 	content guigui.WidgetWithSize[*toolbarContent]
 }
 
-func (t *Toolbar) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *Toolbar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.panel)
 }
 
-func (t *Toolbar) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *Toolbar) Update(context *guigui.Context) error {
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
 	t.panel.SetBorders(basicwidget.PanelBorder{
 		Bottom: true,
 	})
-	t.content.SetFixedSize(widgetBounds.Bounds().Size())
 	t.panel.SetContent(&t.content)
 
 	return nil
 }
 
 func (t *Toolbar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	t.content.SetFixedSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&t.panel, widgetBounds.Bounds())
 }
 
@@ -48,12 +48,12 @@ type toolbarContent struct {
 	rightPanelButton basicwidget.Button
 }
 
-func (t *toolbarContent) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (t *toolbarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&t.leftPanelButton)
 	adder.AddChild(&t.rightPanelButton)
 }
 
-func (t *toolbarContent) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *toolbarContent) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	if model.IsLeftPanelOpen() {

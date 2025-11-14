@@ -92,11 +92,11 @@ func (l *List[T]) updateListItems() {
 	l.list.SetItems(l.baseListItems)
 }
 
-func (l *List[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (l *List[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	adder.AddChild(&l.list)
 }
 
-func (l *List[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (l *List[T]) Update(context *guigui.Context) error {
 	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
@@ -243,7 +243,7 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.style = style
 }
 
-func (l *listItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, adder *guigui.ChildAdder) {
+func (l *listItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	if l.item.Content != nil {
 		adder.AddChild(l.item.Content)
 		return
@@ -251,7 +251,7 @@ func (l *listItemWidget[T]) AddChildren(context *guigui.Context, widgetBounds *g
 	adder.AddChild(&l.text)
 }
 
-func (l *listItemWidget[T]) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (l *listItemWidget[T]) Update(context *guigui.Context) error {
 	l.text.SetValue(l.item.Text)
 	l.text.SetVerticalAlign(VerticalAlignMiddle)
 	return nil
