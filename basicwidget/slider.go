@@ -155,7 +155,7 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 	s.abstractNumberInput.SetMaximumValueUint64(s, maximum)
 }
 
-func (s *Slider) Update(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (s *Slider) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if hovered := s.isThumbHovered(context, widgetBounds); s.prevThumbHovered != hovered {
 		s.prevThumbHovered = hovered
 		guigui.RequestRedraw(s)
@@ -164,6 +164,7 @@ func (s *Slider) Update(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 }
 
 func (s *Slider) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+
 	max := s.abstractNumberInput.MaximumValueBigInt()
 	min := s.abstractNumberInput.MinimumValueBigInt()
 	if max == nil || min == nil {
