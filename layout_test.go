@@ -25,7 +25,7 @@ func (d *dummyWidget) Measure(context *guigui.Context, constraints guigui.Constr
 }
 
 func TestLinearLayoutMeasure(t *testing.T) {
-	l := &guigui.LinearLayout{
+	l := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items: []guigui.LinearLayoutItem{
 			{
@@ -41,7 +41,7 @@ func TestLinearLayoutMeasure(t *testing.T) {
 	}
 
 	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
-		l2 := &guigui.LinearLayout{
+		l2 := guigui.LinearLayout{
 			Direction: dir,
 			Items: []guigui.LinearLayoutItem{
 				{
@@ -57,7 +57,7 @@ func TestLinearLayoutMeasure(t *testing.T) {
 
 func TestLinearLayoutMeasureFlexibleSize(t *testing.T) {
 	for _, dir := range []guigui.LayoutDirection{guigui.LayoutDirectionHorizontal, guigui.LayoutDirectionVertical} {
-		l := &guigui.LinearLayout{
+		l := guigui.LinearLayout{
 			Direction: dir,
 			Gap:       10,
 			Items: []guigui.LinearLayoutItem{
@@ -121,7 +121,7 @@ func TestLinearLayoutMeasureIgnoreFlexibleSize(t *testing.T) {
 		} else {
 			opDir = guigui.LayoutDirectionHorizontal
 		}
-		l := &guigui.LinearLayout{
+		l := guigui.LinearLayout{
 			Direction: dir,
 			Gap:       10,
 			Items: []guigui.LinearLayoutItem{
@@ -158,7 +158,7 @@ func TestLinearLayoutMeasureIgnoreFlexibleSize(t *testing.T) {
 }
 
 func TestLinearLayoutMeasureFlexibleSizeWithWidgetWithoutConstraints(t *testing.T) {
-	l := &guigui.LinearLayout{
+	l := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       10,
 		Items: []guigui.LinearLayoutItem{

@@ -280,7 +280,7 @@ func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, adder *guigui.C
 }
 
 func (t *tableRowWidget[T]) Update(context *guigui.Context) error {
-	l := &guigui.LinearLayout{
+	l := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 	}
 	for i := range t.table.columnWidthsInPixels {
