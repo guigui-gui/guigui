@@ -239,6 +239,7 @@ func (a *app) Update() error {
 		return err
 	}
 	a.context.inBuild = false
+	a.layoutWidgets()
 	a.updateHitWidgets()
 
 	// Handle user inputs.
@@ -287,6 +288,7 @@ func (a *app) Update() error {
 		return err
 	}
 	a.context.inBuild = false
+	a.layoutWidgets()
 	a.updateHitWidgets()
 
 	if !a.cursorShape() {
@@ -421,11 +423,6 @@ func (a *app) buildWidgets() error {
 
 	a.buildCount++
 
-	clear(a.visitedZs)
-	if a.visitedZs == nil {
-		a.visitedZs = map[int]struct{}{}
-	}
-
 	a.root.widgetState().builtAt = a.buildCount
 
 	// Clear event handlers to prevent unexpected handlings.
@@ -436,7 +433,6 @@ func (a *app) buildWidgets() error {
 	})
 
 	var adder ChildAdder
-	var layouter ChildLayouter
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 
@@ -459,6 +455,16 @@ func (a *app) buildWidgets() error {
 		return err
 	}
 
+	return nil
+}
+
+func (a *app) layoutWidgets() {
+	clear(a.visitedZs)
+	if a.visitedZs == nil {
+		a.visitedZs = map[int]struct{}{}
+	}
+
+	var layouter ChildLayouter
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 
@@ -474,8 +480,6 @@ func (a *app) buildWidgets() error {
 	a.zs = slices.Delete(a.zs, 0, len(a.zs))
 	a.zs = slices.AppendSeq(a.zs, maps.Keys(a.visitedZs))
 	slices.Sort(a.zs)
-
-	return nil
 }
 
 func (a *app) updateHitWidgets() {
