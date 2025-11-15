@@ -56,7 +56,7 @@ func toggleMaxCount() int {
 }
 
 func (t *Toggle) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if context.IsEnabled(t) && t.isHovered(context) && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+	if context.IsEnabled(t) && widgetBounds.IsHitAtCursor() && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		context.SetFocused(t, true)
 		t.pressed = true
 		t.SetValue(!t.value)
@@ -73,7 +73,7 @@ func (t *Toggle) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		t.count--
 		guigui.RequestRedraw(t)
 	}
-	if hovered := t.isHovered(context); t.prevHovered != hovered {
+	if hovered := widgetBounds.IsHitAtCursor(); t.prevHovered != hovered {
 		t.prevHovered = hovered
 		guigui.RequestRedraw(t)
 	}
@@ -81,7 +81,7 @@ func (t *Toggle) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (t *Toggle) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	if t.canPress(context) || t.pressed {
+	if t.canPress(context, widgetBounds) || t.pressed {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
@@ -95,9 +95,9 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	cm := context.ColorMode()
 	backgroundColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
 	thumbColor := draw.ThumbColor(context.ColorMode(), context.IsEnabled(t))
-	if t.isActive(context) {
+	if t.isActive(context, widgetBounds) {
 		thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
-	} else if t.canPress(context) {
+	} else if t.canPress(context, widgetBounds) {
 		thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.575)
 	}
 
@@ -144,16 +144,12 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	t.onceRendered = true
 }
 
-func (t *Toggle) canPress(context *guigui.Context) bool {
-	return context.IsEnabled(t) && t.isHovered(context) && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+func (t *Toggle) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(t) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
 }
 
-func (t *Toggle) isHovered(context *guigui.Context) bool {
-	return context.IsWidgetHitAtCursor(t)
-}
-
-func (t *Toggle) isActive(context *guigui.Context) bool {
-	return context.IsEnabled(t) && t.isHovered(context) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && t.pressed
+func (t *Toggle) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(t) && widgetBounds.IsHitAtCursor() && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && t.pressed
 }
 
 func (t *Toggle) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

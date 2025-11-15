@@ -367,7 +367,7 @@ func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *gui
 }
 
 func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if context.IsWidgetHitAtCursor(p) {
+	if widgetBounds.IsHitAtCursor() {
 		return guigui.AbortHandlingInputByWidget(p)
 	}
 	return guigui.HandleInputResult{}

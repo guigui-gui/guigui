@@ -341,10 +341,6 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 	RequestRedraw(widget)
 }
 
-func (c *Context) IsWidgetHitAtCursor(widget Widget) bool {
-	return c.app.isWidgetHitAtCursor(widget)
-}
-
 func (c *Context) SetCustomDraw(widget Widget, customDraw CustomDrawFunc) {
 	widget.widgetState().customDraw = customDraw
 }

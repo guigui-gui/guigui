@@ -24,7 +24,7 @@ type Popups struct {
 	showButton                   basicwidget.Button
 
 	contextMenuPopupText          basicwidget.Text
-	contextMenuPopupClickHereText basicwidget.Text
+	contextMenuPopupClickHereText popupClickHereText
 
 	simplePopup        basicwidget.Popup
 	simplePopupContent guigui.WidgetWithSize[*simplePopupContent]
@@ -65,7 +65,7 @@ func (p *Popups) Update(context *guigui.Context) error {
 	})
 
 	p.contextMenuPopupText.SetValue("Context menu")
-	p.contextMenuPopupClickHereText.SetValue("Click here by the right button")
+	p.contextMenuPopupClickHereText.Text().SetValue("Click here by the right button")
 
 	p.forms[1].SetItems([]basicwidget.FormItem{
 		{
@@ -103,6 +103,11 @@ func (p *Popups) Update(context *guigui.Context) error {
 		},
 	)
 	// A context menu's position is updated at HandlePointingInput.
+
+	p.contextMenuPopupClickHereText.SetOnClicked(func(pt image.Point) {
+		p.contextMenuPopupPosition = pt
+		p.contextMenuPopup.SetOpen(context, true)
+	})
 
 	return nil
 }
@@ -143,11 +148,38 @@ func (p *Popups) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
 }
 
-func (p *Popups) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+const popupClickHereTextEventClicked = "clicked"
+
+type popupClickHereText struct {
+	guigui.DefaultWidget
+
+	text basicwidget.Text
+}
+
+func (p *popupClickHereText) Text() *basicwidget.Text {
+	return &p.text
+}
+
+func (b *popupClickHereText) SetOnClicked(f func(pt image.Point)) {
+	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
+}
+
+func (p *popupClickHereText) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(&p.text)
+}
+
+func (b *popupClickHereText) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&b.text, widgetBounds.Bounds())
+}
+
+func (b *popupClickHereText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return b.text.Measure(context, constraints)
+}
+
+func (p *popupClickHereText) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		if context.IsWidgetHitAtCursor(&p.contextMenuPopupClickHereText) {
-			p.contextMenuPopupPosition = image.Pt(ebiten.CursorPosition())
-			p.contextMenuPopup.SetOpen(context, true)
+		if widgetBounds.IsHitAtCursor() {
+			guigui.DispatchEventHandler(p, popupClickHereTextEventClicked, image.Pt(ebiten.CursorPosition()))
 			return guigui.HandleInputByWidget(p)
 		}
 	}

@@ -56,7 +56,7 @@ func (b *baseButton) setPressed(pressed bool) {
 }
 
 func (b *baseButton) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if hovered := b.isHovered(context); b.prevHovered != hovered {
+	if hovered := widgetBounds.IsHitAtCursor(); b.prevHovered != hovered {
 		b.prevHovered = hovered
 		guigui.RequestRedraw(b)
 	}
@@ -64,7 +64,7 @@ func (b *baseButton) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 }
 
 func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if b.isHovered(context) {
+	if widgetBounds.IsHitAtCursor() {
 		// IsMouseButtonJustPressed and IsMouseButtonJustReleased can be true at the same time as of Ebitengine v2.9.
 		// Check both.
 		var justPressedOrReleased bool
@@ -104,7 +104,7 @@ func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *
 }
 
 func (b *baseButton) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	if (b.canPress(context) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && !b.keepPressed {
+	if (b.canPress(context, widgetBounds) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && !b.keepPressed {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
@@ -119,51 +119,47 @@ func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	cm := context.ColorMode()
 	backgroundColor := draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
-		if b.isPressed(context) {
+		if b.isPressed(context, widgetBounds) {
 			if b.useAccentColor {
 				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.875, 0.5)
 			} else {
 				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.25)
 			}
-		} else if b.canPress(context) {
+		} else if b.canPress(context, widgetBounds) {
 			backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
 		}
 	}
 
 	r := b.radius(context, widgetBounds)
 	border := !b.borderInvisible
-	if context.IsEnabled(b) && (b.isHovered(context) || b.keepPressed) {
+	if context.IsEnabled(b) && (widgetBounds.IsHitAtCursor() || b.keepPressed) {
 		border = true
 	}
 	bounds := widgetBounds.Bounds()
-	if border || b.isPressed(context) {
+	if border || b.isPressed(context, widgetBounds) {
 		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, backgroundColor, r, b.sharpenCorners)
 	}
 
 	if border {
 		borderType := draw.RoundedRectBorderTypeOutset
-		if b.isPressed(context) {
+		if b.isPressed(context, widgetBounds) {
 			borderType = draw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := draw.BorderColors(context.ColorMode(), borderType, b.useAccentColor && b.isPressed(context) && context.IsEnabled(b))
+		clr1, clr2 := draw.BorderColors(context.ColorMode(), borderType, b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
 		draw.DrawRoundedRectBorderWithSharpenCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, b.sharpenCorners)
 	}
 }
 
-func (b *baseButton) canPress(context *guigui.Context) bool {
-	return context.IsEnabled(b) && b.isHovered(context) && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !b.keepPressed
+func (b *baseButton) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(b) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !b.keepPressed
 }
 
-func (b *baseButton) isHovered(context *guigui.Context) bool {
-	return context.IsWidgetHitAtCursor(b)
+func (b *baseButton) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(b) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && widgetBounds.IsHitAtCursor() && (b.pressed || b.pairedButton != nil && b.pairedButton.pressed)
 }
 
-func (b *baseButton) isActive(context *guigui.Context) bool {
-	return context.IsEnabled(b) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && b.isHovered(context) && (b.pressed || b.pairedButton != nil && b.pairedButton.pressed)
-}
-
-func (b *baseButton) isPressed(context *guigui.Context) bool {
-	return context.IsEnabled(b) && b.isActive(context) || b.keepPressed
+func (b *baseButton) isPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(b) && b.isActive(context, widgetBounds) || b.keepPressed
 }
 
 func (b *baseButton) setKeepPressed(keep bool) {

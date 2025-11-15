@@ -17,3 +17,7 @@ func (w *WidgetBounds) Bounds() image.Rectangle {
 func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 	return w.context.visibleBounds(w.widgetState)
 }
+
+func (w *WidgetBounds) IsHitAtCursor() bool {
+	return w.context.app.isWidgetHitAtCursor(w.widgetState)
+}

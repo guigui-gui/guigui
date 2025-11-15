@@ -538,7 +538,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 	}
 
 	b.hoveredItemIndexPlus1 = 0
-	if context.IsWidgetHitAtCursor(b) {
+	if widgetBounds.IsHitAtCursor() {
 		cp := image.Pt(ebiten.CursorPosition())
 		listBounds := widgetBounds.Bounds()
 		for i := range b.visibleItems() {

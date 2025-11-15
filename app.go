@@ -715,8 +715,7 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 	screen.DrawImage(a.debugScreen, nil)
 }
 
-func (a *app) isWidgetHitAtCursor(widget Widget) bool {
-	widgetState := widget.widgetState()
+func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 	if !widgetState.isInTree(a.buildCount) {
 		return false
 	}

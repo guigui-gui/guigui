@@ -140,7 +140,7 @@ func adjustedWheel() (float64, float64) {
 }
 
 func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if !context.IsWidgetHitAtCursor(s) {
+	if !widgetBounds.IsHitAtCursor() {
 		return false
 	}
 	if !s.isBarVisible(context, widgetBounds) {
@@ -156,7 +156,7 @@ func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBound
 // This is becausethe scroll of the widget that is closest to the leaf in the tree should be handled first.
 // If scrollOverlay is treated as an independent widget, the input handling order would become counterintuitive.
 func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	hovered := context.IsWidgetHitAtCursor(s)
+	hovered := widgetBounds.IsHitAtCursor()
 	if hovered {
 		dx, dy := adjustedWheel()
 		s.lastWheelX = dx
@@ -297,7 +297,7 @@ func (s *scrollOverlay) isBarVisible(context *guigui.Context, widgetBounds *guig
 }
 
 func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if !context.IsWidgetHitAtCursor(s) {
+	if !widgetBounds.IsHitAtCursor() {
 		return false
 	}
 	pt := image.Pt(ebiten.CursorPosition())
