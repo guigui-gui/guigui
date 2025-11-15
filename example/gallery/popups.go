@@ -47,7 +47,7 @@ func (p *Popups) Update(context *guigui.Context) error {
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
 	p.showButton.SetOnUp(func() {
-		p.simplePopup.SetOpen(context, true)
+		p.simplePopup.SetOpen(true)
 	})
 
 	p.forms[0].SetItems([]basicwidget.FormItem{
@@ -106,7 +106,7 @@ func (p *Popups) Update(context *guigui.Context) error {
 
 	p.contextMenuPopupClickHereText.SetOnClicked(func(pt image.Point) {
 		p.contextMenuPopupPosition = pt
-		p.contextMenuPopup.SetOpen(context, true)
+		p.contextMenuPopup.SetOpen(true)
 	})
 
 	return nil
@@ -210,7 +210,7 @@ func (s *simplePopupContent) Update(context *guigui.Context) error {
 
 	s.closeButton.SetText("Close")
 	s.closeButton.SetOnUp(func() {
-		s.popup.SetOpen(context, false)
+		s.popup.SetOpen(false)
 	})
 
 	return nil

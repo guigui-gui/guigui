@@ -45,8 +45,8 @@ type Popup struct {
 	popup popup
 }
 
-func (p *Popup) SetOpen(context *guigui.Context, open bool) {
-	p.popup.SetOpen(context, open)
+func (p *Popup) SetOpen(open bool) {
+	p.popup.SetOpen(open)
 }
 
 func (p *Popup) IsOpen() bool {
@@ -98,6 +98,8 @@ type popup struct {
 	shadow            popupShadow
 	contentAndFrame   popupContentAndFrame
 
+	toOpen                 bool
+	toClose                bool
 	openingCount           int
 	showing                bool
 	hiding                 bool
@@ -112,7 +114,7 @@ type popup struct {
 }
 
 func (p *popup) IsOpen() bool {
-	return p.showing || p.hiding || p.openingCount > 0
+	return p.showing || p.hiding || p.openingCount > 0 || p.toOpen
 }
 
 func (p *popup) SetContent(widget guigui.Widget) {
@@ -207,20 +209,13 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 	return guigui.AbortHandlingInputByWidget(p)
 }
 
-func (p *popup) SetOpen(context *guigui.Context, open bool) {
+func (p *popup) SetOpen(open bool) {
 	if open {
-		if p.showing {
-			return
-		}
-		if p.openingCount > 0 {
-			p.close(context, PopupClosedReasonReopen)
-			p.openAfterClose = true
-			return
-		}
-		p.showing = true
-		p.hiding = false
+		p.toOpen = true
+		p.toClose = false
 	} else {
-		p.close(context, PopupClosedReasonFuncCall)
+		p.toOpen = false
+		p.toClose = true
 	}
 }
 
@@ -258,6 +253,22 @@ func (p *popup) backgroundPassThrough() bool {
 }
 
 func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if p.toOpen {
+		if !p.showing {
+			if p.openingCount > 0 {
+				p.close(context, PopupClosedReasonReopen)
+				p.openAfterClose = true
+			} else {
+				p.showing = true
+				p.hiding = false
+			}
+		}
+	} else if p.toClose {
+		p.close(context, PopupClosedReasonFuncCall)
+	}
+	p.toOpen = false
+	p.toClose = false
+
 	if p.showing {
 		if p.openingCount < popupMaxOpeningCount() {
 			p.openingCount += 3
@@ -289,7 +300,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 					p.contentPosition = p.nextContentPosition
 					p.hasNextContentPosition = false
 				}
-				p.SetOpen(context, true)
+				p.SetOpen(true)
 				p.openAfterClose = false
 			}
 		}

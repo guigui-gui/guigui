@@ -82,7 +82,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	d.updateChildren(context)
 
 	d.button.SetOnDown(func() {
-		d.popupMenu.SetOpen(context, true)
+		d.popupMenu.SetOpen(true)
 	})
 	d.button.setKeepPressed(d.popupMenu.IsOpen())
 	d.button.SetIconAlign(IconAlignEnd)

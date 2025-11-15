@@ -50,7 +50,7 @@ func (p *PopupMenu[T]) Update(context *guigui.Context) error {
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
 	list.list.SetOnItemSelected(func(index int) {
-		p.popup.SetOpen(context, false)
+		p.popup.SetOpen(false)
 		guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
 	})
 
@@ -97,8 +97,8 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 	return r
 }
 
-func (p *PopupMenu[T]) SetOpen(context *guigui.Context, open bool) {
-	p.popup.SetOpen(context, open)
+func (p *PopupMenu[T]) SetOpen(open bool) {
+	p.popup.SetOpen(open)
 }
 
 func (p *PopupMenu[T]) IsOpen() bool {
