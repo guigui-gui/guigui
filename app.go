@@ -731,19 +731,20 @@ func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 		return false
 	}
 
+	z := widgetState.z()
+
 	// hitWidgets are ordered by descending z values.
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
 	for _, wz := range a.maybeHitWidgets {
 		z1 := wz.z
-		z2 := widgetState.z()
-		if z1 > z2 {
+		if z1 > z {
 			// w overlaps widget at point.
 			if wz.widget.widgetState().isVisible() && !wz.widget.widgetState().passThrough {
 				return false
 			}
 			continue
 		}
-		if z1 < z2 {
+		if z1 < z {
 			// The same z value no longer exists.
 			return false
 		}
