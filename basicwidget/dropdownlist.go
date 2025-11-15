@@ -35,6 +35,8 @@ type DropdownList[T comparable] struct {
 	items          []DropdownListItem[T]
 	popupMenuItems []PopupMenuItem[T]
 
+	indexAtOpen int
+
 	onDown                  func()
 	onPopupMenuItemSelected func(index int)
 }
@@ -87,6 +89,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	if d.onDown == nil {
 		d.onDown = func() {
 			d.popupMenu.SetOpen(true)
+			d.indexAtOpen = d.popupMenu.SelectedItemIndex()
 		}
 	}
 	d.button.SetOnDown(d.onDown)
@@ -99,7 +102,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context) error {
 		}
 	}
 	d.popupMenu.SetOnItemSelected(d.onPopupMenuItemSelected)
-	d.popupMenu.SetCheckmarkIndex(d.SelectedItemIndex())
+	d.popupMenu.SetCheckmarkIndex(d.indexAtOpen)
 
 	return nil
 }
