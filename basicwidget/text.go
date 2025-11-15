@@ -252,8 +252,12 @@ func (t *Text) SetValue(text string) {
 
 	// When a user is editing, the text should not be changed.
 	// Update the actual value later.
-	t.nextText = text
-	t.nextTextSet = true
+	if t.editable {
+		t.nextText = text
+		t.nextTextSet = true
+	} else {
+		t.setText(text)
+	}
 	t.resetCachedTextSize()
 }
 
