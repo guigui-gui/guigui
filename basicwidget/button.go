@@ -109,7 +109,7 @@ func (b *Button) Update(context *guigui.Context) error {
 
 func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	var yOffset int
-	if widgetBounds.IsHitAtCursor() {
+	if b.button.isPressed(context, widgetBounds) {
 		yOffset = int(0.5 * context.Scale())
 	} else {
 		yOffset = -int(0.5 * context.Scale())
