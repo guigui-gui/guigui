@@ -242,23 +242,26 @@ func (c *Context) SetFocused(widget Widget, focused bool) {
 	}
 }
 
-func (c *Context) focus(widget Widget) {
+func (c *Context) resolveFocusedWidget(widget Widget) *widgetState {
 	ws := widget.widgetState()
-	if !ws.isVisible() {
-		return
+	for {
+		if !c.canHaveFocus(ws) {
+			return nil
+		}
+		if ws.focusDelegation == nil {
+			return ws
+		}
+		ws = ws.focusDelegation
 	}
-	if !ws.isEnabled() {
+}
+
+func (c *Context) focus(widget Widget) {
+	ws := c.resolveFocusedWidget(widget)
+	if c.app.focusedWidgetState == ws {
 		return
 	}
 
-	if !ws.isInTree(c.app.buildCount) {
-		return
-	}
-	if c.app.focusedWidgetState == widget.widgetState() {
-		return
-	}
-
-	c.app.focusWidget(widget.widgetState())
+	c.app.focusWidget(ws)
 
 	// Rerender everything when a focus changes.
 	// A widget including a focused widget might be affected.
@@ -276,11 +279,11 @@ func (c *Context) blur(widget Widget) {
 			return nil
 		}
 		for ; w != nil && w.widgetState() != nil; w = w.widgetState().parent {
-			if !c.canHaveFocus(w) {
-				continue
+			if ws := c.resolveFocusedWidget(w); ws != nil {
+				// TODO: What if ws is the same as the current focused widget?
+				c.app.focusWidget(ws)
+				break
 			}
-			c.app.focusWidget(w.widgetState())
-			break
 		}
 		unfocused = true
 		return skipTraverse
@@ -292,13 +295,12 @@ func (c *Context) blur(widget Widget) {
 	}
 }
 
-func (c *Context) canHaveFocus(widget Widget) bool {
-	widgetState := widget.widgetState()
-	return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
+func (c *Context) canHaveFocus(widgetState *widgetState) bool {
+	return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible() && widgetState.isEnabled()
 }
 
 func (c *Context) IsFocused(widget Widget) bool {
-	return c.canHaveFocus(widget) && c.app.focusedWidgetState == widget.widgetState()
+	return c.canHaveFocus(widget.widgetState()) && c.app.focusedWidgetState == widget.widgetState()
 }
 
 func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
@@ -430,4 +432,13 @@ func (c *Context) SetContainer(widget Widget, container bool) {
 
 func (c *Context) SetFloat(widget Widget, float bool) {
 	widget.widgetState().float = float
+}
+
+func (c *Context) DelegateFocus(from Widget, to Widget) {
+	fromWS := from.widgetState()
+	toWS := to.widgetState()
+	if fromWS.focusDelegation == toWS {
+		return
+	}
+	fromWS.focusDelegation = toWS
 }

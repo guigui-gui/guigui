@@ -106,6 +106,7 @@ type widgetState struct {
 	eventDispatched bool
 	container       bool
 	float           bool
+	focusDelegation *widgetState
 
 	offscreen *ebiten.Image
 

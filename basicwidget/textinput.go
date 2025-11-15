@@ -143,11 +143,7 @@ func (t *TextInput) Update(context *guigui.Context) error {
 	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
-	guigui.SetOnFocusChanged(t, func(focused bool) {
-		if focused {
-			context.SetFocused(&t.textInput.text, true)
-		}
-	})
+	context.DelegateFocus(t, &t.textInput.text)
 	return nil
 }
 
@@ -373,14 +369,8 @@ func (t *textInput) Update(context *guigui.Context) error {
 	}
 
 	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
-
 	context.SetPassThrough(&t.frame, true)
-
-	guigui.SetOnFocusChanged(t, func(focused bool) {
-		if focused {
-			context.SetFocused(&t.text, true)
-		}
-	})
+	context.DelegateFocus(t, &t.text)
 
 	return nil
 }
