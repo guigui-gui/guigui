@@ -38,6 +38,10 @@ type NumberInput struct {
 	downButton Button
 
 	abstractNumberInput abstractNumberInput
+
+	onTextInputValueChanged func(value string, committed bool)
+	onUpButtonDown          func()
+	onDownButtonDown        func()
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -202,9 +206,12 @@ func (n *NumberInput) Update(context *guigui.Context) error {
 	n.textInput.SetHorizontalAlign(HorizontalAlignRight)
 	n.textInput.SetTabular(true)
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
-	n.textInput.SetOnValueChanged(func(text string, committed bool) {
-		n.abstractNumberInput.SetString(n, text, false, committed)
-	})
+	if n.onTextInputValueChanged == nil {
+		n.onTextInputValueChanged = func(text string, committed bool) {
+			n.abstractNumberInput.SetString(n, text, false, committed)
+		}
+	}
+	n.textInput.SetOnValueChanged(n.onTextInputValueChanged)
 
 	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
 	if err != nil {
@@ -221,9 +228,12 @@ func (n *NumberInput) Update(context *guigui.Context) error {
 		LowerEnd:   true,
 	})
 	n.upButton.setPairedButton(&n.downButton)
-	n.upButton.setOnRepeat(func() {
-		n.increment()
-	})
+	if n.onUpButtonDown == nil {
+		n.onUpButtonDown = func() {
+			n.increment()
+		}
+	}
+	n.upButton.setOnRepeat(n.onUpButtonDown)
 	context.SetEnabled(&n.upButton, n.IsEditable() && n.abstractNumberInput.CanIncrement())
 
 	n.downButton.SetIcon(imgDown)
@@ -232,9 +242,12 @@ func (n *NumberInput) Update(context *guigui.Context) error {
 		UpperEnd:   true,
 	})
 	n.downButton.setPairedButton(&n.upButton)
-	n.downButton.setOnRepeat(func() {
-		n.decrement()
-	})
+	if n.onDownButtonDown == nil {
+		n.onDownButtonDown = func() {
+			n.decrement()
+		}
+	}
+	n.downButton.setOnRepeat(n.onDownButtonDown)
 	context.SetEnabled(&n.downButton, n.IsEditable() && n.abstractNumberInput.CanDecrement())
 
 	return nil

@@ -34,6 +34,9 @@ type DropdownList[T comparable] struct {
 
 	items          []DropdownListItem[T]
 	popupMenuItems []PopupMenuItem[T]
+
+	onDown                  func()
+	onPopupMenuItemSelected func(index int)
 }
 
 func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
@@ -81,15 +84,21 @@ func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.Chi
 func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	d.updateChildren(context)
 
-	d.button.SetOnDown(func() {
-		d.popupMenu.SetOpen(true)
-	})
+	if d.onDown == nil {
+		d.onDown = func() {
+			d.popupMenu.SetOpen(true)
+		}
+	}
+	d.button.SetOnDown(d.onDown)
 	d.button.setKeepPressed(d.popupMenu.IsOpen())
 	d.button.SetIconAlign(IconAlignEnd)
 
-	d.popupMenu.SetOnItemSelected(func(index int) {
-		guigui.DispatchEventHandler(d, dropdownListEventItemSelected, index)
-	})
+	if d.onPopupMenuItemSelected == nil {
+		d.onPopupMenuItemSelected = func(index int) {
+			guigui.DispatchEventHandler(d, dropdownListEventItemSelected, index)
+		}
+	}
+	d.popupMenu.SetOnItemSelected(d.onPopupMenuItemSelected)
 	d.popupMenu.SetCheckmarkIndex(d.SelectedItemIndex())
 
 	return nil

@@ -139,6 +139,8 @@ type Text struct {
 
 	prevStart int
 	prevEnd   int
+
+	onFocusChanged func(focused bool)
 }
 
 type cachedTextSizeEntry struct {
@@ -190,18 +192,21 @@ func (t *Text) Update(context *guigui.Context) error {
 	}
 
 	if t.editable {
-		guigui.SetOnFocusChanged(t, func(focused bool) {
-			if focused {
-				t.field.Focus()
-				t.cursor.resetCounter()
-				start, end := t.field.Selection()
-				if start < 0 || end < 0 {
-					t.doSelectAll()
+		if t.onFocusChanged == nil {
+			t.onFocusChanged = func(focused bool) {
+				if focused {
+					t.field.Focus()
+					t.cursor.resetCounter()
+					start, end := t.field.Selection()
+					if start < 0 || end < 0 {
+						t.doSelectAll()
+					}
+				} else {
+					t.commit()
 				}
-			} else {
-				t.commit()
 			}
-		})
+		}
+		guigui.SetOnFocusChanged(t, t.onFocusChanged)
 	}
 
 	context.SetPassThrough(&t.cursor, true)

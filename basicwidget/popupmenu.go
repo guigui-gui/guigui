@@ -32,6 +32,8 @@ type PopupMenu[T comparable] struct {
 	popup     Popup
 	list      guigui.WidgetWithSize[*List[T]]
 	listItems []ListItem[T]
+
+	onItemSelected func(index int)
 }
 
 func (p *PopupMenu[T]) SetOnItemSelected(f func(index int)) {
@@ -49,10 +51,13 @@ func (p *PopupMenu[T]) AddChildren(context *guigui.Context, adder *guigui.ChildA
 func (p *PopupMenu[T]) Update(context *guigui.Context) error {
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
-	list.list.SetOnItemSelected(func(index int) {
-		p.popup.SetOpen(false)
-		guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
-	})
+	if p.onItemSelected == nil {
+		p.onItemSelected = func(index int) {
+			p.popup.SetOpen(false)
+			guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
+		}
+	}
+	list.list.SetOnItemSelected(p.onItemSelected)
 
 	p.popup.SetContent(&p.list)
 	p.popup.SetCloseByClickingOutside(true)

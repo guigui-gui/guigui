@@ -39,6 +39,8 @@ type SegmentedControl[T comparable] struct {
 
 	direction   SegmentedControlDirection
 	layoutItems []guigui.LinearLayoutItem
+
+	onButtonDowns []func()
 }
 
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {
@@ -94,6 +96,7 @@ func (s *SegmentedControl[T]) Update(context *guigui.Context) error {
 
 func (s *SegmentedControl[T]) updateButtons(context *guigui.Context) {
 	s.buttons = adjustSliceSize(s.buttons, s.abstractList.ItemCount())
+	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
 
 	for i := range s.abstractList.ItemCount() {
 		item, _ := s.abstractList.ItemByIndex(i)
@@ -141,9 +144,12 @@ func (s *SegmentedControl[T]) updateButtons(context *guigui.Context) {
 		}
 		context.SetEnabled(&s.buttons[i], !item.Disabled)
 		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
-		s.buttons[i].SetOnDown(func() {
-			s.SelectItemByIndex(i)
-		})
+		if s.onButtonDowns[i] == nil {
+			s.onButtonDowns[i] = func() {
+				s.SelectItemByIndex(i)
+			}
+		}
+		s.buttons[i].SetOnDown(s.onButtonDowns[i])
 	}
 }
 
