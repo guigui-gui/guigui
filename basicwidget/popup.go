@@ -109,7 +109,6 @@ type popup struct {
 	nextContentPosition    image.Point
 	hasNextContentPosition bool
 	openAfterClose         bool
-	onceOpen               bool
 }
 
 func (p *popup) IsOpen() bool {
@@ -168,7 +167,7 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 }
 
 func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	if (p.showing || p.hiding) && p.openingCount > 0 && p.onceOpen {
+	if (p.showing || p.hiding) && p.openingCount > 0 {
 		// When the popup is fading in/out, keep the current position.
 		// This matters especially when the same popup menu is reopened at a different position.
 		p.nextContentPosition = widgetBounds.Bounds().Min
@@ -178,7 +177,6 @@ func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wid
 		p.nextContentPosition = image.Point{}
 		p.hasNextContentPosition = false
 	}
-	p.contentPosition = widgetBounds.Bounds().Min
 	contentBounds := p.contentBounds(context, widgetBounds)
 	p.shadow.SetContentBounds(contentBounds)
 
@@ -271,7 +269,6 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.contentPosition = p.nextContentPosition
 				p.hasNextContentPosition = false
 			}
-			p.onceOpen = true
 		}
 	}
 	if p.hiding {
