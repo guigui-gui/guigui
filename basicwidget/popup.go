@@ -168,6 +168,13 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 	}
 }
 
+func (p *popup) Update(context *guigui.Context) error {
+	context.SetZDelta(&p.blurredBackground, 1)
+	context.SetZDelta(&p.shadow, 1)
+	context.SetZDelta(&p.contentAndFrame, 1)
+	return nil
+}
+
 func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if (p.showing || p.hiding || p.toClose) && p.openingCount > 0 {
 		// When the popup is fading in/out, keep the current position.
@@ -314,10 +321,6 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	// TODO: This is too tricky. Refactor this.
 	context.SetOpacity(&p.shadow, p.openingRate())
 	context.SetOpacity(&p.contentAndFrame, p.openingRate())
-
-	context.SetZDelta(&p.blurredBackground, 1)
-	context.SetZDelta(&p.shadow, 1)
-	context.SetZDelta(&p.contentAndFrame, 1)
 
 	return nil
 }
