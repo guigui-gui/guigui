@@ -161,7 +161,6 @@ func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 					},
 				},
 			}
-			println(&b.icon)
 		}
 		iconLayoutItem = guigui.LinearLayoutItem{
 			Layout: b.iconLayout,
