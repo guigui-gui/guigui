@@ -4,7 +4,7 @@
 package colormode
 
 import (
-	"strings"
+	"bytes"
 	"unsafe"
 
 	"github.com/ebitengine/purego/objc"
@@ -20,6 +20,10 @@ var (
 	selUTF8String          = objc.RegisterName("UTF8String")
 )
 
+var (
+	bytesDark = []byte("Dark")
+)
+
 func systemColorMode() ColorMode {
 	// "effectiveAppearance" works from macOS 10.14. As Go 1.23 supports macOS 11, it's OK to use it.
 	//
@@ -27,9 +31,9 @@ func systemColorMode() ColorMode {
 	// * https://developer.apple.com/documentation/appkit/nsapplication/effectiveappearance?language=objc
 	// * https://go.dev/wiki/MinimumRequirements
 	objcName := idNSApplication.Send(selSharedApplication).Send(selEffectiveAppearance).Send(selName)
-	name := string(unsafe.Slice((*byte)(unsafe.Pointer(objcName.Send(selUTF8String))), objcName.Send(selLength)))
+	name := unsafe.Slice((*byte)(unsafe.Pointer(objcName.Send(selUTF8String))), objcName.Send(selLength))
 	// https://developer.apple.com/documentation/appkit/nsappearance/name-swift.struct?language=objc
-	if strings.Contains(name, "Dark") {
+	if bytes.Contains(name, bytesDark) {
 		return Dark
 	}
 	return Light
