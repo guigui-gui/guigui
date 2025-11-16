@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image"
 	"image/color"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 )
@@ -193,6 +194,8 @@ type dropdownListButtonContent struct {
 	contentWidthPlus1 int
 	text              Text
 	icon              Image
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (d *dropdownListButtonContent) SetContent(content guigui.Widget) {
@@ -243,19 +246,22 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Linea
 		gap = buttonTextAndImagePadding(context)
 	}
 	iconSize := defaultIconSize(context)
+
+	d.layoutItems = slices.Delete(d.layoutItems, 0, len(d.layoutItems))
+	d.layoutItems = append(d.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: contentWidget,
+		},
+		guigui.LinearLayoutItem{
+			Widget: &d.icon,
+			Size:   guigui.FixedSize(iconSize),
+		})
+
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       gap,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: contentWidget,
-			},
-			{
-				Widget: &d.icon,
-				Size:   guigui.FixedSize(iconSize),
-			},
-		},
-		Padding: padding,
+		Items:     d.layoutItems,
+		Padding:   padding,
 	}
 }
 

@@ -33,6 +33,7 @@ type Button struct {
 	textColor color.Color
 
 	layoutItems []guigui.LinearLayoutItem
+	iconLayout  guigui.Layout
 }
 
 func (b *Button) SetOnDown(f func()) {
@@ -135,8 +136,8 @@ func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 			width = max(width, widgetBounds.Bounds().Dx()-2*r)
 			height = max(height, widgetBounds.Bounds().Dy()-2*r)
 		}
-		iconLayoutItem = guigui.LinearLayoutItem{
-			Layout: guigui.LinearLayout{
+		if b.iconLayout == nil || b.iconLayout.(guigui.LinearLayout).Items[1].Size != guigui.FixedSize(height) {
+			b.iconLayout = guigui.LinearLayout{
 				Direction: guigui.LayoutDirectionVertical,
 				Items: []guigui.LinearLayoutItem{
 					{
@@ -150,8 +151,11 @@ func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 						Size: guigui.FlexibleSize(1),
 					},
 				},
-			},
-			Size: guigui.FixedSize(width),
+			}
+		}
+		iconLayoutItem = guigui.LinearLayoutItem{
+			Layout: b.iconLayout,
+			Size:   guigui.FixedSize(width),
 		}
 	}
 
