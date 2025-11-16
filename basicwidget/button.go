@@ -137,7 +137,7 @@ func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 			height = max(height, widgetBounds.Bounds().Dy()-2*r)
 		}
 
-		// TODO: Cache the layout like this condition
+		// TODO: Cache the layout.
 		b.iconLayout = guigui.LinearLayout{
 			Direction: guigui.LayoutDirectionVertical,
 			Items: []guigui.LinearLayoutItem{
