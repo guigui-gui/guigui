@@ -473,6 +473,10 @@ func (a *app) buildWidgets() error {
 }
 
 func (a *app) layoutWidgets() {
+	if a.skipBuild {
+		return
+	}
+
 	clear(a.visitedZs)
 	if a.visitedZs == nil {
 		a.visitedZs = map[int]struct{}{}
