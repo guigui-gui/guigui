@@ -374,6 +374,9 @@ func (c *Context) ZDelta(widget Widget) int {
 }
 
 func (c *Context) SetZDelta(widget Widget, zDelta int) {
+	if zDelta < 0 {
+		panic("guigui: ZDelta must be non-negative")
+	}
 	widgetState := widget.widgetState()
 	if widgetState.zDelta == zDelta {
 		return

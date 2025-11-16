@@ -99,6 +99,7 @@ type widgetState struct {
 	disabled        bool
 	passThrough     bool
 	zDelta          int
+	zPlus1Cache     int
 	transparency    float64
 	customDraw      CustomDrawFunc
 	eventHandlers   map[string]any
@@ -163,10 +164,17 @@ func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 }
 
 func (w *widgetState) z() int {
-	if w.parent == nil {
-		return w.zDelta
+	if w.zPlus1Cache != 0 {
+		return w.zPlus1Cache - 1
 	}
-	return w.parent.widgetState().z() + w.zDelta
+	var z int
+	if w.parent == nil {
+		z = w.zDelta
+	} else {
+		z = w.parent.widgetState().z() + w.zDelta
+	}
+	w.zPlus1Cache = z + 1
+	return z
 }
 
 func widgetBoundsFromWidget(context *Context, widgetState *widgetState) *WidgetBounds {
