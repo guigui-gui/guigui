@@ -430,6 +430,7 @@ func (a *app) buildWidgets() error {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		clear(widget.widgetState().eventHandlers)
 		widget.widgetState().focusDelegation = nil
+		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 		return nil
 	})
 
