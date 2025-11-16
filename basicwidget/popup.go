@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
@@ -61,6 +62,10 @@ func (p *Popup) SetContent(widget guigui.Widget) {
 	p.popup.SetContent(widget)
 }
 
+func (p *Popup) SetBackgroundDarkened(darkenBackground bool) {
+	p.popup.SetBackgroundDarkened(darkenBackground)
+}
+
 func (p *Popup) SetBackgroundBlurred(blurBackground bool) {
 	p.popup.SetBackgroundBlurred(blurBackground)
 }
@@ -94,9 +99,10 @@ func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints)
 type popup struct {
 	guigui.DefaultWidget
 
-	blurredBackground popupBlurredBackground
-	shadow            popupShadow
-	contentAndFrame   popupContentAndFrame
+	blurredBackground  popupBlurredBackground
+	darkenedBackground popupDarkenBackground
+	shadow             popupShadow
+	contentAndFrame    popupContentAndFrame
 
 	toOpen                 bool
 	toClose                bool
@@ -104,6 +110,7 @@ type popup struct {
 	showing                bool
 	hiding                 bool
 	closedReason           PopupClosedReason
+	backgroundDarkened     bool
 	backgroundBlurred      bool
 	closeByClickingOutside bool
 	animateOnFading        bool
@@ -141,6 +148,10 @@ func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.Widg
 	}
 }
 
+func (p *popup) SetBackgroundDarkened(darkenBackground bool) {
+	p.backgroundDarkened = darkenBackground
+}
+
 func (p *popup) SetBackgroundBlurred(blurBackground bool) {
 	p.backgroundBlurred = blurBackground
 }
@@ -163,6 +174,9 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
 		}
+		if p.backgroundDarkened {
+			adder.AddChild(&p.darkenedBackground)
+		}
 		adder.AddChild(&p.shadow)
 		adder.AddChild(&p.contentAndFrame)
 	}
@@ -170,6 +184,7 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 
 func (p *popup) Update(context *guigui.Context) error {
 	context.SetZDelta(&p.blurredBackground, 1)
+	context.SetZDelta(&p.darkenedBackground, 1)
 	context.SetZDelta(&p.shadow, 1)
 	context.SetZDelta(&p.contentAndFrame, 1)
 	return nil
@@ -191,6 +206,7 @@ func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wid
 
 	appBounds := context.AppBounds()
 	layouter.LayoutWidget(&p.blurredBackground, appBounds)
+	layouter.LayoutWidget(&p.darkenedBackground, appBounds)
 	layouter.LayoutWidget(&p.shadow, appBounds)
 	layouter.LayoutWidget(&p.contentAndFrame, contentBounds)
 }
@@ -319,6 +335,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	// SetOpacity cannot be called for p.blurredBackground so far.
 	// If opacity is less than 1, the dst argument of Draw will an empty image in the current implementation.
 	// TODO: This is too tricky. Refactor this.
+	context.SetOpacity(&p.darkenedBackground, p.openingRate())
 	context.SetOpacity(&p.shadow, p.openingRate())
 	context.SetOpacity(&p.contentAndFrame, p.openingRate())
 
@@ -439,6 +456,22 @@ func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *gui
 	draw.DrawBlurredImage(context, dst, p.backgroundCache, rate)
 }
 
+type popupDarkenBackground struct {
+	guigui.DefaultWidget
+}
+
+func (p *popupDarkenBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	bounds := widgetBounds.Bounds()
+
+	var clr color.Color
+	if context.ColorMode() == guigui.ColorModeLight {
+		clr = draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.5, 0.5), 0.75)
+	} else {
+		clr = draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.1, 0.1), 0.75)
+	}
+	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
+}
+
 type popupShadow struct {
 	guigui.DefaultWidget
 
@@ -459,6 +492,6 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Max.X += int(16 * context.Scale())
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
-	clr := draw.ScaleAlpha(color.Black, 0.2)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0), 0.25)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
 }

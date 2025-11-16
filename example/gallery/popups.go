@@ -17,6 +17,8 @@ type Popups struct {
 	guigui.DefaultWidget
 
 	forms                        [2]basicwidget.Form
+	darkenBackgroundText         basicwidget.Text
+	darkenBackgroundToggle       basicwidget.Toggle
 	blurBackgroundText           basicwidget.Text
 	blurBackgroundToggle         basicwidget.Toggle
 	closeByClickingOutsideText   basicwidget.Text
@@ -43,6 +45,7 @@ func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) 
 }
 
 func (p *Popups) Update(context *guigui.Context) error {
+	p.darkenBackgroundText.SetValue("Darken background")
 	p.blurBackgroundText.SetValue("Blur background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
@@ -51,6 +54,10 @@ func (p *Popups) Update(context *guigui.Context) error {
 	})
 
 	p.forms[0].SetItems([]basicwidget.FormItem{
+		{
+			PrimaryWidget:   &p.darkenBackgroundText,
+			SecondaryWidget: &p.darkenBackgroundToggle,
+		},
 		{
 			PrimaryWidget:   &p.blurBackgroundText,
 			SecondaryWidget: &p.blurBackgroundToggle,
@@ -76,6 +83,7 @@ func (p *Popups) Update(context *guigui.Context) error {
 
 	p.simplePopupContent.Widget().SetPopup(&p.simplePopup)
 	p.simplePopup.SetContent(&p.simplePopupContent)
+	p.simplePopup.SetBackgroundDarkened(p.darkenBackgroundToggle.Value())
 	p.simplePopup.SetBackgroundBlurred(p.blurBackgroundToggle.Value())
 	p.simplePopup.SetCloseByClickingOutside(p.closeByClickingOutsideToggle.Value())
 	p.simplePopup.SetAnimationDuringFade(true)
