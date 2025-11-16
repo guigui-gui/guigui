@@ -366,6 +366,7 @@ func (a *app) Update() error {
 func (a *app) Draw(screen *ebiten.Image) {
 	origScreen := screen
 	if theDebugMode.showRenderingRegions {
+		// As the screen is not cleered every frame, create offscreen here to keep the previous contents.
 		if a.offscreen != nil {
 			if a.offscreen.Bounds().Dx() != screen.Bounds().Dx() || a.offscreen.Bounds().Dy() != screen.Bounds().Dy() {
 				a.offscreen.Deallocate()
@@ -378,7 +379,12 @@ func (a *app) Draw(screen *ebiten.Image) {
 		screen = a.offscreen
 	}
 	a.drawWidget(screen)
-	a.drawDebugIfNeeded(origScreen)
+	if origScreen != screen {
+		op := &ebiten.DrawImageOptions{}
+		op.Blend = ebiten.BlendCopy
+		origScreen.DrawImage(a.offscreen, op)
+		a.drawDebugIfNeeded(origScreen)
+	}
 	a.invalidatedRegions = image.Rectangle{}
 }
 
@@ -717,9 +723,6 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 			vector.StrokeRect(a.debugScreen, float32(item.region.Min.X)+w/2, float32(item.region.Min.Y)+w/2, float32(item.region.Dx())-w, float32(item.region.Dy())-w, w, clr, false)
 		}
 	}
-	op := &ebiten.DrawImageOptions{}
-	op.Blend = ebiten.BlendCopy
-	screen.DrawImage(a.offscreen, op)
 	screen.DrawImage(a.debugScreen, nil)
 }
 

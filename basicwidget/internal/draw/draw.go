@@ -546,7 +546,7 @@ func DrawInRoundedCornerRect(context *guigui.Context, dst *ebiten.Image, bounds 
 	sOp.CompositeMode = op.CompositeMode
 	sOp.Blend = op.Blend
 	sOp.Images[0] = src
-	sOp.Uniforms = map[string]interface{}{
+	sOp.Uniforms = map[string]any{
 		"Bounds": []float32{
 			float32(bounds.Min.X),
 			float32(bounds.Min.Y),
