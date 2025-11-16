@@ -228,7 +228,7 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
 	return nil
 }
 
-func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Layout {
+func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.LinearLayout {
 	padding := guigui.Padding{
 		End: buttonEdgeAndImagePadding(context),
 	}
