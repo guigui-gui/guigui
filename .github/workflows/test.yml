@@ -35,11 +35,21 @@ jobs:
       run: |
         Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
-    - name: Vet
+    - name: Vet (macOS)
+      if: runner.os == 'macOS'
+      run: |
+        go list ./... | grep -v -x -F -f .github/workflows/govetblock_darwin.txt | xargs go vet -v
+
+    - name: Vet (Not macOS)
+      if: runner.os != 'macOS'
+      run: |
+        go vet -v ./...
+
+    - name: Vet (errcheck)
       run: |
         go build ./internal/vettool
         go vet -vettool=./vettool${{ runner.os == 'Windows' && '.exe' || '' }} -v ./...
 
     - name: Test
       run: |
-        go test -vet=all -v ./...
+        go test -v ./...

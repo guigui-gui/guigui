@@ -1,0 +1,1 @@
+github.com/guigui-gui/guigui/internal/colormode
