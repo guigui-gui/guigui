@@ -221,6 +221,8 @@ func (a *app) updateInvalidatedRegions() {
 }
 
 func (a *app) Update() error {
+	var built bool
+
 	if a.focusedWidgetState == nil {
 		a.focusWidget(a.root.widgetState())
 	}
@@ -234,12 +236,15 @@ func (a *app) Update() error {
 	rootState.bounds = a.bounds()
 
 	// Call the first buildWidgets.
-	a.context.inBuild = true
-	if err := a.buildWidgets(); err != nil {
-		return err
+	if !a.skipBuild {
+		a.context.inBuild = true
+		if err := a.buildWidgets(); err != nil {
+			return err
+		}
+		a.context.inBuild = false
+		a.layoutWidgets()
+		built = true
 	}
-	a.context.inBuild = false
-	a.layoutWidgets()
 	a.updateHitWidgets()
 
 	// Handle user inputs.
@@ -283,12 +288,15 @@ func (a *app) Update() error {
 	}
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
-	a.context.inBuild = true
-	if err := a.buildWidgets(); err != nil {
-		return err
+	if !a.skipBuild {
+		a.context.inBuild = true
+		if err := a.buildWidgets(); err != nil {
+			return err
+		}
+		a.context.inBuild = false
+		a.layoutWidgets()
+		built = true
 	}
-	a.context.inBuild = false
-	a.layoutWidgets()
 	a.updateHitWidgets()
 
 	if !a.cursorShape() {
@@ -312,7 +320,7 @@ func (a *app) Update() error {
 	}
 	if screenInvalidated {
 		a.requestRedraw(a.bounds())
-	} else {
+	} else if built {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Update, so do this after updating.
 		a.requestRedrawIfTreeChanged(a.root)
@@ -423,10 +431,6 @@ func (a *app) requestRedrawIfDifferentParentZ(widget Widget) {
 }
 
 func (a *app) buildWidgets() error {
-	if a.skipBuild {
-		return nil
-	}
-
 	a.buildCount++
 
 	a.root.widgetState().builtAt = a.buildCount
@@ -473,10 +477,6 @@ func (a *app) buildWidgets() error {
 }
 
 func (a *app) layoutWidgets() {
-	if a.skipBuild {
-		return
-	}
-
 	clear(a.visitedZs)
 	if a.visitedZs == nil {
 		a.visitedZs = map[int]struct{}{}
