@@ -99,7 +99,6 @@ type widgetState struct {
 	disabled        bool
 	passThrough     bool
 	zDelta          int
-	zPlus1Cache     int
 	transparency    float64
 	customDraw      CustomDrawFunc
 	eventHandlers   map[string]any
@@ -108,6 +107,12 @@ type widgetState struct {
 	container       bool
 	float           bool
 	focusDelegation *widgetState
+
+	zPlus1Cache       int
+	visibleCache      bool
+	visibleCacheValid bool
+	enabledCache      bool
+	enabledCacheValid bool
 
 	offscreen *ebiten.Image
 
@@ -127,23 +132,33 @@ func (w *widgetState) isInTree(now int64) bool {
 }
 
 func (w *widgetState) isVisible() bool {
-	if w.parent != nil {
-		if w.hidden {
-			return false
-		}
-		return w.parent.widgetState().isVisible()
+	if w.visibleCacheValid {
+		return w.visibleCache
 	}
-	return !w.hidden
+	w.visibleCacheValid = true
+	if w.hidden {
+		w.visibleCache = false
+	} else if w.parent != nil {
+		w.visibleCache = w.parent.widgetState().isVisible()
+	} else {
+		w.visibleCache = true
+	}
+	return w.visibleCache
 }
 
 func (w *widgetState) isEnabled() bool {
-	if w.parent != nil {
-		if w.disabled {
-			return false
-		}
-		return w.parent.widgetState().isEnabled()
+	if w.enabledCacheValid {
+		return w.enabledCache
 	}
-	return !w.disabled
+	w.enabledCacheValid = true
+	if w.disabled {
+		w.enabledCache = false
+	} else if w.parent != nil {
+		w.enabledCache = w.parent.widgetState().isEnabled()
+	} else {
+		w.enabledCache = true
+	}
+	return w.enabledCache
 }
 
 func (w *widgetState) opacity() float64 {

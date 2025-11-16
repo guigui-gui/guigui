@@ -211,6 +211,11 @@ func (c *Context) SetVisible(widget Widget, visible bool) {
 	if !visible {
 		c.blur(widget)
 	}
+	_ = traverseWidget(widget, func(w Widget) error {
+		w.widgetState().visibleCacheValid = false
+		w.widgetState().visibleCache = false
+		return nil
+	})
 	RequestRedraw(widget)
 }
 
@@ -227,6 +232,11 @@ func (c *Context) SetEnabled(widget Widget, enabled bool) {
 	if !enabled {
 		c.blur(widget)
 	}
+	_ = traverseWidget(widget, func(w Widget) error {
+		w.widgetState().enabledCacheValid = false
+		w.widgetState().enabledCache = false
+		return nil
+	})
 	RequestRedraw(widget)
 }
 

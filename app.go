@@ -438,6 +438,10 @@ func (a *app) buildWidgets() error {
 		widgetState := widget.widgetState()
 		widgetState.focusDelegation = nil
 		widgetState.zPlus1Cache = 0
+		widgetState.visibleCache = false
+		widgetState.visibleCacheValid = false
+		widgetState.enabledCache = false
+		widgetState.enabledCacheValid = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 		return nil
 	})
