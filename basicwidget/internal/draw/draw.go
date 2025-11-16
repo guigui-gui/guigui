@@ -508,6 +508,7 @@ const maskShaderSource = `//kage:unit pixels
 
 package main
 
+var DstOrigin vec2
 var Bounds vec4
 var Radius float
 
@@ -516,12 +517,13 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c2 := Bounds.zy + vec2(-Radius, Radius)
 	c3 := Bounds.xw + vec2(Radius, -Radius)
 	c4 := Bounds.zw + vec2(-Radius, -Radius)
-	if (dstPos.x < Bounds.x+Radius || dstPos.x >= Bounds.z-Radius) &&
-		(dstPos.y < Bounds.y+Radius || dstPos.y >= Bounds.w-Radius) &&
-		distance(c1, dstPos.xy) > Radius &&
-		distance(c2, dstPos.xy) > Radius &&
-		distance(c3, dstPos.xy) > Radius &&
-		distance(c4, dstPos.xy) > Radius {
+	dpos := dstPos.xy - imageDstOrigin() + DstOrigin
+	if (dpos.x < Bounds.x+Radius || dpos.x >= Bounds.z-Radius) &&
+		(dpos.y < Bounds.y+Radius || dpos.y >= Bounds.w-Radius) &&
+		distance(c1, dpos) > Radius &&
+		distance(c2, dpos) > Radius &&
+		distance(c3, dpos) > Radius &&
+		distance(c4, dpos) > Radius {
 		discard()
 	}
 	return imageSrc0At(srcPos) * color
@@ -547,6 +549,10 @@ func DrawInRoundedCornerRect(context *guigui.Context, dst *ebiten.Image, bounds 
 	sOp.Blend = op.Blend
 	sOp.Images[0] = src
 	sOp.Uniforms = map[string]any{
+		"DstOrigin": []float32{
+			float32(dst.Bounds().Min.X),
+			float32(dst.Bounds().Min.Y),
+		},
 		"Bounds": []float32{
 			float32(bounds.Min.X),
 			float32(bounds.Min.Y),
