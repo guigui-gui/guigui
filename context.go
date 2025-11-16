@@ -382,6 +382,10 @@ func (c *Context) SetZDelta(widget Widget, zDelta int) {
 		return
 	}
 	widgetState.zDelta = zDelta
+	_ = traverseWidget(widget, func(w Widget) error {
+		w.widgetState().zPlus1Cache = 0
+		return nil
+	})
 	RequestRedraw(widget)
 }
 
