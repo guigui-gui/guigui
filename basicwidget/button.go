@@ -136,22 +136,22 @@ func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Wi
 			width = max(width, widgetBounds.Bounds().Dx()-2*r)
 			height = max(height, widgetBounds.Bounds().Dy()-2*r)
 		}
-		if b.iconLayout == nil || b.iconLayout.(guigui.LinearLayout).Items[1].Size != guigui.FixedSize(height) {
-			b.iconLayout = guigui.LinearLayout{
-				Direction: guigui.LayoutDirectionVertical,
-				Items: []guigui.LinearLayoutItem{
-					{
-						Size: guigui.FlexibleSize(1),
-					},
-					{
-						Widget: &b.icon,
-						Size:   guigui.FixedSize(height),
-					},
-					{
-						Size: guigui.FlexibleSize(1),
-					},
+
+		// TODO: Cache the layout like this condition
+		b.iconLayout = guigui.LinearLayout{
+			Direction: guigui.LayoutDirectionVertical,
+			Items: []guigui.LinearLayoutItem{
+				{
+					Size: guigui.FlexibleSize(1),
 				},
-			}
+				{
+					Widget: &b.icon,
+					Size:   guigui.FixedSize(height),
+				},
+				{
+					Size: guigui.FlexibleSize(1),
+				},
+			},
 		}
 		iconLayoutItem = guigui.LinearLayoutItem{
 			Layout: b.iconLayout,
