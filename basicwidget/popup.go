@@ -191,9 +191,10 @@ func (p *popup) Update(context *guigui.Context) error {
 }
 
 func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	if (p.showing || p.hiding || p.toClose) && p.openingCount > 0 {
-		// When the popup is fading in/out, keep the current position.
+	if (p.hiding || p.toClose) && p.openingCount > 0 {
+		// When the popup is fading out, keep the current position.
 		// This matters especially when the same popup menu is reopened at a different position.
+		// p.showing is ignored here because the position might be updated soon after opening.
 		p.nextContentPosition = widgetBounds.Bounds().Min
 		p.hasNextContentPosition = true
 	} else {
