@@ -59,6 +59,7 @@ func (p *PopupMenu[T]) Update(context *guigui.Context) error {
 	}
 	list.list.SetOnItemSelected(p.onItemSelected)
 
+	p.popup.setStyle(popupStyleMenu)
 	p.popup.SetContent(&p.list)
 	p.popup.SetCloseByClickingOutside(true)
 

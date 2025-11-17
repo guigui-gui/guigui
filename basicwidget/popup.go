@@ -30,6 +30,13 @@ func popupMaxOpeningCount() int {
 	return ebiten.TPS() / 5
 }
 
+type popupStyle int
+
+const (
+	popupStyleNormal popupStyle = iota
+	popupStyleMenu
+)
+
 type PopupClosedReason int
 
 const (
@@ -43,6 +50,10 @@ type Popup struct {
 	guigui.DefaultWidget
 
 	popup popup
+}
+
+func (p *Popup) setStyle(style popupStyle) {
+	p.popup.setStyle(style)
 }
 
 func (p *Popup) SetOpen(open bool) {
@@ -103,6 +114,7 @@ type popup struct {
 	shadow             popupShadow
 	contentAndFrame    popupContentAndFrame
 
+	style                  popupStyle
 	toOpen                 bool
 	toClose                bool
 	openingCount           int
@@ -117,6 +129,14 @@ type popup struct {
 	nextContentPosition    image.Point
 	hasNextContentPosition bool
 	openAfterClose         bool
+}
+
+func (p *popup) setStyle(style popupStyle) {
+	if p.style == style {
+		return
+	}
+	p.style = style
+	guigui.RequestRedraw(p)
 }
 
 func (p *popup) IsOpen() bool {
@@ -294,7 +314,11 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 	if p.showing {
 		if p.openingCount < popupMaxOpeningCount() {
-			p.openingCount += 3
+			if p.style == popupStyleMenu {
+				p.openingCount += 4
+			} else {
+				p.openingCount += 2
+			}
 			p.openingCount = min(p.openingCount, popupMaxOpeningCount())
 		}
 		if p.openingCount == popupMaxOpeningCount() {
@@ -307,8 +331,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	}
 	if p.hiding {
 		if 0 < p.openingCount {
-			if p.closedReason == PopupClosedReasonReopen {
-				p.openingCount -= 3
+			if p.closedReason == PopupClosedReasonReopen || p.style == popupStyleMenu {
+				p.openingCount -= 4
 			} else {
 				p.openingCount--
 			}
@@ -331,12 +355,13 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
+	p.darkenedBackground.SetOpeningRate(p.openingRate())
+	p.shadow.SetOpeningRate(p.openingRate())
 
 	// SetOpacity cannot be called for p.blurredBackground so far.
 	// If opacity is less than 1, the dst argument of Draw will an empty image in the current implementation.
+	// Use an original implementation by SetOpeningRate anyway as this is more performant.
 	// TODO: This is too tricky. Refactor this.
-	context.SetOpacity(&p.darkenedBackground, p.openingRate())
-	context.SetOpacity(&p.shadow, p.openingRate())
 	context.SetOpacity(&p.contentAndFrame, p.openingRate())
 
 	return nil
@@ -458,12 +483,22 @@ func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *gui
 
 type popupDarkenBackground struct {
 	guigui.DefaultWidget
+
+	openingRate float64
+}
+
+func (p *popupDarkenBackground) SetOpeningRate(rate float64) {
+	if p.openingRate == rate {
+		return
+	}
+	p.openingRate = rate
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupDarkenBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.1), 0.75)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.1), 0.75*p.openingRate)
 	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 }
 
@@ -471,6 +506,15 @@ type popupShadow struct {
 	guigui.DefaultWidget
 
 	contentBounds image.Rectangle
+	openingRate   float64
+}
+
+func (p *popupShadow) SetOpeningRate(rate float64) {
+	if p.openingRate == rate {
+		return
+	}
+	p.openingRate = rate
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
@@ -487,6 +531,6 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Max.X += int(16 * context.Scale())
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0), 0.25)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0), 0.25*p.openingRate)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
 }
