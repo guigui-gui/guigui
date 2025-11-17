@@ -95,6 +95,7 @@ func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 func (p *Popup) Update(context *guigui.Context) error {
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
+	context.SetContainer(&p.popup, true)
 	return nil
 }
 
