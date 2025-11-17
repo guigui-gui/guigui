@@ -463,7 +463,7 @@ type popupDarkenBackground struct {
 func (p *popupDarkenBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
-	clr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.9), 0.75)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.1), 0.75)
 	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 }
 
