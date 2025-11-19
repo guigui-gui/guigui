@@ -66,7 +66,7 @@ func (b *Buttons) Update(context *guigui.Context) error {
 	b.textIconButton2.SetFixedWidth(6 * u)
 
 	b.imageButtonText.SetValue("Image button")
-	img, err = theImageCache.Get("gopher")
+	img, err = theImageCache.Get("gopher_center")
 	if err != nil {
 		return err
 	}

@@ -33,8 +33,9 @@ type DropdownList[T comparable] struct {
 	buttonContent dropdownListButtonContent
 	popupMenu     PopupMenu[T]
 
-	items          []DropdownListItem[T]
-	popupMenuItems []PopupMenuItem[T]
+	items                 []DropdownListItem[T]
+	popupMenuItems        []PopupMenuItem[T]
+	popupMenuItemContents []dropdownListItemContent
 
 	indexAtOpen int
 
@@ -48,9 +49,14 @@ func (d *DropdownList[T]) SetOnItemSelected(f func(index int)) {
 
 func (d *DropdownList[T]) updatePopupMenuitems() {
 	d.popupMenuItems = adjustSliceSize(d.popupMenuItems, len(d.items))
+	d.popupMenuItemContents = adjustSliceSize(d.popupMenuItemContents, len(d.items))
 	for i, item := range d.items {
 		pmItem := PopupMenuItem[T](item)
-		if !d.popupMenu.IsOpen() {
+		if d.popupMenu.IsOpen() && pmItem.Content != nil {
+			d.popupMenuItemContents[i].SetContent(pmItem.Content)
+			pmItem.Content = &d.popupMenuItemContents[i]
+		} else {
+			d.popupMenuItemContents[i].SetContent(nil)
 			pmItem.Content = nil
 		}
 		d.popupMenuItems[i] = pmItem
@@ -68,7 +74,7 @@ func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	if index := d.popupMenu.SelectedItemIndex(); index >= 0 {
 		if content := d.items[index].Content; content != nil {
 			if d.popupMenu.IsOpen() {
-				d.buttonContent.SetContentWidth(content.Measure(context, guigui.Constraints{}).X)
+				d.buttonContent.SetContentSize(content.Measure(context, guigui.Constraints{}))
 			} else {
 				d.buttonContent.SetContent(content)
 			}
@@ -184,22 +190,24 @@ func (d *DropdownList[T]) IsPopupOpen() bool {
 type dropdownListButtonContent struct {
 	guigui.DefaultWidget
 
-	content           guigui.Widget
-	contentWidthPlus1 int
-	text              Text
-	icon              Image
+	content      guigui.Widget
+	dummyContent guigui.WidgetWithSize[*guigui.DefaultWidget]
+
+	contentSizePlus1 image.Point
+	text             Text
+	icon             Image
 
 	layoutItems []guigui.LinearLayoutItem
 }
 
 func (d *dropdownListButtonContent) SetContent(content guigui.Widget) {
 	d.content = content
-	d.contentWidthPlus1 = 0
+	d.contentSizePlus1 = image.Point{}
 }
 
-func (d *dropdownListButtonContent) SetContentWidth(width int) {
+func (d *dropdownListButtonContent) SetContentSize(size image.Point) {
 	d.content = nil
-	d.contentWidthPlus1 = width + 1
+	d.contentSizePlus1 = size.Add(image.Point{1, 1})
 }
 
 func (d *dropdownListButtonContent) SetText(text string) {
@@ -210,6 +218,7 @@ func (d *dropdownListButtonContent) AddChildren(context *guigui.Context, adder *
 	if d.content != nil {
 		adder.AddChild(d.content)
 	}
+	adder.AddChild(&d.dummyContent)
 	adder.AddChild(&d.text)
 	adder.AddChild(&d.icon)
 }
@@ -226,26 +235,35 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
 }
 
 func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.LinearLayout {
-	padding := guigui.Padding{
-		End: buttonEdgeAndImagePadding(context),
-	}
-
-	var contentWidget guigui.Widget
-	var gap int
-	if d.content != nil {
-		contentWidget = d.content
-	} else {
-		contentWidget = &d.text
-		padding.Start = buttonEdgeAndTextPadding(context)
-		gap = buttonTextAndImagePadding(context)
-	}
-	iconSize := defaultIconSize(context)
-
 	d.layoutItems = slices.Delete(d.layoutItems, 0, len(d.layoutItems))
+
+	var paddingTop int
+	var paddingBottom int
+	u := UnitSize(context)
+	if d.contentSizePlus1.X != 0 || d.contentSizePlus1.Y != 0 {
+		d.dummyContent.SetFixedSize(d.contentSizePlus1.Sub(image.Pt(1, 1)))
+		d.layoutItems = append(d.layoutItems,
+			guigui.LinearLayoutItem{
+				Widget: &d.dummyContent,
+			})
+		paddingTop = u / 4
+		paddingBottom = u / 4
+	} else if d.content != nil {
+		d.layoutItems = append(d.layoutItems,
+			guigui.LinearLayoutItem{
+				Widget: d.content,
+			})
+		paddingTop = u / 4
+		paddingBottom = u / 4
+	} else {
+		d.layoutItems = append(d.layoutItems,
+			guigui.LinearLayoutItem{
+				Widget: &d.text,
+			})
+	}
+
+	iconSize := defaultIconSize(context)
 	d.layoutItems = append(d.layoutItems,
-		guigui.LinearLayoutItem{
-			Widget: contentWidget,
-		},
 		guigui.LinearLayoutItem{
 			Widget: &d.icon,
 			Size:   guigui.FixedSize(iconSize),
@@ -253,9 +271,14 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Linea
 
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Gap:       gap,
+		Gap:       buttonTextAndImagePadding(context),
 		Items:     d.layoutItems,
-		Padding:   padding,
+		Padding: guigui.Padding{
+			Start:  buttonEdgeAndTextPadding(context),
+			Top:    paddingTop,
+			End:    buttonTextAndImagePadding(context),
+			Bottom: paddingBottom,
+		},
 	}
 }
 
@@ -267,12 +290,42 @@ func (d *dropdownListButtonContent) Measure(context *guigui.Context, constraints
 	return d.layout(context).Measure(context, constraints)
 }
 
-// TODO: Remove this.
-func DropdownListButtonTextPadding(context *guigui.Context) guigui.Padding {
-	return guigui.Padding{
-		Start:  buttonEdgeAndTextPadding(context),
-		Top:    0,
-		End:    buttonTextAndImagePadding(context),
-		Bottom: 0,
+type dropdownListItemContent struct {
+	guigui.DefaultWidget
+
+	content guigui.Widget
+}
+
+func (d *dropdownListItemContent) SetContent(content guigui.Widget) {
+	d.content = content
+}
+
+func (d *dropdownListItemContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(d.content)
+}
+
+func (d *dropdownListItemContent) layout(context *guigui.Context) guigui.LinearLayout {
+	u := UnitSize(context)
+	return guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items: []guigui.LinearLayoutItem{
+			{
+				Widget: d.content,
+			},
+		},
+		Padding: guigui.Padding{
+			Start:  u / 4,
+			Top:    int(context.Scale()),
+			End:    u / 4,
+			Bottom: int(context.Scale()),
+		},
 	}
+}
+
+func (d *dropdownListItemContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	d.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (d *dropdownListItemContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return d.layout(context).Measure(context, constraints)
 }
