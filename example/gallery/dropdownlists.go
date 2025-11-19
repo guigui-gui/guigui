@@ -15,7 +15,7 @@ type DropdownLists struct {
 
 	listForm         basicwidget.Form
 	dropdownListText basicwidget.Text
-	dropdownList     guigui.WidgetWithSize[*basicwidget.DropdownList[int]]
+	dropdownList     basicwidget.DropdownList[int]
 
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
@@ -34,10 +34,9 @@ func (d *DropdownLists) Update(context *guigui.Context) error {
 
 	// Dropdown list
 	d.dropdownListText.SetValue("Dropdown list")
-	dropdownList := d.dropdownList.Widget()
 	d.dropdownListItems = slices.Delete(d.dropdownListItems, 0, len(d.dropdownListItems))
 	d.dropdownListItems = model.DropdownLists().AppendDropdownListItems(d.dropdownListItems)
-	dropdownList.SetItems(d.dropdownListItems)
+	d.dropdownList.SetItems(d.dropdownListItems)
 	context.SetEnabled(&d.dropdownList, model.Lists().Enabled())
 
 	d.listForm.SetItems([]basicwidget.FormItem{
