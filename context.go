@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui/internal/colormode"
@@ -458,4 +459,8 @@ func (c *Context) DelegateFocus(from Widget, to Widget) {
 		return
 	}
 	fromWS.focusDelegation = toWS
+}
+
+func (c *Context) SetWindowTitle(title string) {
+	ebiten.SetWindowTitle(title)
 }
