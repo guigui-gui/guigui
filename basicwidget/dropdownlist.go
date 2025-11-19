@@ -58,7 +58,12 @@ func (d *DropdownList[T]) updatePopupMenuitems() {
 	d.popupMenu.SetItems(d.popupMenuItems)
 }
 
-func (d *DropdownList[T]) updateChildren(context *guigui.Context) {
+func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+	adder.AddChild(&d.button)
+	adder.AddChild(&d.popupMenu)
+}
+
+func (d *DropdownList[T]) Update(context *guigui.Context) error {
 	d.updatePopupMenuitems()
 	if index := d.popupMenu.SelectedItemIndex(); index >= 0 {
 		if content := d.items[index].Content; content != nil {
@@ -77,15 +82,6 @@ func (d *DropdownList[T]) updateChildren(context *guigui.Context) {
 		d.buttonContent.SetText("")
 	}
 	d.button.SetContent(&d.buttonContent)
-}
-
-func (d *DropdownList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
-	adder.AddChild(&d.button)
-	adder.AddChild(&d.popupMenu)
-}
-
-func (d *DropdownList[T]) Update(context *guigui.Context) error {
-	d.updateChildren(context)
 
 	if d.onDown == nil {
 		d.onDown = func() {
@@ -174,8 +170,6 @@ func (d *DropdownList[T]) SelectItemByValue(value T) {
 }
 
 func (d *DropdownList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	// Update the button content to reflect the current selected item.
-	d.updateChildren(context)
 	return d.button.Measure(context, constraints)
 }
 
