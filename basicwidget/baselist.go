@@ -361,7 +361,9 @@ func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBound
 			imgP.X += item.IndentLevel * listItemIndentSize(context)
 			imgP.X += UnitSize(context) / 4
 			itemH := contentH
-			imgP.Y += (itemH - imgSize) * 3 / 4
+			imgP.Y += (itemH - imgSize) / 2
+			// Adjust the position a bit for better appearance.
+			imgP.Y += UnitSize(context) / 16
 			imgP.Y = b.adjustItemY(context, imgP.Y)
 			b.itemBoundsForLayoutFromWidget[&b.checkmark] = image.Rectangle{
 				Min: imgP,
