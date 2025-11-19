@@ -109,5 +109,11 @@ func (t *toolbarContent) LayoutChildren(context *guigui.Context, widgetBounds *g
 				Size:   guigui.FixedSize(u * 3 / 2),
 			},
 		},
-	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/4), layouter)
+		Padding: guigui.Padding{
+			Start:  u / 4,
+			Top:    u / 4,
+			End:    u / 4,
+			Bottom: u / 4,
+		},
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }

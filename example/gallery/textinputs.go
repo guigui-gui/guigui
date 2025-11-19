@@ -251,7 +251,13 @@ func (t *TextInputs) LayoutChildren(context *guigui.Context, widgetBounds *guigu
 			},
 		},
 		Gap: u / 2,
-	}).LayoutWidgets(context, widgetBounds.Bounds().Inset(u/2), layouter)
+		Padding: guigui.Padding{
+			Start:  u / 2,
+			Top:    u / 2,
+			End:    u / 2,
+			Bottom: u / 2,
+		},
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 type inlineTextInputContainer struct {

@@ -197,9 +197,14 @@ func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.Widg
 			},
 		},
 		Gap: u / 2,
+		Padding: guigui.Padding{
+			Start:  u / 2,
+			Top:    u / 2,
+			End:    u / 2,
+			Bottom: u / 2,
+		},
 	}
-	layoutBounds := widgetBounds.Bounds().Inset(u / 2)
-	layout.LayoutWidgets(context, layoutBounds, layouter)
+	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func main() {
