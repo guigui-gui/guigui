@@ -26,17 +26,18 @@ const (
 type Root struct {
 	guigui.DefaultWidget
 
-	background   basicwidget.Background
-	sidebar      Sidebar
-	settings     Settings
-	basic        Basic
-	buttons      Buttons
-	texts        Texts
-	textInputs   TextInputs
-	numberInputs NumberInputs
-	lists        Lists
-	tables       Tables
-	popups       Popups
+	background    basicwidget.Background
+	sidebar       Sidebar
+	settings      Settings
+	basic         Basic
+	buttons       Buttons
+	texts         Texts
+	textInputs    TextInputs
+	numberInputs  NumberInputs
+	lists         Lists
+	dropdownLists DropdownLists
+	tables        Tables
+	popups        Popups
 
 	model Model
 
@@ -78,6 +79,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.numberInputs
 	case "lists":
 		return &r.lists
+	case "dropdownlists":
+		return &r.dropdownLists
 	case "tables":
 		return &r.tables
 	case "popups":

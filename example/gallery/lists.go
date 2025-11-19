@@ -13,14 +13,12 @@ import (
 type Lists struct {
 	guigui.DefaultWidget
 
-	listFormPanel    basicwidget.Panel
-	listForm         basicwidget.Form
-	listText         basicwidget.Text
-	list             guigui.WidgetWithSize[*basicwidget.List[int]]
-	treeText         basicwidget.Text
-	tree             guigui.WidgetWithSize[*basicwidget.List[int]]
-	dropdownListText basicwidget.Text
-	dropdownList     guigui.WidgetWithSize[*basicwidget.DropdownList[int]]
+	listFormPanel basicwidget.Panel
+	listForm      basicwidget.Form
+	listText      basicwidget.Text
+	list          guigui.WidgetWithSize[*basicwidget.List[int]]
+	treeText      basicwidget.Text
+	tree          guigui.WidgetWithSize[*basicwidget.List[int]]
 
 	jumpForm         basicwidget.Form
 	indexText        basicwidget.Text
@@ -39,9 +37,8 @@ type Lists struct {
 	enabledText      basicwidget.Text
 	enabledToggle    basicwidget.Toggle
 
-	listItems         []basicwidget.ListItem[int]
-	treeItems         []basicwidget.ListItem[int]
-	dropdownListItems []basicwidget.DropdownListItem[int]
+	listItems []basicwidget.ListItem[int]
+	treeItems []basicwidget.ListItem[int]
 }
 
 func (l *Lists) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
@@ -76,7 +73,7 @@ func (l *Lists) Update(context *guigui.Context) error {
 	})
 
 	l.listItems = slices.Delete(l.listItems, 0, len(l.listItems))
-	l.listItems = model.lists.AppendListItems(l.listItems)
+	l.listItems = model.Lists().AppendListItems(l.listItems)
 	list.SetItems(l.listItems)
 	context.SetEnabled(&l.list, model.Lists().Enabled())
 	l.list.SetFixedHeight(6 * u)
@@ -105,14 +102,6 @@ func (l *Lists) Update(context *guigui.Context) error {
 	context.SetEnabled(&l.tree, model.Lists().Enabled())
 	l.tree.SetFixedHeight(6 * u)
 
-	// Dropdown list
-	l.dropdownListText.SetValue("Dropdown list")
-	dropdownList := l.dropdownList.Widget()
-	l.dropdownListItems = slices.Delete(l.dropdownListItems, 0, len(l.dropdownListItems))
-	l.dropdownListItems = model.lists.AppendDropdownListItems(l.dropdownListItems)
-	dropdownList.SetItems(l.dropdownListItems)
-	context.SetEnabled(&l.dropdownList, model.Lists().Enabled())
-
 	l.listForm.SetItems([]basicwidget.FormItem{
 		{
 			PrimaryWidget:   &l.listText,
@@ -121,10 +110,6 @@ func (l *Lists) Update(context *guigui.Context) error {
 		{
 			PrimaryWidget:   &l.treeText,
 			SecondaryWidget: &l.tree,
-		},
-		{
-			PrimaryWidget:   &l.dropdownListText,
-			SecondaryWidget: &l.dropdownList,
 		},
 	})
 

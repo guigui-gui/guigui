@@ -273,6 +273,7 @@ func (d *dropdownListButtonContent) Measure(context *guigui.Context, constraints
 	return d.layout(context).Measure(context, constraints)
 }
 
+// TODO: Remove this.
 func DropdownListButtonTextPadding(context *guigui.Context) guigui.Padding {
 	return guigui.Padding{
 		Start:  buttonEdgeAndTextPadding(context),
