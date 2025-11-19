@@ -38,6 +38,9 @@ func (d *DropdownLists) Update(context *guigui.Context) error {
 	d.dropdownListItems = model.DropdownLists().AppendDropdownListItems(d.dropdownListItems)
 	d.dropdownList.SetItems(d.dropdownListItems)
 	context.SetEnabled(&d.dropdownList, model.Lists().Enabled())
+	if d.dropdownList.SelectedItemIndex() < 0 {
+		d.dropdownList.SelectItemByIndex(0)
+	}
 
 	d.listForm.SetItems([]basicwidget.FormItem{
 		{
