@@ -97,7 +97,7 @@ func (l *Lists) Update(context *guigui.Context) error {
 	})
 
 	l.treeItems = slices.Delete(l.treeItems, 0, len(l.treeItems))
-	l.treeItems = model.lists.AppendTreeItems(l.treeItems)
+	l.treeItems = model.Lists().AppendTreeItems(l.treeItems)
 	tree.SetItems(l.treeItems)
 	context.SetEnabled(&l.tree, model.Lists().Enabled())
 	l.tree.SetFixedHeight(6 * u)
