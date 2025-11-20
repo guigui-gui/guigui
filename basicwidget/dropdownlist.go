@@ -237,28 +237,17 @@ func (d *dropdownListButtonContent) Update(context *guigui.Context) error {
 func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.LinearLayout {
 	d.layoutItems = slices.Delete(d.layoutItems, 0, len(d.layoutItems))
 
-	var paddingTop int
-	var paddingBottom int
 	if d.contentSizePlus1.X != 0 || d.contentSizePlus1.Y != 0 {
 		d.dummyContent.SetFixedSize(d.contentSizePlus1.Sub(image.Pt(1, 1)))
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: &d.dummyContent,
 			})
-		// Add paddings. Paddings are calculated as if the content is a text widget.
-		h := defaultButtonSize(context).Y
-		padding := h - int(LineHeight(context))
-		paddingTop = padding / 2
-		paddingBottom = padding - paddingTop
 	} else if d.content != nil {
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: d.content,
 			})
-		h := defaultButtonSize(context).Y
-		padding := h - int(LineHeight(context))
-		paddingTop = padding / 2
-		paddingBottom = padding - paddingTop
 	} else {
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
@@ -272,6 +261,12 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Linea
 			Widget: &d.icon,
 			Size:   guigui.FixedSize(iconSize),
 		})
+
+	// Add paddings. Paddings are calculated as if the content is a text widget.
+	// Even if the content is not a text widget, this padding should look good enough.
+	padding := defaultButtonSize(context).Y - int(LineHeight(context))
+	paddingTop := padding / 2
+	paddingBottom := padding - paddingTop
 
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
