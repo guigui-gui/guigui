@@ -239,22 +239,26 @@ func (d *dropdownListButtonContent) layout(context *guigui.Context) guigui.Linea
 
 	var paddingTop int
 	var paddingBottom int
-	u := UnitSize(context)
 	if d.contentSizePlus1.X != 0 || d.contentSizePlus1.Y != 0 {
 		d.dummyContent.SetFixedSize(d.contentSizePlus1.Sub(image.Pt(1, 1)))
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: &d.dummyContent,
 			})
-		paddingTop = u / 4
-		paddingBottom = u / 4
+		// Add paddings. Paddings are calculated as if the content is a text widget.
+		h := defaultButtonSize(context).Y
+		padding := h - int(LineHeight(context))
+		paddingTop = padding / 2
+		paddingBottom = padding - paddingTop
 	} else if d.content != nil {
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: d.content,
 			})
-		paddingTop = u / 4
-		paddingBottom = u / 4
+		h := defaultButtonSize(context).Y
+		padding := h - int(LineHeight(context))
+		paddingTop = padding / 2
+		paddingBottom = padding - paddingTop
 	} else {
 		d.layoutItems = append(d.layoutItems,
 			guigui.LinearLayoutItem{
