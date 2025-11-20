@@ -44,7 +44,7 @@ func (d *DropdownLists) Update(context *guigui.Context) error {
 	d.dropdown1ListItems = slices.Delete(d.dropdown1ListItems, 0, len(d.dropdown1ListItems))
 	d.dropdown1ListItems = model.DropdownLists().AppendDropdownListItems(d.dropdown1ListItems)
 	d.dropdown1List.SetItems(d.dropdown1ListItems)
-	context.SetEnabled(&d.dropdown1List, model.Lists().Enabled())
+	context.SetEnabled(&d.dropdown1List, model.DropdownLists().Enabled())
 	if d.dropdown1List.SelectedItemIndex() < 0 {
 		d.dropdown1List.SelectItemByIndex(0)
 	}
@@ -85,7 +85,7 @@ func (d *DropdownLists) Update(context *guigui.Context) error {
 		})
 	}
 	d.dropdown2List.SetItems(d.dropdown2ListItems)
-	context.SetEnabled(&d.dropdown2List, model.Lists().Enabled())
+	context.SetEnabled(&d.dropdown2List, model.DropdownLists().Enabled())
 	if d.dropdown2List.SelectedItemIndex() < 0 {
 		d.dropdown2List.SelectItemByIndex(0)
 	}
