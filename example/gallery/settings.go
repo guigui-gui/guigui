@@ -19,7 +19,7 @@ type Settings struct {
 	colorModeText             basicwidget.Text
 	colorModeSegmentedControl basicwidget.SegmentedControl[string]
 	localeText                textWithSubText
-	localeSelect        basicwidget.Select[language.Tag]
+	localeSelect              basicwidget.Select[language.Tag]
 	scaleText                 basicwidget.Text
 	scaleSegmentedControl     basicwidget.SegmentedControl[float64]
 }
