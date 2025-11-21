@@ -105,7 +105,7 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	return nil
 }
 
-func (l *List[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&l.list, widgetBounds.Bounds())
 }
 
@@ -254,7 +254,7 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	return nil
 }
 
-func (l *listItemWidget[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	var widget guigui.Widget
 	if l.item.Content != nil {
 		widget = l.item.Content

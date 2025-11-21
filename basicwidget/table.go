@@ -114,7 +114,7 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	return nil
 }
 
-func (t *Table[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 
 	t.columnWidthsInPixels = adjustSliceSize(t.columnWidthsInPixels, len(t.columns))
@@ -306,7 +306,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	return nil
 }
 
-func (t *tableRowWidget[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

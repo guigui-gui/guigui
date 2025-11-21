@@ -88,7 +88,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
@@ -166,7 +166,7 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	return nil
 }
 
-func (t *taskWidget) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
@@ -224,7 +224,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 	return nil
 }
 
-func (t *tasksPanelContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,

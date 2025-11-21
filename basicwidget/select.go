@@ -108,7 +108,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	return nil
 }
 
-func (s *Select[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *Select[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	p := widgetBounds.Bounds().Min
 	layouter.LayoutWidget(&s.button, image.Rectangle{
 		Min: p,
@@ -278,7 +278,7 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 	}
 }
 
-func (s *selectButtonContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *selectButtonContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
@@ -319,7 +319,7 @@ func (s *selectItemContent) layout(context *guigui.Context) guigui.LinearLayout 
 	}
 }
 
-func (s *selectItemContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *selectItemContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

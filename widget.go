@@ -14,7 +14,7 @@ import (
 type Widget interface {
 	Model(key any) any
 	Build(context *Context, adder *ChildAdder) error
-	LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
+	Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	Tick(context *Context, widgetBounds *WidgetBounds) error
@@ -90,7 +90,7 @@ func (w *WidgetWithSize[T]) Build(context *Context, adder *ChildAdder) error {
 	return nil
 }
 
-func (w *WidgetWithSize[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+func (w *WidgetWithSize[T]) Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
 	layouter.LayoutWidget(w.Widget(), widgetBounds.Bounds())
 }
 
@@ -134,7 +134,7 @@ func (w *WidgetWithPadding[T]) Build(context *Context, adder *ChildAdder) error 
 	return nil
 }
 
-func (w *WidgetWithPadding[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+func (w *WidgetWithPadding[T]) Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
 	b := widgetBounds.Bounds()
 	b.Min.X += w.padding.Start
 	b.Min.Y += w.padding.Top

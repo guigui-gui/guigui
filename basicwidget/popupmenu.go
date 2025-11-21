@@ -64,7 +64,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	return nil
 }
 
-func (p *PopupMenu[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *PopupMenu[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	b := p.contentBounds(context, widgetBounds)
 	p.list.SetFixedSize(b.Size())
 	layouter.LayoutWidget(&p.popup, b)

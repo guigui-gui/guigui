@@ -311,7 +311,7 @@ func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds
 	return false
 }
 
-func (s *scrollOverlay) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	cs := widgetBounds.Bounds().Size()
 	if s.lastSize != cs {
 		s.adjustOffset(context, widgetBounds)

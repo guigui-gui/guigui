@@ -119,7 +119,7 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	return nil
 }
 
-func (s *Selects) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -186,7 +186,7 @@ func (s *selectItem) layout(context *guigui.Context) guigui.LinearLayout {
 	}
 }
 
-func (s *selectItem) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

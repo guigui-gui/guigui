@@ -123,7 +123,7 @@ func (p *Popups) contentSize(context *guigui.Context) image.Point {
 	return image.Pt(int(12*u), int(6*u))
 }
 
-func (p *Popups) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	appBounds := context.AppBounds()
 	contentSize := p.contentSize(context)
 	center := image.Point{
@@ -181,7 +181,7 @@ func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildA
 	return nil
 }
 
-func (b *popupClickHereText) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (b *popupClickHereText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&b.text, widgetBounds.Bounds())
 }
 
@@ -226,7 +226,7 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 	return nil
 }
 
-func (s *simplePopupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,

@@ -96,7 +96,7 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (p *Popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&p.popup, widgetBounds.Bounds())
 }
 
@@ -205,7 +205,7 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (p *popup) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if (p.hiding || p.toClose) && p.openingCount > 0 {
 		// When the popup is fading out, keep the current position.
 		// This matters especially when the same popup menu is reopened at a different position.
@@ -384,7 +384,7 @@ func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.Chil
 	return nil
 }
 
-func (p *popupContentAndFrame) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// CustomDraw might be too generic and overkill for this case.
 	context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
 		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
@@ -414,7 +414,7 @@ func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	return nil
 }
 
-func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *popupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if p.content != nil {
 		layouter.LayoutWidget(p.content, widgetBounds.Bounds())
 	}

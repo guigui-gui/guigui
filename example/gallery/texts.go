@@ -188,7 +188,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (t *Texts) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,

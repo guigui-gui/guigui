@@ -149,7 +149,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	return nil
 }
 
-func (n *NumberInputs) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,

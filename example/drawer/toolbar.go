@@ -27,7 +27,7 @@ func (t *Toolbar) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	return nil
 }
 
-func (t *Toolbar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *Toolbar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.content.SetFixedSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&t.panel, widgetBounds.Bounds())
 }
@@ -86,7 +86,7 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	return nil
 }
 
-func (t *toolbarContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,

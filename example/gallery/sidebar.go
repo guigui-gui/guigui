@@ -27,7 +27,7 @@ func (s *Sidebar) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	return nil
 }
 
-func (s *Sidebar) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *Sidebar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.panelContent.setSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&s.panel, widgetBounds.Bounds())
 }
@@ -109,7 +109,7 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	return nil
 }
 
-func (s *sidebarContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *sidebarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&s.list, widgetBounds.Bounds())
 }
 

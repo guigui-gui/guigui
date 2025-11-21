@@ -481,7 +481,7 @@ func (a *app) layoutWidgets() {
 
 		// Call Layout.
 		bounds := widgetBoundsFromWidget(&a.context, widgetState)
-		widget.LayoutChildren(&a.context, bounds, &layouter)
+		widget.Layout(&a.context, bounds, &layouter)
 
 		a.visitedZs[widgetState.z()] = struct{}{}
 

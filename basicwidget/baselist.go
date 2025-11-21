@@ -155,7 +155,7 @@ func (b *baseList[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	return nil
 }
 
-func (b *baseList[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y += b.headerHeight
 	bounds.Max.Y -= b.footerHeight
@@ -317,7 +317,7 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 	return nil
 }
 
-func (b *baseListContent[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// Record the current position of the selected item.
 	var headToSelectedItem int
 	if idx := b.SelectedItemIndex(); idx >= 0 {

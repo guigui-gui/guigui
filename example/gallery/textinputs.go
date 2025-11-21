@@ -233,7 +233,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	return nil
 }
 
-func (t *TextInputs) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -276,7 +276,7 @@ func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.
 	return nil
 }
 
-func (c *inlineTextInputContainer) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (c *inlineTextInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	size := c.textInput.Measure(context, guigui.Constraints{})
 	if size.X > widgetBounds.Bounds().Dx() {
 		size = c.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))

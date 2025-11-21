@@ -217,7 +217,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (t *Text) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	vb := widgetBounds.VisibleBounds()
 	vb.Min.X -= textCursorWidth(context) / 2
 	vb.Max.X += textCursorWidth(context) / 2

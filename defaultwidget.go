@@ -23,7 +23,7 @@ func (*DefaultWidget) Build(context *Context, adder *ChildAdder) error {
 	return nil
 }
 
-func (*DefaultWidget) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
 }
 
 func (*DefaultWidget) HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {

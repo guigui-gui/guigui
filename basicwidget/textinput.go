@@ -144,7 +144,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	return nil
 }
 
-func (t *TextInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&t.textInput, widgetBounds.Bounds())
 
 	bounds := widgetBounds.Bounds()
@@ -362,7 +362,7 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 	return b
 }
 
-func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
 	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
 	t.adjustScrollOffsetIfNeeded(context, widgetBounds)

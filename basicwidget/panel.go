@@ -76,7 +76,7 @@ func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (p *Panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *Panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&p.panel, widgetBounds.Bounds())
 }
 
@@ -165,7 +165,7 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 	}
 }
 
-func (p *panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
 		contentSize := p.contentSize(context, widgetBounds)

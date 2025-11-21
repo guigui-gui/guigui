@@ -106,7 +106,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	return nil
 }
 
-func (b *Button) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	var yOffset int
 	if b.button.isPressed(context, widgetBounds) {
 		yOffset = int(0.5 * context.Scale())

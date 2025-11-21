@@ -147,7 +147,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 	return nil
 }
 
-func (s *SegmentedControl[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *SegmentedControl[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layoutItems = adjustSliceSize(s.layoutItems, s.abstractList.ItemCount())
 	for i := range s.abstractList.ItemCount() {
 		s.layoutItems[i] = guigui.LinearLayoutItem{

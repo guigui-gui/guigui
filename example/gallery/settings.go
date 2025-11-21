@@ -177,7 +177,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	return nil
 }
 
-func (s *Settings) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
@@ -227,7 +227,7 @@ func (t *textWithSubText) layout() guigui.LinearLayout {
 	}
 }
 
-func (t *textWithSubText) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.layout().LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

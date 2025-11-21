@@ -251,7 +251,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	return nil
 }
 
-func (n *NumberInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	b := widgetBounds.Bounds()
 	layouter.LayoutWidget(&n.textInput, b)
 	layouter.LayoutWidget(&n.upButton, image.Rectangle{

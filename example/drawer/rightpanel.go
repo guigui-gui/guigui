@@ -25,7 +25,7 @@ func (r *RightPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	return nil
 }
 
-func (r *RightPanel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (r *RightPanel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	r.content.SetFixedSize(widgetBounds.Bounds().Size())
 	layouter.LayoutWidget(&r.panel, widgetBounds.Bounds())
 }
@@ -44,7 +44,7 @@ func (r *rightPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 	return nil
 }
 
-func (r *rightPanelContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (r *rightPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	layouter.LayoutWidget(&r.text, widgetBounds.Bounds().Inset(u/2))
 }

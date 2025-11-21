@@ -52,7 +52,7 @@ func (f *Form) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (f *Form) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (f *Form) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	f.cachedItemBounds = slices.Delete(f.cachedItemBounds, 0, len(f.cachedItemBounds))
 	clear(f.cachedContentBounds)
 	pt := widgetBounds.Bounds().Min

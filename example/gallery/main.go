@@ -99,7 +99,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
-func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
