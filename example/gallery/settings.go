@@ -19,7 +19,7 @@ type Settings struct {
 	colorModeText             basicwidget.Text
 	colorModeSegmentedControl basicwidget.SegmentedControl[string]
 	localeText                textWithSubText
-	localeDropdownList        basicwidget.DropdownList[language.Tag]
+	localeSelect        basicwidget.Select[language.Tag]
 	scaleText                 basicwidget.Text
 	scaleSegmentedControl     basicwidget.SegmentedControl[float64]
 }
@@ -86,7 +86,7 @@ func (s *Settings) Update(context *guigui.Context) error {
 	s.localeText.text.SetValue("Locale")
 	s.localeText.subText.SetValue("The locale affects the glyphs for Chinese characters.")
 
-	s.localeDropdownList.SetItems([]basicwidget.DropdownListItem[language.Tag]{
+	s.localeSelect.SetItems([]basicwidget.SelectItem[language.Tag]{
 		{
 			Text:  "(Default)",
 			Value: language.Und,
@@ -116,8 +116,8 @@ func (s *Settings) Update(context *guigui.Context) error {
 			Value: hongKongChinese,
 		},
 	})
-	s.localeDropdownList.SetOnItemSelected(func(index int) {
-		item, ok := s.localeDropdownList.ItemByIndex(index)
+	s.localeSelect.SetOnItemSelected(func(index int) {
+		item, ok := s.localeSelect.ItemByIndex(index)
 		if !ok {
 			context.SetAppLocales(nil)
 			return
@@ -128,11 +128,11 @@ func (s *Settings) Update(context *guigui.Context) error {
 		}
 		context.SetAppLocales([]language.Tag{item.Value})
 	})
-	if !s.localeDropdownList.IsPopupOpen() {
+	if !s.localeSelect.IsPopupOpen() {
 		if locales := context.AppendAppLocales(nil); len(locales) > 0 {
-			s.localeDropdownList.SelectItemByValue(locales[0])
+			s.localeSelect.SelectItemByValue(locales[0])
 		} else {
-			s.localeDropdownList.SelectItemByValue(language.Und)
+			s.localeSelect.SelectItemByValue(language.Und)
 		}
 	}
 
@@ -168,7 +168,7 @@ func (s *Settings) Update(context *guigui.Context) error {
 		},
 		{
 			PrimaryWidget:   &s.localeText,
-			SecondaryWidget: &s.localeDropdownList,
+			SecondaryWidget: &s.localeSelect,
 		},
 		{
 			PrimaryWidget:   &s.scaleText,

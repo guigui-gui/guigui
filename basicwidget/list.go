@@ -176,7 +176,7 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 	l.listItems = adjustSliceSize(l.listItems, len(items))
 	copy(l.listItems, items)
 
-	// Updating list items at Update might be too late, when the text list is not visible like a dropdown menu.
+	// Updating list items at Update might be too late, when the text list is not visible like a select.
 	// Update it here.
 	l.updateListItems()
 }

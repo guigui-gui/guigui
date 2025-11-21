@@ -15,13 +15,13 @@ import (
 type Model struct {
 	mode string
 
-	buttons       ButtonsModel
-	texts         TextsModel
-	textInputs    TextInputsModel
-	numberInputs  NumberInputsModel
-	lists         ListsModel
-	dropdownLists DropdownListsModel
-	tables        TablesModel
+	buttons      ButtonsModel
+	texts        TextsModel
+	textInputs   TextInputsModel
+	numberInputs NumberInputsModel
+	lists        ListsModel
+	selects      SelectsModel
+	tables       TablesModel
 }
 
 func (m *Model) Mode() string {
@@ -55,8 +55,8 @@ func (m *Model) Lists() *ListsModel {
 	return &m.lists
 }
 
-func (m *Model) DropdownLists() *DropdownListsModel {
-	return &m.dropdownLists
+func (m *Model) Selects() *SelectsModel {
+	return &m.selects
 }
 
 func (m *Model) Tables() *TablesModel {
@@ -407,30 +407,30 @@ func (l *ListsModel) SetEnabled(enabled bool) {
 	l.disabled = !enabled
 }
 
-type DropdownListsModel struct {
-	dropdownListItems []basicwidget.DropdownListItem[int]
+type SelectsModel struct {
+	selectItems []basicwidget.SelectItem[int]
 
 	disabled bool
 }
 
-func (d *DropdownListsModel) AppendDropdownListItems(items []basicwidget.DropdownListItem[int]) []basicwidget.DropdownListItem[int] {
-	if d.dropdownListItems == nil {
+func (s *SelectsModel) AppendSelectItems(items []basicwidget.SelectItem[int]) []basicwidget.SelectItem[int] {
+	if s.selectItems == nil {
 		for i := range 9 {
-			d.dropdownListItems = append(d.dropdownListItems, basicwidget.DropdownListItem[int]{
+			s.selectItems = append(s.selectItems, basicwidget.SelectItem[int]{
 				Text:  fmt.Sprintf("Item %d", i+1),
 				Value: i + 1,
 			})
 		}
 	}
-	return append(items, d.dropdownListItems...)
+	return append(items, s.selectItems...)
 }
 
-func (d *DropdownListsModel) Enabled() bool {
-	return !d.disabled
+func (s *SelectsModel) Enabled() bool {
+	return !s.disabled
 }
 
-func (d *DropdownListsModel) SetEnabled(enabled bool) {
-	d.disabled = !enabled
+func (s *SelectsModel) SetEnabled(enabled bool) {
+	s.disabled = !enabled
 }
 
 type TableItem struct {

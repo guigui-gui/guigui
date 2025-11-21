@@ -86,8 +86,8 @@ func (s *sidebarContent) Update(context *guigui.Context) error {
 			Value: "lists",
 		},
 		{
-			Text:  "Dropdown Lists",
-			Value: "dropdownlists",
+			Text:  "Selects",
+			Value: "selects",
 		},
 		{
 			Text:  "Tables",
