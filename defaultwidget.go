@@ -19,10 +19,7 @@ func (*DefaultWidget) Model(key any) any {
 	return nil
 }
 
-func (*DefaultWidget) AddChildren(context *Context, adder *ChildAdder) {
-}
-
-func (*DefaultWidget) Update(context *Context) error {
+func (*DefaultWidget) Build(context *Context, adder *ChildAdder) error {
 	return nil
 }
 

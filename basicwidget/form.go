@@ -40,7 +40,7 @@ func (f *Form) SetItems(items []FormItem) {
 	f.items = append(f.items, items...)
 }
 
-func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (f *Form) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	for _, item := range f.items {
 		if item.PrimaryWidget != nil {
 			adder.AddChild(item.PrimaryWidget)
@@ -49,6 +49,7 @@ func (f *Form) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 			adder.AddChild(item.SecondaryWidget)
 		}
 	}
+	return nil
 }
 
 func (f *Form) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

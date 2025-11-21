@@ -70,11 +70,8 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.panel.SetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
-func (p *Panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.panel)
-}
-
-func (p *Panel) Update(context *guigui.Context) error {
 	context.SetContainer(&p.panel, true)
 	return nil
 }
@@ -140,12 +137,17 @@ func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.isNextOffsetDelta = true
 }
 
-func (p *panel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}
 	adder.AddChild(&p.scrollOverlay)
 	adder.AddChild(&p.border)
+	if p.content == nil {
+		return nil
+	}
+	p.border.scrollOverlay = &p.scrollOverlay
+	return nil
 }
 
 func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
@@ -161,14 +163,6 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 	default:
 		panic(fmt.Sprintf("basicwidget: unknown PanelContentConstraints value: %d", p.contentConstraints))
 	}
-}
-
-func (p *panel) Update(context *guigui.Context) error {
-	if p.content == nil {
-		return nil
-	}
-	p.border.scrollOverlay = &p.scrollOverlay
-	return nil
 }
 
 func (p *panel) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

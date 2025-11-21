@@ -92,11 +92,9 @@ func (l *List[T]) updateListItems() {
 	l.list.SetItems(l.baseListItems)
 }
 
-func (l *List[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.list)
-}
 
-func (l *List[T]) Update(context *guigui.Context) error {
 	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
@@ -178,6 +176,7 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 
 	// Updating list items at Update might be too late, when the text list is not visible like a select.
 	// Update it here.
+	// TODO: Is this now really needed?
 	l.updateListItems()
 }
 
@@ -243,15 +242,13 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.style = style
 }
 
-func (l *listItemWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if l.item.Content != nil {
 		adder.AddChild(l.item.Content)
-		return
+	} else {
+		adder.AddChild(&l.text)
 	}
-	adder.AddChild(&l.text)
-}
 
-func (l *listItemWidget[T]) Update(context *guigui.Context) error {
 	l.text.SetValue(l.item.Text)
 	l.text.SetVerticalAlign(VerticalAlignMiddle)
 	return nil

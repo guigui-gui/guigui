@@ -64,12 +64,10 @@ func (s *Select[T]) updatePopupMenuitems() {
 	s.popupMenu.SetItems(s.popupMenuItems)
 }
 
-func (s *Select[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.button)
 	adder.AddChild(&s.popupMenu)
-}
 
-func (s *Select[T]) Update(context *guigui.Context) error {
 	s.updatePopupMenuitems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {
 		if content := s.items[index].Content; content != nil {
@@ -134,6 +132,7 @@ func (s *Select[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui
 func (s *Select[T]) SetItems(items []SelectItem[T]) {
 	s.items = adjustSliceSize(s.items, len(items))
 	copy(s.items, items)
+	// TODO: Is this really needed here?
 	s.updatePopupMenuitems()
 }
 
@@ -144,6 +143,7 @@ func (s *Select[T]) SetItemsByStrings(items []string) {
 			Text: str,
 		}
 	}
+	// TODO: Is this really needed here?
 	s.updatePopupMenuitems()
 }
 
@@ -214,16 +214,13 @@ func (s *selectButtonContent) SetText(text string) {
 	s.text.SetValue(text)
 }
 
-func (s *selectButtonContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *selectButtonContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if s.content != nil {
 		adder.AddChild(s.content)
 	}
 	adder.AddChild(&s.dummyContent)
 	adder.AddChild(&s.text)
 	adder.AddChild(&s.icon)
-}
-
-func (s *selectButtonContent) Update(context *guigui.Context) error {
 	s.text.SetVerticalAlign(VerticalAlignMiddle)
 
 	img, err := theResourceImages.Get("unfold_more", context.ColorMode())
@@ -299,8 +296,9 @@ func (s *selectItemContent) SetContent(content guigui.Widget) {
 	s.content = content
 }
 
-func (s *selectItemContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *selectItemContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(s.content)
+	return nil
 }
 
 func (s *selectItemContent) layout(context *guigui.Context) guigui.LinearLayout {

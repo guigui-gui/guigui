@@ -88,16 +88,14 @@ func (b *Button) setKeepPressed(keep bool) {
 	b.button.setKeepPressed(keep)
 }
 
-func (b *Button) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&b.button)
 	if b.content != nil {
 		adder.AddChild(b.content)
 	}
 	adder.AddChild(&b.text)
 	adder.AddChild(&b.icon)
-}
 
-func (b *Button) Update(context *guigui.Context) error {
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
 	} else {

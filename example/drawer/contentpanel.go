@@ -15,11 +15,8 @@ type ContentPanel struct {
 	content guigui.WidgetWithSize[*contentPanelContent]
 }
 
-func (c *ContentPanel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (c *ContentPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&c.panel)
-}
-
-func (c *ContentPanel) Update(context *guigui.Context) error {
 	c.panel.SetContent(&c.content)
 	return nil
 }
@@ -35,11 +32,8 @@ type contentPanelContent struct {
 	text basicwidget.Text
 }
 
-func (c *contentPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (c *contentPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&c.text)
-}
-
-func (c *contentPanelContent) Update(context *guigui.Context) error {
 	c.text.SetValue("Content panel: " + dummyText)
 	c.text.SetAutoWrap(true)
 	c.text.SetSelectable(true)

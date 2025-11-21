@@ -148,12 +148,9 @@ func (b *baseList[T]) ItemYFromIndexForMenu(context *guigui.Context, index int) 
 	return b.content.itemYFromIndexForMenu(context, index)
 }
 
-func (b *baseList[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *baseList[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&b.content)
 	adder.AddChild(&b.frame)
-}
-
-func (b *baseList[T]) Update(context *guigui.Context) error {
 	context.SetContainer(b, true)
 	return nil
 }
@@ -294,7 +291,7 @@ func (b *baseListContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (b *baseListContent[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	b.expanderImages = adjustSliceSize(b.expanderImages, b.abstractList.ItemCount())
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
@@ -307,9 +304,7 @@ func (b *baseListContent[T]) AddChildren(context *guigui.Context, adder *guigui.
 		adder.AddChild(item.Content)
 	}
 	adder.AddChild(&b.scrollOverlay)
-}
 
-func (b *baseListContent[T]) Update(context *guigui.Context) error {
 	var err error
 	b.treeItemCollapsedImage, err = theResourceImages.Get("keyboard_arrow_right", context.ColorMode())
 	if err != nil {
@@ -700,7 +695,7 @@ func (b *baseListContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.
 // itemYFromIndex returns the Y position of the item at the given index relative to the top of the baseList widget.
 // itemYFromIndex returns the same value whatever the baseList position is.
 //
-// itemYFromIndex is available after Update is called, so do not use this from a parent widget.
+// itemYFromIndex is available after Build is called, so do not use this from a parent widget.
 func (b *baseListContent[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
 	if index < 0 || index > len(b.itemBoundsForLayoutFromIndex) || len(b.itemBoundsForLayoutFromIndex) == 0 {
 		return 0, false
@@ -720,7 +715,7 @@ func (b *baseListContent[T]) itemYFromIndex(context *guigui.Context, index int) 
 // itemYFromIndexForMenu returns the Y position of the item at the given index relative to the top of the baseList widget.
 // itemYFromIndexForMenu returns the same value whatever the baseList position is.
 //
-// itemYFromIndexForMenu is available anytime even before Update is called.
+// itemYFromIndexForMenu is available anytime even before Build is called.
 func (b *baseListContent[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
 	y := RoundedCornerRadius(context)
 	for i := range b.visibleItems() {

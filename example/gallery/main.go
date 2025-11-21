@@ -89,15 +89,12 @@ func (r *Root) contentWidgeet() guigui.Widget {
 	return nil
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.sidebar)
 	if content := r.contentWidgeet(); content != nil {
 		adder.AddChild(content)
 	}
-}
-
-func (r *Root) Update(context *guigui.Context) error {
 	r.updateFontFaceSources(context)
 	return nil
 }

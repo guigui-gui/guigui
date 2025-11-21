@@ -88,11 +88,8 @@ func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.popup.SetAnimationDuringFade(animateOnFading)
 }
 
-func (p *Popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
-}
-
-func (p *Popup) Update(context *guigui.Context) error {
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
 	context.SetContainer(&p.popup, true)
@@ -189,7 +186,7 @@ func (p *popup) SetOnClosed(f func(reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
-func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -200,9 +197,7 @@ func (p *popup) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
 		adder.AddChild(&p.shadow)
 		adder.AddChild(&p.contentAndFrame)
 	}
-}
 
-func (p *popup) Update(context *guigui.Context) error {
 	context.SetZDelta(&p.blurredBackground, 1)
 	context.SetZDelta(&p.darkenedBackground, 1)
 	context.SetZDelta(&p.shadow, 1)
@@ -383,9 +378,10 @@ func (p *popupContentAndFrame) hasContent() bool {
 	return p.content.hasContent()
 }
 
-func (p *popupContentAndFrame) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.content)
 	adder.AddChild(&p.frame)
+	return nil
 }
 
 func (p *popupContentAndFrame) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -411,10 +407,11 @@ func (p *popupContent) hasContent() bool {
 	return p.content != nil
 }
 
-func (p *popupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}
+	return nil
 }
 
 func (p *popupContent) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

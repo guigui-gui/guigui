@@ -33,12 +33,10 @@ type NumberInputs struct {
 	enabledToggle  basicwidget.Toggle
 }
 
-func (n *NumberInputs) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&n.numberInputForm)
 	adder.AddChild(&n.configForm)
-}
 
-func (n *NumberInputs) Update(context *guigui.Context) error {
 	model := context.Model(n, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)

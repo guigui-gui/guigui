@@ -28,12 +28,10 @@ type Tables struct {
 	tableRows []basicwidget.TableRow[int]
 }
 
-func (t *Tables) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.table)
 	adder.AddChild(&t.configForm)
-}
 
-func (t *Tables) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
@@ -143,8 +141,6 @@ func (t *Tables) Update(context *guigui.Context) error {
 			SecondaryWidget: &t.enabledToggle,
 		},
 	})
-
-	// layout handled in Layout using LinearLayout
 
 	return nil
 }

@@ -31,12 +31,10 @@ type Selects struct {
 	select2ItemWidgets []selectItem
 }
 
-func (s *Selects) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.listForm)
 	adder.AddChild(&s.configForm)
-}
 
-func (s *Selects) Update(context *guigui.Context) error {
 	model := context.Model(s, modelKeyModel).(*Model)
 
 	// Select (Text)
@@ -164,12 +162,9 @@ func (s *selectItem) SetTextColor(clr color.Color) {
 	s.text.SetColor(clr)
 }
 
-func (s *selectItem) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *selectItem) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.image)
 	adder.AddChild(&s.text)
-}
-
-func (s *selectItem) Update(context *guigui.Context) error {
 	s.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	return nil
 }

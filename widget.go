@@ -13,8 +13,7 @@ import (
 
 type Widget interface {
 	Model(key any) any
-	AddChildren(context *Context, adder *ChildAdder)
-	Update(context *Context) error
+	Build(context *Context, adder *ChildAdder) error
 	LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
@@ -86,8 +85,9 @@ func (w *WidgetWithSize[T]) Widget() T {
 	return w.widget.Widget()
 }
 
-func (w *WidgetWithSize[T]) AddChildren(context *Context, adder *ChildAdder) {
+func (w *WidgetWithSize[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(w.Widget())
+	return nil
 }
 
 func (w *WidgetWithSize[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
@@ -129,8 +129,9 @@ func (w *WidgetWithPadding[T]) Widget() T {
 	return w.widget.Widget()
 }
 
-func (w *WidgetWithPadding[T]) AddChildren(context *Context, adder *ChildAdder) {
+func (w *WidgetWithPadding[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(w.Widget())
+	return nil
 }
 
 func (w *WidgetWithPadding[T]) LayoutChildren(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {

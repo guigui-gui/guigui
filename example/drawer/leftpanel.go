@@ -15,17 +15,13 @@ type LeftPanel struct {
 	content guigui.WidgetWithSize[*leftPanelContent]
 }
 
-func (l *LeftPanel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *LeftPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.panel)
-}
-
-func (l *LeftPanel) Update(context *guigui.Context) error {
 	l.panel.SetStyle(basicwidget.PanelStyleSide)
 	l.panel.SetBorders(basicwidget.PanelBorder{
 		End: true,
 	})
 	l.panel.SetContent(&l.content)
-
 	return nil
 }
 
@@ -40,11 +36,8 @@ type leftPanelContent struct {
 	text basicwidget.Text
 }
 
-func (l *leftPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *leftPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.text)
-}
-
-func (l *leftPanelContent) Update(context *guigui.Context) error {
 	l.text.SetValue("Left panel: " + dummyText)
 	l.text.SetAutoWrap(true)
 	l.text.SetSelectable(true)

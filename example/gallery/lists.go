@@ -41,13 +41,11 @@ type Lists struct {
 	treeItems []basicwidget.ListItem[int]
 }
 
-func (l *Lists) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.listFormPanel)
 	adder.AddChild(&l.jumpForm)
 	adder.AddChild(&l.configForm)
-}
 
-func (l *Lists) Update(context *guigui.Context) error {
 	model := context.Model(l, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)

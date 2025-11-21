@@ -43,12 +43,13 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.toolbar)
 	adder.AddChild(&r.leftPanel)
 	adder.AddChild(&r.contentPanel)
 	adder.AddChild(&r.rightPanel)
+	return nil
 }
 
 func (r *Root) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

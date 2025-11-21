@@ -30,15 +30,13 @@ type Root struct {
 	buttons    [16]basicwidget.Button
 }
 
-func (r *Root) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.configForm)
 	for i := range r.buttons {
 		adder.AddChild(&r.buttons[i])
 	}
-}
 
-func (r *Root) Update(context *guigui.Context) error {
 	r.fillText.SetValue("Fill Widgets into Grid Cells")
 	r.fillToggle.SetValue(r.fill)
 	r.fillToggle.SetOnValueChanged(func(value bool) {

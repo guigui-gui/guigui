@@ -92,15 +92,13 @@ func (t *Table[T]) updateTableRows() {
 	t.list.SetItems(t.baseListItems)
 }
 
-func (t *Table[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.list)
 	for i := range t.columnTexts {
 		adder.AddChild(&t.columnTexts[i])
 	}
 	adder.AddChild(&t.tableHeader)
-}
 
-func (t *Table[T]) Update(context *guigui.Context) error {
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
@@ -268,7 +266,7 @@ func (t *tableRowWidget[T]) ensureTexts() {
 	}
 }
 
-func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.ensureTexts()
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {
@@ -277,9 +275,6 @@ func (t *tableRowWidget[T]) AddChildren(context *guigui.Context, adder *guigui.C
 			adder.AddChild(&t.texts[i])
 		}
 	}
-}
-
-func (t *tableRowWidget[T]) Update(context *guigui.Context) error {
 	l := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 	}

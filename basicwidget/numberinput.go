@@ -187,13 +187,11 @@ func (n *NumberInput) CommitWithCurrentInputValue() {
 	n.textInput.CommitWithCurrentInputValue()
 }
 
-func (n *NumberInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&n.textInput)
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)
-}
 
-func (n *NumberInput) Update(context *guigui.Context) error {
 	n.abstractNumberInput.SetOnValueChangedString(n, func(text string, force bool) {
 		if force {
 			n.textInput.ForceSetValue(text)

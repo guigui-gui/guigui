@@ -29,12 +29,10 @@ type Texts struct {
 	sampleText                      basicwidget.Text
 }
 
-func (t *Texts) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
-}
 
-func (t *Texts) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())

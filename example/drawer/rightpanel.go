@@ -15,17 +15,13 @@ type RightPanel struct {
 	content guigui.WidgetWithSize[*rightPanelContent]
 }
 
-func (r *RightPanel) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *RightPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.panel)
-}
-
-func (r *RightPanel) Update(context *guigui.Context) error {
 	r.panel.SetStyle(basicwidget.PanelStyleSide)
 	r.panel.SetBorders(basicwidget.PanelBorder{
 		Start: true,
 	})
 	r.panel.SetContent(&r.content)
-
 	return nil
 }
 
@@ -40,11 +36,8 @@ type rightPanelContent struct {
 	text basicwidget.Text
 }
 
-func (r *rightPanelContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (r *rightPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.text)
-}
-
-func (r *rightPanelContent) Update(context *guigui.Context) error {
 	r.text.SetValue("Right panel: " + dummyText)
 	r.text.SetAutoWrap(true)
 	r.text.SetSelectable(true)

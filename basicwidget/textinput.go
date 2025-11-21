@@ -134,12 +134,9 @@ func (t *TextInput) Paste() bool {
 	return t.textInput.Paste()
 }
 
-func (t *TextInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
-}
-
-func (t *TextInput) Update(context *guigui.Context) error {
 	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
@@ -167,10 +164,6 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(&t.textInput.text))
 	return nil
-}
-
-func (t *TextInput) isFocused(context *guigui.Context) bool {
-	return t.textInput.isFocused(context)
 }
 
 func (t *TextInput) setPaddingStart(padding int) {
@@ -319,11 +312,7 @@ func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *gui
 	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(start+end, top+bottom))
 }
 
-func (t *textInput) isFocused(context *guigui.Context) bool {
-	return context.IsFocused(t) || context.IsFocused(&t.text)
-}
-
-func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {
@@ -332,6 +321,23 @@ func (t *textInput) AddChildren(context *guigui.Context, adder *guigui.ChildAdde
 	}
 	adder.AddChild(&t.frame)
 	adder.AddChild(&t.scrollOverlay)
+
+	t.background.textInput = t
+
+	t.text.SetEditable(!t.readonly)
+	t.text.SetSelectable(true)
+	t.text.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
+	t.text.setKeepTailingSpace(!t.text.autoWrap)
+
+	if t.icon.HasImage() {
+		t.iconBackground.textInput = t
+	}
+
+	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
+	context.SetPassThrough(&t.frame, true)
+	context.DelegateFocus(t, &t.text)
+
+	return nil
 }
 
 func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
@@ -354,25 +360,6 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 	b = b.Add(image.Pt(int(offsetX), int(offsetY)))
 
 	return b
-}
-
-func (t *textInput) Update(context *guigui.Context) error {
-	t.background.textInput = t
-
-	t.text.SetEditable(!t.readonly)
-	t.text.SetSelectable(true)
-	t.text.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
-	t.text.setKeepTailingSpace(!t.text.autoWrap)
-
-	if t.icon.HasImage() {
-		t.iconBackground.textInput = t
-	}
-
-	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
-	context.SetPassThrough(&t.frame, true)
-	context.DelegateFocus(t, &t.text)
-
-	return nil
 }
 
 func (t *textInput) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

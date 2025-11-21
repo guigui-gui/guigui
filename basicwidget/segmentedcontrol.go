@@ -83,18 +83,11 @@ func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 	}
 }
 
-func (s *SegmentedControl[T]) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	for i := range s.buttons {
 		adder.AddChild(&s.buttons[i])
 	}
-}
 
-func (s *SegmentedControl[T]) Update(context *guigui.Context) error {
-	s.updateButtons(context)
-	return nil
-}
-
-func (s *SegmentedControl[T]) updateButtons(context *guigui.Context) {
 	s.buttons = adjustSliceSize(s.buttons, s.abstractList.ItemCount())
 	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
 
@@ -151,6 +144,7 @@ func (s *SegmentedControl[T]) updateButtons(context *guigui.Context) {
 		}
 		s.buttons[i].SetOnDown(s.onButtonDowns[i])
 	}
+	return nil
 }
 
 func (s *SegmentedControl[T]) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -176,7 +170,6 @@ func (s *SegmentedControl[T]) LayoutChildren(context *guigui.Context, widgetBoun
 }
 
 func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	s.updateButtons(context)
 	if s.abstractList.ItemCount() == 0 {
 		return image.Pt(0, 0)
 	}

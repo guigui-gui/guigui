@@ -34,12 +34,10 @@ type Buttons struct {
 	enabledToggle basicwidget.Toggle
 }
 
-func (b *Buttons) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&b.buttonsForm)
 	adder.AddChild(&b.configForm)
-}
 
-func (b *Buttons) Update(context *guigui.Context) error {
 	model := context.Model(b, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)

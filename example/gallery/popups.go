@@ -36,15 +36,13 @@ type Popups struct {
 	contextMenuPopupPosition image.Point
 }
 
-func (p *Popups) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	for i := range p.forms {
 		adder.AddChild(&p.forms[i])
 	}
 	adder.AddChild(&p.simplePopup)
 	adder.AddChild(&p.contextMenuPopup)
-}
 
-func (p *Popups) Update(context *guigui.Context) error {
 	p.darkenBackgroundText.SetValue("Darken background")
 	p.blurBackgroundText.SetValue("Blur background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
@@ -178,8 +176,9 @@ func (b *popupClickHereText) SetOnClicked(f func(pt image.Point)) {
 	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
-func (p *popupClickHereText) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.text)
+	return nil
 }
 
 func (b *popupClickHereText) LayoutChildren(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -213,12 +212,9 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 	s.popup = popup
 }
 
-func (s *simplePopupContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.titleText)
 	adder.AddChild(&s.closeButton)
-}
-
-func (s *simplePopupContent) Update(context *guigui.Context) error {
 	s.titleText.SetValue("Hello!")
 	s.titleText.SetBold(true)
 

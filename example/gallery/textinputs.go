@@ -36,12 +36,10 @@ type TextInputs struct {
 	enabledToggle                   basicwidget.Toggle
 }
 
-func (t *TextInputs) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.textInputForm)
 	adder.AddChild(&t.configForm)
-}
 
-func (t *TextInputs) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
@@ -272,11 +270,8 @@ func (c *inlineTextInputContainer) SetHorizontalAlign(align basicwidget.Horizont
 	c.textInput.SetHorizontalAlign(align)
 }
 
-func (c *inlineTextInputContainer) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&c.textInput)
-}
-
-func (c *inlineTextInputContainer) Update(context *guigui.Context) error {
 	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
 	return nil
 }

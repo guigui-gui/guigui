@@ -17,17 +17,13 @@ type Toolbar struct {
 	content guigui.WidgetWithSize[*toolbarContent]
 }
 
-func (t *Toolbar) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *Toolbar) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.panel)
-}
-
-func (t *Toolbar) Update(context *guigui.Context) error {
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
 	t.panel.SetBorders(basicwidget.PanelBorder{
 		Bottom: true,
 	})
 	t.panel.SetContent(&t.content)
-
 	return nil
 }
 
@@ -48,12 +44,10 @@ type toolbarContent struct {
 	rightPanelButton basicwidget.Button
 }
 
-func (t *toolbarContent) AddChildren(context *guigui.Context, adder *guigui.ChildAdder) {
+func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.leftPanelButton)
 	adder.AddChild(&t.rightPanelButton)
-}
 
-func (t *toolbarContent) Update(context *guigui.Context) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	if model.IsLeftPanelOpen() {
