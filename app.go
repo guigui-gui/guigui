@@ -205,17 +205,17 @@ func (a *app) updateEventDispatchStates() Widget {
 func (a *app) updateInvalidatedRegions() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
-		if !widgetState.dirty {
+		if !widgetState.redrawRequested {
 			return nil
 		}
 		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
 			if theDebugMode.showRenderingRegions {
-				slog.Info("request redrawing", "requester", fmt.Sprintf("%T", widget), "at", widgetState.dirtyAt, "region", vb)
+				slog.Info("request redrawing", "requester", fmt.Sprintf("%T", widget), "at", widgetState.redrawRequestedAt, "region", vb)
 			}
 			a.requestRedrawWidget(widget)
 		}
-		widgetState.dirty = false
-		widgetState.dirtyAt = ""
+		widgetState.redrawRequested = false
+		widgetState.redrawRequestedAt = ""
 		return nil
 	})
 }
@@ -275,15 +275,15 @@ func (a *app) Update() error {
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
-	} else if !a.invalidatedRegions.Empty() {
-		a.skipBuild = false
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
-		}
 	} else if inputHandledWidget != nil {
 		a.skipBuild = false
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
+		}
+	} else if !a.invalidatedRegions.Empty() {
+		a.skipBuild = false
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
 		}
 	}
 

@@ -65,8 +65,6 @@ type Context struct {
 	defaultColorWarnOnce       sync.Once
 	locales                    []language.Tag
 	allLocales                 []language.Tag
-
-	tmpWidgetStates []*widgetState
 }
 
 func (c *Context) Scale() float64 {

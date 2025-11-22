@@ -116,8 +116,8 @@ type widgetState struct {
 
 	offscreen *ebiten.Image
 
-	dirty   bool
-	dirtyAt string
+	redrawRequested   bool
+	redrawRequestedAt string
 
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
@@ -218,10 +218,10 @@ func RequestRedraw(widget Widget) {
 }
 
 func requestRedraw(widgetState *widgetState) {
-	widgetState.dirty = true
+	widgetState.redrawRequested = true
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
-			widgetState.dirtyAt = fmt.Sprintf("%s:%d", file, line)
+			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
 		}
 	}
 }
