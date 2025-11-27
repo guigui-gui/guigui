@@ -479,6 +479,11 @@ func (a *app) layoutWidgets() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 
+		// Reset child layouts.
+		for _, child := range widgetState.children {
+			child.widgetState().bounds = image.Rectangle{}
+		}
+
 		// Call Layout.
 		bounds := widgetBoundsFromWidget(&a.context, widgetState)
 		widget.Layout(&a.context, bounds, &layouter)
