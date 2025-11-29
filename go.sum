@@ -18,8 +18,8 @@ github.com/hajimehoshi/bitmapfont/v4 v4.1.0 h1:eE3qa5Do4qhowZVIHjsrX5pYyyPN6sAFW
 github.com/hajimehoshi/bitmapfont/v4 v4.1.0/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
 github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.4 h1:TMNyiGyzH24U7To0Fqx5JyDLUy5XkBT3fhMXBD/BolE=
 github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.4/go.mod h1:peuPPoZS3JNf0N8mFcQ/sz9dMdAoBqDyNmWLM0Dqorc=
-github.com/hajimehoshi/iro v0.0.0-20251129071038-df3036aab531 h1:w6jCoTkBynwkKWZuiEfPsdhVIB/ewv7eh1Kt7M/uw90=
-github.com/hajimehoshi/iro v0.0.0-20251129071038-df3036aab531/go.mod h1:bLdpK3WZGnCTIak1ZilBl9LjVAi+UayAvqOOM5xNvs4=
+github.com/hajimehoshi/iro v0.1.0 h1:Flx0bYIXHneqeZNX22Dlwmr8phXavn1Gm6TPHmjKTrg=
+github.com/hajimehoshi/iro v0.1.0/go.mod h1:gfbDojwwKcq04DipcwqdW35ooEStXByUF3JanzJG5Ks=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade h1:FmusiCI1wHw+XQbvL9M+1r/C3SPqKrmBaIOYwVfQoDE=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade/go.mod h1:ZDXo8KHryOWSIqnsb/CiDq7hQUYryCgdVnxbj8tDG7o=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
