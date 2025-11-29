@@ -88,13 +88,17 @@ func getColor(base iro.Color, lightness float64, back, front iro.Color) color.Co
 	l2 := c0l*(1-lightness) + c1l*lightness
 	if l2 < l {
 		rate := (l2 - c0l) / (l - c0l)
-		return MixColor(back, base, rate)
+		return mixColors(back, base, rate)
 	}
 	rate := (l2 - l) / (c1l - l)
-	return MixColor(base, front, rate)
+	return mixColors(base, front, rate)
 }
 
-func MixColor(clr0, clr1 iro.Color, rate float64) color.Color {
+func MixColors(clr0, clr1 color.Color, rate float64) color.Color {
+	return mixColors(iro.ColorFromSRGBColor(clr0), iro.ColorFromSRGBColor(clr1), rate)
+}
+
+func mixColors(clr0, clr1 iro.Color, rate float64) color.Color {
 	if rate == 0 {
 		return clr0.SRGBColor()
 	}
