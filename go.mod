@@ -6,7 +6,7 @@ require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/ebitengine/purego v0.10.0-alpha.2.0.20251027033332-4956991301fb
 	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.4
-	github.com/hajimehoshi/oklab v0.1.0
+	github.com/hajimehoshi/iro v0.0.0-20251129071038-df3036aab531
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.9.0
 	github.com/rivo/uniseg v0.4.7

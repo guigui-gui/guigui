@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/iro"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
@@ -106,9 +107,9 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	bgColorOn := draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
 	var bgColor color.Color
 	if t.value && context.IsEnabled(t) {
-		bgColor = draw.MixColor(bgColorOff, bgColorOn, rate)
+		bgColor = draw.MixColor(iro.ColorFromSRGBColor(bgColorOff), iro.ColorFromSRGBColor(bgColorOn), rate)
 	} else {
-		bgColor = draw.MixColor(bgColorOn, bgColorOff, rate)
+		bgColor = draw.MixColor(iro.ColorFromSRGBColor(bgColorOn), iro.ColorFromSRGBColor(bgColorOff), rate)
 	}
 	r := bounds.Dy() / 2
 	draw.DrawRoundedRect(context, dst, bounds, bgColor, r)

@@ -17,7 +17,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/hajimehoshi/oklab"
 )
 
 type debugMode struct {
@@ -722,10 +721,9 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 
 	a.debugScreen.Clear()
 	for _, item := range a.invalidatedRegionsForDebug {
-		clr := oklab.OklchModel.Convert(color.RGBA{R: 0xff, G: 0x4b, B: 0x00, A: 0xff}).(oklab.Oklch)
-		clr.Alpha = float64(item.time) / float64(invalidatedRegionForDebugMaxTime())
-		if clr.Alpha > 0 {
+		if alpha := float64(item.time) / float64(invalidatedRegionForDebugMaxTime()); alpha > 0 {
 			w := float32(4 * a.context.Scale())
+			clr := color.NRGBA{R: 0xff, G: 0x4b, B: 0x00, A: uint8(alpha * 255)}
 			vector.StrokeRect(a.debugScreen, float32(item.region.Min.X)+w/2, float32(item.region.Min.Y)+w/2, float32(item.region.Dx())-w, float32(item.region.Dy())-w, w, clr, false)
 		}
 	}
