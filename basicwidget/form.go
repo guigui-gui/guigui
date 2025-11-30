@@ -82,6 +82,8 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 			continue
 		}
 
+		u := UnitSize(context)
+
 		var primaryS image.Point
 		var secondaryS image.Point
 		if item.PrimaryWidget != nil {
@@ -96,7 +98,7 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 				secondaryS = item.SecondaryWidget.Measure(context, guigui.FixedWidthConstraints(width-2*paddingS.X))
 			}
 		}
-		newLine := item.PrimaryWidget != nil && primaryS.X+secondaryS.X+2*paddingS.X > width
+		newLine := item.PrimaryWidget != nil && primaryS.X+u/4+secondaryS.X+2*paddingS.X > width
 		var baseH int
 		if newLine {
 			baseH = max(primaryS.Y+paddingS.Y+secondaryS.Y, minFormItemHeight(context)) + 2*paddingS.Y
@@ -109,7 +111,7 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 		}
 		itemBounds = append(itemBounds, b)
 
-		maxPaddingY := paddingS.Y + int((float64(UnitSize(context))-LineHeight(context))/2)
+		maxPaddingY := paddingS.Y + int((float64(u)-LineHeight(context))/2)
 		if item.PrimaryWidget != nil {
 			bounds := b
 			bounds.Min.X += paddingS.X
