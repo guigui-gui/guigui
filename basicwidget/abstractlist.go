@@ -18,9 +18,8 @@ type valuer[Value comparable] interface {
 }
 
 type abstractList[Value comparable, Item valuer[Value]] struct {
-	items               []Item
-	selectedIndices     []int
-	nextSelectedIndices []int
+	items           []Item
+	selectedIndices []int
 }
 
 func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f func(index int)) {
@@ -30,16 +29,6 @@ func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f fu
 func (a *abstractList[Value, Item]) SetItems(widget guigui.Widget, items []Item) {
 	a.items = adjustSliceSize(items, len(items))
 	copy(a.items, items)
-
-	if len(a.nextSelectedIndices) > 0 {
-		if len(a.nextSelectedIndices) != 1 {
-			panic("basicwidget: nextSelectedIndices must have length 0 or 1 so far")
-		}
-		index := a.nextSelectedIndices[0]
-		a.selectedIndices = adjustSliceSize(a.selectedIndices, 1)
-		a.selectedIndices[0] = index
-		guigui.DispatchEventHandler(widget, abstractListEventItemSelected, index)
-	}
 }
 
 func (a *abstractList[Value, Item]) ItemCount() int {
@@ -63,16 +52,6 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, inde
 		return true
 	}
 
-	if index >= len(a.items) {
-		a.selectedIndices = a.selectedIndices[:0]
-		if len(a.nextSelectedIndices) == 1 && a.nextSelectedIndices[0] == index {
-			return false
-		}
-		a.nextSelectedIndices = adjustSliceSize(a.nextSelectedIndices, 1)
-		a.nextSelectedIndices[0] = index
-		return true
-	}
-
 	if len(a.selectedIndices) == 1 && a.selectedIndices[0] == index && !forceFireEvents {
 		return false
 	}
@@ -80,7 +59,6 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, inde
 	selected := slices.Contains(a.selectedIndices, index)
 	a.selectedIndices = adjustSliceSize(a.selectedIndices, 1)
 	a.selectedIndices[0] = index
-	a.nextSelectedIndices = a.nextSelectedIndices[:0]
 	if !selected || forceFireEvents {
 		guigui.DispatchEventHandler(widget, abstractListEventItemSelected, index)
 	}
@@ -95,16 +73,21 @@ func (a *abstractList[Value, Item]) SelectItemByValue(widget guigui.Widget, valu
 }
 
 func (a *abstractList[Value, Item]) SelectedItem() (Item, bool) {
-	if len(a.selectedIndices) == 0 {
-		var item Item
-		return item, false
+	if len(a.selectedIndices) > 0 {
+		idx := a.selectedIndices[0]
+		if idx < 0 || idx >= len(a.items) {
+			var item Item
+			return item, false
+		}
+		return a.items[idx], true
 	}
-	return a.items[a.selectedIndices[0]], true
+	var item Item
+	return item, false
 }
 
 func (a *abstractList[Value, Item]) SelectedItemIndex() int {
-	if len(a.selectedIndices) == 0 {
-		return -1
+	if len(a.selectedIndices) > 0 {
+		return a.selectedIndices[0]
 	}
-	return a.selectedIndices[0]
+	return -1
 }
