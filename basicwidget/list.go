@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image"
 	"image/color"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -30,6 +31,7 @@ type ListItem[T comparable] struct {
 	TextColor    color.Color
 	Header       bool
 	Content      guigui.Widget
+	KeyText      string
 	Unselectable bool
 	Border       bool
 	Disabled     bool
@@ -100,6 +102,7 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		item := &l.listItemWidgets[i]
 		item.text.SetBold(item.item.Header || l.list.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
+		item.keyText.SetColor(l.ItemTextColor(context, i))
 		context.SetEnabled(item, !item.item.Disabled)
 	}
 	return nil
@@ -173,10 +176,6 @@ func (l *List[T]) SetItemsByStrings(strs []string) {
 func (l *List[T]) SetItems(items []ListItem[T]) {
 	l.listItems = adjustSliceSize(l.listItems, len(items))
 	copy(l.listItems, items)
-
-	// Updating list items at Update might be too late, when the text list is not visible like a select.
-	// Update it here.
-	// TODO: Is this now really needed?
 	l.updateListItems()
 }
 
@@ -219,16 +218,20 @@ func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraint
 type listItemWidget[T comparable] struct {
 	guigui.DefaultWidget
 
-	item ListItem[T]
-	text Text
+	item    ListItem[T]
+	text    Text
+	keyText Text
 
 	heightPlus1 int
 	style       ListStyle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
 	l.item = listItem
 	l.text.SetValue(listItem.Text)
+	l.keyText.SetValue(listItem.KeyText)
 }
 
 func (l *listItemWidget[T]) setHeight(height int) {
@@ -248,37 +251,69 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	} else {
 		adder.AddChild(&l.text)
 	}
+	adder.AddChild(&l.keyText)
 
 	l.text.SetValue(l.item.Text)
 	l.text.SetVerticalAlign(VerticalAlignMiddle)
+	l.keyText.SetOpacity(0.5)
+	l.keyText.SetValue(l.item.KeyText)
+	l.keyText.SetVerticalAlign(VerticalAlignMiddle)
+	l.keyText.SetHorizontalAlign(HorizontalAlignEnd)
 	return nil
 }
 
-func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	var widget guigui.Widget
+func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout {
+	layout := guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Gap:       int(LineHeight(context)),
+	}
+	l.layoutItems = slices.Delete(l.layoutItems, 0, len(l.layoutItems))
 	if l.item.Content != nil {
-		widget = l.item.Content
+		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
+			Widget: l.item.Content,
+		})
 	} else {
-		widget = &l.text
+		// TODO: Use bold font to measure the size, maybe?
+		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
+			Widget: &l.text,
+		})
+		layout.Padding = ListItemTextPadding(context)
 	}
-
-	b := widgetBounds.Bounds()
-	s := widget.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
-	if l.style != ListStyleMenu {
-		s.X = b.Dx()
+	if l.keyText.Value() != "" {
+		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
+			Widget: &l.keyText,
+		})
+		layout.Padding.End = ListItemTextPadding(context).End
 	}
+	layout.Items = l.layoutItems
+	var h int
 	if l.heightPlus1 > 0 {
-		s.Y = l.heightPlus1 - 1
+		h = l.heightPlus1 - 1
+	} else if l.item.Border && l.item.Content == nil {
+		h = UnitSize(context) / 2
+	} else if l.item.Header && l.item.Content == nil {
+		h = UnitSize(context) * 3 / 2
 	}
-	offY := (b.Dy() - s.Y) / 2
-	pt := b.Min.Add(image.Pt(0, offY))
-	if widget == &l.text {
-		pt.X += ListItemTextPadding(context).Start
+	if h > 0 {
+		return guigui.LinearLayout{
+			Direction: guigui.LayoutDirectionVertical,
+			Items: []guigui.LinearLayoutItem{
+				{
+					Layout: layout,
+					Size:   guigui.FixedSize(h),
+				},
+			},
+		}
 	}
-	layouter.LayoutWidget(widget, image.Rectangle{
-		Min: pt,
-		Max: pt.Add(s),
-	})
+	return layout
+}
+
+func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	l.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return l.layout(context).Measure(context, constraints)
 }
 
 func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -295,39 +330,6 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 		bounds := widgetBounds.Bounds()
 		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), RoundedCornerRadius(context))
 	}*/
-}
-
-func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	var s image.Point
-	if l.item.Content != nil {
-		s = l.item.Content.Measure(context, constraints)
-	} else {
-		// Assume that every item can use a bold font.
-		p := ListItemTextPadding(context)
-		if fixedWidth, ok := constraints.FixedWidth(); ok {
-			constraints = guigui.FixedWidthConstraints(fixedWidth - p.Start - p.End)
-		}
-		if fixedHeight, ok := constraints.FixedHeight(); ok {
-			constraints = guigui.FixedHeightConstraints(fixedHeight - p.Top - p.Bottom)
-		}
-		s = l.text.boldTextSize(context, constraints)
-		s = s.Add(image.Pt(p.Start+p.End, p.Top+p.Bottom))
-	}
-
-	if l.style != ListStyleMenu || l.item.Border {
-		if w, ok := constraints.FixedWidth(); ok {
-			s.X = max(s.X, w)
-		}
-	}
-
-	if l.heightPlus1 > 0 {
-		s.Y = l.heightPlus1 - 1
-	} else if l.item.Border {
-		s.Y = UnitSize(context) / 2
-	} else if l.item.Header {
-		s.Y = UnitSize(context) * 3 / 2
-	}
-	return s
 }
 
 func (l *listItemWidget[T]) selectable() bool {

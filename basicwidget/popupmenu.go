@@ -20,6 +20,7 @@ type PopupMenuItem[T comparable] struct {
 	TextColor    color.Color
 	Header       bool
 	Content      guigui.Widget
+	KeyText      string
 	Unselectable bool
 	Border       bool
 	Disabled     bool
@@ -118,6 +119,7 @@ func (p *PopupMenu[T]) updateListItems() {
 			TextColor:    item.TextColor,
 			Header:       item.Header,
 			Content:      item.Content,
+			KeyText:      item.KeyText,
 			Unselectable: item.Unselectable,
 			Border:       item.Border,
 			Disabled:     item.Disabled,

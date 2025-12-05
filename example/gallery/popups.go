@@ -91,10 +91,12 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	p.contextMenuPopup.SetItems(
 		[]basicwidget.PopupMenuItem[int]{
 			{
-				Text: "Item 1",
+				Text:    "Item 1",
+				KeyText: "Foo",
 			},
 			{
-				Text: "Item 2",
+				Text:    "Item 2",
+				KeyText: "Bar",
 			},
 			{
 				Text: "Item 3",
