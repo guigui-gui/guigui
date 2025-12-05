@@ -347,13 +347,13 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 	for i := range b.visibleItems() {
 		item, _ := b.abstractList.ItemByIndex(i)
 		itemW := cw - 2*RoundedCornerRadius(context)
-		itemW -= item.IndentLevel * listItemIndentSize(context)
+		itemW -= listItemIndentSize(context, item.IndentLevel)
 		contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
 
 		if b.checkmarkIndexPlus1 == i+1 {
 			imgSize := listItemCheckmarkSize(context)
 			imgP := p
-			imgP.X += item.IndentLevel * listItemIndentSize(context)
+			imgP.X += listItemIndentSize(context, item.IndentLevel)
 			imgP.X += UnitSize(context) / 4
 			itemH := contentH
 			imgP.Y += (itemH - imgSize) / 2
@@ -381,11 +381,11 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 			}
 			b.expanderImages[i].SetImage(img)
 			expanderP := p
-			expanderP.X += (item.IndentLevel - 1) * listItemIndentSize(context)
+			expanderP.X += listItemIndentSize(context, item.IndentLevel) - int(LineHeight(context))
 			// Adjust the position a bit for better appearance.
 			expanderP.Y += UnitSize(context) / 16
 			s := image.Pt(
-				listItemIndentSize(context),
+				int(LineHeight(context)),
 				contentH,
 			)
 			b.itemBoundsForLayoutFromWidget[&b.expanderImages[i]] = image.Rectangle{
@@ -398,7 +398,7 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 		if b.checkmarkIndexPlus1 > 0 {
 			itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 		}
-		itemP.X += item.IndentLevel * listItemIndentSize(context)
+		itemP.X += listItemIndentSize(context, item.IndentLevel)
 		itemP.Y = b.adjustItemY(context, itemP.Y)
 		r := image.Rectangle{
 			Min: itemP,
@@ -799,7 +799,7 @@ func (b *baseListContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			bounds := b.itemBounds(context, i)
 			// Reset the X position to ignore indentation.
 			item, _ := b.abstractList.ItemByIndex(i)
-			bounds.Min.X -= item.IndentLevel * listItemIndentSize(context)
+			bounds.Min.X -= listItemIndentSize(context, item.IndentLevel)
 			if bounds.Min.Y > vb.Max.Y {
 				break
 			}
@@ -886,7 +886,7 @@ func (b *baseListContent[T]) Measure(context *guigui.Context, constraints guigui
 	for i := range b.abstractList.ItemCount() {
 		item, _ := b.abstractList.ItemByIndex(i)
 		s := item.Content.Measure(context, itemConstraints)
-		size.X = max(size.X, s.X+item.IndentLevel*listItemIndentSize(context))
+		size.X = max(size.X, s.X+listItemIndentSize(context, item.IndentLevel))
 		size.Y += s.Y
 	}
 
@@ -1007,6 +1007,9 @@ func listItemTextAndImagePadding(context *guigui.Context) int {
 	return UnitSize(context) / 8
 }
 
-func listItemIndentSize(context *guigui.Context) int {
-	return int(LineHeight(context))
+func listItemIndentSize(context *guigui.Context, level int) int {
+	if level == 0 {
+		return 0
+	}
+	return int(LineHeight(context) + LineHeight(context)/2*float64(level-1))
 }
