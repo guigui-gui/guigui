@@ -31,6 +31,7 @@ type PopupMenu[T comparable] struct {
 
 	popup     Popup
 	list      guigui.WidgetWithSize[*List[T]]
+	items     []PopupMenuItem[T]
 	listItems []ListItem[T]
 
 	onItemSelected func(index int)
@@ -109,9 +110,9 @@ func (p *PopupMenu[T]) IsOpen() bool {
 	return p.popup.IsOpen()
 }
 
-func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
-	p.listItems = adjustSliceSize(p.listItems, len(items))
-	for i, item := range items {
+func (p *PopupMenu[T]) updateListItems() {
+	p.listItems = adjustSliceSize(p.listItems, len(p.items))
+	for i, item := range p.items {
 		p.listItems[i] = ListItem[T]{
 			Text:         item.Text,
 			TextColor:    item.TextColor,
@@ -126,42 +127,32 @@ func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
 	p.list.Widget().SetItems(p.listItems)
 }
 
+func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
+	p.items = adjustSliceSize(p.items, len(items))
+	copy(p.items, items)
+	p.updateListItems()
+}
+
 func (p *PopupMenu[T]) SetItemsByStrings(items []string) {
-	p.list.Widget().SetItemsByStrings(items)
+	p.items = adjustSliceSize(p.items, len(items))
+	for i, str := range items {
+		p.items[i] = PopupMenuItem[T]{
+			Text: str,
+		}
+	}
+	p.updateListItems()
 }
 
 func (p *PopupMenu[T]) SelectedItem() (PopupMenuItem[T], bool) {
-	listItem, ok := p.list.Widget().SelectedItem()
-	if !ok {
-		return PopupMenuItem[T]{}, false
-	}
-	return PopupMenuItem[T]{
-		Text:         listItem.Text,
-		TextColor:    listItem.TextColor,
-		Header:       listItem.Header,
-		Content:      listItem.Content,
-		Unselectable: listItem.Unselectable,
-		Border:       listItem.Border,
-		Disabled:     listItem.Disabled,
-		Value:        listItem.Value,
-	}, true
+	index := p.list.Widget().SelectedItemIndex()
+	return p.ItemByIndex(index)
 }
 
 func (p *PopupMenu[T]) ItemByIndex(index int) (PopupMenuItem[T], bool) {
-	listItem, ok := p.list.Widget().ItemByIndex(index)
-	if !ok {
+	if index < 0 || index >= len(p.items) {
 		return PopupMenuItem[T]{}, false
 	}
-	return PopupMenuItem[T]{
-		Text:         listItem.Text,
-		TextColor:    listItem.TextColor,
-		Header:       listItem.Header,
-		Content:      listItem.Content,
-		Unselectable: listItem.Unselectable,
-		Border:       listItem.Border,
-		Disabled:     listItem.Disabled,
-		Value:        listItem.Value,
-	}, true
+	return p.items[index], true
 }
 
 func (p *PopupMenu[T]) SelectedItemIndex() int {

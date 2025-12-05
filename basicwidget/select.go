@@ -47,11 +47,20 @@ func (s *Select[T]) SetOnItemSelected(f func(index int)) {
 	guigui.RegisterEventHandler(s, selectEventItemSelected, f)
 }
 
-func (s *Select[T]) updatePopupMenuitems() {
+func (s *Select[T]) updatePopupMenuItems() {
 	s.popupMenuItems = adjustSliceSize(s.popupMenuItems, len(s.items))
 	s.popupMenuItemContents = adjustSliceSize(s.popupMenuItemContents, len(s.items))
 	for i, item := range s.items {
-		pmItem := PopupMenuItem[T](item)
+		pmItem := PopupMenuItem[T]{
+			Text:         item.Text,
+			TextColor:    item.TextColor,
+			Header:       item.Header,
+			Content:      item.Content,
+			Unselectable: item.Unselectable,
+			Border:       item.Border,
+			Disabled:     item.Disabled,
+			Value:        item.Value,
+		}
 		if s.popupMenu.IsOpen() && pmItem.Content != nil {
 			s.popupMenuItemContents[i].SetContent(pmItem.Content)
 			pmItem.Content = &s.popupMenuItemContents[i]
@@ -68,7 +77,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddChild(&s.button)
 	adder.AddChild(&s.popupMenu)
 
-	s.updatePopupMenuitems()
+	s.updatePopupMenuItems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {
 		if content := s.items[index].Content; content != nil {
 			if s.popupMenu.IsOpen() {
@@ -132,8 +141,7 @@ func (s *Select[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 func (s *Select[T]) SetItems(items []SelectItem[T]) {
 	s.items = adjustSliceSize(s.items, len(items))
 	copy(s.items, items)
-	// TODO: Is this really needed here?
-	s.updatePopupMenuitems()
+	s.updatePopupMenuItems()
 }
 
 func (s *Select[T]) SetItemsByStrings(items []string) {
@@ -143,24 +151,19 @@ func (s *Select[T]) SetItemsByStrings(items []string) {
 			Text: str,
 		}
 	}
-	// TODO: Is this really needed here?
-	s.updatePopupMenuitems()
+	s.updatePopupMenuItems()
 }
 
 func (s *Select[T]) SelectedItem() (SelectItem[T], bool) {
-	item, ok := s.popupMenu.SelectedItem()
-	if !ok {
-		return SelectItem[T]{}, false
-	}
-	return SelectItem[T](item), true
+	index := s.popupMenu.SelectedItemIndex()
+	return s.ItemByIndex(index)
 }
 
 func (s *Select[T]) ItemByIndex(index int) (SelectItem[T], bool) {
-	item, ok := s.popupMenu.ItemByIndex(index)
-	if !ok {
+	if index < 0 || index >= len(s.items) {
 		return SelectItem[T]{}, false
 	}
-	return SelectItem[T](item), true
+	return s.items[index], true
 }
 
 func (s *Select[T]) SelectedItemIndex() int {
