@@ -291,6 +291,10 @@ func (p *popup) backgroundPassThrough() bool {
 	return p.openingCount == 0 || p.showing || p.hiding
 }
 
+func (p *popup) isHiding() bool {
+	return p.hiding
+}
+
 func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if p.toOpen {
 		if !p.showing {

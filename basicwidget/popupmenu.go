@@ -130,6 +130,10 @@ func (p *PopupMenu[T]) updateListItems() {
 }
 
 func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
+	// When the popup is hiding, do not update the items, or the animation would seem unstable.
+	if p.popup.popup.isHiding() {
+		return
+	}
 	p.items = adjustSliceSize(p.items, len(items))
 	copy(p.items, items)
 	p.updateListItems()
