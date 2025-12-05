@@ -320,9 +320,10 @@ func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.
 
 func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if l.item.Border {
+		u := UnitSize(context)
 		b := widgetBounds.Bounds()
-		x0 := float32(b.Min.X)
-		x1 := float32(b.Max.X)
+		x0 := float32(b.Min.X + u/4)
+		x1 := float32(b.Max.X - u/4)
 		y := float32(b.Min.Y) + float32(b.Dy())/2
 		width := float32(1 * context.Scale())
 		vector.StrokeLine(dst, x0, y, x1, y, width, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), false)
