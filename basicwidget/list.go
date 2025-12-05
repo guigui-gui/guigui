@@ -271,11 +271,13 @@ func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout 
 	if l.item.Content != nil {
 		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
 			Widget: l.item.Content,
+			Size:   guigui.FlexibleSize(1),
 		})
 	} else {
 		// TODO: Use bold font to measure the size, maybe?
 		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
 			Widget: &l.text,
+			Size:   guigui.FlexibleSize(1),
 		})
 		layout.Padding = ListItemTextPadding(context)
 	}
