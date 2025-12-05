@@ -323,6 +323,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.openingCount += 2
 			}
 			p.openingCount = min(p.openingCount, popupMaxOpeningCount())
+			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == popupMaxOpeningCount() {
 			p.showing = false
@@ -340,6 +341,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.openingCount--
 			}
 			p.openingCount = max(p.openingCount, 0)
+			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
