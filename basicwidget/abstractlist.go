@@ -22,7 +22,7 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 	selectedIndices []int
 }
 
-func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
+func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f func(index int)) {
 	guigui.RegisterEventHandler(widget, abstractListEventItemSelected, f)
 }
 

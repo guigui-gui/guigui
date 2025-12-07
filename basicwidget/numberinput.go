@@ -39,9 +39,9 @@ type NumberInput struct {
 
 	abstractNumberInput abstractNumberInput
 
-	onTextInputValueChanged func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value string, committed bool)
-	onUpButtonDown          func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
-	onDownButtonDown        func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
+	onTextInputValueChanged func(value string, committed bool)
+	onUpButtonDown          func()
+	onDownButtonDown        func()
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -52,23 +52,23 @@ func (n *NumberInput) SetEditable(editable bool) {
 	n.textInput.SetEditable(editable)
 }
 
-func (n *NumberInput) SetOnValueChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value int, committed bool)) {
+func (n *NumberInput) SetOnValueChanged(f func(value int, committed bool)) {
 	n.abstractNumberInput.SetOnValueChanged(n, f)
 }
 
-func (n *NumberInput) SetOnValueChangedBigInt(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value *big.Int, committed bool)) {
+func (n *NumberInput) SetOnValueChangedBigInt(f func(value *big.Int, committed bool)) {
 	n.abstractNumberInput.SetOnValueChangedBigInt(n, f)
 }
 
-func (n *NumberInput) SetOnValueChangedInt64(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value int64, committed bool)) {
+func (n *NumberInput) SetOnValueChangedInt64(f func(value int64, committed bool)) {
 	n.abstractNumberInput.SetOnValueChangedInt64(n, f)
 }
 
-func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value uint64, committed bool)) {
+func (n *NumberInput) SetOnValueChangedUint64(f func(value uint64, committed bool)) {
 	n.abstractNumberInput.SetOnValueChangedUint64(n, f)
 }
 
-func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, key ebiten.Key) (handled bool)) {
+func (n *NumberInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
 	n.textInput.SetOnKeyJustPressed(f)
 }
 
@@ -192,7 +192,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)
 
-	n.abstractNumberInput.SetOnValueChangedString(n, func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, force bool) {
+	n.abstractNumberInput.SetOnValueChangedString(n, func(text string, force bool) {
 		if force {
 			n.textInput.ForceSetValue(text)
 		} else {
@@ -205,7 +205,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	n.textInput.SetTabular(true)
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
 	if n.onTextInputValueChanged == nil {
-		n.onTextInputValueChanged = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool) {
+		n.onTextInputValueChanged = func(text string, committed bool) {
 			n.abstractNumberInput.SetString(n, text, false, committed)
 		}
 	}
@@ -227,7 +227,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	})
 	n.upButton.setPairedButton(&n.downButton)
 	if n.onUpButtonDown == nil {
-		n.onUpButtonDown = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+		n.onUpButtonDown = func() {
 			n.increment()
 		}
 	}
@@ -241,7 +241,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	})
 	n.downButton.setPairedButton(&n.upButton)
 	if n.onDownButtonDown == nil {
-		n.onDownButtonDown = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+		n.onDownButtonDown = func() {
 			n.decrement()
 		}
 	}

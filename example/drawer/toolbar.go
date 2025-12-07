@@ -76,10 +76,10 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 		t.rightPanelButton.SetIcon(img)
 	}
-	t.leftPanelButton.SetOnDown(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	t.leftPanelButton.SetOnDown(func() {
 		model.SetLeftPanelOpen(!model.IsLeftPanelOpen())
 	})
-	t.rightPanelButton.SetOnDown(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	t.rightPanelButton.SetOnDown(func() {
 		model.SetRightPanelOpen(!model.IsRightPanelOpen())
 	})
 

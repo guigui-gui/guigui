@@ -31,15 +31,15 @@ type baseButton struct {
 	pairedButton    *baseButton
 }
 
-func (b *baseButton) SetOnDown(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)) {
+func (b *baseButton) SetOnDown(f func()) {
 	guigui.RegisterEventHandler(b, baseButtonEventDown, f)
 }
 
-func (b *baseButton) SetOnUp(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)) {
+func (b *baseButton) SetOnUp(f func()) {
 	guigui.RegisterEventHandler(b, baseButtonEventUp, f)
 }
 
-func (b *baseButton) setOnRepeat(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)) {
+func (b *baseButton) setOnRepeat(f func()) {
 	guigui.RegisterEventHandler(b, baseButtonEventRepeat, f)
 }
 

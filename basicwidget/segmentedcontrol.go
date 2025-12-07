@@ -40,7 +40,7 @@ type SegmentedControl[T comparable] struct {
 	direction   SegmentedControlDirection
 	layoutItems []guigui.LinearLayoutItem
 
-	onButtonDowns []func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
+	onButtonDowns []func()
 }
 
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {
@@ -51,7 +51,7 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 	guigui.RequestRedraw(s)
 }
 
-func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
+func (s *SegmentedControl[T]) SetOnItemSelected(f func(index int)) {
 	s.abstractList.SetOnItemSelected(s, f)
 }
 
@@ -138,7 +138,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		context.SetEnabled(&s.buttons[i], !item.Disabled)
 		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
 		if s.onButtonDowns[i] == nil {
-			s.onButtonDowns[i] = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+			s.onButtonDowns[i] = func() {
 				s.SelectItemByIndex(i)
 			}
 		}

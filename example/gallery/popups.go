@@ -47,7 +47,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	p.blurBackgroundText.SetValue("Blur background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.showButton.SetText("Show")
-	p.showButton.SetOnUp(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	p.showButton.SetOnUp(func() {
 		p.simplePopup.SetOpen(true)
 	})
 
@@ -112,7 +112,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	)
 	// A context menu's position is updated at HandlePointingInput.
 
-	p.contextMenuPopupClickHereText.SetOnClicked(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, pt image.Point) {
+	p.contextMenuPopupClickHereText.SetOnClicked(func(pt image.Point) {
 		p.contextMenuPopupPosition = pt
 		p.contextMenuPopup.SetOpen(true)
 	})
@@ -174,7 +174,7 @@ func (p *popupClickHereText) Text() *basicwidget.Text {
 	return &p.text
 }
 
-func (b *popupClickHereText) SetOnClicked(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, pt image.Point)) {
+func (b *popupClickHereText) SetOnClicked(f func(pt image.Point)) {
 	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
@@ -221,7 +221,7 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 	s.titleText.SetBold(true)
 
 	s.closeButton.SetText("Close")
-	s.closeButton.SetOnUp(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	s.closeButton.SetOnUp(func() {
 		s.popup.SetOpen(false)
 	})
 
