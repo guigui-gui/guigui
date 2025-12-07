@@ -36,15 +36,15 @@ type Button struct {
 	iconLayout  guigui.Layout
 }
 
-func (b *Button) SetOnDown(f func()) {
+func (b *Button) SetOnDown(f func(context *guigui.Context)) {
 	b.button.SetOnDown(f)
 }
 
-func (b *Button) SetOnUp(f func()) {
+func (b *Button) SetOnUp(f func(context *guigui.Context)) {
 	b.button.SetOnUp(f)
 }
 
-func (b *Button) setOnRepeat(f func()) {
+func (b *Button) setOnRepeat(f func(context *guigui.Context)) {
 	b.button.setOnRepeat(f)
 }
 

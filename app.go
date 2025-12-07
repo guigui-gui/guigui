@@ -95,6 +95,8 @@ type app struct {
 	debugScreen *ebiten.Image
 }
 
+var theApp app
+
 type RunOptions struct {
 	Title         string
 	WindowSize    image.Point
@@ -138,10 +140,9 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 	}
 	ebiten.SetWindowSizeLimits(minW, minH, maxW, maxH)
 
-	a := &app{
-		root:        root,
-		deviceScale: deviceScaleFactor(),
-	}
+	a := &theApp
+	a.root = root
+	a.deviceScale = deviceScaleFactor()
 	a.root.widgetState().root = true
 	a.context.app = a
 	if options.AppScale > 0 {
@@ -178,11 +179,11 @@ func (a *app) focusWidget(widgetState *widgetState) {
 		return
 	}
 	if a.focusedWidgetState != nil {
-		dispatchEventHandler(a.focusedWidgetState, focusChangedEvent, false)
+		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, false)
 	}
 	a.focusedWidgetState = widgetState
 	if a.focusedWidgetState != nil {
-		dispatchEventHandler(a.focusedWidgetState, focusChangedEvent, true)
+		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, true)
 	}
 }
 

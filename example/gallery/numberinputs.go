@@ -45,7 +45,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	width := 12 * u
 
 	n.numberInput1Text.SetValue("Number input (BigInt)")
-	n.numberInput1.Widget().SetOnValueChangedBigInt(func(value *big.Int, committed bool) {
+	n.numberInput1.Widget().SetOnValueChangedBigInt(func(context *guigui.Context, value *big.Int, committed bool) {
 		if !committed {
 			return
 		}
@@ -57,7 +57,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput1.SetFixedWidth(width)
 
 	n.numberInput2Text.SetValue("Number input (uint64)")
-	n.numberInput2.Widget().SetOnValueChangedUint64(func(value uint64, committed bool) {
+	n.numberInput2.Widget().SetOnValueChangedUint64(func(context *guigui.Context, value uint64, committed bool) {
 		if !committed {
 			return
 		}
@@ -71,7 +71,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput2.SetFixedWidth(width)
 
 	n.numberInput3Text.SetValue("Number input (Range: [-100, 100], Step: 5)")
-	n.numberInput3.Widget().SetOnValueChangedInt64(func(value int64, committed bool) {
+	n.numberInput3.Widget().SetOnValueChangedInt64(func(context *guigui.Context, value int64, committed bool) {
 		if !committed {
 			return
 		}
@@ -86,7 +86,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput3.SetFixedWidth(width)
 
 	n.sliderText.SetValue("Slider (Range: [-100, 100])")
-	n.slider.Widget().SetOnValueChanged(func(value int) {
+	n.slider.Widget().SetOnValueChanged(func(context *guigui.Context, value int) {
 		model.NumberInputs().SetNumberInputValue3(value)
 	})
 	n.slider.Widget().SetMinimumValue(-100)
@@ -124,13 +124,13 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	// Configurations
 	n.editableText.SetValue("Editable (for number inputs)")
-	n.editableToggle.SetOnValueChanged(func(value bool) {
+	n.editableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
 		model.NumberInputs().SetEditable(value)
 	})
 	n.editableToggle.SetValue(model.NumberInputs().Editable())
 
 	n.enabledText.SetValue("Enabled")
-	n.enabledToggle.SetOnValueChanged(func(value bool) {
+	n.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
 		model.NumberInputs().SetEnabled(value)
 	})
 	n.enabledToggle.SetValue(model.NumberInputs().Enabled())

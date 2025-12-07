@@ -73,7 +73,7 @@ type scrollOverlay struct {
 	barCount int
 }
 
-func (s *scrollOverlay) SetOnScroll(f func(offsetX, offsetY float64)) {
+func (s *scrollOverlay) SetOnScroll(f func(context *guigui.Context, offsetX, offsetY float64)) {
 	guigui.RegisterEventHandler(s, scrollOverlayEventScroll, f)
 }
 

@@ -27,43 +27,43 @@ type Slider struct {
 	prevThumbHovered bool
 }
 
-func (s *Slider) SetOnValueChanged(f func(value int)) {
+func (s *Slider) SetOnValueChanged(f func(context *guigui.Context, value int)) {
 	if f == nil {
 		s.abstractNumberInput.SetOnValueChanged(s, nil)
 		return
 	}
-	s.abstractNumberInput.SetOnValueChanged(s, func(value int, committed bool) {
-		f(value)
+	s.abstractNumberInput.SetOnValueChanged(s, func(context *guigui.Context, value int, committed bool) {
+		f(context, value)
 	})
 }
 
-func (s *Slider) SetOnValueChangedBigInt(f func(value *big.Int)) {
+func (s *Slider) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int)) {
 	if f == nil {
 		s.abstractNumberInput.SetOnValueChangedBigInt(s, nil)
 		return
 	}
-	s.abstractNumberInput.SetOnValueChangedBigInt(s, func(value *big.Int, committed bool) {
-		f(value)
+	s.abstractNumberInput.SetOnValueChangedBigInt(s, func(context *guigui.Context, value *big.Int, committed bool) {
+		f(context, value)
 	})
 }
 
-func (s *Slider) SetOnValueChangedInt64(f func(value int64)) {
+func (s *Slider) SetOnValueChangedInt64(f func(context *guigui.Context, value int64)) {
 	if f == nil {
 		s.abstractNumberInput.SetOnValueChangedInt64(s, nil)
 		return
 	}
-	s.abstractNumberInput.SetOnValueChangedInt64(s, func(value int64, committed bool) {
-		f(value)
+	s.abstractNumberInput.SetOnValueChangedInt64(s, func(context *guigui.Context, value int64, committed bool) {
+		f(context, value)
 	})
 }
 
-func (s *Slider) SetOnValueChangedUint64(f func(value uint64)) {
+func (s *Slider) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64)) {
 	if f == nil {
 		s.abstractNumberInput.SetOnValueChangedUint64(s, nil)
 		return
 	}
-	s.abstractNumberInput.SetOnValueChangedUint64(s, func(value uint64, committed bool) {
-		f(value)
+	s.abstractNumberInput.SetOnValueChangedUint64(s, func(context *guigui.Context, value uint64, committed bool) {
+		f(context, value)
 	})
 }
 

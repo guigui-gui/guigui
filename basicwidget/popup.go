@@ -64,7 +64,7 @@ func (p *Popup) IsOpen() bool {
 	return p.popup.IsOpen()
 }
 
-func (p *Popup) SetOnClosed(f func(reason PopupClosedReason)) {
+func (p *Popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
 	p.popup.SetOnClosed(f)
 }
 
@@ -182,7 +182,7 @@ func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.animateOnFading = animateOnFading
 }
 
-func (p *popup) SetOnClosed(f func(reason PopupClosedReason)) {
+func (p *popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
 	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 

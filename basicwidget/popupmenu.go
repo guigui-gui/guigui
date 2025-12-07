@@ -35,10 +35,10 @@ type PopupMenu[T comparable] struct {
 	items     []PopupMenuItem[T]
 	listItems []ListItem[T]
 
-	onItemSelected func(index int)
+	onItemSelected func(context *guigui.Context, index int)
 }
 
-func (p *PopupMenu[T]) SetOnItemSelected(f func(index int)) {
+func (p *PopupMenu[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
 	guigui.RegisterEventHandler(p, popupMenuEventItemSelected, f)
 }
 
@@ -52,7 +52,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
 	if p.onItemSelected == nil {
-		p.onItemSelected = func(index int) {
+		p.onItemSelected = func(context *guigui.Context, index int) {
 			p.popup.SetOpen(false)
 			guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
 		}

@@ -39,12 +39,12 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.fillText.SetValue("Fill Widgets into Grid Cells")
 	r.fillToggle.SetValue(r.fill)
-	r.fillToggle.SetOnValueChanged(func(value bool) {
+	r.fillToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
 		r.fill = value
 	})
 	r.gapText.SetValue("Use Gap")
 	r.gapToggle.SetValue(r.gap)
-	r.gapToggle.SetOnValueChanged(func(value bool) {
+	r.gapToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
 		r.gap = value
 	})
 	r.configForm.SetItems([]basicwidget.FormItem{
