@@ -241,16 +241,18 @@ func IsEventHandlerRegistered(widget Widget, eventName string) bool {
 }
 
 func DispatchEventHandler(widget Widget, eventName string, args ...any) ([]any, bool) {
-	return dispatchEventHandler(widget.widgetState(), eventName, args...)
+	return dispatchEventHandler(&theApp.context, widget.widgetState(), eventName, args...)
 }
 
-func dispatchEventHandler(widgetState *widgetState, eventName string, args ...any) ([]any, bool) {
+func dispatchEventHandler(context *Context, widgetState *widgetState, eventName string, args ...any) ([]any, bool) {
 	hanlder, ok := widgetState.eventHandlers[eventName]
 	if !ok {
 		return nil, false
 	}
 	f := reflect.ValueOf(hanlder)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
+	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(context))
+	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(widgetBoundsFromWidget(context, widgetState)))
 	for _, arg := range args {
 		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
 	}
@@ -269,7 +271,7 @@ const focusChangedEvent = "__focusChanged"
 // SetOnFocusChanged registers a handler for focus changed events.
 //
 // A handler can be dispatched even when the widget is not in the tree.
-func SetOnFocusChanged(widget Widget, f func(focused bool)) {
+func SetOnFocusChanged(widget Widget, f func(context *Context, widgetBounds *WidgetBounds, focused bool)) {
 	RegisterEventHandler(widget, focusChangedEvent, f)
 }
 

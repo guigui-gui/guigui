@@ -39,11 +39,11 @@ type Select[T comparable] struct {
 
 	indexAtOpen int
 
-	onDown                  func()
-	onPopupMenuItemSelected func(index int)
+	onDown                  func(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
+	onPopupMenuItemSelected func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)
 }
 
-func (s *Select[T]) SetOnItemSelected(f func(index int)) {
+func (s *Select[T]) SetOnItemSelected(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
 	guigui.RegisterEventHandler(s, selectEventItemSelected, f)
 }
 
@@ -97,7 +97,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	s.button.SetContent(&s.buttonContent)
 
 	if s.onDown == nil {
-		s.onDown = func() {
+		s.onDown = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 			s.popupMenu.SetOpen(true)
 			s.indexAtOpen = s.popupMenu.SelectedItemIndex()
 		}
@@ -107,7 +107,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	s.button.SetIconAlign(IconAlignEnd)
 
 	if s.onPopupMenuItemSelected == nil {
-		s.onPopupMenuItemSelected = func(index int) {
+		s.onPopupMenuItemSelected = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) {
 			guigui.DispatchEventHandler(s, selectEventItemSelected, index)
 		}
 	}

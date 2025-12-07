@@ -29,23 +29,23 @@ type abstractNumberInput struct {
 	stepSet bool
 }
 
-func (a *abstractNumberInput) SetOnValueChanged(widget guigui.Widget, f func(value int, committed bool)) {
+func (a *abstractNumberInput) SetOnValueChanged(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value int, committed bool)) {
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChanged, f)
 }
 
-func (a *abstractNumberInput) SetOnValueChangedString(widget guigui.Widget, f func(value string, force bool)) {
+func (a *abstractNumberInput) SetOnValueChangedString(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value string, force bool)) {
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChangedString, f)
 }
 
-func (a *abstractNumberInput) SetOnValueChangedBigInt(widget guigui.Widget, f func(value *big.Int, committed bool)) {
+func (a *abstractNumberInput) SetOnValueChangedBigInt(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value *big.Int, committed bool)) {
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChangedBigInt, f)
 }
 
-func (a *abstractNumberInput) SetOnValueChangedInt64(widget guigui.Widget, f func(value int64, committed bool)) {
+func (a *abstractNumberInput) SetOnValueChangedInt64(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value int64, committed bool)) {
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChangedInt64, f)
 }
 
-func (a *abstractNumberInput) SetOnValueChangedUint64(widget guigui.Widget, f func(value uint64, committed bool)) {
+func (a *abstractNumberInput) SetOnValueChangedUint64(widget guigui.Widget, f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value uint64, committed bool)) {
 	guigui.RegisterEventHandler(widget, abstractNumberInputEventValueChangedUint64, f)
 }
 

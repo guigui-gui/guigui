@@ -33,15 +33,15 @@ type TextInput struct {
 	style TextInputStyle
 }
 
-func (t *TextInput) SetOnValueChanged(f func(text string, committed bool)) {
+func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool)) {
 	t.textInput.SetOnValueChanged(f)
 }
 
-func (t *TextInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
+func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, key ebiten.Key) (handled bool)) {
 	t.textInput.SetOnKeyJustPressed(f)
 }
 
-func (t *TextInput) SetOnTextAndSelectionChanged(f func(text string, start, end int)) {
+func (t *TextInput) SetOnTextAndSelectionChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, start, end int)) {
 	t.textInput.SetOnTextAndSelectionChanged(f)
 }
 
@@ -190,15 +190,15 @@ type textInput struct {
 	paddingEnd   int
 }
 
-func (t *textInput) SetOnValueChanged(f func(text string, committed bool)) {
+func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool)) {
 	t.text.SetOnValueChanged(f)
 }
 
-func (t *textInput) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
+func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, key ebiten.Key) (handled bool)) {
 	t.text.SetOnKeyJustPressed(f)
 }
 
-func (t *textInput) SetOnTextAndSelectionChanged(f func(text string, start, end int)) {
+func (t *textInput) SetOnTextAndSelectionChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, start, end int)) {
 	guigui.RegisterEventHandler(t, textInputEventTextAndSelectionChanged, f)
 }
 

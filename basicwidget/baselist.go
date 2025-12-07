@@ -57,15 +57,15 @@ type baseList[T comparable] struct {
 	footerHeight int
 }
 
-func (b *baseList[T]) SetOnItemSelected(f func(index int)) {
+func (b *baseList[T]) SetOnItemSelected(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
 	b.content.SetOnItemSelected(f)
 }
 
-func (b *baseList[T]) SetOnItemsMoved(f func(from, count, to int)) {
+func (b *baseList[T]) SetOnItemsMoved(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, from, count, to int)) {
 	b.content.SetOnItemsMoved(f)
 }
 
-func (b *baseList[T]) SetOnItemExpanderToggled(f func(index int, expanded bool)) {
+func (b *baseList[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int, expanded bool)) {
 	b.content.SetOnItemExpanderToggled(f)
 }
 
@@ -200,15 +200,15 @@ type baseListContent[T comparable] struct {
 	prevWidth int
 }
 
-func (b *baseListContent[T]) SetOnItemSelected(f func(index int)) {
+func (b *baseListContent[T]) SetOnItemSelected(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
 	b.abstractList.SetOnItemSelected(b, f)
 }
 
-func (b *baseListContent[T]) SetOnItemsMoved(f func(from, count, to int)) {
+func (b *baseListContent[T]) SetOnItemsMoved(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, from, count, to int)) {
 	guigui.RegisterEventHandler(b, baseListEventItemsMoved, f)
 }
 
-func (b *baseListContent[T]) SetOnItemExpanderToggled(f func(index int, expanded bool)) {
+func (b *baseListContent[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int, expanded bool)) {
 	guigui.RegisterEventHandler(b, baseListEventItemExpanderToggled, f)
 }
 

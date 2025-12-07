@@ -57,15 +57,15 @@ func (l *List[T]) SetItemHeight(height int) {
 	guigui.RequestRedraw(l)
 }
 
-func (l *List[T]) SetOnItemSelected(f func(index int)) {
+func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int)) {
 	l.list.SetOnItemSelected(f)
 }
 
-func (l *List[T]) SetOnItemsMoved(f func(from, count, to int)) {
+func (l *List[T]) SetOnItemsMoved(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, from, count, to int)) {
 	l.list.SetOnItemsMoved(f)
 }
 
-func (l *List[T]) SetOnItemExpanderToggled(f func(index int, expanded bool)) {
+func (l *List[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int, expanded bool)) {
 	l.list.SetOnItemExpanderToggled(f)
 }
 

@@ -106,23 +106,23 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		t.table.SetFooterHeight(0)
 	}
 	context.SetEnabled(&t.table, model.Tables().Enabled())
-	t.table.SetOnItemsMoved(func(from, count, to int) {
+	t.table.SetOnItemsMoved(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, from, count, to int) {
 		idx := model.Tables().MoveTableItems(from, count, to)
 		t.table.SelectItemByIndex(idx)
 	})
 
 	// Configurations
 	t.showFooterText.SetValue("Show footer")
-	t.showFooterToggle.SetOnValueChanged(func(value bool) {
+	t.showFooterToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.Tables().SetFooterVisible(value)
 	})
 	t.movableText.SetValue("Enable to move items")
 	t.movableToggle.SetValue(model.Tables().Movable())
-	t.movableToggle.SetOnValueChanged(func(value bool) {
+	t.movableToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.Tables().SetMovable(value)
 	})
 	t.enabledText.SetValue("Enabled")
-	t.enabledToggle.SetOnValueChanged(func(value bool) {
+	t.enabledToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.Tables().SetEnabled(value)
 	})
 	t.enabledToggle.SetValue(model.Tables().Enabled())

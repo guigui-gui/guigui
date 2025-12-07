@@ -41,18 +41,18 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.counterText.SetValue(fmt.Sprintf("%d", r.counter))
 
 	r.resetButton.SetText("Reset")
-	r.resetButton.SetOnUp(func() {
+	r.resetButton.SetOnUp(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 		r.counter = 0
 	})
 	context.SetEnabled(&r.resetButton, r.counter != 0)
 
 	r.decButton.SetText("Decrement")
-	r.decButton.SetOnUp(func() {
+	r.decButton.SetOnUp(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 		r.counter--
 	})
 
 	r.incButton.SetText("Increment")
-	r.incButton.SetOnUp(func() {
+	r.incButton.SetOnUp(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 		r.counter++
 	})
 

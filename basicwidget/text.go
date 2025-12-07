@@ -140,7 +140,7 @@ type Text struct {
 	prevStart int
 	prevEnd   int
 
-	onFocusChanged func(focused bool)
+	onFocusChanged func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, focused bool)
 }
 
 type cachedTextSizeEntry struct {
@@ -163,11 +163,11 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 	return key
 }
 
-func (t *Text) SetOnValueChanged(f func(text string, committed bool)) {
+func (t *Text) SetOnValueChanged(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool)) {
 	guigui.RegisterEventHandler(t, textEventValueChanged, f)
 }
 
-func (t *Text) SetOnKeyJustPressed(f func(key ebiten.Key) (handled bool)) {
+func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, key ebiten.Key) (handled bool)) {
 	guigui.RegisterEventHandler(t, textEventKeyJustPressed, f)
 }
 
@@ -191,7 +191,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	if t.editable {
 		if t.onFocusChanged == nil {
-			t.onFocusChanged = func(focused bool) {
+			t.onFocusChanged = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, focused bool) {
 				if focused {
 					t.field.Focus()
 					t.cursor.resetCounter()

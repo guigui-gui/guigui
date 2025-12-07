@@ -77,7 +77,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	width := 12 * u
 
 	t.singleLineText.SetValue("Single line")
-	t.singleLineTextInput.Widget().SetOnValueChanged(func(text string, committed bool) {
+	t.singleLineTextInput.Widget().SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool) {
 		if committed {
 			model.TextInputs().SetSingleLineText(text)
 		}
@@ -98,7 +98,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
 
 	t.multilineText.SetValue("Multiline")
-	t.multilineTextInput.Widget().SetOnValueChanged(func(text string, committed bool) {
+	t.multilineTextInput.Widget().SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text string, committed bool) {
 		if committed {
 			model.TextInputs().SetMultilineText(text)
 		}
@@ -154,12 +154,8 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 			Value: basicwidget.HorizontalAlignEnd,
 		},
 	})
-	t.horizontalAlignSegmentedControl.SetOnItemSelected(func(index int) {
-		item, ok := t.horizontalAlignSegmentedControl.ItemByIndex(index)
-		if !ok {
-			model.TextInputs().SetHorizontalAlign(basicwidget.HorizontalAlignStart)
-			return
-		}
+	t.horizontalAlignSegmentedControl.SetOnItemSelected(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) {
+		item, _ := t.horizontalAlignSegmentedControl.ItemByIndex(index)
 		model.TextInputs().SetHorizontalAlign(item.Value)
 	})
 	t.horizontalAlignSegmentedControl.SelectItemByValue(model.TextInputs().HorizontalAlign())
@@ -179,30 +175,26 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 			Value: basicwidget.VerticalAlignBottom,
 		},
 	})
-	t.verticalAlignSegmentedControl.SetOnItemSelected(func(index int) {
-		item, ok := t.verticalAlignSegmentedControl.ItemByIndex(index)
-		if !ok {
-			model.TextInputs().SetVerticalAlign(basicwidget.VerticalAlignTop)
-			return
-		}
+	t.verticalAlignSegmentedControl.SetOnItemSelected(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) {
+		item, _ := t.verticalAlignSegmentedControl.ItemByIndex(index)
 		model.TextInputs().SetVerticalAlign(item.Value)
 	})
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.TextInputs().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
-	t.autoWrapToggle.SetOnValueChanged(func(value bool) {
+	t.autoWrapToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.TextInputs().SetAutoWrap(value)
 	})
 	t.autoWrapToggle.SetValue(model.TextInputs().AutoWrap())
 
 	t.editableText.SetValue("Editable")
-	t.editableToggle.SetOnValueChanged(func(value bool) {
+	t.editableToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.TextInputs().SetEditable(value)
 	})
 	t.editableToggle.SetValue(model.TextInputs().Editable())
 
 	t.enabledText.SetValue("Enabled")
-	t.enabledToggle.SetOnValueChanged(func(value bool) {
+	t.enabledToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, value bool) {
 		model.TextInputs().SetEnabled(value)
 	})
 	t.enabledToggle.SetValue(model.TextInputs().Enabled())

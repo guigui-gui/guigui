@@ -105,7 +105,7 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	// Config form
 	s.enabledText.SetValue("Enabled")
 	s.enabledToggle.SetValue(model.Selects().Enabled())
-	s.enabledToggle.SetOnValueChanged(func(toggled bool) {
+	s.enabledToggle.SetOnValueChanged(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds, toggled bool) {
 		model.Selects().SetEnabled(toggled)
 	})
 

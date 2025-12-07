@@ -105,6 +105,8 @@ type RunOptions struct {
 	RunGameOptions *ebiten.RunGameOptions
 }
 
+var theApp *app
+
 func Run(root Widget, options *RunOptions) error {
 	return RunWithCustomFunc(root, options, ebiten.RunGameWithOptions)
 }
@@ -138,14 +140,14 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 	}
 	ebiten.SetWindowSizeLimits(minW, minH, maxW, maxH)
 
-	a := &app{
+	theApp = &app{
 		root:        root,
 		deviceScale: deviceScaleFactor(),
 	}
-	a.root.widgetState().root = true
-	a.context.app = a
+	theApp.root.widgetState().root = true
+	theApp.context.app = theApp
 	if options.AppScale > 0 {
-		a.context.appScaleMinus1 = options.AppScale - 1
+		theApp.context.appScaleMinus1 = options.AppScale - 1
 	}
 
 	var eop ebiten.RunGameOptions
@@ -157,7 +159,7 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 		eop.ColorSpace = ebiten.ColorSpaceSRGB
 	}
 
-	return f(a, &eop)
+	return f(theApp, &eop)
 }
 
 func deviceScaleFactor() float64 {
@@ -178,11 +180,11 @@ func (a *app) focusWidget(widgetState *widgetState) {
 		return
 	}
 	if a.focusedWidgetState != nil {
-		dispatchEventHandler(a.focusedWidgetState, focusChangedEvent, false)
+		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, false)
 	}
 	a.focusedWidgetState = widgetState
 	if a.focusedWidgetState != nil {
-		dispatchEventHandler(a.focusedWidgetState, focusChangedEvent, true)
+		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, true)
 	}
 }
 
