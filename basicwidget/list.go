@@ -38,11 +38,16 @@ type ListItem[T comparable] struct {
 	Movable      bool
 	Value        T
 	IndentLevel  int
+	Padding      guigui.Padding
 	Collapsed    bool
 }
 
 func (l *ListItem[T]) selectable() bool {
 	return !l.Header && !l.Unselectable && !l.Border && !l.Disabled
+}
+
+func (l *List[T]) SetBackground(widget guigui.Widget) {
+	l.list.SetBackground(widget)
 }
 
 func (l *List[T]) SetStripeVisible(visible bool) {
@@ -79,6 +84,10 @@ func (l *List[T]) SetHeaderHeight(height int) {
 
 func (l *List[T]) SetFooterHeight(height int) {
 	l.list.SetFooterHeight(height)
+}
+
+func (l *List[T]) ItemBounds(index int) image.Rectangle {
+	return l.list.ItemBounds(index)
 }
 
 func (l *List[T]) updateListItems() {
@@ -346,6 +355,7 @@ func (l *listItemWidget[T]) listItem() baseListItem[T] {
 		Movable:     l.item.Movable,
 		Value:       l.item.Value,
 		IndentLevel: l.item.IndentLevel,
+		Padding:     l.item.Padding,
 		Collapsed:   l.item.Collapsed,
 	}
 }
