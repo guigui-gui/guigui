@@ -191,8 +191,8 @@ type baseListContent[T comparable] struct {
 	contentWidthPlus1         int
 	contentHeight             int
 
-	itemBoundsForLayoutFromWidget map[guigui.Widget]image.Rectangle
-	itemBoundsForLayoutFromIndex  []image.Rectangle
+	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
+	itemBoundsForLayoutFromIndex []image.Rectangle
 
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
@@ -338,9 +338,9 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 	p.X += RoundedCornerRadius(context) + int(offsetX)
 	p.Y += RoundedCornerRadius(context) + int(offsetY)
 	origY := p.Y
-	clear(b.itemBoundsForLayoutFromWidget)
-	if b.itemBoundsForLayoutFromWidget == nil {
-		b.itemBoundsForLayoutFromWidget = map[guigui.Widget]image.Rectangle{}
+	clear(b.widgetBoundsForLayout)
+	if b.widgetBoundsForLayout == nil {
+		b.widgetBoundsForLayout = map[guigui.Widget]image.Rectangle{}
 	}
 	b.itemBoundsForLayoutFromIndex = adjustSliceSize(b.itemBoundsForLayoutFromIndex, b.abstractList.ItemCount())
 
@@ -360,7 +360,7 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 			// Adjust the position a bit for better appearance.
 			imgP.Y += UnitSize(context) / 16
 			imgP.Y = b.adjustItemY(context, imgP.Y)
-			b.itemBoundsForLayoutFromWidget[&b.checkmark] = image.Rectangle{
+			b.widgetBoundsForLayout[&b.checkmark] = image.Rectangle{
 				Min: imgP,
 				Max: imgP.Add(image.Pt(imgSize, imgSize)),
 			}
@@ -388,7 +388,7 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 				int(LineHeight(context)),
 				contentH,
 			)
-			b.itemBoundsForLayoutFromWidget[&b.expanderImages[i]] = image.Rectangle{
+			b.widgetBoundsForLayout[&b.expanderImages[i]] = image.Rectangle{
 				Min: expanderP,
 				Max: expanderP.Add(s),
 			}
@@ -404,7 +404,7 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 			Min: itemP,
 			Max: itemP.Add(image.Pt(itemW, contentH)),
 		}
-		b.itemBoundsForLayoutFromWidget[item.Content] = r
+		b.widgetBoundsForLayout[item.Content] = r
 		b.itemBoundsForLayoutFromIndex[i] = r
 
 		p.Y += contentH
@@ -427,7 +427,7 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 	b.prevWidth = widgetBounds.Bounds().Dx()
 
 	layouter.LayoutWidget(&b.scrollOverlay, widgetBounds.Bounds())
-	for widget, bounds := range b.itemBoundsForLayoutFromWidget {
+	for widget, bounds := range b.widgetBoundsForLayout {
 		layouter.LayoutWidget(widget, bounds)
 	}
 }
