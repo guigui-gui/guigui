@@ -6,7 +6,7 @@
 > **This project is an alpha version, and everything may change in the future.**
 
 > [!WARNING]
-> Except for minor changes like typo fixes, we have not yet established a development policy for accepting changes. For new widgets, please make your proposal in [Discussion](https://github.com/guigui-gui/guigui/discussions/13).
+> Except for minor changes like typo fixes, we have not yet established a development policy for accepting changes. For new features, please [file an issue](https://github.com/guigui-gui/guigui/issues/new) or make your proposal in [Discussion](https://github.com/guigui-gui/guigui/discussions/13).
 
  * Pure Go implementation without any use of HTML, CSS, or JavaScript
  * Hi-DPI support for clear visuals on modern displays
