@@ -98,11 +98,12 @@ type app struct {
 var theApp app
 
 type RunOptions struct {
-	Title         string
-	WindowSize    image.Point
-	WindowMinSize image.Point
-	WindowMaxSize image.Point
-	AppScale      float64
+	Title             string
+	WindowSize        image.Point
+	WindowMinSize     image.Point
+	WindowMaxSize     image.Point
+	AppScale          float64
+	SetWindowFloating bool
 
 	RunGameOptions *ebiten.RunGameOptions
 }
@@ -139,6 +140,9 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 		maxH = options.WindowMaxSize.Y
 	}
 	ebiten.SetWindowSizeLimits(minW, minH, maxW, maxH)
+	if options.SetWindowFloating {
+		ebiten.SetWindowFloating(true)
+	}
 
 	a := &theApp
 	a.root = root
