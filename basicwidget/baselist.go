@@ -1023,10 +1023,10 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	if b.headerHeight > 0 {
 		bounds := b.headerBounds(context, widgetBounds)
 		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
-			UpperStart: false,
-			UpperEnd:   false,
-			LowerStart: true,
-			LowerEnd:   true,
+			TopStart:    false,
+			TopEnd:      false,
+			BottomStart: true,
+			BottomEnd:   true,
 		})
 
 		x0 := float32(bounds.Min.X)
@@ -1044,10 +1044,10 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	if b.footerHeight > 0 {
 		bounds := b.footerBounds(context, widgetBounds)
 		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
-			UpperStart: true,
-			UpperEnd:   true,
-			LowerStart: false,
-			LowerEnd:   false,
+			TopStart:    true,
+			TopEnd:      true,
+			BottomStart: false,
+			BottomEnd:   false,
 		})
 
 		x0 := float32(bounds.Min.X)

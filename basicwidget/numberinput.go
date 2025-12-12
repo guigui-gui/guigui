@@ -222,8 +222,8 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	n.upButton.SetIcon(imgUp)
 	n.upButton.setSharpCorners(basicwidgetdraw.Corners{
-		LowerStart: true,
-		LowerEnd:   true,
+		BottomStart: true,
+		BottomEnd:   true,
 	})
 	n.upButton.setPairedButton(&n.downButton)
 	if n.onUpButtonDown == nil {
@@ -236,8 +236,8 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	n.downButton.SetIcon(imgDown)
 	n.downButton.setSharpCorners(basicwidgetdraw.Corners{
-		UpperStart: true,
-		UpperEnd:   true,
+		TopStart: true,
+		TopEnd:   true,
 	})
 	n.downButton.setPairedButton(&n.upButton)
 	if n.onDownButtonDown == nil {

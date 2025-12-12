@@ -176,17 +176,17 @@ func whiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedR
 }
 
 type Corners struct {
-	UpperStart bool
-	UpperEnd   bool
-	LowerStart bool
-	LowerEnd   bool
+	TopStart    bool
+	TopEnd      bool
+	BottomStart bool
+	BottomEnd   bool
 }
 
 func (s *Corners) bools() [3][3]bool {
 	return [3][3]bool{
-		{!s.UpperStart, true, !s.UpperEnd},
+		{!s.TopStart, true, !s.TopEnd},
 		{true, true, true},
-		{!s.LowerStart, true, !s.LowerEnd},
+		{!s.BottomStart, true, !s.BottomEnd},
 	}
 }
 
