@@ -112,7 +112,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	)
 	// A context menu's position is updated at HandlePointingInput.
 
-	p.contextMenuPopupClickHereText.SetOnClicked(func(pt image.Point) {
+	p.contextMenuPopupClickHereText.SetOnClicked(func(context *guigui.Context, pt image.Point) {
 		p.contextMenuPopupPosition = pt
 		p.contextMenuPopup.SetOpen(true)
 	})
@@ -174,7 +174,7 @@ func (p *popupClickHereText) Text() *basicwidget.Text {
 	return &p.text
 }
 
-func (b *popupClickHereText) SetOnClicked(f func(pt image.Point)) {
+func (b *popupClickHereText) SetOnClicked(f func(context *guigui.Context, pt image.Point)) {
 	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
