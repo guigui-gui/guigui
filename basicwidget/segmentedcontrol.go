@@ -31,6 +31,10 @@ func (s SegmentedControlItem[T]) value() T {
 	return s.Value
 }
 
+func (s SegmentedControlItem[T]) selectable() bool {
+	return !s.Disabled
+}
+
 type SegmentedControl[T comparable] struct {
 	guigui.DefaultWidget
 

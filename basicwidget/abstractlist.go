@@ -15,6 +15,7 @@ const (
 
 type valuer[Value comparable] interface {
 	value() Value
+	selectable() bool
 }
 
 type abstractList[Value comparable, Item valuer[Value]] struct {
@@ -29,6 +30,9 @@ func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f fu
 func (a *abstractList[Value, Item]) SetItems(widget guigui.Widget, items []Item) {
 	a.items = adjustSliceSize(items, len(items))
 	copy(a.items, items)
+	a.selectedIndices = slices.DeleteFunc(a.selectedIndices, func(index int) bool {
+		return index >= 0 && index < len(a.items) && !a.items[index].selectable()
+	})
 }
 
 func (a *abstractList[Value, Item]) ItemCount() int {
@@ -48,6 +52,11 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, inde
 		if len(a.selectedIndices) == 0 {
 			return false
 		}
+		a.selectedIndices = a.selectedIndices[:0]
+		return true
+	}
+
+	if index >= 0 && index < len(a.items) && !a.items[index].selectable() {
 		a.selectedIndices = a.selectedIndices[:0]
 		return true
 	}

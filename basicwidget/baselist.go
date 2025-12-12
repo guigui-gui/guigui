@@ -45,6 +45,10 @@ func (b baseListItem[T]) value() T {
 	return b.Value
 }
 
+func (b baseListItem[T]) selectable() bool {
+	return b.Selectable
+}
+
 func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
 	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 1)
 }
