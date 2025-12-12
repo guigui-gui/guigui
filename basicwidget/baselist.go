@@ -672,14 +672,14 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 		switch {
 		case (left || right) && b.scrollOverlay.isWidgetHitAtCursor(context, widgetBounds):
 			item, _ := b.abstractList.ItemByIndex(index)
-			if !item.Selectable {
-				return guigui.AbortHandlingInputByWidget(b)
-			}
 			if c.X < b.itemBoundsForLayoutFromIndex[index].Min.X {
 				if left {
 					expanded := !item.Collapsed
 					guigui.DispatchEventHandler(b, baseListEventItemExpanderToggled, index, !expanded)
 				}
+				return guigui.AbortHandlingInputByWidget(b)
+			}
+			if !item.Selectable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 
