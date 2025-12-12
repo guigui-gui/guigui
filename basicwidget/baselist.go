@@ -1022,7 +1022,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a header.
 	if b.headerHeight > 0 {
 		bounds := b.headerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: false,
 			UpperEnd:   false,
 			LowerStart: true,
@@ -1043,7 +1043,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a footer.
 	if b.footerHeight > 0 {
 		bounds := b.footerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: true,
 			UpperEnd:   true,
 			LowerStart: false,

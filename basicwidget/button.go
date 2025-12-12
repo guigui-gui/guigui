@@ -247,8 +247,8 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 	return image.Pt(w, h)
 }
 
-func (b *Button) setSharpenCorners(sharpenCorners basicwidgetdraw.Corners) {
-	b.button.setSharpenCorners(sharpenCorners)
+func (b *Button) setSharpCorners(sharpCorners basicwidgetdraw.Corners) {
+	b.button.setSharpCorners(sharpCorners)
 }
 
 func buttonTextAndImagePadding(context *guigui.Context) int {

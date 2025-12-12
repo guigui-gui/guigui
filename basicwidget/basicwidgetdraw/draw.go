@@ -201,14 +201,14 @@ func (s *Corners) invertedBools() [3][3]bool {
 }
 
 func DrawRoundedRect(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr color.Color, radius int) {
-	DrawRoundedRectWithSharpenCorners(context, dst, bounds, clr, radius, Corners{})
+	DrawRoundedRectWithSharpCorners(context, dst, bounds, clr, radius, Corners{})
 }
 
 func adjustRadius(radius int, bounds image.Rectangle) int {
 	return min(radius, bounds.Dx()/2, bounds.Dy()/2)
 }
 
-func DrawRoundedRectWithSharpenCorners(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr color.Color, radius int, sharpenCorners Corners) {
+func DrawRoundedRectWithSharpCorners(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr color.Color, radius int, sharpCorners Corners) {
 	if !dst.Bounds().Overlaps(bounds) {
 		return
 	}
@@ -217,14 +217,14 @@ func DrawRoundedRectWithSharpenCorners(context *guigui.Context, dst *ebiten.Imag
 		return
 	}
 
-	if sharpenCorners == (Corners{}) {
+	if sharpCorners == (Corners{}) {
 		draw.DrawNinePatch(dst, bounds, ensureWhiteRoundedRect(radius), clr, clr)
 		return
 	}
 
-	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRect(radius), clr, clr, sharpenCorners.bools())
+	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRect(radius), clr, clr, sharpCorners.bools())
 	if !dst.Bounds().Intersect(bounds).Empty() {
-		theNinePatchVertices, theNinePatchIndices = draw.AppendNinePatchVertices(theNinePatchVertices[:0], theNinePatchIndices[:0], bounds, whiteImage.Bounds(), radius, radius, clr, clr, sharpenCorners.invertedBools())
+		theNinePatchVertices, theNinePatchIndices = draw.AppendNinePatchVertices(theNinePatchVertices[:0], theNinePatchIndices[:0], bounds, whiteImage.Bounds(), radius, radius, clr, clr, sharpCorners.invertedBools())
 		op := &ebiten.DrawTrianglesOptions{}
 		op.ColorScaleMode = ebiten.ColorScaleModePremultipliedAlpha
 		dst.DrawTriangles32(theNinePatchVertices, theNinePatchIndices, whiteImage, op)
@@ -232,10 +232,10 @@ func DrawRoundedRectWithSharpenCorners(context *guigui.Context, dst *ebiten.Imag
 }
 
 func DrawRoundedRectBorder(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr1, clr2 color.Color, radius int, borderWidth float32, borderType RoundedRectBorderType) {
-	DrawRoundedRectBorderWithSharpenCorners(context, dst, bounds, clr1, clr2, radius, borderWidth, borderType, Corners{})
+	DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, radius, borderWidth, borderType, Corners{})
 }
 
-func DrawRoundedRectBorderWithSharpenCorners(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr1, clr2 color.Color, radius int, borderWidth float32, borderType RoundedRectBorderType, sharpenCorners Corners) {
+func DrawRoundedRectBorderWithSharpCorners(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, clr1, clr2 color.Color, radius int, borderWidth float32, borderType RoundedRectBorderType, sharpCorners Corners) {
 	if !dst.Bounds().Overlaps(bounds) {
 		return
 	}
@@ -244,11 +244,11 @@ func DrawRoundedRectBorderWithSharpenCorners(context *guigui.Context, dst *ebite
 		return
 	}
 
-	if sharpenCorners == (Corners{}) {
+	if sharpCorners == (Corners{}) {
 		draw.DrawNinePatch(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2)
 		return
 	}
 
-	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpenCorners.bools())
-	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpenCorners.invertedBools())
+	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpCorners.bools())
+	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpCorners.invertedBools())
 }
