@@ -1066,7 +1066,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	if b.style != ListStyleNormal {
 		border = basicwidgetdraw.RoundedRectBorderTypeOutset
 	}
-	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(border), false)
+	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(border), false)
 	borderWidth := float32(1 * context.Scale())
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)
 }

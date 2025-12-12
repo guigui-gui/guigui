@@ -146,7 +146,7 @@ func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		if b.isPressed(context, widgetBounds) {
 			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType), b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
+		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType), b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
 		basicwidgetdraw.DrawRoundedRectBorderWithSharpenCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, b.sharpenCorners)
 	}
 }

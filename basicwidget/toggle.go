@@ -119,7 +119,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	halfHeight := b.Dy() / 2
 	b.Max.Y = b.Min.Y + halfHeight
 	strokeWidth := float32(1 * context.Scale())
-	borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset, t.value && context.IsEnabled(t))
+	borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset, t.value && context.IsEnabled(t))
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
 	// Thumb
@@ -132,7 +132,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		cx = int((1-rate)*cxOn + rate*cxOff)
 	}
 	cy := bounds.Min.Y + r
-	thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
+	thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset, false)
 	thumbBounds := image.Rect(cx-r, cy-r, cx+r, cy+r)
 	basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeOutset)
