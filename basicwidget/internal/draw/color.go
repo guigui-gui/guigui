@@ -80,18 +80,18 @@ func Color2(colorMode guigui.ColorMode, typ ColorType, lightnessInLightMode, lig
 	}
 }
 
-func getColor(base iro.Color, lightness float64, back, front iro.Color) color.Color {
-	c0l, _, _, _ := back.OKLch()
-	c1l, _, _, _ := front.OKLch()
+func getColor(base iro.Color, lightness float64, black, white iro.Color) color.Color {
+	c0l, _, _, _ := black.OKLch()
+	c1l, _, _, _ := white.OKLch()
 	l, _, _, _ := base.OKLch()
 	l = max(min(l, c1l), c0l)
 	l2 := c0l*(1-lightness) + c1l*lightness
 	if l2 < l {
 		rate := (l2 - c0l) / (l - c0l)
-		return mixColors(back, base, rate)
+		return mixColors(black, base, rate)
 	}
 	rate := (l2 - l) / (c1l - l)
-	return mixColors(base, front, rate)
+	return mixColors(base, white, rate)
 }
 
 func MixColors(clr0, clr1 color.Color, rate float64) color.Color {
