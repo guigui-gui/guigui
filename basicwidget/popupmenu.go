@@ -8,7 +8,7 @@ import (
 	"image/color"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 const (
@@ -176,7 +176,7 @@ func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.C
 	// If the popup menu is closed, the item content might be used in other places like a select list button.
 	// Use the default text color in that case.
 	if !p.IsOpen() {
-		return draw.TextColor(context.ColorMode(), true)
+		return basicwidgetdraw.TextColor(context.ColorMode(), true)
 	}
 	return p.list.Widget().ItemTextColor(context, index)
 }

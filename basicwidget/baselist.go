@@ -857,9 +857,9 @@ func (b *baseListBackground1[T]) Draw(context *guigui.Context, widgetBounds *gui
 	switch b.content.style {
 	case ListStyleSidebar:
 	case ListStyleNormal:
-		clr = draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
+		clr = basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	case ListStyleMenu:
-		clr = draw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(b))
+		clr = basicwidgetdraw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(b))
 	}
 	if clr != nil {
 		bounds := widgetBounds.Bounds()
@@ -886,7 +886,7 @@ func (b *baseListBackground1[T]) Draw(context *guigui.Context, widgetBounds *gui
 			if !bounds.Overlaps(vb) {
 				continue
 			}
-			clr := draw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(b))
+			clr := basicwidgetdraw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(b))
 			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
@@ -1022,7 +1022,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a header.
 	if b.headerHeight > 0 {
 		bounds := b.headerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: false,
 			UpperEnd:   false,
 			LowerStart: true,
@@ -1043,7 +1043,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a footer.
 	if b.footerHeight > 0 {
 		bounds := b.footerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: true,
 			UpperEnd:   true,
 			LowerStart: false,

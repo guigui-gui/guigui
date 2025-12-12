@@ -21,6 +21,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/internal/clipboard"
@@ -971,7 +972,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	if t.color != nil {
 		textColor = t.color
 	} else {
-		textColor = draw.TextColor(context.ColorMode(), context.IsEnabled(t))
+		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}
 	if t.transparent > 0 {
 		textColor = draw.ScaleAlpha(textColor, 1-t.transparent)

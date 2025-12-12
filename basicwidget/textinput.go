@@ -327,7 +327,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	t.text.SetEditable(!t.readonly)
 	t.text.SetSelectable(true)
-	t.text.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
+	t.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.setKeepTailingSpace(!t.text.autoWrap)
 
 	if t.icon.HasImage() {
@@ -485,7 +485,7 @@ type textInputBackground struct {
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
+	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
@@ -497,7 +497,7 @@ type textInputIconBackground struct {
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
+	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 

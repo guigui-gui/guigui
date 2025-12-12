@@ -118,7 +118,7 @@ func (b *baseButton) radius(context *guigui.Context, widgetBounds *guigui.Widget
 
 func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	cm := context.ColorMode()
-	backgroundColor := draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
+	backgroundColor := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
 		if b.isPressed(context, widgetBounds) {
 			if b.useAccentColor {

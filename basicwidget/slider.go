@@ -307,7 +307,7 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
 		cm := context.ColorMode()
-		thumbColor := draw.ThumbColor(context.ColorMode(), context.IsEnabled(s))
+		thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(s))
 		if s.isActive(context, widgetBounds) {
 			thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
 		} else if s.canPress(context, widgetBounds) {

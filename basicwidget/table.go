@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -179,7 +180,7 @@ func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color
 	case t.list.SelectedItemIndex() == index && item.selectable():
 		return DefaultActiveListItemTextColor(context)
 	default:
-		return draw.TextColor(context.ColorMode(), context.IsEnabled(item))
+		return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
 	}
 }
 

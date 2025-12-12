@@ -95,7 +95,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	cm := context.ColorMode()
 	backgroundColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
-	thumbColor := draw.ThumbColor(context.ColorMode(), context.IsEnabled(t))
+	thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(t))
 	if t.isActive(context, widgetBounds) {
 		thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
 	} else if t.canPress(context, widgetBounds) {

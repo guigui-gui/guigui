@@ -100,7 +100,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
 	} else {
-		b.text.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(b)))
+		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(b)))
 	}
 	b.text.SetHorizontalAlign(HorizontalAlignCenter)
 	b.text.SetVerticalAlign(VerticalAlignMiddle)
