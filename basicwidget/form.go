@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -153,7 +154,7 @@ func (f *Form) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	borderClr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0), 2/32.0)
 
 	bounds := widgetBounds.Bounds()
-	draw.DrawRoundedRect(context, dst, bounds, bgClr, RoundedCornerRadius(context))
+	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, bgClr, RoundedCornerRadius(context))
 
 	// Render borders between items.
 	if len(f.items) > 0 {
@@ -167,7 +168,7 @@ func (f *Form) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		}
 	}
 
-	draw.DrawRoundedRectBorder(context, dst, bounds, borderClr, borderClr, RoundedCornerRadius(context), 1*float32(context.Scale()), draw.RoundedRectBorderTypeRegular)
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, borderClr, borderClr, RoundedCornerRadius(context), 1*float32(context.Scale()), basicwidgetdraw.RoundedRectBorderTypeRegular)
 }
 
 func (f *Form) measureWithoutConstraints(context *guigui.Context) image.Point {

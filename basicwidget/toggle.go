@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -111,7 +112,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		bgColor = draw.MixColors(bgColorOn, bgColorOff, rate)
 	}
 	r := bounds.Dy() / 2
-	draw.DrawRoundedRect(context, dst, bounds, bgColor, r)
+	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, bgColor, r)
 
 	// Border (upper)
 	b := bounds
@@ -119,7 +120,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	b.Max.Y = b.Min.Y + halfHeight
 	strokeWidth := float32(1 * context.Scale())
 	borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset, t.value && context.IsEnabled(t))
-	draw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, draw.RoundedRectBorderTypeInset)
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
 	// Thumb
 	cxOff := float64(bounds.Min.X) + float64(r)
@@ -133,13 +134,13 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	cy := bounds.Min.Y + r
 	thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
 	thumbBounds := image.Rect(cx-r, cy-r, cx+r, cy+r)
-	draw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
-	draw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, draw.RoundedRectBorderTypeOutset)
+	basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeOutset)
 
 	// Border (lower)
 	b = bounds
 	b.Min.Y += halfHeight
-	draw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, draw.RoundedRectBorderTypeInset)
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
 	t.onceRendered = true
 }

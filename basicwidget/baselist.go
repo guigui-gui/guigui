@@ -14,6 +14,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -862,7 +863,7 @@ func (b *baseListBackground1[T]) Draw(context *guigui.Context, widgetBounds *gui
 	}
 	if clr != nil {
 		bounds := widgetBounds.Bounds()
-		draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	}
 
 	if b.content.stripeVisible && b.content.abstractList.ItemCount() > 0 {
@@ -886,7 +887,7 @@ func (b *baseListBackground1[T]) Draw(context *guigui.Context, widgetBounds *gui
 				continue
 			}
 			clr := draw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(b))
-			draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
 }
@@ -911,7 +912,7 @@ func (b *baseListBackground2[T]) Draw(context *guigui.Context, widgetBounds *gui
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
 		if bounds.Overlaps(vb) {
-			draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
 
@@ -927,7 +928,7 @@ func (b *baseListBackground2[T]) Draw(context *guigui.Context, widgetBounds *gui
 			if b.content.style == ListStyleMenu {
 				clr = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
 			}
-			draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
 
@@ -1021,7 +1022,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a header.
 	if b.headerHeight > 0 {
 		bounds := b.headerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), draw.SharpenCorners{
+		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: false,
 			UpperEnd:   false,
 			LowerStart: true,
@@ -1042,7 +1043,7 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	// Draw a footer.
 	if b.footerHeight > 0 {
 		bounds := b.footerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), draw.SharpenCorners{
+		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(b)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			UpperStart: true,
 			UpperEnd:   true,
 			LowerStart: false,
@@ -1061,13 +1062,13 @@ func (b *baseListFrame) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 
 	bounds := widgetBounds.Bounds()
-	border := draw.RoundedRectBorderTypeInset
+	border := basicwidgetdraw.RoundedRectBorderTypeInset
 	if b.style != ListStyleNormal {
-		border = draw.RoundedRectBorderTypeOutset
+		border = basicwidgetdraw.RoundedRectBorderTypeOutset
 	}
-	clr1, clr2 := draw.BorderColors(context.ColorMode(), border, false)
+	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(border), false)
 	borderWidth := float32(1 * context.Scale())
-	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)
 }
 
 func listItemCheckmarkSize(context *guigui.Context) int {

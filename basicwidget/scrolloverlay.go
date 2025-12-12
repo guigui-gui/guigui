@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -393,12 +394,12 @@ func (s *scrollOverlay) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 
 	// Show a horizontal bar.
 	if !hb.Empty() {
-		draw.DrawRoundedRect(context, dst, hb, barColor, RoundedCornerRadius(context))
+		basicwidgetdraw.DrawRoundedRect(context, dst, hb, barColor, RoundedCornerRadius(context))
 	}
 
 	// Show a vertical bar.
 	if !vb.Empty() {
-		draw.DrawRoundedRect(context, dst, vb, barColor, RoundedCornerRadius(context))
+		basicwidgetdraw.DrawRoundedRect(context, dst, vb, barColor, RoundedCornerRadius(context))
 	}
 }
 

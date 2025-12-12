@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -288,20 +289,20 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if x0 < x1 {
 		b := image.Rect(x0, y0, x1, y1)
-		draw.DrawRoundedRect(context, dst, b, bgColorOn, r)
+		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOn, r)
 
 		if !context.IsEnabled(s) {
 			borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset, false)
-			draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
+			basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
 		}
 	}
 
 	if x1 < x2 {
 		b := image.Rect(x1, y0, x2, y1)
-		draw.DrawRoundedRect(context, dst, b, bgColorOff, r)
+		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOff, r)
 
 		borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset, false)
-		draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
+		basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
 	}
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
@@ -314,8 +315,8 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 		thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset, false)
 		r := thumbBounds.Dy() / 2
-		draw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
-		draw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeOutset)
+		basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
+		basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeOutset)
 	}
 }
 

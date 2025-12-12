@@ -8,7 +8,7 @@ import (
 	"image"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -103,12 +103,12 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			case 0:
 				switch s.direction {
 				case SegmentedControlDirectionHorizontal:
-					s.buttons[i].setSharpenCorners(draw.SharpenCorners{
+					s.buttons[i].setSharpenCorners(basicwidgetdraw.Corners{
 						UpperEnd: true,
 						LowerEnd: true,
 					})
 				case SegmentedControlDirectionVertical:
-					s.buttons[i].setSharpenCorners(draw.SharpenCorners{
+					s.buttons[i].setSharpenCorners(basicwidgetdraw.Corners{
 						LowerStart: true,
 						LowerEnd:   true,
 					})
@@ -116,18 +116,18 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			case s.abstractList.ItemCount() - 1:
 				switch s.direction {
 				case SegmentedControlDirectionHorizontal:
-					s.buttons[i].setSharpenCorners(draw.SharpenCorners{
+					s.buttons[i].setSharpenCorners(basicwidgetdraw.Corners{
 						UpperStart: true,
 						LowerStart: true,
 					})
 				case SegmentedControlDirectionVertical:
-					s.buttons[i].setSharpenCorners(draw.SharpenCorners{
+					s.buttons[i].setSharpenCorners(basicwidgetdraw.Corners{
 						UpperEnd:   true,
 						UpperStart: true,
 					})
 				}
 			default:
-				s.buttons[i].setSharpenCorners(draw.SharpenCorners{
+				s.buttons[i].setSharpenCorners(basicwidgetdraw.Corners{
 					UpperStart: true,
 					LowerStart: true,
 					UpperEnd:   true,

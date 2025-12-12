@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -246,7 +247,7 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 	return image.Pt(w, h)
 }
 
-func (b *Button) setSharpenCorners(sharpenCorners draw.SharpenCorners) {
+func (b *Button) setSharpenCorners(sharpenCorners basicwidgetdraw.Corners) {
 	b.button.setSharpenCorners(sharpenCorners)
 }
 

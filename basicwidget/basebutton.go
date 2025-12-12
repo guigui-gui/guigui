@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -27,7 +28,7 @@ type baseButton struct {
 	useAccentColor  bool
 	borderInvisible bool
 	prevHovered     bool
-	sharpenCorners  draw.SharpenCorners
+	sharpenCorners  basicwidgetdraw.Corners
 	pairedButton    *baseButton
 }
 
@@ -137,16 +138,16 @@ func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	}
 	bounds := widgetBounds.Bounds()
 	if border || b.isPressed(context, widgetBounds) {
-		draw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, backgroundColor, r, b.sharpenCorners)
+		basicwidgetdraw.DrawRoundedRectWithSharpenCorners(context, dst, bounds, backgroundColor, r, b.sharpenCorners)
 	}
 
 	if border {
-		borderType := draw.RoundedRectBorderTypeOutset
+		borderType := basicwidgetdraw.RoundedRectBorderTypeOutset
 		if b.isPressed(context, widgetBounds) {
-			borderType = draw.RoundedRectBorderTypeInset
+			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := draw.BorderColors(context.ColorMode(), borderType, b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
-		draw.DrawRoundedRectBorderWithSharpenCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, b.sharpenCorners)
+		clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType), b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
+		basicwidgetdraw.DrawRoundedRectBorderWithSharpenCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, b.sharpenCorners)
 	}
 }
 
@@ -178,7 +179,7 @@ func (b *baseButton) Measure(context *guigui.Context, constraints guigui.Constra
 	return defaultButtonSize(context)
 }
 
-func (b *baseButton) setSharpenCorners(sharpenCorners draw.SharpenCorners) {
+func (b *baseButton) setSharpenCorners(sharpenCorners basicwidgetdraw.Corners) {
 	if b.sharpenCorners == sharpenCorners {
 		return
 	}
