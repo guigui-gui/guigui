@@ -690,7 +690,7 @@ func (t *Text) compositionSelectionToDraw(context *guigui.Context) (uStart, cSta
 
 func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	// Handle a key input by user-setting callback, unless IME is working.
-	if t.field.UncommittedTextLengthInBytes() == 0 && guigui.IsEventHandlerRegistered(t, textEventKeyJustPressed) {
+	if t.field.UncommittedTextLengthInBytes() == 0 {
 		var handled bool
 		for _, key := range inpututil.AppendJustPressedKeys(nil) {
 			rets, _ := guigui.DispatchEventHandler(t, textEventKeyJustPressed, key)

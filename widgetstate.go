@@ -234,12 +234,6 @@ func RegisterEventHandler(widget Widget, eventName string, handler any) {
 	widgetState.eventHandlers[eventName] = handler
 }
 
-func IsEventHandlerRegistered(widget Widget, eventName string) bool {
-	widgetState := widget.widgetState()
-	_, ok := widgetState.eventHandlers[eventName]
-	return ok
-}
-
 func DispatchEventHandler(widget Widget, eventName string, args ...any) ([]any, bool) {
 	return dispatchEventHandler(&theApp.context, widget.widgetState(), eventName, args...)
 }
