@@ -56,8 +56,9 @@ func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
 type baseList[T comparable] struct {
 	guigui.DefaultWidget
 
-	content baseListContent[T]
-	frame   baseListFrame
+	background1 baseListBackground1[T]
+	content     baseListContent[T]
+	frame       baseListFrame
 
 	headerHeight int
 	footerHeight int
@@ -163,9 +164,12 @@ func (b *baseList[T]) ItemYFromIndexForMenu(context *guigui.Context, index int) 
 }
 
 func (b *baseList[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddChild(&b.background1)
 	adder.AddChild(&b.content)
 	adder.AddChild(&b.frame)
 	context.SetContainer(b, true)
+
+	b.background1.setListContent(&b.content)
 	return nil
 }
 
@@ -173,6 +177,7 @@ func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y += b.headerHeight
 	bounds.Max.Y -= b.footerHeight
+	layouter.LayoutWidget(&b.background1, widgetBounds.Bounds())
 	layouter.LayoutWidget(&b.content, bounds)
 	layouter.LayoutWidget(&b.frame, widgetBounds.Bounds())
 }
@@ -184,7 +189,6 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 type baseListContent[T comparable] struct {
 	guigui.DefaultWidget
 
-	background1      baseListBackground1[T]
 	customBackground guigui.Widget
 	background2      baseListBackground2[T]
 	checkmark        Image
@@ -317,7 +321,6 @@ func (b *baseListContent[T]) isItemVisible(index int) bool {
 }
 
 func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&b.background1)
 	if b.customBackground != nil {
 		adder.AddChild(b.customBackground)
 	}
@@ -335,7 +338,6 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 	}
 	adder.AddChild(&b.scrollOverlay)
 
-	b.background1.setListContent(b)
 	b.background2.setListContent(b)
 
 	var err error
@@ -467,7 +469,6 @@ func (b *baseListContent[T]) Layout(context *guigui.Context, widgetBounds *guigu
 	}
 	b.prevWidth = widgetBounds.Bounds().Dx()
 
-	layouter.LayoutWidget(&b.background1, widgetBounds.Bounds())
 	if b.customBackground != nil {
 		layouter.LayoutWidget(b.customBackground, image.Rectangle{
 			Min: origP,
