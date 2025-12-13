@@ -441,6 +441,7 @@ func (a *app) buildWidgets() error {
 	// An event handler is often a closure capturing variables, and this might cause unexpected behaviors.
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
+		widgetState.eventHandler = nil
 		clear(widgetState.eventHandlers)
 		widgetState.focusDelegation = nil
 		widgetState.zPlus1Cache = 0

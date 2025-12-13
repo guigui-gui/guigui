@@ -16,6 +16,21 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type TableEventArgsItemSelected struct {
+	Index int
+}
+
+type TableEventArgsItemsMoved struct {
+	From  int
+	Count int
+	To    int
+}
+
+type TableEventArgsItemExpanderToggled struct {
+	Index    int
+	Expanded bool
+}
+
 type Table[T comparable] struct {
 	guigui.DefaultWidget
 
@@ -66,14 +81,6 @@ func (t *Table[T]) SetColumns(columns []TableColumn) {
 	t.columns = append(t.columns, columns...)
 }
 
-func (t *Table[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	t.list.SetOnItemSelected(f)
-}
-
-func (t *Table[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	t.list.SetOnItemsMoved(f)
-}
-
 func (t *Table[T]) SetCheckmarkIndex(index int) {
 	t.list.SetCheckmarkIndex(index)
 }
@@ -99,6 +106,8 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 		adder.AddChild(&t.columnTexts[i])
 	}
 	adder.AddChild(&t.tableHeader)
+
+	guigui.RegisterEventHandler2(t, &t.list)
 
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
@@ -234,6 +243,22 @@ func (t *Table[T]) EnsureItemVisibleByIndex(index int) {
 
 func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return image.Pt(12*UnitSize(context), 6*UnitSize(context))
+}
+
+func (t *Table[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &t.list {
+		switch eventArgs := eventArgs.(type) {
+		case *baseListEventArgsItemSelected:
+			args := (TableEventArgsItemSelected)(*eventArgs)
+			guigui.DispatchEventHandler2(t, &args)
+		case *baseListEventArgsItemsMoved:
+			args := (TableEventArgsItemsMoved)(*eventArgs)
+			guigui.DispatchEventHandler2(t, &args)
+		case *baseListEventArgsItemExpanderToggled:
+			args := (TableEventArgsItemExpanderToggled)(*eventArgs)
+			guigui.DispatchEventHandler2(t, &args)
+		}
+	}
 }
 
 type tableRowWidget[T comparable] struct {

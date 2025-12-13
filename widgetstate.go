@@ -101,12 +101,16 @@ type widgetState struct {
 	zDelta          int
 	transparency    float64
 	customDraw      CustomDrawFunc
-	eventHandlers   map[string]any
-	tmpArgs         []reflect.Value
-	eventDispatched bool
 	container       bool
 	float           bool
 	focusDelegation Widget
+
+	eventHandler    Widget
+	eventDispatched bool
+
+	// These members are deprecated.
+	eventHandlers map[string]any
+	tmpArgs       []reflect.Value
 
 	zPlus1Cache       int
 	visibleCache      bool
@@ -226,6 +230,7 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
+// Deprecated
 func RegisterEventHandler(widget Widget, eventName string, handler any) {
 	widgetState := widget.widgetState()
 	if widgetState.eventHandlers == nil {
@@ -234,6 +239,7 @@ func RegisterEventHandler(widget Widget, eventName string, handler any) {
 	widgetState.eventHandlers[eventName] = handler
 }
 
+// Deprecated: use DispatchEventHandler2
 func DispatchEventHandler(widget Widget, eventName string, args ...any) {
 	dispatchEventHandler(&theApp.context, widget.widgetState(), eventName, args...)
 }
@@ -252,6 +258,17 @@ func dispatchEventHandler(context *Context, widgetState *widgetState, eventName 
 	f.Call(widgetState.tmpArgs)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 	widgetState.eventDispatched = true
+}
+
+func RegisterEventHandler2(widget Widget, targetWidget Widget) {
+	targetWidget.widgetState().eventHandler = widget
+}
+
+func DispatchEventHandler2(targetWidget Widget, args any) {
+	if w := targetWidget.widgetState().eventHandler; w != nil {
+		w.HandleEvent(&theApp.context, targetWidget, args)
+		targetWidget.widgetState().eventDispatched = true
+	}
 }
 
 // noCopy is a struct to warn that the struct should not be copied.

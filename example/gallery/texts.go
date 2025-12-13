@@ -75,14 +75,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			Value: basicwidget.HorizontalAlignEnd,
 		},
 	})
-	t.horizontalAlignSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := t.horizontalAlignSegmentedControl.ItemByIndex(index)
-		if !ok {
-			model.Texts().SetHorizontalAlign(basicwidget.HorizontalAlignStart)
-			return
-		}
-		model.Texts().SetHorizontalAlign(item.Value)
-	})
+	guigui.RegisterEventHandler2(t, &t.horizontalAlignSegmentedControl)
 	t.horizontalAlignSegmentedControl.SelectItemByValue(model.Texts().HorizontalAlign())
 
 	t.verticalAlignText.SetValue("Vertical align")
@@ -100,14 +93,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			Value: basicwidget.VerticalAlignBottom,
 		},
 	})
-	t.verticalAlignSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := t.verticalAlignSegmentedControl.ItemByIndex(index)
-		if !ok {
-			model.Texts().SetVerticalAlign(basicwidget.VerticalAlignTop)
-			return
-		}
-		model.Texts().SetVerticalAlign(item.Value)
-	})
+	guigui.RegisterEventHandler2(t, &t.verticalAlignSegmentedControl)
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.Texts().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
@@ -207,4 +193,30 @@ func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (t *Texts) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	model := context.Model(t, modelKeyModel).(*Model)
+	switch targetWidget {
+	case &t.horizontalAlignSegmentedControl:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SegmentedControlEventArgsItemSelected:
+			item, ok := t.horizontalAlignSegmentedControl.ItemByIndex(eventArgs.Index)
+			if !ok {
+				model.Texts().SetHorizontalAlign(basicwidget.HorizontalAlignStart)
+				return
+			}
+			model.Texts().SetHorizontalAlign(item.Value)
+		}
+	case &t.verticalAlignSegmentedControl:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SegmentedControlEventArgsItemSelected:
+			item, ok := t.verticalAlignSegmentedControl.ItemByIndex(eventArgs.Index)
+			if !ok {
+				model.Texts().SetVerticalAlign(basicwidget.VerticalAlignTop)
+				return
+			}
+			model.Texts().SetVerticalAlign(item.Value)
+		}
+	}
 }

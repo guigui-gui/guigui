@@ -106,10 +106,7 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		t.table.SetFooterHeight(0)
 	}
 	context.SetEnabled(&t.table, model.Tables().Enabled())
-	t.table.SetOnItemsMoved(func(context *guigui.Context, from, count, to int) {
-		idx := model.Tables().MoveTableItems(from, count, to)
-		t.table.SelectItemByIndex(idx)
-	})
+	guigui.RegisterEventHandler2(t, &t.table)
 
 	// Configurations
 	t.showFooterText.SetValue("Show footer")
@@ -167,4 +164,15 @@ func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (t *Tables) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &t.table {
+		model := context.Model(t, modelKeyModel).(*Model)
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.TableEventArgsItemsMoved:
+			idx := model.Tables().MoveTableItems(eventArgs.From, eventArgs.Count, eventArgs.To)
+			t.table.SelectItemByIndex(idx)
+		}
+	}
 }

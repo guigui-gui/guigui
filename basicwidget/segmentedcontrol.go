@@ -12,9 +12,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
-const (
-	segmentedControlEventItemSelected = "itemSelected"
-)
+type SegmentedControlEventArgsItemSelected struct {
+	Index int
+}
 
 type SegmentedControlDirection int
 
@@ -50,6 +50,7 @@ type SegmentedControl[T comparable] struct {
 
 	onItemSelected func(index int)
 
+	// TODO: This will not be needed when HandleEvent is implemented.
 	onButtonDowns []func(context *guigui.Context)
 }
 
@@ -59,10 +60,6 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 	}
 	s.direction = direction
 	guigui.RequestRedraw(s)
-}
-
-func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(s, segmentedControlEventItemSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
@@ -100,7 +97,9 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 
 	if s.onItemSelected == nil {
 		s.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler(s, segmentedControlEventItemSelected, index)
+			guigui.DispatchEventHandler2(s, &SegmentedControlEventArgsItemSelected{
+				Index: index,
+			})
 		}
 	}
 	s.abstractList.SetOnItemSelected(s.onItemSelected)

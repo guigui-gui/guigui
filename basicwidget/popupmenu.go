@@ -11,9 +11,9 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
-const (
-	popupMenuEventItemSelected = "itemSelected"
-)
+type PopupMenuEventArgsItemSelected struct {
+	Index int
+}
 
 type PopupMenuItem[T comparable] struct {
 	Text         string
@@ -34,12 +34,6 @@ type PopupMenu[T comparable] struct {
 	list      guigui.WidgetWithSize[*List[T]]
 	items     []PopupMenuItem[T]
 	listItems []ListItem[T]
-
-	onItemSelected func(context *guigui.Context, index int)
-}
-
-func (p *PopupMenu[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(p, popupMenuEventItemSelected, f)
 }
 
 func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
@@ -51,13 +45,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
-	if p.onItemSelected == nil {
-		p.onItemSelected = func(context *guigui.Context, index int) {
-			p.popup.SetOpen(false)
-			guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
-		}
-	}
-	list.list.SetOnItemSelected(p.onItemSelected)
+	guigui.RegisterEventHandler2(p, list)
 
 	p.popup.setStyle(popupStyleMenu)
 	p.popup.SetContent(&p.list)
@@ -183,4 +171,16 @@ func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.C
 
 func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
 	return p.list.Widget().list.ItemYFromIndexForMenu(context, index)
+}
+
+func (p *PopupMenu[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == p.list.Widget() {
+		switch eventArgs := eventArgs.(type) {
+		case *ListEventArgsItemSelected:
+			p.popup.SetOpen(false)
+			guigui.DispatchEventHandler2(p, &PopupMenuEventArgsItemSelected{
+				Index: eventArgs.Index,
+			})
+		}
+	}
 }

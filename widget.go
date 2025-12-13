@@ -17,6 +17,7 @@ type Widget interface {
 	Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
+	HandleEvent(context *Context, taregetWidget Widget, eventArgs any)
 	Tick(context *Context, widgetBounds *WidgetBounds) error
 	CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool)
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)

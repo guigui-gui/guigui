@@ -16,6 +16,21 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type ListEventArgsItemSelected struct {
+	Index int
+}
+
+type ListEventArgsItemsMoved struct {
+	From  int
+	Count int
+	To    int
+}
+
+type ListEventArgsItemExpanderToggled struct {
+	Index    int
+	Expanded bool
+}
+
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
@@ -63,18 +78,6 @@ func (l *List[T]) SetItemHeight(height int) {
 	guigui.RequestRedraw(l)
 }
 
-func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	l.list.SetOnItemSelected(f)
-}
-
-func (l *List[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	l.list.SetOnItemsMoved(f)
-}
-
-func (l *List[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	l.list.SetOnItemExpanderToggled(f)
-}
-
 func (l *List[T]) SetCheckmarkIndex(index int) {
 	l.list.SetCheckmarkIndex(index)
 }
@@ -106,6 +109,8 @@ func (l *List[T]) updateListItems() {
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.list)
+
+	guigui.RegisterEventHandler2(l, &l.list)
 
 	l.updateListItems()
 	for i := range l.listItemWidgets {
@@ -223,6 +228,22 @@ func (l *List[T]) SetItemString(str string, index int) {
 
 func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return l.list.Measure(context, constraints)
+}
+
+func (l *List[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &l.list {
+		switch eventArgs := eventArgs.(type) {
+		case *baseListEventArgsItemSelected:
+			args := ListEventArgsItemSelected(*eventArgs)
+			guigui.DispatchEventHandler2(l, &args)
+		case *baseListEventArgsItemsMoved:
+			args := ListEventArgsItemsMoved(*eventArgs)
+			guigui.DispatchEventHandler2(l, &args)
+		case *baseListEventArgsItemExpanderToggled:
+			args := ListEventArgsItemExpanderToggled(*eventArgs)
+			guigui.DispatchEventHandler2(l, &args)
+		}
+	}
 }
 
 type listItemWidget[T comparable] struct {

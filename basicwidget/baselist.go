@@ -18,11 +18,20 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	baseListEventItemSelected        = "itemSelected"
-	baseListEventItemsMoved          = "itemsMoved"
-	baseListEventItemExpanderToggled = "itemExpanderToggled"
-)
+type baseListEventArgsItemSelected struct {
+	Index int
+}
+
+type baseListEventArgsItemsMoved struct {
+	From  int
+	Count int
+	To    int
+}
+
+type baseListEventArgsItemExpanderToggled struct {
+	Index    int
+	Expanded bool
+}
 
 type ListStyle int
 
@@ -67,18 +76,6 @@ type baseList[T comparable] struct {
 
 func (b *baseList[T]) SetBackground(widget guigui.Widget) {
 	b.content.SetBackground(widget)
-}
-
-func (b *baseList[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	b.content.SetOnItemSelected(f)
-}
-
-func (b *baseList[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	b.content.SetOnItemsMoved(f)
-}
-
-func (b *baseList[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	b.content.SetOnItemExpanderToggled(f)
 }
 
 func (b *baseList[T]) SetCheckmarkIndex(index int) {
@@ -170,6 +167,8 @@ func (b *baseList[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddChild(&b.frame)
 	context.SetContainer(b, true)
 
+	guigui.RegisterEventHandler2(b, &b.content)
+
 	b.background1.setListContent(&b.content)
 	return nil
 }
@@ -185,6 +184,12 @@ func (b *baseList[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 
 func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return b.content.Measure(context, constraints)
+}
+
+func (b *baseList[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &b.content {
+		guigui.DispatchEventHandler2(b, eventArgs)
+	}
 }
 
 type baseListContent[T comparable] struct {
@@ -226,18 +231,6 @@ type baseListContent[T comparable] struct {
 
 func (b *baseListContent[T]) SetBackground(widget guigui.Widget) {
 	b.customBackground = widget
-}
-
-func (b *baseListContent[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(b, baseListEventItemSelected, f)
-}
-
-func (b *baseListContent[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	guigui.RegisterEventHandler(b, baseListEventItemsMoved, f)
-}
-
-func (b *baseListContent[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	guigui.RegisterEventHandler(b, baseListEventItemExpanderToggled, f)
 }
 
 func (b *baseListContent[T]) SetCheckmarkIndex(index int) {
@@ -343,7 +336,9 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 
 	if b.onItemSelected == nil {
 		b.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler(b, baseListEventItemSelected, index)
+			guigui.DispatchEventHandler2(b, &baseListEventArgsItemSelected{
+				Index: index,
+			})
 		}
 	}
 	b.abstractList.SetOnItemSelected(b.onItemSelected)
@@ -671,7 +666,11 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 		}
 		if b.dragDstIndexPlus1 > 0 {
 			// TODO: Implement multiple items drop.
-			guigui.DispatchEventHandler(b, baseListEventItemsMoved, b.dragSrcIndexPlus1-1, 1, b.dragDstIndexPlus1-1)
+			guigui.DispatchEventHandler2(b, &baseListEventArgsItemsMoved{
+				From:  b.dragSrcIndexPlus1 - 1,
+				Count: 1,
+				To:    b.dragDstIndexPlus1 - 1,
+			})
 			b.dragDstIndexPlus1 = 0
 		}
 		b.dragSrcIndexPlus1 = 0
@@ -690,7 +689,10 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			if c.X < b.itemBoundsForLayoutFromIndex[index].Min.X {
 				if left {
 					expanded := !item.Collapsed
-					guigui.DispatchEventHandler(b, baseListEventItemExpanderToggled, index, !expanded)
+					guigui.DispatchEventHandler2(b, &baseListEventArgsItemExpanderToggled{
+						Index:    index,
+						Expanded: !expanded,
+					})
 				}
 				return guigui.AbortHandlingInputByWidget(b)
 			}

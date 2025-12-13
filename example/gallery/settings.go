@@ -53,21 +53,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: "dark",
 		},
 	})
-	s.colorModeSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := s.colorModeSegmentedControl.ItemByIndex(index)
-		if !ok {
-			context.SetColorMode(guigui.ColorModeLight)
-			return
-		}
-		switch item.Value {
-		case "light":
-			context.SetColorMode(guigui.ColorModeLight)
-		case "dark":
-			context.SetColorMode(guigui.ColorModeDark)
-		default:
-			context.UseAutoColorMode()
-		}
-	})
+	guigui.RegisterEventHandler2(s, &s.colorModeSegmentedControl)
 	if context.IsAutoColorModeUsed() {
 		s.colorModeSegmentedControl.SelectItemByValue("")
 	} else {
@@ -114,18 +100,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: hongKongChinese,
 		},
 	})
-	s.localeSelect.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := s.localeSelect.ItemByIndex(index)
-		if !ok {
-			context.SetAppLocales(nil)
-			return
-		}
-		if item.Value == language.Und {
-			context.SetAppLocales(nil)
-			return
-		}
-		context.SetAppLocales([]language.Tag{item.Value})
-	})
+	guigui.RegisterEventHandler2(s, &s.localeSelect)
 	if !s.localeSelect.IsPopupOpen() {
 		if locales := context.AppendAppLocales(nil); len(locales) > 0 {
 			s.localeSelect.SelectItemByValue(locales[0])
@@ -149,14 +124,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: 1.2,
 		},
 	})
-	s.scaleSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := s.scaleSegmentedControl.ItemByIndex(index)
-		if !ok {
-			context.SetAppScale(1)
-			return
-		}
-		context.SetAppScale(item.Value)
-	})
+	guigui.RegisterEventHandler2(s, &s.scaleSegmentedControl)
 	s.scaleSegmentedControl.SelectItemByValue(context.AppScale())
 
 	s.form.SetItems([]basicwidget.FormItem{
@@ -194,6 +162,52 @@ func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (s *Settings) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &s.colorModeSegmentedControl:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SegmentedControlEventArgsItemSelected:
+			item, ok := s.colorModeSegmentedControl.ItemByIndex(eventArgs.Index)
+			if !ok {
+				context.SetColorMode(guigui.ColorModeLight)
+				return
+			}
+			switch item.Value {
+			case "light":
+				context.SetColorMode(guigui.ColorModeLight)
+			case "dark":
+				context.SetColorMode(guigui.ColorModeDark)
+			default:
+				context.UseAutoColorMode()
+			}
+		}
+	case &s.localeSelect:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SelectEventArgsItemSelected:
+			item, ok := s.localeSelect.ItemByIndex(eventArgs.Index)
+			if !ok {
+				context.SetAppLocales(nil)
+				return
+			}
+			if item.Value == language.Und {
+				context.SetAppLocales(nil)
+				return
+			}
+			context.SetAppLocales([]language.Tag{item.Value})
+		}
+	case &s.scaleSegmentedControl:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SegmentedControlEventArgsItemSelected:
+			item, ok := s.scaleSegmentedControl.ItemByIndex(eventArgs.Index)
+			if !ok {
+				context.SetAppScale(1)
+				return
+			}
+			context.SetAppScale(item.Value)
+		}
+	}
 }
 
 type textWithSubText struct {

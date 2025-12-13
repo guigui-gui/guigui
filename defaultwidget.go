@@ -34,6 +34,9 @@ func (*DefaultWidget) HandleButtonInput(context *Context, widgetBounds *WidgetBo
 	return HandleInputResult{}
 }
 
+func (*DefaultWidget) HandleEvent(context *Context, taregetWidget Widget, eventArgs any) {
+}
+
 func (*DefaultWidget) Tick(context *Context, widgetBounds *WidgetBounds) error {
 	return nil
 }

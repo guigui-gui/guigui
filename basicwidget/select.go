@@ -11,9 +11,9 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-const (
-	selectEventItemSelected = "itemSelected"
-)
+type SelectEventArgsItemSelected struct {
+	Index int
+}
 
 type SelectItem[T comparable] struct {
 	Text         string
@@ -39,12 +39,7 @@ type Select[T comparable] struct {
 
 	indexAtOpen int
 
-	onDown                  func(context *guigui.Context)
-	onPopupMenuItemSelected func(context *guigui.Context, index int)
-}
-
-func (s *Select[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(s, selectEventItemSelected, f)
+	onDown func(context *guigui.Context)
 }
 
 func (s *Select[T]) updatePopupMenuItems() {
@@ -106,12 +101,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
 	s.button.SetIconAlign(IconAlignEnd)
 
-	if s.onPopupMenuItemSelected == nil {
-		s.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
-			guigui.DispatchEventHandler(s, selectEventItemSelected, index)
-		}
-	}
-	s.popupMenu.SetOnItemSelected(s.onPopupMenuItemSelected)
+	guigui.RegisterEventHandler2(s, &s.popupMenu)
 	s.popupMenu.SetCheckmarkIndex(s.indexAtOpen)
 
 	return nil
@@ -136,6 +126,17 @@ func (s *Select[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 		Min: p,
 		Max: p.Add(s.popupMenu.Measure(context, guigui.Constraints{})),
 	})
+}
+
+func (s *Select[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &s.popupMenu {
+		switch eventArgs := eventArgs.(type) {
+		case *PopupMenuEventArgsItemSelected:
+			guigui.DispatchEventHandler2(s, &SelectEventArgsItemSelected{
+				Index: eventArgs.Index,
+			})
+		}
+	}
 }
 
 func (s *Select[T]) SetItems(items []SelectItem[T]) {

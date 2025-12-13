@@ -97,14 +97,7 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	s.list.SetItems(items)
 	s.list.SelectItemByValue(model.Mode())
 	s.list.SetItemHeight(basicwidget.UnitSize(context))
-	s.list.SetOnItemSelected(func(context *guigui.Context, index int) {
-		item, ok := s.list.ItemByIndex(index)
-		if !ok {
-			model.SetMode("")
-			return
-		}
-		model.SetMode(item.Value)
-	})
+	guigui.RegisterEventHandler2(s, &s.list)
 
 	return nil
 }
@@ -115,4 +108,20 @@ func (s *sidebarContent) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 
 func (s *sidebarContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return s.size
+}
+
+func (s *sidebarContent) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	model := context.Model(s, modelKeyModel).(*Model)
+	switch targetWidget {
+	case &s.list:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ListEventArgsItemSelected:
+			item, ok := s.list.ItemByIndex(eventArgs.Index)
+			if !ok {
+				model.SetMode("")
+				return
+			}
+			model.SetMode(item.Value)
+		}
+	}
 }

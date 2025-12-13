@@ -65,10 +65,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		list.SetFooterHeight(0)
 	}
-	list.SetOnItemsMoved(func(context *guigui.Context, from, count, to int) {
-		idx := model.Lists().MoveListItems(from, count, to)
-		list.SelectItemByIndex(idx)
-	})
+	guigui.RegisterEventHandler2(l, list)
 
 	l.listItems = slices.Delete(l.listItems, 0, len(l.listItems))
 	l.listItems = model.Lists().AppendListItems(l.listItems)
@@ -90,9 +87,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		tree.SetFooterHeight(0)
 	}
-	tree.SetOnItemExpanderToggled(func(context *guigui.Context, index int, expanded bool) {
-		model.Lists().SetTreeItemExpanded(index, expanded)
-	})
+	guigui.RegisterEventHandler2(l, tree)
 
 	l.treeItems = slices.Delete(l.treeItems, 0, len(l.treeItems))
 	l.treeItems = model.Lists().AppendTreeItems(l.treeItems)
@@ -212,4 +207,17 @@ func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+func (l *Lists) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &l.list {
+		model := context.Model(l, modelKeyModel).(*Model)
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ListEventArgsItemsMoved:
+			idx := model.Lists().MoveListItems(eventArgs.From, eventArgs.Count, eventArgs.To)
+			l.list.Widget().SelectItemByIndex(idx)
+		case *basicwidget.ListEventArgsItemExpanderToggled:
+			model.Lists().SetTreeItemExpanded(eventArgs.Index, eventArgs.Expanded)
+		}
+	}
 }
