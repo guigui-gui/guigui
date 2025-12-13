@@ -64,12 +64,10 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.updateFontFaceSources(context)
 
-	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) bool {
+	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if key == ebiten.KeyEnter {
 			r.tryCreateTask(r.textInput.Value())
-			return true
 		}
-		return false
 	})
 
 	r.createButton.SetText("Create")

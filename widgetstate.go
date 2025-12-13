@@ -234,14 +234,14 @@ func RegisterEventHandler(widget Widget, eventName string, handler any) {
 	widgetState.eventHandlers[eventName] = handler
 }
 
-func DispatchEventHandler(widget Widget, eventName string, args ...any) ([]any, bool) {
-	return dispatchEventHandler(&theApp.context, widget.widgetState(), eventName, args...)
+func DispatchEventHandler(widget Widget, eventName string, args ...any) {
+	dispatchEventHandler(&theApp.context, widget.widgetState(), eventName, args...)
 }
 
-func dispatchEventHandler(context *Context, widgetState *widgetState, eventName string, args ...any) ([]any, bool) {
+func dispatchEventHandler(context *Context, widgetState *widgetState, eventName string, args ...any) {
 	hanlder, ok := widgetState.eventHandlers[eventName]
 	if !ok {
-		return nil, false
+		return
 	}
 	f := reflect.ValueOf(hanlder)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
@@ -249,14 +249,9 @@ func dispatchEventHandler(context *Context, widgetState *widgetState, eventName 
 	for _, arg := range args {
 		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
 	}
-	returns := f.Call(widgetState.tmpArgs)
+	f.Call(widgetState.tmpArgs)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-	var v []any
-	for _, ret := range returns {
-		v = append(v, ret.Interface())
-	}
 	widgetState.eventDispatched = true
-	return v, true
 }
 
 const focusChangedEvent = "__focusChanged"

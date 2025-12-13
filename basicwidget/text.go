@@ -168,7 +168,7 @@ func (t *Text) SetOnValueChanged(f func(context *guigui.Context, text string, co
 	guigui.RegisterEventHandler(t, textEventValueChanged, f)
 }
 
-func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key) (handled bool)) {
+func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	guigui.RegisterEventHandler(t, textEventKeyJustPressed, f)
 }
 
@@ -691,14 +691,8 @@ func (t *Text) compositionSelectionToDraw(context *guigui.Context) (uStart, cSta
 func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	// Handle a key input by user-setting callback, unless IME is working.
 	if t.field.UncommittedTextLengthInBytes() == 0 {
-		var handled bool
 		for _, key := range inpututil.AppendJustPressedKeys(nil) {
-			if rets, ok := guigui.DispatchEventHandler(t, textEventKeyJustPressed, key); ok && len(rets) > 0 {
-				handled = handled || rets[0].(bool)
-			}
-		}
-		if handled {
-			return guigui.HandleInputByWidget(t)
+			guigui.DispatchEventHandler(t, textEventKeyJustPressed, key)
 		}
 	}
 

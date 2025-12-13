@@ -68,7 +68,7 @@ func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, va
 	n.abstractNumberInput.SetOnValueChangedUint64(n, f)
 }
 
-func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key) (handled bool)) {
+func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	n.textInput.SetOnKeyJustPressed(f)
 }
 

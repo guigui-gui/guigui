@@ -38,7 +38,7 @@ func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, text strin
 	t.textInput.SetOnValueChanged(f)
 }
 
-func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key) (handled bool)) {
+func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	t.textInput.SetOnKeyJustPressed(f)
 }
 
@@ -195,7 +195,7 @@ func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text strin
 	t.text.SetOnValueChanged(f)
 }
 
-func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key) (handled bool)) {
+func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	t.text.SetOnKeyJustPressed(f)
 }
 
