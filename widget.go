@@ -25,6 +25,16 @@ type Widget interface {
 	widgetState() *widgetState
 }
 
+func areWidgetsSame(a Widget, b Widget) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return a.widgetState() == b.widgetState()
+}
+
 type HandleInputResult struct {
 	widget  Widget
 	aborted bool

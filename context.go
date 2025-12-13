@@ -251,22 +251,21 @@ func (c *Context) SetFocused(widget Widget, focused bool) {
 	}
 }
 
-func (c *Context) resolveFocusedWidget(widget Widget) *widgetState {
-	ws := widget.widgetState()
+func (c *Context) resolveFocusedWidget(widget Widget) Widget {
 	for {
-		if !c.canHaveFocus(ws) {
+		if !c.canHaveFocus(widget.widgetState()) {
 			return nil
 		}
-		if ws.focusDelegation == nil {
-			return ws
+		if widget.widgetState().focusDelegation == nil {
+			return widget
 		}
-		ws = ws.focusDelegation
+		widget = widget.widgetState().focusDelegation
 	}
 }
 
 func (c *Context) focus(widget Widget) {
 	ws := c.resolveFocusedWidget(widget)
-	if c.app.focusedWidgetState == ws {
+	if c.app.focusedWidget == ws {
 		return
 	}
 
@@ -284,7 +283,7 @@ func (c *Context) blur(widget Widget) {
 	}
 	var unfocused bool
 	_ = traverseWidget(widget, func(w Widget) error {
-		if c.app.focusedWidgetState != w.widgetState() {
+		if c.app.focusedWidget.widgetState() != w.widgetState() {
 			return nil
 		}
 		for ; w != nil && w.widgetState() != nil; w = w.widgetState().parent {
@@ -309,7 +308,7 @@ func (c *Context) canHaveFocus(widgetState *widgetState) bool {
 }
 
 func (c *Context) IsFocused(widget Widget) bool {
-	return c.canHaveFocus(widget.widgetState()) && c.app.focusedWidgetState == widget.widgetState()
+	return c.canHaveFocus(widget.widgetState()) && areWidgetsSame(c.app.focusedWidget, widget)
 }
 
 func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
@@ -318,22 +317,22 @@ func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
 	}
 
 	if len(widget.widgetState().children) == 0 {
-		return c.app.focusedWidgetState == widget.widgetState()
+		return areWidgetsSame(c.app.focusedWidget, widget)
 	}
 
-	w := c.app.focusedWidgetState
+	w := c.app.focusedWidget
 	if w == nil {
 		return false
 	}
 	for {
 		widgetState := widget.widgetState()
-		if w == widgetState {
+		if areWidgetsSame(w, widget) {
 			return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
 		}
-		if w.parent == nil {
+		if w.widgetState().parent == nil {
 			break
 		}
-		w = w.parent.widgetState()
+		w = w.widgetState().parent
 	}
 	return false
 }
@@ -451,12 +450,10 @@ func (c *Context) SetFloat(widget Widget, float bool) {
 }
 
 func (c *Context) DelegateFocus(from Widget, to Widget) {
-	fromWS := from.widgetState()
-	toWS := to.widgetState()
-	if fromWS.focusDelegation == toWS {
+	if areWidgetsSame(from.widgetState().focusDelegation, to) {
 		return
 	}
-	fromWS.focusDelegation = toWS
+	from.widgetState().focusDelegation = to
 }
 
 func (c *Context) SetWindowTitle(title string) {

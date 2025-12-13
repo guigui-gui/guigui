@@ -89,7 +89,7 @@ type app struct {
 	lastScreenHeight   float64
 	lastCursorPosition image.Point
 
-	focusedWidgetState *widgetState
+	focusedWidget Widget
 
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
@@ -176,16 +176,16 @@ func (a *app) bounds() image.Rectangle {
 	return image.Rect(0, 0, int(math.Ceil(a.screenWidth)), int(math.Ceil(a.screenHeight)))
 }
 
-func (a *app) focusWidget(widgetState *widgetState) {
-	if a.focusedWidgetState == widgetState {
+func (a *app) focusWidget(widget Widget) {
+	if areWidgetsSame(a.focusedWidget, widget) {
 		return
 	}
-	if a.focusedWidgetState != nil {
-		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, false)
+	if a.focusedWidget != nil {
+		dispatchEventHandler(&a.context, a.focusedWidget.widgetState(), focusChangedEvent, false)
 	}
-	a.focusedWidgetState = widgetState
-	if a.focusedWidgetState != nil {
-		dispatchEventHandler(&a.context, a.focusedWidgetState, focusChangedEvent, true)
+	a.focusedWidget = widget
+	if a.focusedWidget != nil {
+		dispatchEventHandler(&a.context, a.focusedWidget.widgetState(), focusChangedEvent, true)
 	}
 }
 
@@ -225,8 +225,8 @@ func (a *app) updateInvalidatedRegions() {
 func (a *app) Update() error {
 	var built bool
 
-	if a.focusedWidgetState == nil {
-		a.focusWidget(a.root.widgetState())
+	if a.focusedWidget == nil {
+		a.focusWidget(a.root)
 	}
 
 	if s := deviceScaleFactor(); a.deviceScale != s {

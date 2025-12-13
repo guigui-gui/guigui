@@ -106,7 +106,7 @@ type widgetState struct {
 	eventDispatched bool
 	container       bool
 	float           bool
-	focusDelegation *widgetState
+	focusDelegation Widget
 
 	zPlus1Cache       int
 	visibleCache      bool
