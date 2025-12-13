@@ -6,13 +6,14 @@
 package clipboard
 
 import (
-	"github.com/atotto/clipboard"
+	"golang.design/x/clipboard"
 )
 
 func readAll() (string, error) {
-	return clipboard.ReadAll()
+	return clipboard.Read(clipboard.FmtText), nil
 }
 
 func writeAll(text string) error {
-	return clipboard.WriteAll(text)
+	clipboard.Write(clipboard.FmtText, []byte(text))
+	return nil
 }
