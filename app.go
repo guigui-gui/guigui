@@ -440,8 +440,8 @@ func (a *app) buildWidgets() error {
 	// Clear event handlers to prevent unexpected handlings.
 	// An event handler is often a closure capturing variables, and this might cause unexpected behaviors.
 	_ = traverseWidget(a.root, func(widget Widget) error {
-		clear(widget.widgetState().eventHandlers)
 		widgetState := widget.widgetState()
+		clear(widgetState.eventHandlers)
 		widgetState.focusDelegation = nil
 		widgetState.zPlus1Cache = 0
 		widgetState.visibleCache = false
