@@ -10,7 +10,7 @@ import (
 )
 
 func readAll() (string, error) {
-	return clipboard.Read(clipboard.FmtText), nil
+	return string(clipboard.Read(clipboard.FmtText)), nil
 }
 
 func writeAll(text string) error {
