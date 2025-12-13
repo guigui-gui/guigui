@@ -693,8 +693,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	if t.field.UncommittedTextLengthInBytes() == 0 {
 		var handled bool
 		for _, key := range inpututil.AppendJustPressedKeys(nil) {
-			rets, _ := guigui.DispatchEventHandler(t, textEventKeyJustPressed, key)
-			handled = handled || rets[0].(bool)
+			if rets, ok := guigui.DispatchEventHandler(t, textEventKeyJustPressed, key); ok && len(rets) > 0 {
+				handled = handled || rets[0].(bool)
+			}
 		}
 		if handled {
 			return guigui.HandleInputByWidget(t)
