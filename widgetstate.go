@@ -254,15 +254,6 @@ func dispatchEventHandler(context *Context, widgetState *widgetState, eventName 
 	widgetState.eventDispatched = true
 }
 
-const focusChangedEvent = "__focusChanged"
-
-// SetOnFocusChanged registers a handler for focus changed events.
-//
-// A handler can be dispatched even when the widget is not in the tree.
-func SetOnFocusChanged(widget Widget, f func(c *Context, focused bool)) {
-	RegisterEventHandler(widget, focusChangedEvent, f)
-}
-
 // noCopy is a struct to warn that the struct should not be copied.
 //
 // For details, see https://go.dev/issues/8005#issuecomment-190753527

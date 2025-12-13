@@ -140,8 +140,6 @@ type Text struct {
 
 	prevStart int
 	prevEnd   int
-
-	onFocusChanged func(context *guigui.Context, focused bool)
 }
 
 type cachedTextSizeEntry struct {
@@ -188,24 +186,6 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if t.lastScale != context.Scale() {
 		t.lastScale = context.Scale()
 		t.resetCachedTextSize()
-	}
-
-	if t.editable {
-		if t.onFocusChanged == nil {
-			t.onFocusChanged = func(context *guigui.Context, focused bool) {
-				if focused {
-					t.field.Focus()
-					t.cursor.resetCounter()
-					start, end := t.field.Selection()
-					if start < 0 || end < 0 {
-						t.doSelectAll()
-					}
-				} else {
-					t.commit()
-				}
-			}
-		}
-		guigui.SetOnFocusChanged(t, t.onFocusChanged)
 	}
 
 	context.SetPassThrough(&t.cursor, true)
@@ -1141,6 +1121,22 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		Top:    pos.Top + float64(textBounds.Min.Y),
 		Bottom: pos.Bottom + float64(textBounds.Min.Y),
 	}, true
+}
+
+func (t *Text) OnFocusChanged(context *guigui.Context, focused bool) {
+	if !t.editable {
+		return
+	}
+	if focused {
+		t.field.Focus()
+		t.cursor.resetCounter()
+		start, end := t.field.Selection()
+		if start < 0 || end < 0 {
+			t.doSelectAll()
+		}
+	} else {
+		t.commit()
+	}
 }
 
 func textCursorWidth(context *guigui.Context) int {

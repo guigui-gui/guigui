@@ -181,11 +181,11 @@ func (a *app) focusWidget(widget Widget) {
 		return
 	}
 	if a.focusedWidget != nil {
-		dispatchEventHandler(&a.context, a.focusedWidget.widgetState(), focusChangedEvent, false)
+		a.focusedWidget.OnFocusChanged(&a.context, false)
 	}
 	a.focusedWidget = widget
 	if a.focusedWidget != nil {
-		dispatchEventHandler(&a.context, a.focusedWidget.widgetState(), focusChangedEvent, true)
+		a.focusedWidget.OnFocusChanged(&a.context, true)
 	}
 }
 
