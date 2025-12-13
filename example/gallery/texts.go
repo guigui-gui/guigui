@@ -173,15 +173,13 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			model.Texts().SetText(text)
 		}
 	})
-	t.sampleText.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) bool {
+	t.sampleText.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if !t.sampleText.IsEditable() {
-			return false
+			return
 		}
 		if key == ebiten.KeyTab {
 			t.sampleText.ReplaceValueAtSelection("\t")
-			return true
 		}
-		return false
 	})
 	t.sampleText.SetValue(model.Texts().Text())
 
