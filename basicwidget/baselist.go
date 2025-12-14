@@ -19,6 +19,7 @@ import (
 )
 
 const (
+	baseListEventItemSelected        = "itemSelected"
 	baseListEventItemsMoved          = "itemsMoved"
 	baseListEventItemExpanderToggled = "itemExpanderToggled"
 )
@@ -219,6 +220,8 @@ type baseListContent[T comparable] struct {
 	treeItemExpandedImage  *ebiten.Image
 
 	prevWidth int
+
+	onItemSelected func(index int)
 }
 
 func (b *baseListContent[T]) SetBackground(widget guigui.Widget) {
@@ -226,7 +229,7 @@ func (b *baseListContent[T]) SetBackground(widget guigui.Widget) {
 }
 
 func (b *baseListContent[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	b.abstractList.SetOnItemSelected(b, f)
+	guigui.RegisterEventHandler(b, baseListEventItemSelected, f)
 }
 
 func (b *baseListContent[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
@@ -337,6 +340,13 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 		adder.AddChild(item.Content)
 	}
 	adder.AddChild(&b.scrollOverlay)
+
+	if b.onItemSelected == nil {
+		b.onItemSelected = func(index int) {
+			guigui.DispatchEventHandler(b, baseListEventItemSelected, index)
+		}
+	}
+	b.abstractList.SetOnItemSelected(b.onItemSelected)
 
 	b.background2.setListContent(b)
 

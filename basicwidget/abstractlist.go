@@ -9,10 +9,6 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-const (
-	abstractListEventItemSelected = "itemSelected"
-)
-
 type valuer[Value comparable] interface {
 	value() Value
 	selectable() bool
@@ -21,10 +17,11 @@ type valuer[Value comparable] interface {
 type abstractList[Value comparable, Item valuer[Value]] struct {
 	items           []Item
 	selectedIndices []int
+	onItemSelected  func(index int)
 }
 
-func (a *abstractList[Value, Item]) SetOnItemSelected(widget guigui.Widget, f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(widget, abstractListEventItemSelected, f)
+func (a *abstractList[Value, Item]) SetOnItemSelected(f func(index int)) {
+	a.onItemSelected = f
 }
 
 func (a *abstractList[Value, Item]) SetItems(widget guigui.Widget, items []Item) {
@@ -69,7 +66,9 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(widget guigui.Widget, inde
 	a.selectedIndices = adjustSliceSize(a.selectedIndices, 1)
 	a.selectedIndices[0] = index
 	if !selected || forceFireEvents {
-		guigui.DispatchEventHandler(widget, abstractListEventItemSelected, index)
+		if a.onItemSelected != nil {
+			a.onItemSelected(index)
+		}
 	}
 	return true
 }

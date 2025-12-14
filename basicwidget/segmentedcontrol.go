@@ -12,6 +12,10 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+const (
+	segmentedControlEventItemSelected = "itemSelected"
+)
+
 type SegmentedControlDirection int
 
 const (
@@ -44,6 +48,8 @@ type SegmentedControl[T comparable] struct {
 	direction   SegmentedControlDirection
 	layoutItems []guigui.LinearLayoutItem
 
+	onItemSelected func(index int)
+
 	onButtonDowns []func(context *guigui.Context)
 }
 
@@ -56,7 +62,7 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 }
 
 func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	s.abstractList.SetOnItemSelected(s, f)
+	guigui.RegisterEventHandler(s, segmentedControlEventItemSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
@@ -91,6 +97,13 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 	for i := range s.buttons {
 		adder.AddChild(&s.buttons[i])
 	}
+
+	if s.onItemSelected == nil {
+		s.onItemSelected = func(index int) {
+			guigui.DispatchEventHandler(s, segmentedControlEventItemSelected, index)
+		}
+	}
+	s.abstractList.SetOnItemSelected(s.onItemSelected)
 
 	s.buttons = adjustSliceSize(s.buttons, s.abstractList.ItemCount())
 	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
