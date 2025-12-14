@@ -5,7 +5,6 @@ package main
 
 import (
 	"math"
-	"math/big"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -45,24 +44,14 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	width := 12 * u
 
 	n.numberInput1Text.SetValue("Number input (BigInt)")
-	n.numberInput1.Widget().SetOnValueChangedBigInt(func(context *guigui.Context, value *big.Int, committed bool) {
-		if !committed {
-			return
-		}
-		model.NumberInputs().SetNumberInputValue1(value)
-	})
+	guigui.RegisterEventHandler2(n, n.numberInput1.Widget())
 	n.numberInput1.Widget().SetValueBigInt(model.NumberInputs().NumberInputValue1())
 	n.numberInput1.Widget().SetEditable(model.NumberInputs().Editable())
 	context.SetEnabled(&n.numberInput1, model.NumberInputs().Enabled())
 	n.numberInput1.SetFixedWidth(width)
 
 	n.numberInput2Text.SetValue("Number input (uint64)")
-	n.numberInput2.Widget().SetOnValueChangedUint64(func(context *guigui.Context, value uint64, committed bool) {
-		if !committed {
-			return
-		}
-		model.NumberInputs().SetNumberInputValue2(value)
-	})
+	guigui.RegisterEventHandler2(n, n.numberInput2.Widget())
 	n.numberInput2.Widget().SetMinimumValueUint64(0)
 	n.numberInput2.Widget().SetMaximumValueUint64(math.MaxUint64)
 	n.numberInput2.Widget().SetValueUint64(model.NumberInputs().NumberInputValue2())
@@ -71,12 +60,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput2.SetFixedWidth(width)
 
 	n.numberInput3Text.SetValue("Number input (Range: [-100, 100], Step: 5)")
-	n.numberInput3.Widget().SetOnValueChangedInt64(func(context *guigui.Context, value int64, committed bool) {
-		if !committed {
-			return
-		}
-		model.NumberInputs().SetNumberInputValue3(int(value))
-	})
+	guigui.RegisterEventHandler2(n, n.numberInput3.Widget())
 	n.numberInput3.Widget().SetMinimumValue(-100)
 	n.numberInput3.Widget().SetMaximumValue(100)
 	n.numberInput3.Widget().SetStep(5)
@@ -147,6 +131,33 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	})
 
 	return nil
+}
+
+func (n *NumberInputs) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	model := context.Model(n, modelKeyModel).(*Model)
+	switch targetWidget {
+	case n.numberInput1.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.NumberInputEventArgsValueChangedBigInt:
+			if eventArgs.Committed {
+				model.NumberInputs().SetNumberInputValue1(eventArgs.Value)
+			}
+		}
+	case n.numberInput2.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.NumberInputEventArgsValueChangedUint64:
+			if eventArgs.Committed {
+				model.NumberInputs().SetNumberInputValue2(eventArgs.Value)
+			}
+		}
+	case n.numberInput3.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.NumberInputEventArgsValueChangedInt64:
+			if eventArgs.Committed {
+				model.NumberInputs().SetNumberInputValue3(int(eventArgs.Value))
+			}
+		}
+	}
 }
 
 func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

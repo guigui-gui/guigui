@@ -64,11 +64,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.updateFontFaceSources(context)
 
-	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
-		if key == ebiten.KeyEnter {
-			r.tryCreateTask(r.textInput.Value())
-		}
-	})
+	guigui.RegisterEventHandler2(r, &r.textInput)
 
 	r.createButton.SetText("Create")
 	r.createButton.SetOnUp(func(context *guigui.Context) {
@@ -84,6 +80,17 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.tasksPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	return nil
+}
+
+func (r *Root) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &r.textInput {
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.TextInputEventArgsKeyJustPressed:
+			if eventArgs.Key == ebiten.KeyEnter {
+				r.tryCreateTask(r.textInput.Value())
+			}
+		}
+	}
 }
 
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

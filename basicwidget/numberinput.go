@@ -14,12 +14,29 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
-const (
-	numberInputEventValueChanged       = "valueChanged"
-	numberInputEventValueChangedBigInt = "valueChangedBigInt"
-	numberInputEventValueChangedInt64  = "valueChangedInt64"
-	numberInputEventValueChangedUint64 = "valueChangedUint64"
-)
+type NumberInputEventArgsValueChanged struct {
+	Value     int
+	Committed bool
+}
+
+type NumberInputEventArgsValueChangedBigInt struct {
+	Value     *big.Int
+	Committed bool
+}
+
+type NumberInputEventArgsValueChangedInt64 struct {
+	Value     int64
+	Committed bool
+}
+
+type NumberInputEventArgsValueChangedUint64 struct {
+	Value     uint64
+	Committed bool
+}
+
+type NumberInputEventArgsKeyJustPressed struct {
+	Key ebiten.Key
+}
 
 var (
 	minInt    big.Int
@@ -52,9 +69,8 @@ type NumberInput struct {
 	onValueChangedUint64 func(value uint64, committed bool)
 	onValueChangedString func(value string, force bool)
 
-	onTextInputValueChanged func(context *guigui.Context, value string, committed bool)
-	onUpButtonDown          func(context *guigui.Context)
-	onDownButtonDown        func(context *guigui.Context)
+	onUpButtonDown   func(context *guigui.Context)
+	onDownButtonDown func(context *guigui.Context)
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -63,26 +79,6 @@ func (n *NumberInput) IsEditable() bool {
 
 func (n *NumberInput) SetEditable(editable bool) {
 	n.textInput.SetEditable(editable)
-}
-
-func (n *NumberInput) SetOnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChanged, f)
-}
-
-func (n *NumberInput) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedBigInt, f)
-}
-
-func (n *NumberInput) SetOnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedInt64, f)
-}
-
-func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedUint64, f)
-}
-
-func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	n.textInput.SetOnKeyJustPressed(f)
 }
 
 func (n *NumberInput) Value() int {
@@ -103,13 +99,6 @@ func (n *NumberInput) ValueUint64() uint64 {
 
 func (n *NumberInput) SetValueBigInt(value *big.Int) {
 	n.abstractNumberInput.SetValueBigInt(value, true)
-	/*if n.nextValue != nil && n.nextValue.Cmp(value) == 0 {
-		return
-	}
-	if n.nextValue == nil {
-		n.nextValue = &big.Int{}
-	}
-	n.nextValue.Set(value)*/
 }
 
 func (n *NumberInput) SetValue(value int) {
@@ -207,28 +196,40 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChanged, value, committed)
+			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChanged{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	n.abstractNumberInput.SetOnValueChanged(n.onValueChanged)
 
 	if n.onValueChangedBigInt == nil {
 		n.onValueChangedBigInt = func(value *big.Int, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedBigInt, value, committed)
+			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedBigInt{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedBigInt(n.onValueChangedBigInt)
 
 	if n.onValueChangedInt64 == nil {
 		n.onValueChangedInt64 = func(value int64, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedInt64, value, committed)
+			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedInt64{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedInt64(n.onValueChangedInt64)
 
 	if n.onValueChangedUint64 == nil {
 		n.onValueChangedUint64 = func(value uint64, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedUint64, value, committed)
+			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedUint64{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedUint64(n.onValueChangedUint64)
@@ -248,12 +249,8 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	n.textInput.SetHorizontalAlign(HorizontalAlignRight)
 	n.textInput.SetTabular(true)
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
-	if n.onTextInputValueChanged == nil {
-		n.onTextInputValueChanged = func(context *guigui.Context, text string, committed bool) {
-			n.abstractNumberInput.SetString(text, false, committed)
-		}
-	}
-	n.textInput.SetOnValueChanged(n.onTextInputValueChanged)
+
+	guigui.RegisterEventHandler2(n, &n.textInput)
 
 	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
 	if err != nil {
@@ -371,4 +368,17 @@ func (n *NumberInput) Copy() bool {
 
 func (n *NumberInput) Paste() bool {
 	return n.textInput.Paste()
+}
+
+func (n *NumberInput) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &n.textInput { // TextInput
+		switch eventArgs := eventArgs.(type) {
+		case *TextInputEventArgsValueChanged:
+			n.abstractNumberInput.SetString(eventArgs.Value, false, eventArgs.Committed)
+		case *TextInputEventArgsKeyJustPressed:
+			guigui.DispatchEventHandler2(n, &NumberInputEventArgsKeyJustPressed{
+				Key: eventArgs.Key,
+			})
+		}
+	}
 }

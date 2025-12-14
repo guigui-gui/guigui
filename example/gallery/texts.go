@@ -154,19 +154,8 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.sampleText.SetBold(model.Texts().Bold())
 	t.sampleText.SetSelectable(model.Texts().Selectable())
 	t.sampleText.SetEditable(model.Texts().Editable())
-	t.sampleText.SetOnValueChanged(func(context *guigui.Context, text string, committed bool) {
-		if committed {
-			model.Texts().SetText(text)
-		}
-	})
-	t.sampleText.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
-		if !t.sampleText.IsEditable() {
-			return
-		}
-		if key == ebiten.KeyTab {
-			t.sampleText.ReplaceValueAtSelection("\t")
-		}
-	})
+	guigui.RegisterEventHandler2(t, &t.sampleText)
+
 	t.sampleText.SetValue(model.Texts().Text())
 
 	return nil
@@ -217,6 +206,20 @@ func (t *Texts) HandleEvent(context *guigui.Context, targetWidget guigui.Widget,
 				return
 			}
 			model.Texts().SetVerticalAlign(item.Value)
+		}
+	case &t.sampleText:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.TextEventArgsValueChanged:
+			if eventArgs.Committed {
+				model.Texts().SetText(eventArgs.Value)
+			}
+		case *basicwidget.TextEventArgsKeyJustPressed:
+			if !t.sampleText.IsEditable() {
+				return
+			}
+			if eventArgs.Key == ebiten.KeyTab {
+				t.sampleText.ReplaceValueAtSelection("\t")
+			}
 		}
 	}
 }

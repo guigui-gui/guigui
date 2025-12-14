@@ -14,6 +14,15 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type TextInputEventArgsValueChanged struct {
+	Value     string
+	Committed bool
+}
+
+type TextInputEventArgsKeyJustPressed struct {
+	Key ebiten.Key
+}
+
 type TextInputStyle int
 
 const (
@@ -28,14 +37,6 @@ type TextInput struct {
 	focus     textInputFocus
 
 	style TextInputStyle
-}
-
-func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	t.textInput.SetOnValueChanged(f)
-}
-
-func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.textInput.SetOnKeyJustPressed(f)
 }
 
 func (t *TextInput) Value() string {
@@ -134,7 +135,24 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
+	guigui.RegisterEventHandler2(t, &t.textInput.text)
 	return nil
+}
+
+func (t *TextInput) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &t.textInput.text {
+		switch eventArgs := eventArgs.(type) {
+		case *TextEventArgsValueChanged:
+			guigui.DispatchEventHandler2(t, &TextInputEventArgsValueChanged{
+				Value:     eventArgs.Value,
+				Committed: eventArgs.Committed,
+			})
+		case *TextEventArgsKeyJustPressed:
+			guigui.DispatchEventHandler2(t, &TextInputEventArgsKeyJustPressed{
+				Key: eventArgs.Key,
+			})
+		}
+	}
 }
 
 func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -181,14 +199,6 @@ type textInput struct {
 	readonly     bool
 	paddingStart int
 	paddingEnd   int
-}
-
-func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	t.text.SetOnValueChanged(f)
-}
-
-func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.text.SetOnKeyJustPressed(f)
 }
 
 func (t *textInput) Value() string {

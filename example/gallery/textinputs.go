@@ -77,11 +77,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	width := 12 * u
 
 	t.singleLineText.SetValue("Single line")
-	t.singleLineTextInput.Widget().SetOnValueChanged(func(context *guigui.Context, text string, committed bool) {
-		if committed {
-			model.TextInputs().SetSingleLineText(text)
-		}
-	})
+	guigui.RegisterEventHandler2(t, t.singleLineTextInput.Widget())
 	t.singleLineTextInput.Widget().SetValue(model.TextInputs().SingleLineText())
 	t.singleLineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.singleLineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
@@ -98,11 +94,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
 
 	t.multilineText.SetValue("Multiline")
-	t.multilineTextInput.Widget().SetOnValueChanged(func(context *guigui.Context, text string, committed bool) {
-		if committed {
-			model.TextInputs().SetMultilineText(text)
-		}
-	})
+	guigui.RegisterEventHandler2(t, t.multilineTextInput.Widget())
 	t.multilineTextInput.Widget().SetValue(model.TextInputs().MultilineText())
 	t.multilineTextInput.Widget().SetMultiline(true)
 	t.multilineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
@@ -266,6 +258,20 @@ func (t *TextInputs) HandleEvent(context *guigui.Context, targetWidget guigui.Wi
 				return
 			}
 			model.TextInputs().SetVerticalAlign(item.Value)
+		}
+	case t.singleLineTextInput.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.TextInputEventArgsValueChanged:
+			if eventArgs.Committed {
+				model.TextInputs().SetSingleLineText(eventArgs.Value)
+			}
+		}
+	case t.multilineTextInput.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.TextInputEventArgsValueChanged:
+			if eventArgs.Committed {
+				model.TextInputs().SetMultilineText(eventArgs.Value)
+			}
 		}
 	}
 }
