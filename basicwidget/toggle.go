@@ -45,7 +45,7 @@ func (t *Toggle) SetValue(value bool) {
 	}
 	guigui.RequestRedraw(t)
 
-	guigui.DispatchEventHandler2(t, &ToggleEventArgsValueChanged{
+	guigui.DispatchEvent(t, &ToggleEventArgsValueChanged{
 		Value: value,
 	})
 }

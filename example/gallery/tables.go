@@ -106,18 +106,18 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		t.table.SetFooterHeight(0)
 	}
 	context.SetEnabled(&t.table, model.Tables().Enabled())
-	guigui.RegisterEventHandler2(t, &t.table)
+	guigui.AddEventHandler(t, &t.table)
 
 	// Configurations
 	t.showFooterText.SetValue("Show footer")
-	guigui.RegisterEventHandler2(t, &t.showFooterToggle)
+	guigui.AddEventHandler(t, &t.showFooterToggle)
 
 	t.movableText.SetValue("Enable to move items")
 	t.movableToggle.SetValue(model.Tables().Movable())
-	guigui.RegisterEventHandler2(t, &t.movableToggle)
+	guigui.AddEventHandler(t, &t.movableToggle)
 
 	t.enabledText.SetValue("Enabled")
-	guigui.RegisterEventHandler2(t, &t.enabledToggle)
+	guigui.AddEventHandler(t, &t.enabledToggle)
 	t.enabledToggle.SetValue(model.Tables().Enabled())
 
 	t.configForm.SetItems([]basicwidget.FormItem{

@@ -45,7 +45,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
-	guigui.RegisterEventHandler2(p, list)
+	guigui.AddEventHandler(p, list)
 
 	p.popup.setStyle(popupStyleMenu)
 	p.popup.SetContent(&p.list)
@@ -178,7 +178,7 @@ func (p *PopupMenu[T]) HandleEvent(context *guigui.Context, targetWidget guigui.
 		switch eventArgs := eventArgs.(type) {
 		case *ListEventArgsItemSelected:
 			p.popup.SetOpen(false)
-			guigui.DispatchEventHandler2(p, &PopupMenuEventArgsItemSelected{
+			guigui.DispatchEvent(p, &PopupMenuEventArgsItemSelected{
 				Index: eventArgs.Index,
 			})
 		}

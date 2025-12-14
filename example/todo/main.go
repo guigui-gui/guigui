@@ -64,13 +64,13 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.updateFontFaceSources(context)
 
-	guigui.RegisterEventHandler2(r, &r.textInput)
+	guigui.AddEventHandler(r, &r.textInput)
 
 	r.createButton.SetText("Create")
-	guigui.RegisterEventHandler2(r, &r.createButton)
+	guigui.AddEventHandler(r, &r.createButton)
 	context.SetEnabled(&r.createButton, r.model.CanAddTask(r.textInput.Value()))
 
-	guigui.RegisterEventHandler2(r, &r.tasksPanelContent)
+	guigui.AddEventHandler(r, &r.tasksPanelContent)
 	r.tasksPanel.SetContent(&r.tasksPanelContent)
 	r.tasksPanel.SetAutoBorder(true)
 	r.tasksPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
@@ -163,7 +163,7 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	adder.AddChild(&t.text)
 
 	t.doneButton.SetText("Done")
-	guigui.RegisterEventHandler2(t, &t.doneButton)
+	guigui.AddEventHandler(t, &t.doneButton)
 
 	t.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 
@@ -175,7 +175,7 @@ func (t *taskWidget) HandleEvent(context *guigui.Context, targetWidget guigui.Wi
 	case &t.doneButton:
 		switch eventArgs.(type) {
 		case *basicwidget.ButtonEventArgsUp:
-			guigui.DispatchEventHandler2(t, &taskWidgetEventArgsDoneButtonPressed{})
+			guigui.DispatchEvent(t, &taskWidgetEventArgsDoneButtonPressed{})
 		}
 	}
 }
@@ -226,7 +226,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
-		guigui.RegisterEventHandler2(t, &t.taskWidgets[i])
+		guigui.AddEventHandler(t, &t.taskWidgets[i])
 		t.taskWidgets[i].SetText(task.Text)
 	}
 	return nil
@@ -247,7 +247,7 @@ func (t *tasksPanelContent) HandleEvent(context *guigui.Context, targetWidget gu
 	model := context.Model(t, modelKeyModel).(*Model)
 	switch eventArgs.(type) {
 	case *taskWidgetEventArgsDoneButtonPressed:
-		guigui.DispatchEventHandler2(t, &tasksPanelContentEventArgsDeleted{
+		guigui.DispatchEvent(t, &tasksPanelContentEventArgsDeleted{
 			ID: model.TaskByIndex(idx).ID,
 		})
 	}

@@ -89,11 +89,11 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 	s.button.SetContent(&s.buttonContent)
 
-	guigui.RegisterEventHandler2(s, &s.button)
+	guigui.AddEventHandler(s, &s.button)
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
 	s.button.SetIconAlign(IconAlignEnd)
 
-	guigui.RegisterEventHandler2(s, &s.popupMenu)
+	guigui.AddEventHandler(s, &s.popupMenu)
 	s.popupMenu.SetCheckmarkIndex(s.indexAtOpen)
 
 	return nil
@@ -125,7 +125,7 @@ func (s *Select[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Wid
 	case &s.popupMenu:
 		switch eventArgs := eventArgs.(type) {
 		case *PopupMenuEventArgsItemSelected:
-			guigui.DispatchEventHandler2(s, &SelectEventArgsItemSelected{
+			guigui.DispatchEvent(s, &SelectEventArgsItemSelected{
 				Index: eventArgs.Index,
 			})
 		}

@@ -97,7 +97,7 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	s.list.SetItems(items)
 	s.list.SelectItemByValue(model.Mode())
 	s.list.SetItemHeight(basicwidget.UnitSize(context))
-	guigui.RegisterEventHandler2(s, &s.list)
+	guigui.AddEventHandler(s, &s.list)
 
 	return nil
 }

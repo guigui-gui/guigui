@@ -77,7 +77,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	width := 12 * u
 
 	t.singleLineText.SetValue("Single line")
-	guigui.RegisterEventHandler2(t, t.singleLineTextInput.Widget())
+	guigui.AddEventHandler(t, t.singleLineTextInput.Widget())
 	t.singleLineTextInput.Widget().SetValue(model.TextInputs().SingleLineText())
 	t.singleLineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.singleLineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
@@ -94,7 +94,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
 
 	t.multilineText.SetValue("Multiline")
-	guigui.RegisterEventHandler2(t, t.multilineTextInput.Widget())
+	guigui.AddEventHandler(t, t.multilineTextInput.Widget())
 	t.multilineTextInput.Widget().SetValue(model.TextInputs().MultilineText())
 	t.multilineTextInput.Widget().SetMultiline(true)
 	t.multilineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
@@ -146,7 +146,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 			Value: basicwidget.HorizontalAlignEnd,
 		},
 	})
-	guigui.RegisterEventHandler2(t, &t.horizontalAlignSegmentedControl)
+	guigui.AddEventHandler(t, &t.horizontalAlignSegmentedControl)
 	t.horizontalAlignSegmentedControl.SelectItemByValue(model.TextInputs().HorizontalAlign())
 
 	t.verticalAlignText.SetValue("Vertical align")
@@ -164,19 +164,19 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 			Value: basicwidget.VerticalAlignBottom,
 		},
 	})
-	guigui.RegisterEventHandler2(t, &t.verticalAlignSegmentedControl)
+	guigui.AddEventHandler(t, &t.verticalAlignSegmentedControl)
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.TextInputs().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
-	guigui.RegisterEventHandler2(t, &t.autoWrapToggle)
+	guigui.AddEventHandler(t, &t.autoWrapToggle)
 	t.autoWrapToggle.SetValue(model.TextInputs().AutoWrap())
 
 	t.editableText.SetValue("Editable")
-	guigui.RegisterEventHandler2(t, &t.editableToggle)
+	guigui.AddEventHandler(t, &t.editableToggle)
 	t.editableToggle.SetValue(model.TextInputs().Editable())
 
 	t.enabledText.SetValue("Enabled")
-	guigui.RegisterEventHandler2(t, &t.enabledToggle)
+	guigui.AddEventHandler(t, &t.enabledToggle)
 	t.enabledToggle.SetValue(model.TextInputs().Enabled())
 
 	t.configForm.SetItems([]basicwidget.FormItem{

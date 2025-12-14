@@ -210,7 +210,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 			}
 			s.adjustOffset(context, widgetBounds)
 			if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-				guigui.DispatchEventHandler2(s, &scrollOverlayEventArgsScroll{
+				guigui.DispatchEvent(s, &scrollOverlayEventArgsScroll{
 					OffsetX: s.offsetX,
 					OffsetY: s.offsetY,
 				})
@@ -236,7 +236,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 		s.offsetY += dy * 4 * context.Scale()
 		s.adjustOffset(context, widgetBounds)
 		if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-			guigui.DispatchEventHandler2(s, &scrollOverlayEventArgsScroll{
+			guigui.DispatchEvent(s, &scrollOverlayEventArgsScroll{
 				OffsetX: s.offsetX,
 				OffsetY: s.offsetY,
 			})

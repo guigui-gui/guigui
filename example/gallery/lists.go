@@ -65,7 +65,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		list.SetFooterHeight(0)
 	}
-	guigui.RegisterEventHandler2(l, list)
+	guigui.AddEventHandler(l, list)
 
 	l.listItems = slices.Delete(l.listItems, 0, len(l.listItems))
 	l.listItems = model.Lists().AppendListItems(l.listItems)
@@ -87,7 +87,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		tree.SetFooterHeight(0)
 	}
-	guigui.RegisterEventHandler2(l, tree)
+	guigui.AddEventHandler(l, tree)
 
 	l.treeItems = slices.Delete(l.treeItems, 0, len(l.treeItems))
 	l.treeItems = model.Lists().AppendTreeItems(l.treeItems)
@@ -111,7 +111,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.indexNumberInput.SetMinimumValue(1)
 	l.indexNumberInput.SetMaximumValue(model.Lists().ListItemCount())
 	l.jumpButton.SetText("Ensure the item is visible")
-	guigui.RegisterEventHandler2(l, &l.jumpButton)
+	guigui.AddEventHandler(l, &l.jumpButton)
 
 	l.jumpForm.SetItems([]basicwidget.FormItem{
 		{
@@ -125,23 +125,23 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	// Configurations
 	l.showStripeText.SetValue("Show stripe")
-	guigui.RegisterEventHandler2(l, &l.showStripeToggle)
+	guigui.AddEventHandler(l, &l.showStripeToggle)
 	l.showStripeToggle.SetValue(model.Lists().IsStripeVisible())
 
 	l.showHeaderText.SetValue("Show header")
-	guigui.RegisterEventHandler2(l, &l.showHeaderToggle)
+	guigui.AddEventHandler(l, &l.showHeaderToggle)
 	l.showHeaderToggle.SetValue(model.Lists().IsHeaderVisible())
 
 	l.showFooterText.SetValue("Show footer")
-	guigui.RegisterEventHandler2(l, &l.showFooterToggle)
+	guigui.AddEventHandler(l, &l.showFooterToggle)
 	l.showFooterToggle.SetValue(model.Lists().IsFooterVisible())
 
 	l.movableText.SetValue("Enable to move items")
 	l.movableToggle.SetValue(model.Lists().Movable())
-	guigui.RegisterEventHandler2(l, &l.movableToggle)
+	guigui.AddEventHandler(l, &l.movableToggle)
 
 	l.enabledText.SetValue("Enabled")
-	guigui.RegisterEventHandler2(l, &l.enabledToggle)
+	guigui.AddEventHandler(l, &l.enabledToggle)
 	l.enabledToggle.SetValue(model.Lists().Enabled())
 
 	l.configForm.SetItems([]basicwidget.FormItem{

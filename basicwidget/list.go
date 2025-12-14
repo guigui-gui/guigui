@@ -110,7 +110,7 @@ func (l *List[T]) updateListItems() {
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.list)
 
-	guigui.RegisterEventHandler2(l, &l.list)
+	guigui.AddEventHandler(l, &l.list)
 
 	l.updateListItems()
 	for i := range l.listItemWidgets {
@@ -235,13 +235,13 @@ func (l *List[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widge
 		switch eventArgs := eventArgs.(type) {
 		case *baseListEventArgsItemSelected:
 			args := ListEventArgsItemSelected(*eventArgs)
-			guigui.DispatchEventHandler2(l, &args)
+			guigui.DispatchEvent(l, &args)
 		case *baseListEventArgsItemsMoved:
 			args := ListEventArgsItemsMoved(*eventArgs)
-			guigui.DispatchEventHandler2(l, &args)
+			guigui.DispatchEvent(l, &args)
 		case *baseListEventArgsItemExpanderToggled:
 			args := ListEventArgsItemExpanderToggled(*eventArgs)
-			guigui.DispatchEventHandler2(l, &args)
+			guigui.DispatchEvent(l, &args)
 		}
 	}
 }

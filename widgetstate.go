@@ -224,11 +224,11 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
-func RegisterEventHandler2(widget Widget, targetWidget Widget) {
-	targetWidget.widgetState().eventHandler = widget
+func AddEventHandler(handlerWidget Widget, targetWidget Widget) {
+	targetWidget.widgetState().eventHandler = handlerWidget
 }
 
-func DispatchEventHandler2(targetWidget Widget, args any) {
+func DispatchEvent(targetWidget Widget, args any) {
 	if w := targetWidget.widgetState().eventHandler; w != nil {
 		w.HandleEvent(&theApp.context, targetWidget, args)
 		targetWidget.widgetState().eventDispatched = true

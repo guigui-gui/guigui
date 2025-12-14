@@ -44,16 +44,16 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddChild(&p.contextMenuPopup)
 
 	p.darkenBackgroundText.SetValue("Darken background")
-	guigui.RegisterEventHandler2(p, &p.darkenBackgroundToggle)
+	guigui.AddEventHandler(p, &p.darkenBackgroundToggle)
 
 	p.blurBackgroundText.SetValue("Blur background")
-	guigui.RegisterEventHandler2(p, &p.blurBackgroundToggle)
+	guigui.AddEventHandler(p, &p.blurBackgroundToggle)
 
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
-	guigui.RegisterEventHandler2(p, &p.closeByClickingOutsideToggle)
+	guigui.AddEventHandler(p, &p.closeByClickingOutsideToggle)
 
 	p.showButton.SetText("Show")
-	guigui.RegisterEventHandler2(p, &p.showButton)
+	guigui.AddEventHandler(p, &p.showButton)
 
 	p.forms[0].SetItems([]basicwidget.FormItem{
 		{
@@ -116,7 +116,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	)
 	// A context menu's position is updated at HandlePointingInput.
 
-	guigui.RegisterEventHandler2(p, &p.contextMenuPopupClickHereText)
+	guigui.AddEventHandler(p, &p.contextMenuPopupClickHereText)
 	return nil
 }
 
@@ -223,7 +223,7 @@ func (b *popupClickHereText) Measure(context *guigui.Context, constraints guigui
 func (p *popupClickHereText) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		if widgetBounds.IsHitAtCursor() {
-			guigui.DispatchEventHandler2(p, &popupClickHereTextEventArgsClicked{
+			guigui.DispatchEvent(p, &popupClickHereTextEventArgsClicked{
 				Point: image.Pt(ebiten.CursorPosition()),
 			})
 			return guigui.HandleInputByWidget(p)
@@ -252,7 +252,7 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 	s.titleText.SetBold(true)
 
 	s.closeButton.SetText("Close")
-	guigui.RegisterEventHandler2(s, &s.closeButton)
+	guigui.AddEventHandler(s, &s.closeButton)
 
 	return nil
 }

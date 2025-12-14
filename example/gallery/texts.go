@@ -75,7 +75,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			Value: basicwidget.HorizontalAlignEnd,
 		},
 	})
-	guigui.RegisterEventHandler2(t, &t.horizontalAlignSegmentedControl)
+	guigui.AddEventHandler(t, &t.horizontalAlignSegmentedControl)
 	t.horizontalAlignSegmentedControl.SelectItemByValue(model.Texts().HorizontalAlign())
 
 	t.verticalAlignText.SetValue("Vertical align")
@@ -93,23 +93,23 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			Value: basicwidget.VerticalAlignBottom,
 		},
 	})
-	guigui.RegisterEventHandler2(t, &t.verticalAlignSegmentedControl)
+	guigui.AddEventHandler(t, &t.verticalAlignSegmentedControl)
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.Texts().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
-	guigui.RegisterEventHandler2(t, &t.autoWrapToggle)
+	guigui.AddEventHandler(t, &t.autoWrapToggle)
 	t.autoWrapToggle.SetValue(model.Texts().AutoWrap())
 
 	t.boldText.SetValue("Bold")
-	guigui.RegisterEventHandler2(t, &t.boldToggle)
+	guigui.AddEventHandler(t, &t.boldToggle)
 	t.boldToggle.SetValue(model.Texts().Bold())
 
 	t.selectableText.SetValue("Selectable")
-	guigui.RegisterEventHandler2(t, &t.selectableToggle)
+	guigui.AddEventHandler(t, &t.selectableToggle)
 	t.selectableToggle.SetValue(model.Texts().Selectable())
 
 	t.editableText.SetValue("Editable")
-	guigui.RegisterEventHandler2(t, &t.editableToggle)
+	guigui.AddEventHandler(t, &t.editableToggle)
 	t.editableToggle.SetValue(model.Texts().Editable())
 
 	t.form.SetItems([]basicwidget.FormItem{
@@ -146,7 +146,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.sampleText.SetBold(model.Texts().Bold())
 	t.sampleText.SetSelectable(model.Texts().Selectable())
 	t.sampleText.SetEditable(model.Texts().Editable())
-	guigui.RegisterEventHandler2(t, &t.sampleText)
+	guigui.AddEventHandler(t, &t.sampleText)
 
 	t.sampleText.SetValue(model.Texts().Text())
 

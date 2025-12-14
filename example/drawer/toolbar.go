@@ -76,8 +76,8 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 		t.rightPanelButton.SetIcon(img)
 	}
-	guigui.RegisterEventHandler2(t, &t.leftPanelButton)
-	guigui.RegisterEventHandler2(t, &t.rightPanelButton)
+	guigui.AddEventHandler(t, &t.leftPanelButton)
+	guigui.AddEventHandler(t, &t.rightPanelButton)
 
 	return nil
 }

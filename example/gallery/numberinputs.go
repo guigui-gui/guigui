@@ -44,14 +44,14 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	width := 12 * u
 
 	n.numberInput1Text.SetValue("Number input (BigInt)")
-	guigui.RegisterEventHandler2(n, n.numberInput1.Widget())
+	guigui.AddEventHandler(n, n.numberInput1.Widget())
 	n.numberInput1.Widget().SetValueBigInt(model.NumberInputs().NumberInputValue1())
 	n.numberInput1.Widget().SetEditable(model.NumberInputs().Editable())
 	context.SetEnabled(&n.numberInput1, model.NumberInputs().Enabled())
 	n.numberInput1.SetFixedWidth(width)
 
 	n.numberInput2Text.SetValue("Number input (uint64)")
-	guigui.RegisterEventHandler2(n, n.numberInput2.Widget())
+	guigui.AddEventHandler(n, n.numberInput2.Widget())
 	n.numberInput2.Widget().SetMinimumValueUint64(0)
 	n.numberInput2.Widget().SetMaximumValueUint64(math.MaxUint64)
 	n.numberInput2.Widget().SetValueUint64(model.NumberInputs().NumberInputValue2())
@@ -60,7 +60,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput2.SetFixedWidth(width)
 
 	n.numberInput3Text.SetValue("Number input (Range: [-100, 100], Step: 5)")
-	guigui.RegisterEventHandler2(n, n.numberInput3.Widget())
+	guigui.AddEventHandler(n, n.numberInput3.Widget())
 	n.numberInput3.Widget().SetMinimumValue(-100)
 	n.numberInput3.Widget().SetMaximumValue(100)
 	n.numberInput3.Widget().SetStep(5)
@@ -70,7 +70,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput3.SetFixedWidth(width)
 
 	n.sliderText.SetValue("Slider (Range: [-100, 100])")
-	guigui.RegisterEventHandler2(n, n.slider.Widget())
+	guigui.AddEventHandler(n, n.slider.Widget())
 	n.slider.Widget().SetMinimumValue(-100)
 	n.slider.Widget().SetMaximumValue(100)
 	n.slider.Widget().SetValue(model.NumberInputs().NumberInputValue3())
@@ -106,11 +106,11 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	// Configurations
 	n.editableText.SetValue("Editable (for number inputs)")
-	guigui.RegisterEventHandler2(n, &n.editableToggle)
+	guigui.AddEventHandler(n, &n.editableToggle)
 	n.editableToggle.SetValue(model.NumberInputs().Editable())
 
 	n.enabledText.SetValue("Enabled")
-	guigui.RegisterEventHandler2(n, &n.enabledToggle)
+	guigui.AddEventHandler(n, &n.enabledToggle)
 	n.enabledToggle.SetValue(model.NumberInputs().Enabled())
 
 	n.configForm.SetItems([]basicwidget.FormItem{

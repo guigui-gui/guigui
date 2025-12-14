@@ -53,7 +53,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: "dark",
 		},
 	})
-	guigui.RegisterEventHandler2(s, &s.colorModeSegmentedControl)
+	guigui.AddEventHandler(s, &s.colorModeSegmentedControl)
 	if context.IsAutoColorModeUsed() {
 		s.colorModeSegmentedControl.SelectItemByValue("")
 	} else {
@@ -100,7 +100,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: hongKongChinese,
 		},
 	})
-	guigui.RegisterEventHandler2(s, &s.localeSelect)
+	guigui.AddEventHandler(s, &s.localeSelect)
 	if !s.localeSelect.IsPopupOpen() {
 		if locales := context.AppendAppLocales(nil); len(locales) > 0 {
 			s.localeSelect.SelectItemByValue(locales[0])
@@ -124,7 +124,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: 1.2,
 		},
 	})
-	guigui.RegisterEventHandler2(s, &s.scaleSegmentedControl)
+	guigui.AddEventHandler(s, &s.scaleSegmentedControl)
 	s.scaleSegmentedControl.SelectItemByValue(context.AppScale())
 
 	s.form.SetItems([]basicwidget.FormItem{

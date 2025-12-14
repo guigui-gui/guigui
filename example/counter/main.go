@@ -41,14 +41,14 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.counterText.SetValue(fmt.Sprintf("%d", r.counter))
 
 	r.resetButton.SetText("Reset")
-	guigui.RegisterEventHandler2(r, &r.resetButton)
+	guigui.AddEventHandler(r, &r.resetButton)
 	context.SetEnabled(&r.resetButton, r.counter != 0)
 
 	r.decButton.SetText("Decrement")
-	guigui.RegisterEventHandler2(r, &r.decButton)
+	guigui.AddEventHandler(r, &r.decButton)
 
 	r.incButton.SetText("Increment")
-	guigui.RegisterEventHandler2(r, &r.incButton)
+	guigui.AddEventHandler(r, &r.incButton)
 
 	return nil
 }

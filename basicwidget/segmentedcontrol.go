@@ -94,7 +94,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 
 	if s.onItemSelected == nil {
 		s.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler2(s, &SegmentedControlEventArgsItemSelected{
+			guigui.DispatchEvent(s, &SegmentedControlEventArgsItemSelected{
 				Index: index,
 			})
 		}
@@ -151,7 +151,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
 		context.SetEnabled(&s.buttons[i], !item.Disabled)
 		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
-		guigui.RegisterEventHandler2(s, &s.buttons[i])
+		guigui.AddEventHandler(s, &s.buttons[i])
 	}
 	return nil
 }

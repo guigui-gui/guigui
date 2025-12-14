@@ -144,7 +144,7 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if s.onValueChanged == nil {
 		s.onValueChanged = func(value int, committed bool) {
-			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChanged{
+			guigui.DispatchEvent(s, &SliderEventArgsValueChanged{
 				Value:     value,
 				Committed: committed,
 			})
@@ -154,7 +154,7 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	if s.onValueChangedBigInt == nil {
 		s.onValueChangedBigInt = func(value *big.Int, committed bool) {
-			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedBigInt{
+			guigui.DispatchEvent(s, &SliderEventArgsValueChangedBigInt{
 				Value:     value,
 				Committed: committed,
 			})
@@ -164,7 +164,7 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	if s.onValueChangedInt64 == nil {
 		s.onValueChangedInt64 = func(value int64, committed bool) {
-			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedInt64{
+			guigui.DispatchEvent(s, &SliderEventArgsValueChangedInt64{
 				Value:     value,
 				Committed: committed,
 			})
@@ -174,7 +174,7 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	if s.onValueChangedUint64 == nil {
 		s.onValueChangedUint64 = func(value uint64, committed bool) {
-			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedUint64{
+			guigui.DispatchEvent(s, &SliderEventArgsValueChangedUint64{
 				Value:     value,
 				Committed: committed,
 			})

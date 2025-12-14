@@ -137,7 +137,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	})
 
 	b.enabledText.SetValue("Enabled")
-	guigui.RegisterEventHandler2(b, &b.enabledToggle)
+	guigui.AddEventHandler(b, &b.enabledToggle)
 	b.enabledToggle.SetValue(model.Buttons().Enabled())
 
 	b.configForm.SetItems([]basicwidget.FormItem{

@@ -107,7 +107,7 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	}
 	adder.AddChild(&t.tableHeader)
 
-	guigui.RegisterEventHandler2(t, &t.list)
+	guigui.AddEventHandler(t, &t.list)
 
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
@@ -250,13 +250,13 @@ func (t *Table[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widg
 		switch eventArgs := eventArgs.(type) {
 		case *baseListEventArgsItemSelected:
 			args := (TableEventArgsItemSelected)(*eventArgs)
-			guigui.DispatchEventHandler2(t, &args)
+			guigui.DispatchEvent(t, &args)
 		case *baseListEventArgsItemsMoved:
 			args := (TableEventArgsItemsMoved)(*eventArgs)
-			guigui.DispatchEventHandler2(t, &args)
+			guigui.DispatchEvent(t, &args)
 		case *baseListEventArgsItemExpanderToggled:
 			args := (TableEventArgsItemExpanderToggled)(*eventArgs)
-			guigui.DispatchEventHandler2(t, &args)
+			guigui.DispatchEvent(t, &args)
 		}
 	}
 }

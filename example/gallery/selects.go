@@ -105,7 +105,7 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	// Config form
 	s.enabledText.SetValue("Enabled")
 	s.enabledToggle.SetValue(model.Selects().Enabled())
-	guigui.RegisterEventHandler2(s, &s.enabledToggle)
+	guigui.AddEventHandler(s, &s.enabledToggle)
 
 	s.configForm.SetItems([]basicwidget.FormItem{
 		{

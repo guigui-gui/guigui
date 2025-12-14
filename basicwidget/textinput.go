@@ -135,7 +135,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
-	guigui.RegisterEventHandler2(t, &t.textInput.text)
+	guigui.AddEventHandler(t, &t.textInput.text)
 	return nil
 }
 
@@ -143,12 +143,12 @@ func (t *TextInput) HandleEvent(context *guigui.Context, targetWidget guigui.Wid
 	if targetWidget == &t.textInput.text {
 		switch eventArgs := eventArgs.(type) {
 		case *TextEventArgsValueChanged:
-			guigui.DispatchEventHandler2(t, &TextInputEventArgsValueChanged{
+			guigui.DispatchEvent(t, &TextInputEventArgsValueChanged{
 				Value:     eventArgs.Value,
 				Committed: eventArgs.Committed,
 			})
 		case *TextEventArgsKeyJustPressed:
-			guigui.DispatchEventHandler2(t, &TextInputEventArgsKeyJustPressed{
+			guigui.DispatchEvent(t, &TextInputEventArgsKeyJustPressed{
 				Key: eventArgs.Key,
 			})
 		}

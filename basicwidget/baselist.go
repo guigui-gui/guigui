@@ -167,7 +167,7 @@ func (b *baseList[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddChild(&b.frame)
 	context.SetContainer(b, true)
 
-	guigui.RegisterEventHandler2(b, &b.content)
+	guigui.AddEventHandler(b, &b.content)
 
 	b.background1.setListContent(&b.content)
 	return nil
@@ -188,7 +188,7 @@ func (b *baseList[T]) Measure(context *guigui.Context, constraints guigui.Constr
 
 func (b *baseList[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
 	if targetWidget == &b.content {
-		guigui.DispatchEventHandler2(b, eventArgs)
+		guigui.DispatchEvent(b, eventArgs)
 	}
 }
 
@@ -336,7 +336,7 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 
 	if b.onItemSelected == nil {
 		b.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler2(b, &baseListEventArgsItemSelected{
+			guigui.DispatchEvent(b, &baseListEventArgsItemSelected{
 				Index: index,
 			})
 		}
@@ -666,7 +666,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 		}
 		if b.dragDstIndexPlus1 > 0 {
 			// TODO: Implement multiple items drop.
-			guigui.DispatchEventHandler2(b, &baseListEventArgsItemsMoved{
+			guigui.DispatchEvent(b, &baseListEventArgsItemsMoved{
 				From:  b.dragSrcIndexPlus1 - 1,
 				Count: 1,
 				To:    b.dragDstIndexPlus1 - 1,
@@ -689,7 +689,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			if c.X < b.itemBoundsForLayoutFromIndex[index].Min.X {
 				if left {
 					expanded := !item.Collapsed
-					guigui.DispatchEventHandler2(b, &baseListEventArgsItemExpanderToggled{
+					guigui.DispatchEvent(b, &baseListEventArgsItemExpanderToggled{
 						Index:    index,
 						Expanded: !expanded,
 					})

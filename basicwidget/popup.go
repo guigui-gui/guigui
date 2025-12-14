@@ -95,7 +95,7 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	context.SetZDelta(&p.popup, popupZ)
 	context.SetContainer(&p.popup, true)
 
-	guigui.RegisterEventHandler2(p, &p.popup)
+	guigui.AddEventHandler(p, &p.popup)
 
 	return nil
 }
@@ -104,7 +104,7 @@ func (p *Popup) HandleEvent(context *guigui.Context, targetWidget guigui.Widget,
 	if targetWidget == &p.popup {
 		switch eventArgs := eventArgs.(type) {
 		case *popupEventArgsClosed:
-			guigui.DispatchEventHandler2(p, &PopupEventArgsClosed{
+			guigui.DispatchEvent(p, &PopupEventArgsClosed{
 				Reason: eventArgs.Reason,
 			})
 		}
@@ -356,7 +356,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
-			guigui.DispatchEventHandler2(p, &popupEventArgsClosed{
+			guigui.DispatchEvent(p, &popupEventArgsClosed{
 				Reason: p.closedReason,
 			})
 			p.closedReason = PopupClosedReasonNone

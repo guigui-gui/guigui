@@ -193,7 +193,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {
-			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChanged{
+			guigui.DispatchEvent(n, &NumberInputEventArgsValueChanged{
 				Value:     value,
 				Committed: committed,
 			})
@@ -203,7 +203,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChangedBigInt == nil {
 		n.onValueChangedBigInt = func(value *big.Int, committed bool) {
-			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedBigInt{
+			guigui.DispatchEvent(n, &NumberInputEventArgsValueChangedBigInt{
 				Value:     value,
 				Committed: committed,
 			})
@@ -213,7 +213,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChangedInt64 == nil {
 		n.onValueChangedInt64 = func(value int64, committed bool) {
-			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedInt64{
+			guigui.DispatchEvent(n, &NumberInputEventArgsValueChangedInt64{
 				Value:     value,
 				Committed: committed,
 			})
@@ -223,7 +223,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChangedUint64 == nil {
 		n.onValueChangedUint64 = func(value uint64, committed bool) {
-			guigui.DispatchEventHandler2(n, &NumberInputEventArgsValueChangedUint64{
+			guigui.DispatchEvent(n, &NumberInputEventArgsValueChangedUint64{
 				Value:     value,
 				Committed: committed,
 			})
@@ -247,7 +247,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	n.textInput.SetTabular(true)
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
 
-	guigui.RegisterEventHandler2(n, &n.textInput)
+	guigui.AddEventHandler(n, &n.textInput)
 
 	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
 	if err != nil {
@@ -264,7 +264,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 		BottomEnd:   true,
 	})
 	n.upButton.setPairedButton(&n.downButton)
-	guigui.RegisterEventHandler2(n, &n.upButton)
+	guigui.AddEventHandler(n, &n.upButton)
 	context.SetEnabled(&n.upButton, n.IsEditable() && n.abstractNumberInput.CanIncrement())
 
 	n.downButton.SetIcon(imgDown)
@@ -273,7 +273,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 		TopEnd:   true,
 	})
 	n.downButton.setPairedButton(&n.upButton)
-	guigui.RegisterEventHandler2(n, &n.downButton)
+	guigui.AddEventHandler(n, &n.downButton)
 	context.SetEnabled(&n.downButton, n.IsEditable() && n.abstractNumberInput.CanDecrement())
 
 	return nil
@@ -364,7 +364,7 @@ func (n *NumberInput) HandleEvent(context *guigui.Context, targetWidget guigui.W
 		case *TextInputEventArgsValueChanged:
 			n.abstractNumberInput.SetString(eventArgs.Value, false, eventArgs.Committed)
 		case *TextInputEventArgsKeyJustPressed:
-			guigui.DispatchEventHandler2(n, &NumberInputEventArgsKeyJustPressed{
+			guigui.DispatchEvent(n, &NumberInputEventArgsKeyJustPressed{
 				Key: eventArgs.Key,
 			})
 		}
