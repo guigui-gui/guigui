@@ -14,6 +14,13 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
+const (
+	numberInputEventValueChanged       = "valueChanged"
+	numberInputEventValueChangedBigInt = "valueChangedBigInt"
+	numberInputEventValueChangedInt64  = "valueChangedInt64"
+	numberInputEventValueChangedUint64 = "valueChangedUint64"
+)
+
 var (
 	minInt    big.Int
 	maxInt    big.Int
@@ -39,6 +46,12 @@ type NumberInput struct {
 
 	abstractNumberInput abstractNumberInput
 
+	onValueChanged       func(value int, committed bool)
+	onValueChangedBigInt func(value *big.Int, committed bool)
+	onValueChangedInt64  func(value int64, committed bool)
+	onValueChangedUint64 func(value uint64, committed bool)
+	onValueChangedString func(value string, force bool)
+
 	onTextInputValueChanged func(context *guigui.Context, value string, committed bool)
 	onUpButtonDown          func(context *guigui.Context)
 	onDownButtonDown        func(context *guigui.Context)
@@ -53,19 +66,19 @@ func (n *NumberInput) SetEditable(editable bool) {
 }
 
 func (n *NumberInput) SetOnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
-	n.abstractNumberInput.SetOnValueChanged(n, f)
+	guigui.RegisterEventHandler(n, numberInputEventValueChanged, f)
 }
 
 func (n *NumberInput) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
-	n.abstractNumberInput.SetOnValueChangedBigInt(n, f)
+	guigui.RegisterEventHandler(n, numberInputEventValueChangedBigInt, f)
 }
 
 func (n *NumberInput) SetOnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
-	n.abstractNumberInput.SetOnValueChangedInt64(n, f)
+	guigui.RegisterEventHandler(n, numberInputEventValueChangedInt64, f)
 }
 
 func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
-	n.abstractNumberInput.SetOnValueChangedUint64(n, f)
+	guigui.RegisterEventHandler(n, numberInputEventValueChangedUint64, f)
 }
 
 func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
@@ -89,7 +102,7 @@ func (n *NumberInput) ValueUint64() uint64 {
 }
 
 func (n *NumberInput) SetValueBigInt(value *big.Int) {
-	n.abstractNumberInput.SetValueBigInt(n, value, true)
+	n.abstractNumberInput.SetValueBigInt(value, true)
 	/*if n.nextValue != nil && n.nextValue.Cmp(value) == 0 {
 		return
 	}
@@ -112,19 +125,19 @@ func (n *NumberInput) SetValueUint64(value uint64) {
 }
 
 func (n *NumberInput) ForceSetValue(value int) {
-	n.abstractNumberInput.ForceSetValue(n, value, true)
+	n.abstractNumberInput.ForceSetValue(value, true)
 }
 
 func (n *NumberInput) ForceSetValueBigInt(value *big.Int) {
-	n.abstractNumberInput.ForceSetValueBigInt(n, value, true)
+	n.abstractNumberInput.ForceSetValueBigInt(value, true)
 }
 
 func (n *NumberInput) ForceSetValueInt64(value int64) {
-	n.abstractNumberInput.ForceSetValueInt64(n, value, true)
+	n.abstractNumberInput.ForceSetValueInt64(value, true)
 }
 
 func (n *NumberInput) ForceSetValueUint64(value uint64) {
-	n.abstractNumberInput.ForceSetValueUint64(n, value, true)
+	n.abstractNumberInput.ForceSetValueUint64(value, true)
 }
 
 func (n *NumberInput) MinimumValueBigInt() *big.Int {
@@ -132,19 +145,19 @@ func (n *NumberInput) MinimumValueBigInt() *big.Int {
 }
 
 func (n *NumberInput) SetMinimumValue(minimum int) {
-	n.abstractNumberInput.SetMinimumValue(n, minimum)
+	n.abstractNumberInput.SetMinimumValue(minimum)
 }
 
 func (n *NumberInput) SetMinimumValueBigInt(minimum *big.Int) {
-	n.abstractNumberInput.SetMinimumValueBigInt(n, minimum)
+	n.abstractNumberInput.SetMinimumValueBigInt(minimum)
 }
 
 func (n *NumberInput) SetMinimumValueInt64(minimum int64) {
-	n.abstractNumberInput.SetMinimumValueInt64(n, minimum)
+	n.abstractNumberInput.SetMinimumValueInt64(minimum)
 }
 
 func (n *NumberInput) SetMinimumValueUint64(minimum uint64) {
-	n.abstractNumberInput.SetMinimumValueUint64(n, minimum)
+	n.abstractNumberInput.SetMinimumValueUint64(minimum)
 }
 
 func (n *NumberInput) MaximumValueBigInt() *big.Int {
@@ -152,19 +165,19 @@ func (n *NumberInput) MaximumValueBigInt() *big.Int {
 }
 
 func (n *NumberInput) SetMaximumValue(maximum int) {
-	n.abstractNumberInput.SetMaximumValue(n, maximum)
+	n.abstractNumberInput.SetMaximumValue(maximum)
 }
 
 func (n *NumberInput) SetMaximumValueBigInt(maximum *big.Int) {
-	n.abstractNumberInput.SetMaximumValueBigInt(n, maximum)
+	n.abstractNumberInput.SetMaximumValueBigInt(maximum)
 }
 
 func (n *NumberInput) SetMaximumValueInt64(maximum int64) {
-	n.abstractNumberInput.SetMaximumValueInt64(n, maximum)
+	n.abstractNumberInput.SetMaximumValueInt64(maximum)
 }
 
 func (n *NumberInput) SetMaximumValueUint64(maximum uint64) {
-	n.abstractNumberInput.SetMaximumValueUint64(n, maximum)
+	n.abstractNumberInput.SetMaximumValueUint64(maximum)
 }
 
 func (n *NumberInput) SetStep(step int) {
@@ -192,13 +205,44 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)
 
-	n.abstractNumberInput.SetOnValueChangedString(n, func(context *guigui.Context, text string, force bool) {
-		if force {
-			n.textInput.ForceSetValue(text)
-		} else {
-			n.textInput.SetValue(text)
+	if n.onValueChanged == nil {
+		n.onValueChanged = func(value int, committed bool) {
+			guigui.DispatchEventHandler(n, numberInputEventValueChanged, value, committed)
 		}
-	})
+	}
+	n.abstractNumberInput.SetOnValueChanged(n.onValueChanged)
+
+	if n.onValueChangedBigInt == nil {
+		n.onValueChangedBigInt = func(value *big.Int, committed bool) {
+			guigui.DispatchEventHandler(n, numberInputEventValueChangedBigInt, value, committed)
+		}
+	}
+	n.abstractNumberInput.SetOnValueChangedBigInt(n.onValueChangedBigInt)
+
+	if n.onValueChangedInt64 == nil {
+		n.onValueChangedInt64 = func(value int64, committed bool) {
+			guigui.DispatchEventHandler(n, numberInputEventValueChangedInt64, value, committed)
+		}
+	}
+	n.abstractNumberInput.SetOnValueChangedInt64(n.onValueChangedInt64)
+
+	if n.onValueChangedUint64 == nil {
+		n.onValueChangedUint64 = func(value uint64, committed bool) {
+			guigui.DispatchEventHandler(n, numberInputEventValueChangedUint64, value, committed)
+		}
+	}
+	n.abstractNumberInput.SetOnValueChangedUint64(n.onValueChangedUint64)
+
+	if n.onValueChangedString == nil {
+		n.onValueChangedString = func(value string, force bool) {
+			if force {
+				n.textInput.ForceSetValue(value)
+			} else {
+				n.textInput.SetValue(value)
+			}
+		}
+	}
+	n.abstractNumberInput.SetOnValueChangedString(n.onValueChangedString)
 
 	n.textInput.SetValue(n.abstractNumberInput.ValueString())
 	n.textInput.SetHorizontalAlign(HorizontalAlignRight)
@@ -206,7 +250,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
 	if n.onTextInputValueChanged == nil {
 		n.onTextInputValueChanged = func(context *guigui.Context, text string, committed bool) {
-			n.abstractNumberInput.SetString(n, text, false, committed)
+			n.abstractNumberInput.SetString(text, false, committed)
 		}
 	}
 	n.textInput.SetOnValueChanged(n.onTextInputValueChanged)
@@ -294,7 +338,7 @@ func (n *NumberInput) increment() {
 		return
 	}
 	n.CommitWithCurrentInputValue()
-	n.abstractNumberInput.Increment(n)
+	n.abstractNumberInput.Increment()
 }
 
 func (n *NumberInput) decrement() {
@@ -302,7 +346,7 @@ func (n *NumberInput) decrement() {
 		return
 	}
 	n.CommitWithCurrentInputValue()
-	n.abstractNumberInput.Decrement(n)
+	n.abstractNumberInput.Decrement()
 }
 
 func (n *NumberInput) CanCut() bool {
