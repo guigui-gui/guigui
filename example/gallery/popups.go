@@ -116,21 +116,12 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	)
 	// A context menu's position is updated at HandlePointingInput.
 
-	p.contextMenuPopupClickHereText.SetOnClicked(func(context *guigui.Context, pt image.Point) {
-		p.contextMenuPopupPosition = pt
-		p.contextMenuPopup.SetOpen(true)
-	})
-
+	guigui.RegisterEventHandler2(p, &p.contextMenuPopupClickHereText)
 	return nil
 }
 
 func (p *Popups) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
 	switch targetWidget {
-	case &p.showButton:
-		switch eventArgs.(type) {
-		case *basicwidget.ButtonEventArgsUp:
-			p.simplePopup.SetOpen(true)
-		}
 	case &p.darkenBackgroundToggle:
 		switch eventArgs := eventArgs.(type) {
 		case *basicwidget.ToggleEventArgsValueChanged:
@@ -141,10 +132,21 @@ func (p *Popups) HandleEvent(context *guigui.Context, targetWidget guigui.Widget
 		case *basicwidget.ToggleEventArgsValueChanged:
 			p.simplePopup.SetBackgroundBlurred(eventArgs.Value)
 		}
+	case &p.showButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			p.simplePopup.SetOpen(true)
+		}
 	case &p.closeByClickingOutsideToggle:
 		switch eventArgs := eventArgs.(type) {
 		case *basicwidget.ToggleEventArgsValueChanged:
 			p.simplePopup.SetCloseByClickingOutside(eventArgs.Value)
+		}
+	case &p.contextMenuPopupClickHereText:
+		switch eventArgs := eventArgs.(type) {
+		case *popupClickHereTextEventArgsClicked:
+			p.contextMenuPopupPosition = eventArgs.Point
+			p.contextMenuPopup.SetOpen(true)
 		}
 	}
 }
@@ -191,7 +193,9 @@ func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
-const popupClickHereTextEventClicked = "clicked"
+type popupClickHereTextEventArgsClicked struct {
+	Point image.Point
+}
 
 type popupClickHereText struct {
 	guigui.DefaultWidget
@@ -201,10 +205,6 @@ type popupClickHereText struct {
 
 func (p *popupClickHereText) Text() *basicwidget.Text {
 	return &p.text
-}
-
-func (b *popupClickHereText) SetOnClicked(f func(context *guigui.Context, pt image.Point)) {
-	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
 func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -223,7 +223,9 @@ func (b *popupClickHereText) Measure(context *guigui.Context, constraints guigui
 func (p *popupClickHereText) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		if widgetBounds.IsHitAtCursor() {
-			guigui.DispatchEventHandler(p, popupClickHereTextEventClicked, image.Pt(ebiten.CursorPosition()))
+			guigui.DispatchEventHandler2(p, &popupClickHereTextEventArgsClicked{
+				Point: image.Pt(ebiten.CursorPosition()),
+			})
 			return guigui.HandleInputByWidget(p)
 		}
 	}
