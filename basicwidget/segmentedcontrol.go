@@ -66,7 +66,7 @@ func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, 
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
-	s.abstractList.SetItems(s, items)
+	s.abstractList.SetItems(items)
 }
 
 func (s *SegmentedControl[T]) SelectedItem() (SegmentedControlItem[T], bool) {
@@ -82,13 +82,13 @@ func (s *SegmentedControl[T]) ItemByIndex(index int) (SegmentedControlItem[T], b
 }
 
 func (s *SegmentedControl[T]) SelectItemByIndex(index int) {
-	if s.abstractList.SelectItemByIndex(s, index, false) {
+	if s.abstractList.SelectItemByIndex(index, false) {
 		guigui.RequestRedraw(s)
 	}
 }
 
 func (s *SegmentedControl[T]) SelectItemByValue(value T) {
-	if s.abstractList.SelectItemByValue(s, value, false) {
+	if s.abstractList.SelectItemByValue(value, false) {
 		guigui.RequestRedraw(s)
 	}
 }

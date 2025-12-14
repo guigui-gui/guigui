@@ -536,7 +536,7 @@ func (b *baseListContent[T]) SelectedItemIndex() int {
 }
 
 func (b *baseListContent[T]) SetItems(items []baseListItem[T]) {
-	b.abstractList.SetItems(b, items)
+	b.abstractList.SetItems(items)
 }
 
 func (b *baseListContent[T]) SelectItemByIndex(index int) {
@@ -544,13 +544,13 @@ func (b *baseListContent[T]) SelectItemByIndex(index int) {
 }
 
 func (b *baseListContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
-	if b.abstractList.SelectItemByIndex(b, index, forceFireEvents) {
+	if b.abstractList.SelectItemByIndex(index, forceFireEvents) {
 		guigui.RequestRedraw(b)
 	}
 }
 
 func (b *baseListContent[T]) SelectItemByValue(value T) {
-	if b.abstractList.SelectItemByValue(b, value, false) {
+	if b.abstractList.SelectItemByValue(value, false) {
 		guigui.RequestRedraw(b)
 	}
 }
