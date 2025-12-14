@@ -17,9 +17,13 @@ import (
 
 const popupZ = 16
 
-const (
-	popupEventClosed = "closed"
-)
+type PopupEventArgsClosed struct {
+	Reason PopupClosedReason
+}
+
+type popupEventArgsClosed struct {
+	Reason PopupClosedReason
+}
 
 func easeOutQuad(t float64) float64 {
 	// https://greweb.me/2012/02/bezier-curve-based-easing-functions-from-concept-to-implementation
@@ -65,10 +69,6 @@ func (p *Popup) IsOpen() bool {
 	return p.popup.IsOpen()
 }
 
-func (p *Popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
-	p.popup.SetOnClosed(f)
-}
-
 func (p *Popup) SetContent(widget guigui.Widget) {
 	p.popup.SetContent(widget)
 }
@@ -94,7 +94,21 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
 	context.SetContainer(&p.popup, true)
+
+	guigui.RegisterEventHandler2(p, &p.popup)
+
 	return nil
+}
+
+func (p *Popup) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &p.popup {
+		switch eventArgs := eventArgs.(type) {
+		case *popupEventArgsClosed:
+			guigui.DispatchEventHandler2(p, &PopupEventArgsClosed{
+				Reason: eventArgs.Reason,
+			})
+		}
+	}
 }
 
 func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -181,10 +195,6 @@ func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 	// TODO: Rename Popup to basePopup and create Popup with animateOnFading true.
 	p.animateOnFading = animateOnFading
-}
-
-func (p *popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
-	guigui.RegisterEventHandler(p, popupEventClosed, f)
 }
 
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -346,7 +356,9 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
-			guigui.DispatchEventHandler(p, popupEventClosed, p.closedReason)
+			guigui.DispatchEventHandler2(p, &popupEventArgsClosed{
+				Reason: p.closedReason,
+			})
 			p.closedReason = PopupClosedReasonNone
 			if p.openAfterClose {
 				if p.hasNextContentPosition {
