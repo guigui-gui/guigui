@@ -442,7 +442,6 @@ func (a *app) buildWidgets() error {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		widgetState.eventHandler = nil
-		clear(widgetState.eventHandlers)
 		widgetState.focusDelegation = nil
 		widgetState.zPlus1Cache = 0
 		widgetState.visibleCache = false
