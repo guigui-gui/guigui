@@ -14,10 +14,6 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	textInputEventTextAndSelectionChanged = "textAndSelectionChanged"
-)
-
 type TextInputStyle int
 
 const (
@@ -40,10 +36,6 @@ func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, text strin
 
 func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	t.textInput.SetOnKeyJustPressed(f)
-}
-
-func (t *TextInput) SetOnTextAndSelectionChanged(f func(context *guigui.Context, text string, start, end int)) {
-	t.textInput.SetOnTextAndSelectionChanged(f)
 }
 
 func (t *TextInput) Value() string {
@@ -197,10 +189,6 @@ func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text strin
 
 func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	t.text.SetOnKeyJustPressed(f)
-}
-
-func (t *textInput) SetOnTextAndSelectionChanged(f func(context *guigui.Context, text string, start, end int)) {
-	guigui.RegisterEventHandler(t, textInputEventTextAndSelectionChanged, f)
 }
 
 func (t *textInput) Value() string {
