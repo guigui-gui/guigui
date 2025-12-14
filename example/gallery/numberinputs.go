@@ -108,15 +108,11 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	// Configurations
 	n.editableText.SetValue("Editable (for number inputs)")
-	n.editableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.NumberInputs().SetEditable(value)
-	})
+	guigui.RegisterEventHandler2(n, &n.editableToggle)
 	n.editableToggle.SetValue(model.NumberInputs().Editable())
 
 	n.enabledText.SetValue("Enabled")
-	n.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.NumberInputs().SetEnabled(value)
-	})
+	guigui.RegisterEventHandler2(n, &n.enabledToggle)
 	n.enabledToggle.SetValue(model.NumberInputs().Enabled())
 
 	n.configForm.SetItems([]basicwidget.FormItem{
@@ -156,6 +152,16 @@ func (n *NumberInputs) HandleEvent(context *guigui.Context, targetWidget guigui.
 			if eventArgs.Committed {
 				model.NumberInputs().SetNumberInputValue3(int(eventArgs.Value))
 			}
+		}
+	case &n.editableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.NumberInputs().SetEditable(eventArgs.Value)
+		}
+	case &n.enabledToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.NumberInputs().SetEnabled(eventArgs.Value)
 		}
 	}
 }

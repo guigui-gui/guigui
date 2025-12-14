@@ -111,11 +111,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.indexNumberInput.SetMinimumValue(1)
 	l.indexNumberInput.SetMaximumValue(model.Lists().ListItemCount())
 	l.jumpButton.SetText("Ensure the item is visible")
-	l.jumpButton.SetOnDown(func(context *guigui.Context) {
-		index := l.indexNumberInput.Value() - 1
-		l.list.Widget().EnsureItemVisibleByIndex(index)
-		l.list.Widget().SelectItemByIndex(index)
-	})
+	guigui.RegisterEventHandler2(l, &l.jumpButton)
 
 	l.jumpForm.SetItems([]basicwidget.FormItem{
 		{
@@ -129,29 +125,23 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	// Configurations
 	l.showStripeText.SetValue("Show stripe")
-	l.showStripeToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Lists().SetStripeVisible(value)
-	})
+	guigui.RegisterEventHandler2(l, &l.showStripeToggle)
 	l.showStripeToggle.SetValue(model.Lists().IsStripeVisible())
+
 	l.showHeaderText.SetValue("Show header")
-	l.showHeaderToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Lists().SetHeaderVisible(value)
-	})
+	guigui.RegisterEventHandler2(l, &l.showHeaderToggle)
 	l.showHeaderToggle.SetValue(model.Lists().IsHeaderVisible())
+
 	l.showFooterText.SetValue("Show footer")
-	l.showFooterToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Lists().SetFooterVisible(value)
-	})
+	guigui.RegisterEventHandler2(l, &l.showFooterToggle)
 	l.showFooterToggle.SetValue(model.Lists().IsFooterVisible())
+
 	l.movableText.SetValue("Enable to move items")
 	l.movableToggle.SetValue(model.Lists().Movable())
-	l.movableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Lists().SetMovable(value)
-	})
+	guigui.RegisterEventHandler2(l, &l.movableToggle)
+
 	l.enabledText.SetValue("Enabled")
-	l.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Lists().SetEnabled(value)
-	})
+	guigui.RegisterEventHandler2(l, &l.enabledToggle)
 	l.enabledToggle.SetValue(model.Lists().Enabled())
 
 	l.configForm.SetItems([]basicwidget.FormItem{
@@ -210,14 +200,47 @@ func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 }
 
 func (l *Lists) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
-	if targetWidget == &l.list {
-		model := context.Model(l, modelKeyModel).(*Model)
+	model := context.Model(l, modelKeyModel).(*Model)
+	switch targetWidget {
+	case &l.list:
 		switch eventArgs := eventArgs.(type) {
 		case *basicwidget.ListEventArgsItemsMoved:
 			idx := model.Lists().MoveListItems(eventArgs.From, eventArgs.Count, eventArgs.To)
 			l.list.Widget().SelectItemByIndex(idx)
 		case *basicwidget.ListEventArgsItemExpanderToggled:
 			model.Lists().SetTreeItemExpanded(eventArgs.Index, eventArgs.Expanded)
+		}
+	case &l.jumpButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsDown:
+			index := l.indexNumberInput.Value() - 1
+			l.list.Widget().EnsureItemVisibleByIndex(index)
+			l.list.Widget().SelectItemByIndex(index)
+		}
+	case &l.showStripeToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Lists().SetStripeVisible(eventArgs.Value)
+		}
+	case &l.showHeaderToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Lists().SetHeaderVisible(eventArgs.Value)
+		}
+	case &l.showFooterToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Lists().SetFooterVisible(eventArgs.Value)
+		}
+	case &l.movableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Lists().SetMovable(eventArgs.Value)
+		}
+	case &l.enabledToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Lists().SetEnabled(eventArgs.Value)
 		}
 	}
 }

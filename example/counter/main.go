@@ -41,22 +41,36 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.counterText.SetValue(fmt.Sprintf("%d", r.counter))
 
 	r.resetButton.SetText("Reset")
-	r.resetButton.SetOnUp(func(context *guigui.Context) {
-		r.counter = 0
-	})
+	guigui.RegisterEventHandler2(r, &r.resetButton)
 	context.SetEnabled(&r.resetButton, r.counter != 0)
 
 	r.decButton.SetText("Decrement")
-	r.decButton.SetOnUp(func(context *guigui.Context) {
-		r.counter--
-	})
+	guigui.RegisterEventHandler2(r, &r.decButton)
 
 	r.incButton.SetText("Increment")
-	r.incButton.SetOnUp(func(context *guigui.Context) {
-		r.counter++
-	})
+	guigui.RegisterEventHandler2(r, &r.incButton)
 
 	return nil
+}
+
+func (r *Root) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &r.resetButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			r.counter = 0
+		}
+	case &r.decButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			r.counter--
+		}
+	case &r.incButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			r.counter++
+		}
+	}
 }
 
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

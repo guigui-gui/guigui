@@ -137,9 +137,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	})
 
 	b.enabledText.SetValue("Enabled")
-	b.enabledToggle.SetOnValueChanged(func(context *guigui.Context, enabled bool) {
-		model.Buttons().SetEnabled(enabled)
-	})
+	guigui.RegisterEventHandler2(b, &b.enabledToggle)
 	b.enabledToggle.SetValue(model.Buttons().Enabled())
 
 	b.configForm.SetItems([]basicwidget.FormItem{
@@ -150,6 +148,17 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	})
 
 	return nil
+}
+
+func (b *Buttons) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &b.enabledToggle:
+		model := context.Model(b, modelKeyModel).(*Model)
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Buttons().SetEnabled(eventArgs.Value)
+		}
+	}
 }
 
 func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

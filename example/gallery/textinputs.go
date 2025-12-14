@@ -168,21 +168,15 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.TextInputs().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
-	t.autoWrapToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.TextInputs().SetAutoWrap(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.autoWrapToggle)
 	t.autoWrapToggle.SetValue(model.TextInputs().AutoWrap())
 
 	t.editableText.SetValue("Editable")
-	t.editableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.TextInputs().SetEditable(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.editableToggle)
 	t.editableToggle.SetValue(model.TextInputs().Editable())
 
 	t.enabledText.SetValue("Enabled")
-	t.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.TextInputs().SetEnabled(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.enabledToggle)
 	t.enabledToggle.SetValue(model.TextInputs().Enabled())
 
 	t.configForm.SetItems([]basicwidget.FormItem{
@@ -272,6 +266,21 @@ func (t *TextInputs) HandleEvent(context *guigui.Context, targetWidget guigui.Wi
 			if eventArgs.Committed {
 				model.TextInputs().SetMultilineText(eventArgs.Value)
 			}
+		}
+	case &t.autoWrapToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.TextInputs().SetAutoWrap(eventArgs.Value)
+		}
+	case &t.editableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.TextInputs().SetEditable(eventArgs.Value)
+		}
+	case &t.enabledToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.TextInputs().SetEnabled(eventArgs.Value)
 		}
 	}
 }

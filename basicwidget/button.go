@@ -15,6 +15,12 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type ButtonEventArgsDown struct{}
+
+type ButtonEventArgsUp struct{}
+
+type ButtonEventArgsRepeat struct{}
+
 type IconAlign int
 
 const (
@@ -37,16 +43,20 @@ type Button struct {
 	iconLayout  guigui.Layout
 }
 
-func (b *Button) SetOnDown(f func(context *guigui.Context)) {
-	b.button.SetOnDown(f)
-}
-
-func (b *Button) SetOnUp(f func(context *guigui.Context)) {
-	b.button.SetOnUp(f)
-}
-
-func (b *Button) setOnRepeat(f func(context *guigui.Context)) {
-	b.button.setOnRepeat(f)
+func (b *Button) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	if targetWidget == &b.button {
+		switch eventArgs := eventArgs.(type) {
+		case *baseButtonEventArgsDown:
+			args := ButtonEventArgsDown(*eventArgs)
+			guigui.DispatchEventHandler2(b, &args)
+		case *baseButtonEventArgsUp:
+			args := ButtonEventArgsUp(*eventArgs)
+			guigui.DispatchEventHandler2(b, &args)
+		case *baseButtonEventArgsRepeat:
+			args := ButtonEventArgsRepeat(*eventArgs)
+			guigui.DispatchEventHandler2(b, &args)
+		}
+	}
 }
 
 func (b *Button) SetContent(content guigui.Widget) {
@@ -96,6 +106,8 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	}
 	adder.AddChild(&b.text)
 	adder.AddChild(&b.icon)
+
+	guigui.RegisterEventHandler2(b, &b.button)
 
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)

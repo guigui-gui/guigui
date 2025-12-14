@@ -76,14 +76,26 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 		t.rightPanelButton.SetIcon(img)
 	}
-	t.leftPanelButton.SetOnDown(func(context *guigui.Context) {
-		model.SetLeftPanelOpen(!model.IsLeftPanelOpen())
-	})
-	t.rightPanelButton.SetOnDown(func(context *guigui.Context) {
-		model.SetRightPanelOpen(!model.IsRightPanelOpen())
-	})
+	guigui.RegisterEventHandler2(t, &t.leftPanelButton)
+	guigui.RegisterEventHandler2(t, &t.rightPanelButton)
 
 	return nil
+}
+
+func (t *toolbarContent) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	model := context.Model(t, modelKeyModel).(*Model)
+	switch targetWidget {
+	case &t.leftPanelButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsDown:
+			model.SetLeftPanelOpen(!model.IsLeftPanelOpen())
+		}
+	case &t.rightPanelButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsDown:
+			model.SetRightPanelOpen(!model.IsRightPanelOpen())
+		}
+	}
 }
 
 func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

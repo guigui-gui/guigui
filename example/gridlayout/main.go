@@ -39,14 +39,12 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.fillText.SetValue("Fill Widgets into Grid Cells")
 	r.fillToggle.SetValue(r.fill)
-	r.fillToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		r.fill = value
-	})
+	guigui.RegisterEventHandler2(r, &r.fillToggle)
+
 	r.gapText.SetValue("Use Gap")
 	r.gapToggle.SetValue(r.gap)
-	r.gapToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		r.gap = value
-	})
+	guigui.RegisterEventHandler2(r, &r.gapToggle)
+
 	r.configForm.SetItems([]basicwidget.FormItem{
 		{
 			PrimaryWidget:   &r.fillText,
@@ -63,6 +61,21 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	return nil
+}
+
+func (r *Root) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &r.fillToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			r.fill = eventArgs.Value
+		}
+	case &r.gapToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			r.gap = eventArgs.Value
+		}
+	}
 }
 
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

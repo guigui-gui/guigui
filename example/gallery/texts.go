@@ -97,27 +97,19 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.verticalAlignSegmentedControl.SelectItemByValue(model.Texts().VerticalAlign())
 
 	t.autoWrapText.SetValue("Auto wrap")
-	t.autoWrapToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Texts().SetAutoWrap(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.autoWrapToggle)
 	t.autoWrapToggle.SetValue(model.Texts().AutoWrap())
 
 	t.boldText.SetValue("Bold")
-	t.boldToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Texts().SetBold(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.boldToggle)
 	t.boldToggle.SetValue(model.Texts().Bold())
 
 	t.selectableText.SetValue("Selectable")
-	t.selectableToggle.SetOnValueChanged(func(context *guigui.Context, checked bool) {
-		model.Texts().SetSelectable(checked)
-	})
+	guigui.RegisterEventHandler2(t, &t.selectableToggle)
 	t.selectableToggle.SetValue(model.Texts().Selectable())
 
 	t.editableText.SetValue("Editable")
-	t.editableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Texts().SetEditable(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.editableToggle)
 	t.editableToggle.SetValue(model.Texts().Editable())
 
 	t.form.SetItems([]basicwidget.FormItem{
@@ -220,6 +212,26 @@ func (t *Texts) HandleEvent(context *guigui.Context, targetWidget guigui.Widget,
 			if eventArgs.Key == ebiten.KeyTab {
 				t.sampleText.ReplaceValueAtSelection("\t")
 			}
+		}
+	case &t.autoWrapToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Texts().SetAutoWrap(eventArgs.Value)
+		}
+	case &t.boldToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Texts().SetBold(eventArgs.Value)
+		}
+	case &t.selectableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Texts().SetSelectable(eventArgs.Value)
+		}
+	case &t.editableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Texts().SetEditable(eventArgs.Value)
 		}
 	}
 }

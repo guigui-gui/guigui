@@ -49,9 +49,6 @@ type SegmentedControl[T comparable] struct {
 	layoutItems []guigui.LinearLayoutItem
 
 	onItemSelected func(index int)
-
-	// TODO: This will not be needed when HandleEvent is implemented.
-	onButtonDowns []func(context *guigui.Context)
 }
 
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {
@@ -105,7 +102,6 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 	s.abstractList.SetOnItemSelected(s.onItemSelected)
 
 	s.buttons = adjustSliceSize(s.buttons, s.abstractList.ItemCount())
-	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
 
 	for i := range s.abstractList.ItemCount() {
 		item, _ := s.abstractList.ItemByIndex(i)
@@ -153,14 +149,28 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		}
 		context.SetEnabled(&s.buttons[i], !item.Disabled)
 		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
-		if s.onButtonDowns[i] == nil {
-			s.onButtonDowns[i] = func(context *guigui.Context) {
-				s.SelectItemByIndex(i)
-			}
-		}
-		s.buttons[i].SetOnDown(s.onButtonDowns[i])
+		context.SetEnabled(&s.buttons[i], !item.Disabled)
+		s.buttons[i].setKeepPressed(s.abstractList.SelectedItemIndex() == i)
+		guigui.RegisterEventHandler2(s, &s.buttons[i])
 	}
 	return nil
+}
+
+func (s *SegmentedControl[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	idx := -1
+	for i := range s.buttons {
+		if targetWidget == &s.buttons[i] {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		return
+	}
+	switch eventArgs.(type) {
+	case *ButtonEventArgsDown:
+		s.SelectItemByIndex(idx)
+	}
 }
 
 func (s *SegmentedControl[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

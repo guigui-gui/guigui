@@ -68,9 +68,6 @@ type NumberInput struct {
 	onValueChangedInt64  func(value int64, committed bool)
 	onValueChangedUint64 func(value uint64, committed bool)
 	onValueChangedString func(value string, force bool)
-
-	onUpButtonDown   func(context *guigui.Context)
-	onDownButtonDown func(context *guigui.Context)
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -267,12 +264,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 		BottomEnd:   true,
 	})
 	n.upButton.setPairedButton(&n.downButton)
-	if n.onUpButtonDown == nil {
-		n.onUpButtonDown = func(context *guigui.Context) {
-			n.increment()
-		}
-	}
-	n.upButton.setOnRepeat(n.onUpButtonDown)
+	guigui.RegisterEventHandler2(n, &n.upButton)
 	context.SetEnabled(&n.upButton, n.IsEditable() && n.abstractNumberInput.CanIncrement())
 
 	n.downButton.SetIcon(imgDown)
@@ -281,12 +273,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 		TopEnd:   true,
 	})
 	n.downButton.setPairedButton(&n.upButton)
-	if n.onDownButtonDown == nil {
-		n.onDownButtonDown = func(context *guigui.Context) {
-			n.decrement()
-		}
-	}
-	n.downButton.setOnRepeat(n.onDownButtonDown)
+	guigui.RegisterEventHandler2(n, &n.downButton)
 	context.SetEnabled(&n.downButton, n.IsEditable() && n.abstractNumberInput.CanDecrement())
 
 	return nil
@@ -371,7 +358,8 @@ func (n *NumberInput) Paste() bool {
 }
 
 func (n *NumberInput) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
-	if targetWidget == &n.textInput { // TextInput
+	switch targetWidget {
+	case &n.textInput:
 		switch eventArgs := eventArgs.(type) {
 		case *TextInputEventArgsValueChanged:
 			n.abstractNumberInput.SetString(eventArgs.Value, false, eventArgs.Committed)
@@ -379,6 +367,20 @@ func (n *NumberInput) HandleEvent(context *guigui.Context, targetWidget guigui.W
 			guigui.DispatchEventHandler2(n, &NumberInputEventArgsKeyJustPressed{
 				Key: eventArgs.Key,
 			})
+		}
+	case &n.upButton:
+		switch eventArgs.(type) {
+		case *ButtonEventArgsDown:
+			n.increment()
+		case *ButtonEventArgsRepeat:
+			n.increment()
+		}
+	case &n.downButton:
+		switch eventArgs.(type) {
+		case *ButtonEventArgsDown:
+			n.decrement()
+		case *ButtonEventArgsRepeat:
+			n.decrement()
 		}
 	}
 }

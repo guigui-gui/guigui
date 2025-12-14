@@ -38,8 +38,6 @@ type Select[T comparable] struct {
 	popupMenuItemContents []selectItemContent
 
 	indexAtOpen int
-
-	onDown func(context *guigui.Context)
 }
 
 func (s *Select[T]) updatePopupMenuItems() {
@@ -91,13 +89,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 	s.button.SetContent(&s.buttonContent)
 
-	if s.onDown == nil {
-		s.onDown = func(context *guigui.Context) {
-			s.popupMenu.SetOpen(true)
-			s.indexAtOpen = s.popupMenu.SelectedItemIndex()
-		}
-	}
-	s.button.SetOnDown(s.onDown)
+	guigui.RegisterEventHandler2(s, &s.button)
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
 	s.button.SetIconAlign(IconAlignEnd)
 
@@ -129,12 +121,19 @@ func (s *Select[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 }
 
 func (s *Select[T]) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
-	if targetWidget == &s.popupMenu {
+	switch targetWidget {
+	case &s.popupMenu:
 		switch eventArgs := eventArgs.(type) {
 		case *PopupMenuEventArgsItemSelected:
 			guigui.DispatchEventHandler2(s, &SelectEventArgsItemSelected{
 				Index: eventArgs.Index,
 			})
+		}
+	case &s.button:
+		switch eventArgs.(type) {
+		case *ButtonEventArgsDown:
+			s.popupMenu.SetOpen(true)
+			s.indexAtOpen = s.popupMenu.SelectedItemIndex()
 		}
 	}
 }

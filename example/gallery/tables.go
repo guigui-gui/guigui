@@ -110,18 +110,14 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	// Configurations
 	t.showFooterText.SetValue("Show footer")
-	t.showFooterToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Tables().SetFooterVisible(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.showFooterToggle)
+
 	t.movableText.SetValue("Enable to move items")
 	t.movableToggle.SetValue(model.Tables().Movable())
-	t.movableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Tables().SetMovable(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.movableToggle)
+
 	t.enabledText.SetValue("Enabled")
-	t.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
-		model.Tables().SetEnabled(value)
-	})
+	guigui.RegisterEventHandler2(t, &t.enabledToggle)
 	t.enabledToggle.SetValue(model.Tables().Enabled())
 
 	t.configForm.SetItems([]basicwidget.FormItem{
@@ -167,12 +163,28 @@ func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 }
 
 func (t *Tables) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
-	if targetWidget == &t.table {
-		model := context.Model(t, modelKeyModel).(*Model)
+	model := context.Model(t, modelKeyModel).(*Model)
+	switch targetWidget {
+	case &t.table:
 		switch eventArgs := eventArgs.(type) {
 		case *basicwidget.TableEventArgsItemsMoved:
 			idx := model.Tables().MoveTableItems(eventArgs.From, eventArgs.Count, eventArgs.To)
 			t.table.SelectItemByIndex(idx)
+		}
+	case &t.showFooterToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Tables().SetFooterVisible(eventArgs.Value)
+		}
+	case &t.movableToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Tables().SetMovable(eventArgs.Value)
+		}
+	case &t.enabledToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			model.Tables().SetEnabled(eventArgs.Value)
 		}
 	}
 }

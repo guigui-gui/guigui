@@ -67,9 +67,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	guigui.RegisterEventHandler2(r, &r.textInput)
 
 	r.createButton.SetText("Create")
-	r.createButton.SetOnUp(func(context *guigui.Context) {
-		r.tryCreateTask(r.textInput.Value())
-	})
+	guigui.RegisterEventHandler2(r, &r.createButton)
 	context.SetEnabled(&r.createButton, r.model.CanAddTask(r.textInput.Value()))
 
 	r.tasksPanelContent.SetOnDeleted(func(context *guigui.Context, id int) {
@@ -83,12 +81,18 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 func (r *Root) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
-	if targetWidget == &r.textInput {
+	switch targetWidget {
+	case &r.textInput:
 		switch eventArgs := eventArgs.(type) {
 		case *basicwidget.TextInputEventArgsKeyJustPressed:
 			if eventArgs.Key == ebiten.KeyEnter {
 				r.tryCreateTask(r.textInput.Value())
 			}
+		}
+	case &r.createButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			r.tryCreateTask(r.textInput.Value())
 		}
 	}
 }
@@ -162,13 +166,21 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	adder.AddChild(&t.text)
 
 	t.doneButton.SetText("Done")
-	t.doneButton.SetOnUp(func(context *guigui.Context) {
-		guigui.DispatchEventHandler(t, taskWidgetEventDoneButtonPressed)
-	})
+	guigui.RegisterEventHandler2(t, &t.doneButton)
 
 	t.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 
 	return nil
+}
+
+func (t *taskWidget) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &t.doneButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			guigui.DispatchEventHandler(t, taskWidgetEventDoneButtonPressed)
+		}
+	}
 }
 
 func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

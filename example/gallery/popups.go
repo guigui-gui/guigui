@@ -44,12 +44,16 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddChild(&p.contextMenuPopup)
 
 	p.darkenBackgroundText.SetValue("Darken background")
+	guigui.RegisterEventHandler2(p, &p.darkenBackgroundToggle)
+
 	p.blurBackgroundText.SetValue("Blur background")
+	guigui.RegisterEventHandler2(p, &p.blurBackgroundToggle)
+
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
+	guigui.RegisterEventHandler2(p, &p.closeByClickingOutsideToggle)
+
 	p.showButton.SetText("Show")
-	p.showButton.SetOnUp(func(context *guigui.Context) {
-		p.simplePopup.SetOpen(true)
-	})
+	guigui.RegisterEventHandler2(p, &p.showButton)
 
 	p.forms[0].SetItems([]basicwidget.FormItem{
 		{
@@ -118,6 +122,31 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	})
 
 	return nil
+}
+
+func (p *Popups) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &p.showButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			p.simplePopup.SetOpen(true)
+		}
+	case &p.darkenBackgroundToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			p.simplePopup.SetBackgroundDarkened(eventArgs.Value)
+		}
+	case &p.blurBackgroundToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			p.simplePopup.SetBackgroundBlurred(eventArgs.Value)
+		}
+	case &p.closeByClickingOutsideToggle:
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.ToggleEventArgsValueChanged:
+			p.simplePopup.SetCloseByClickingOutside(eventArgs.Value)
+		}
+	}
 }
 
 func (p *Popups) contentSize(context *guigui.Context) image.Point {
@@ -221,11 +250,19 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 	s.titleText.SetBold(true)
 
 	s.closeButton.SetText("Close")
-	s.closeButton.SetOnUp(func(context *guigui.Context) {
-		s.popup.SetOpen(false)
-	})
+	guigui.RegisterEventHandler2(s, &s.closeButton)
 
 	return nil
+}
+
+func (s *simplePopupContent) HandleEvent(context *guigui.Context, targetWidget guigui.Widget, eventArgs any) {
+	switch targetWidget {
+	case &s.closeButton:
+		switch eventArgs.(type) {
+		case *basicwidget.ButtonEventArgsUp:
+			s.popup.SetOpen(false)
+		}
+	}
 }
 
 func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

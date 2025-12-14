@@ -15,9 +15,9 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	toggleEventValueChanged = "valueChanged"
-)
+type ToggleEventArgsValueChanged struct {
+	Value bool
+}
 
 type Toggle struct {
 	guigui.DefaultWidget
@@ -28,10 +28,6 @@ type Toggle struct {
 	prevHovered  bool
 
 	count int
-}
-
-func (t *Toggle) SetOnValueChanged(f func(context *guigui.Context, value bool)) {
-	guigui.RegisterEventHandler(t, toggleEventValueChanged, f)
 }
 
 func (t *Toggle) Value() bool {
@@ -49,7 +45,9 @@ func (t *Toggle) SetValue(value bool) {
 	}
 	guigui.RequestRedraw(t)
 
-	guigui.DispatchEventHandler(t, toggleEventValueChanged, value)
+	guigui.DispatchEventHandler2(t, &ToggleEventArgsValueChanged{
+		Value: value,
+	})
 }
 
 func toggleMaxCount() int {
