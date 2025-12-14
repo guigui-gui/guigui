@@ -70,9 +70,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	n.numberInput3.SetFixedWidth(width)
 
 	n.sliderText.SetValue("Slider (Range: [-100, 100])")
-	n.slider.Widget().SetOnValueChanged(func(context *guigui.Context, value int) {
-		model.NumberInputs().SetNumberInputValue3(value)
-	})
+	guigui.RegisterEventHandler2(n, n.slider.Widget())
 	n.slider.Widget().SetMinimumValue(-100)
 	n.slider.Widget().SetMaximumValue(100)
 	n.slider.Widget().SetValue(model.NumberInputs().NumberInputValue3())
@@ -152,6 +150,11 @@ func (n *NumberInputs) HandleEvent(context *guigui.Context, targetWidget guigui.
 			if eventArgs.Committed {
 				model.NumberInputs().SetNumberInputValue3(int(eventArgs.Value))
 			}
+		}
+	case n.slider.Widget():
+		switch eventArgs := eventArgs.(type) {
+		case *basicwidget.SliderEventArgsValueChanged:
+			model.NumberInputs().SetNumberInputValue3(eventArgs.Value)
 		}
 	case &n.editableToggle:
 		switch eventArgs := eventArgs.(type) {

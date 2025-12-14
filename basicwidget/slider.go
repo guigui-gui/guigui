@@ -16,12 +16,25 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-const (
-	sliderEventValueChanged       = "valueChanged"
-	sliderEventValueChangedBigInt = "valueChangedBigInt"
-	sliderEventValueChangedInt64  = "valueChangedInt64"
-	sliderEventValueChangedUint64 = "valueChangedUint64"
-)
+type SliderEventArgsValueChanged struct {
+	Value     int
+	Committed bool
+}
+
+type SliderEventArgsValueChangedBigInt struct {
+	Value     *big.Int
+	Committed bool
+}
+
+type SliderEventArgsValueChangedInt64 struct {
+	Value     int64
+	Committed bool
+}
+
+type SliderEventArgsValueChangedUint64 struct {
+	Value     uint64
+	Committed bool
+}
 
 type Slider struct {
 	guigui.DefaultWidget
@@ -38,30 +51,6 @@ type Slider struct {
 	onValueChangedBigInt func(value *big.Int, committed bool)
 	onValueChangedInt64  func(value int64, committed bool)
 	onValueChangedUint64 func(value uint64, committed bool)
-}
-
-func (s *Slider) SetOnValueChanged(f func(context *guigui.Context, value int)) {
-	guigui.RegisterEventHandler(s, sliderEventValueChanged, func(context *guigui.Context, value int, committed bool) {
-		f(context, value)
-	})
-}
-
-func (s *Slider) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int)) {
-	guigui.RegisterEventHandler(s, sliderEventValueChangedBigInt, func(context *guigui.Context, value *big.Int, committed bool) {
-		f(context, value)
-	})
-}
-
-func (s *Slider) SetOnValueChangedInt64(f func(context *guigui.Context, value int64)) {
-	guigui.RegisterEventHandler(s, sliderEventValueChangedInt64, func(context *guigui.Context, value int64, committed bool) {
-		f(context, value)
-	})
-}
-
-func (s *Slider) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64)) {
-	guigui.RegisterEventHandler(s, sliderEventValueChangedUint64, func(context *guigui.Context, value uint64, committed bool) {
-		f(context, value)
-	})
 }
 
 func (s *Slider) Value() int {
@@ -155,28 +144,40 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if s.onValueChanged == nil {
 		s.onValueChanged = func(value int, committed bool) {
-			guigui.DispatchEventHandler(s, sliderEventValueChanged, value, committed)
+			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChanged{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	s.abstractNumberInput.SetOnValueChanged(s.onValueChanged)
 
 	if s.onValueChangedBigInt == nil {
 		s.onValueChangedBigInt = func(value *big.Int, committed bool) {
-			guigui.DispatchEventHandler(s, sliderEventValueChangedBigInt, value, committed)
+			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedBigInt{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	s.abstractNumberInput.SetOnValueChangedBigInt(s.onValueChangedBigInt)
 
 	if s.onValueChangedInt64 == nil {
 		s.onValueChangedInt64 = func(value int64, committed bool) {
-			guigui.DispatchEventHandler(s, sliderEventValueChangedInt64, value, committed)
+			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedInt64{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	s.abstractNumberInput.SetOnValueChangedInt64(s.onValueChangedInt64)
 
 	if s.onValueChangedUint64 == nil {
 		s.onValueChangedUint64 = func(value uint64, committed bool) {
-			guigui.DispatchEventHandler(s, sliderEventValueChangedUint64, value, committed)
+			guigui.DispatchEventHandler2(s, &SliderEventArgsValueChangedUint64{
+				Value:     value,
+				Committed: committed,
+			})
 		}
 	}
 	s.abstractNumberInput.SetOnValueChangedUint64(s.onValueChangedUint64)
