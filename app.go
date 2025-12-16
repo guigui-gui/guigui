@@ -231,9 +231,6 @@ func (a *app) updateRedrawRequestedRegionsByWidgets() {
 			return nil
 		}
 		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-			if theDebugMode.showRenderingRegions {
-				slog.Info("request redrawing", "requester", fmt.Sprintf("%T", widget), "at", widgetState.redrawRequestedAt, "region", vb)
-			}
 			a.requestRedrawWidget(widget)
 		}
 		widgetState.redrawRequested = false
@@ -251,7 +248,7 @@ func (a *app) Update() error {
 
 	if s := deviceScaleFactor(); a.deviceScale != s {
 		a.deviceScale = s
-		a.requestRedraw(a.bounds(), requestRedrawReasonScreenDeviceScale)
+		a.requestRedraw(a.bounds(), requestRedrawReasonScreenDeviceScale, nil)
 	}
 
 	rootState := a.root.widgetState()
@@ -351,7 +348,7 @@ func (a *app) Update() error {
 		a.lastScreenHeight = a.screenHeight
 	}
 	if screenInvalidated {
-		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize)
+		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize, nil)
 	} else if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
@@ -455,12 +452,12 @@ const (
 	requestRedrawReasonLocale
 )
 
-func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason) {
+func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, widget Widget) {
 	a.redrawRequestedRegions = a.redrawRequestedRegions.Union(region)
 	if theDebugMode.showRenderingRegions {
 		switch reason {
 		case requestRedrawReasonWidget:
-			slog.Info("request redrawing", "reason", "widget", "region", region)
+			slog.Info("request redrawing", "reason", "widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
 		case requestRedrawReasonLayout:
 			slog.Info("request redrawing", "reason", "layout", "region", region)
 		case requestRedrawReasonScreenSize:
@@ -483,7 +480,7 @@ func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason) 
 
 func (a *app) requestRedrawWidget(widget Widget) {
 	widgetState := widget.widgetState()
-	a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonWidget)
+	a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonWidget, widget)
 	for _, child := range widgetState.children {
 		a.requestRedrawIfDifferentParentZ(child)
 	}
@@ -690,14 +687,14 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	widgetState := widget.widgetState()
 	// If the children and/or children's bounds are changed, request redraw.
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
-		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout)
+		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
 
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		// The float property is similar.
 		widgetState.prev.redrawIfNeeded(a)
 		for _, child := range widgetState.children {
 			if child.widgetState().zDelta != 0 || child.widgetState().float {
-				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout)
+				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
 			}
 		}
 	}

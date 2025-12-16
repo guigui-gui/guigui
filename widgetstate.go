@@ -77,7 +77,7 @@ func (w *widgetsAndVisibleBounds) equals(context *Context, currentWidgets []Widg
 func (w *widgetsAndVisibleBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
 		if bounds3D.zDelta != 0 || bounds3D.float {
-			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout)
+			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
 			requestRedraw(widgetState)
 		}
 	}
