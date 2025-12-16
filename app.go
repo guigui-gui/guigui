@@ -201,10 +201,12 @@ func (a *app) focusWidget(widget Widget) {
 		return
 	}
 	if a.focusedWidget != nil {
+		RequestRedraw(a.focusedWidget)
 		a.focusedWidget.OnFocusChanged(&a.context, false)
 	}
 	a.focusedWidget = widget
 	if a.focusedWidget != nil {
+		RequestRedraw(a.focusedWidget)
 		a.focusedWidget.OnFocusChanged(&a.context, true)
 	}
 }
@@ -446,7 +448,6 @@ const (
 	requestRedrawReasonLayout
 	requestRedrawReasonScreenSize
 	requestRedrawReasonScreenDeviceScale
-	requestRedrawReasonFocus
 	requestRedrawReasonAppScale
 	requestRedrawReasonColorMode
 	requestRedrawReasonLocale
@@ -464,8 +465,6 @@ func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, 
 			slog.Info("request redrawing", "reason", "screen size", "region", region)
 		case requestRedrawReasonScreenDeviceScale:
 			slog.Info("request redrawing", "reason", "screen device scale", "region", region)
-		case requestRedrawReasonFocus:
-			slog.Info("request redrawing", "reason", "focus", "region", region)
 		case requestRedrawReasonAppScale:
 			slog.Info("request redrawing", "reason", "app scale", "region", region)
 		case requestRedrawReasonColorMode:

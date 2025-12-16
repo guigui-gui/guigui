@@ -270,10 +270,6 @@ func (c *Context) focus(widget Widget) {
 	}
 
 	c.app.focusWidget(ws)
-
-	// Rerender everything when a focus changes.
-	// A widget including a focused widget might be affected.
-	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonFocus, nil)
 }
 
 func (c *Context) blur(widget Widget) {
@@ -281,7 +277,6 @@ func (c *Context) blur(widget Widget) {
 	if !widgetState.isInTree(c.app.buildCount) {
 		return
 	}
-	var unfocused bool
 	_ = traverseWidget(widget, func(w Widget) error {
 		if c.app.focusedWidget.widgetState() != w.widgetState() {
 			return nil
@@ -293,14 +288,8 @@ func (c *Context) blur(widget Widget) {
 				break
 			}
 		}
-		unfocused = true
 		return skipTraverse
 	})
-	if unfocused {
-		// Rerender everything when a focus changes.
-		// A widget including a focused widget might be affected.
-		c.app.requestRedraw(c.app.bounds(), requestRedrawReasonFocus, nil)
-	}
 }
 
 func (c *Context) canHaveFocus(widgetState *widgetState) bool {
