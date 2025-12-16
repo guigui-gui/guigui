@@ -61,13 +61,30 @@ type widgetAndZ struct {
 	z      int
 }
 
+type requiredPhases int
+
+const (
+	requiredPhasesBuildAndLayout = iota
+	// TODO: Use this when appropriated.
+	requiredPhasesLayout
+	requiredPhasesNone
+)
+
+func (r requiredPhases) requiresBuild() bool {
+	return r == requiredPhasesBuildAndLayout
+}
+
+func (r requiredPhases) requiresLayout() bool {
+	return r == requiredPhasesBuildAndLayout || r == requiredPhasesLayout
+}
+
 type app struct {
-	root       Widget
-	context    Context
-	visitedZs  map[int]struct{}
-	zs         []int
-	buildCount int64
-	skipBuild  bool
+	root           Widget
+	context        Context
+	visitedZs      map[int]struct{}
+	zs             []int
+	buildCount     int64
+	requiredPhases requiredPhases
 
 	// maybeHitWidgets are widgets and their z values at the cursor position.
 	// maybeHitWidgets are ordered by descending z values.
@@ -223,7 +240,7 @@ func (a *app) updateInvalidatedRegions() {
 }
 
 func (a *app) Update() error {
-	var built bool
+	var layoutChanged bool
 
 	if a.focusedWidget == nil {
 		a.focusWidget(a.root)
@@ -238,15 +255,18 @@ func (a *app) Update() error {
 	rootState.bounds = a.bounds()
 
 	// Call the first buildWidgets.
-	if !a.skipBuild {
+	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
 			return err
 		}
 		a.context.inBuild = false
-		a.layoutWidgets()
-		built = true
 	}
+	if a.requiredPhases.requiresLayout() {
+		a.layoutWidgets()
+		layoutChanged = true
+	}
+
 	a.updateHitWidgets()
 
 	// Handle user inputs.
@@ -271,34 +291,37 @@ func (a *app) Update() error {
 
 	dispatchedWidget := a.updateEventDispatchStates()
 	a.updateInvalidatedRegions()
-	a.skipBuild = true
+	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
-		a.skipBuild = false
+		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	} else if inputHandledWidget != nil {
-		a.skipBuild = false
+		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
 	} else if !a.invalidatedRegions.Empty() {
-		a.skipBuild = false
+		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
 		}
 	}
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
-	if !a.skipBuild {
+	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
 			return err
 		}
 		a.context.inBuild = false
-		a.layoutWidgets()
-		built = true
 	}
+	if a.requiredPhases.requiresLayout() {
+		a.layoutWidgets()
+		layoutChanged = true
+	}
+
 	a.updateHitWidgets()
 
 	if !a.cursorShape() {
@@ -322,7 +345,7 @@ func (a *app) Update() error {
 	}
 	if screenInvalidated {
 		a.requestRedraw(a.bounds())
-	} else if built {
+	} else if layoutChanged {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
 		a.requestRedrawIfTreeChanged(a.root)
@@ -332,14 +355,14 @@ func (a *app) Update() error {
 
 	dispatchedWidget = a.updateEventDispatchStates()
 	a.updateInvalidatedRegions()
-	a.skipBuild = true
+	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
-		a.skipBuild = false
+		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	} else if !a.invalidatedRegions.Empty() {
-		a.skipBuild = false
+		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
 		}
@@ -502,7 +525,7 @@ func (a *app) layoutWidgets() {
 
 func (a *app) updateHitWidgets() {
 	pt := image.Pt(ebiten.CursorPosition())
-	if a.skipBuild && pt == a.lastCursorPosition {
+	if !a.requiredPhases.requiresLayout() && pt == a.lastCursorPosition {
 		return
 	}
 	a.lastCursorPosition = pt
