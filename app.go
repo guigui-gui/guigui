@@ -240,7 +240,7 @@ func (a *app) updateInvalidatedRegions() {
 }
 
 func (a *app) Update() error {
-	var layoutChanged bool
+	var layoutChangedInUpdate bool
 
 	if a.focusedWidget == nil {
 		a.focusWidget(a.root)
@@ -264,10 +264,10 @@ func (a *app) Update() error {
 	}
 	if a.requiredPhases.requiresLayout() {
 		a.layoutWidgets()
-		layoutChanged = true
+		layoutChangedInUpdate = true
 	}
 
-	a.updateHitWidgets()
+	a.updateHitWidgets(a.requiredPhases.requiresLayout())
 
 	// Handle user inputs.
 	// TODO: Handle this in Ebitengine's HandleInput in the future (hajimehoshi/ebiten#1704)
@@ -319,10 +319,10 @@ func (a *app) Update() error {
 	}
 	if a.requiredPhases.requiresLayout() {
 		a.layoutWidgets()
-		layoutChanged = true
+		layoutChangedInUpdate = true
 	}
 
-	a.updateHitWidgets()
+	a.updateHitWidgets(a.requiredPhases.requiresLayout())
 
 	if !a.cursorShape() {
 		ebiten.SetCursorShape(ebiten.CursorShapeDefault)
@@ -345,7 +345,7 @@ func (a *app) Update() error {
 	}
 	if screenInvalidated {
 		a.requestRedraw(a.bounds())
-	} else if layoutChanged {
+	} else if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
 		a.requestRedrawIfTreeChanged(a.root)
@@ -523,9 +523,9 @@ func (a *app) layoutWidgets() {
 	slices.Sort(a.zs)
 }
 
-func (a *app) updateHitWidgets() {
+func (a *app) updateHitWidgets(layoutChanged bool) {
 	pt := image.Pt(ebiten.CursorPosition())
-	if !a.requiredPhases.requiresLayout() && pt == a.lastCursorPosition {
+	if !layoutChanged && pt == a.lastCursorPosition {
 		return
 	}
 	a.lastCursorPosition = pt
