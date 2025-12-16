@@ -96,7 +96,8 @@ type app struct {
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
 	maybeHitWidgets []widgetAndZ
 
-	invalidatedRegions image.Rectangle
+	redrawRequestedRegions image.Rectangle
+	invalidatedRegions     image.Rectangle
 
 	invalidatedRegionsForDebug []invalidatedRegionsForDebugItem
 
@@ -223,7 +224,7 @@ func (a *app) updateEventDispatchStates() Widget {
 	return dispatchedWidget
 }
 
-func (a *app) updateInvalidatedRegions() {
+func (a *app) updateRedrawRequestedRegionsByWidgets() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		if !widgetState.redrawRequested {
@@ -250,13 +251,14 @@ func (a *app) Update() error {
 
 	if s := deviceScaleFactor(); a.deviceScale != s {
 		a.deviceScale = s
-		a.requestRedraw(a.bounds())
+		a.requestRedraw(a.bounds(), requestRedrawReasonScreenDeviceScale)
 	}
 
 	rootState := a.root.widgetState()
 	rootState.bounds = a.bounds()
 
 	// Call the first buildWidgets.
+	a.redrawRequestedRegions = image.Rectangle{}
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -292,7 +294,7 @@ func (a *app) Update() error {
 	}
 
 	dispatchedWidget := a.updateEventDispatchStates()
-	a.updateInvalidatedRegions()
+	a.updateRedrawRequestedRegionsByWidgets()
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
 		a.requiredPhases = requiredPhasesBuildAndLayout
@@ -304,14 +306,17 @@ func (a *app) Update() error {
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
-	} else if !a.invalidatedRegions.Empty() {
+	} else if !a.redrawRequestedRegions.Empty() {
 		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
 		}
 	}
 
+	a.invalidatedRegions = a.invalidatedRegions.Union(a.redrawRequestedRegions)
+
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
+	a.redrawRequestedRegions = image.Rectangle{}
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -346,7 +351,7 @@ func (a *app) Update() error {
 		a.lastScreenHeight = a.screenHeight
 	}
 	if screenInvalidated {
-		a.requestRedraw(a.bounds())
+		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize)
 	} else if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
@@ -356,19 +361,21 @@ func (a *app) Update() error {
 	a.resetPrevWidgets(a.root)
 
 	dispatchedWidget = a.updateEventDispatchStates()
-	a.updateInvalidatedRegions()
+	a.updateRedrawRequestedRegionsByWidgets()
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
 		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
-	} else if !a.invalidatedRegions.Empty() {
+	} else if !a.redrawRequestedRegions.Empty() {
 		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region invalidated", "region", a.invalidatedRegions)
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
 		}
 	}
+
+	a.invalidatedRegions = a.invalidatedRegions.Union(a.redrawRequestedRegions)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
@@ -434,13 +441,49 @@ func (a *app) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	return a.screenWidth, a.screenHeight
 }
 
-func (a *app) requestRedraw(region image.Rectangle) {
-	a.invalidatedRegions = a.invalidatedRegions.Union(region)
+type requestRedrawReason int
+
+const (
+	requestRedrawReasonUnknown requestRedrawReason = iota
+	requestRedrawReasonWidget
+	requestRedrawReasonLayout
+	requestRedrawReasonScreenSize
+	requestRedrawReasonScreenDeviceScale
+	requestRedrawReasonFocus
+	requestRedrawReasonAppScale
+	requestRedrawReasonColorMode
+	requestRedrawReasonLocale
+)
+
+func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason) {
+	a.redrawRequestedRegions = a.redrawRequestedRegions.Union(region)
+	if theDebugMode.showRenderingRegions {
+		switch reason {
+		case requestRedrawReasonWidget:
+			slog.Info("request redrawing", "reason", "widget", "region", region)
+		case requestRedrawReasonLayout:
+			slog.Info("request redrawing", "reason", "layout", "region", region)
+		case requestRedrawReasonScreenSize:
+			slog.Info("request redrawing", "reason", "screen size", "region", region)
+		case requestRedrawReasonScreenDeviceScale:
+			slog.Info("request redrawing", "reason", "screen device scale", "region", region)
+		case requestRedrawReasonFocus:
+			slog.Info("request redrawing", "reason", "focus", "region", region)
+		case requestRedrawReasonAppScale:
+			slog.Info("request redrawing", "reason", "app scale", "region", region)
+		case requestRedrawReasonColorMode:
+			slog.Info("request redrawing", "reason", "color mode", "region", region)
+		case requestRedrawReasonLocale:
+			slog.Info("request redrawing", "reason", "locale", "region", region)
+		default:
+			slog.Info("request redrawing", "reason", "unknown", "region", region)
+		}
+	}
 }
 
 func (a *app) requestRedrawWidget(widget Widget) {
 	widgetState := widget.widgetState()
-	a.requestRedraw(a.context.visibleBounds(widgetState))
+	a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonWidget)
 	for _, child := range widgetState.children {
 		a.requestRedrawIfDifferentParentZ(child)
 	}
@@ -647,14 +690,14 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	widgetState := widget.widgetState()
 	// If the children and/or children's bounds are changed, request redraw.
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
-		a.requestRedraw(a.context.visibleBounds(widgetState))
+		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout)
 
 		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		// The float property is similar.
 		widgetState.prev.redrawIfNeeded(a)
 		for _, child := range widgetState.children {
 			if child.widgetState().zDelta != 0 || child.widgetState().float {
-				a.requestRedraw(a.context.visibleBounds(child.widgetState()))
+				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout)
 			}
 		}
 	}

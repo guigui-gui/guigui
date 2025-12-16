@@ -84,7 +84,7 @@ func (c *Context) SetAppScale(scale float64) {
 		return
 	}
 	c.appScaleMinus1 = scale - 1
-	c.app.requestRedraw(c.app.bounds())
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonAppScale)
 }
 
 func (c *Context) ColorMode() ColorMode {
@@ -101,7 +101,7 @@ func (c *Context) SetColorMode(mode ColorMode) {
 
 	c.colorMode = mode
 	c.colorModeSet = true
-	c.app.requestRedraw(c.app.bounds())
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode)
 }
 
 func (c *Context) UseAutoColorMode() {
@@ -109,7 +109,7 @@ func (c *Context) UseAutoColorMode() {
 		return
 	}
 	c.colorModeSet = false
-	c.app.requestRedraw(c.app.bounds())
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode)
 }
 
 func (c *Context) IsAutoColorModeUsed() bool {
@@ -127,7 +127,7 @@ func (c *Context) autoColorMode() ColorMode {
 		if time.Since(c.cachedDefaultColorModeTime) >= time.Second {
 			m := colormode.SystemColorMode()
 			if c.cachedDefaultColorMode != m {
-				c.app.requestRedraw(c.app.bounds())
+				c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode)
 			}
 			c.cachedDefaultColorMode = m
 			c.cachedDefaultColorModeTime = time.Now()
@@ -194,7 +194,7 @@ func (c *Context) SetAppLocales(locales []language.Tag) {
 	c.locales = append(c.locales, locales...)
 	c.allLocales = slices.Delete(c.allLocales, 0, len(c.allLocales))
 
-	c.app.requestRedraw(c.app.bounds())
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonLocale)
 }
 
 func (c *Context) AppBounds() image.Rectangle {
@@ -273,7 +273,7 @@ func (c *Context) focus(widget Widget) {
 
 	// Rerender everything when a focus changes.
 	// A widget including a focused widget might be affected.
-	c.app.requestRedraw(c.app.bounds())
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonFocus)
 }
 
 func (c *Context) blur(widget Widget) {
@@ -299,7 +299,7 @@ func (c *Context) blur(widget Widget) {
 	if unfocused {
 		// Rerender everything when a focus changes.
 		// A widget including a focused widget might be affected.
-		c.app.requestRedraw(c.app.bounds())
+		c.app.requestRedraw(c.app.bounds(), requestRedrawReasonFocus)
 	}
 }
 
