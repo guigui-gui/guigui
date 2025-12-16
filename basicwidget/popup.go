@@ -184,7 +184,7 @@ func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 }
 
 func (p *popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
-	guigui.RegisterEventHandler(p, popupEventClosed, f)
+	guigui.SetEventHandler(p, popupEventClosed, f)
 }
 
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -346,7 +346,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
-			guigui.DispatchEventHandler(p, popupEventClosed, p.closedReason)
+			guigui.DispatchEvent(p, popupEventClosed, p.closedReason)
 			p.closedReason = PopupClosedReasonNone
 			if p.openAfterClose {
 				if p.hasNextContentPosition {

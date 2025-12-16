@@ -229,15 +229,15 @@ func (b *baseListContent[T]) SetBackground(widget guigui.Widget) {
 }
 
 func (b *baseListContent[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(b, baseListEventItemSelected, f)
+	guigui.SetEventHandler(b, baseListEventItemSelected, f)
 }
 
 func (b *baseListContent[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	guigui.RegisterEventHandler(b, baseListEventItemsMoved, f)
+	guigui.SetEventHandler(b, baseListEventItemsMoved, f)
 }
 
 func (b *baseListContent[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	guigui.RegisterEventHandler(b, baseListEventItemExpanderToggled, f)
+	guigui.SetEventHandler(b, baseListEventItemExpanderToggled, f)
 }
 
 func (b *baseListContent[T]) SetCheckmarkIndex(index int) {
@@ -343,7 +343,7 @@ func (b *baseListContent[T]) Build(context *guigui.Context, adder *guigui.ChildA
 
 	if b.onItemSelected == nil {
 		b.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler(b, baseListEventItemSelected, index)
+			guigui.DispatchEvent(b, baseListEventItemSelected, index)
 		}
 	}
 	b.abstractList.SetOnItemSelected(b.onItemSelected)
@@ -671,7 +671,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 		}
 		if b.dragDstIndexPlus1 > 0 {
 			// TODO: Implement multiple items drop.
-			guigui.DispatchEventHandler(b, baseListEventItemsMoved, b.dragSrcIndexPlus1-1, 1, b.dragDstIndexPlus1-1)
+			guigui.DispatchEvent(b, baseListEventItemsMoved, b.dragSrcIndexPlus1-1, 1, b.dragDstIndexPlus1-1)
 			b.dragDstIndexPlus1 = 0
 		}
 		b.dragSrcIndexPlus1 = 0
@@ -690,7 +690,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 			if c.X < b.itemBoundsForLayoutFromIndex[index].Min.X {
 				if left {
 					expanded := !item.Collapsed
-					guigui.DispatchEventHandler(b, baseListEventItemExpanderToggled, index, !expanded)
+					guigui.DispatchEvent(b, baseListEventItemExpanderToggled, index, !expanded)
 				}
 				return guigui.AbortHandlingInputByWidget(b)
 			}

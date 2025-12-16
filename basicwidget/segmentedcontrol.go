@@ -62,7 +62,7 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 }
 
 func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(s, segmentedControlEventItemSelected, f)
+	guigui.SetEventHandler(s, segmentedControlEventItemSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
@@ -100,7 +100,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 
 	if s.onItemSelected == nil {
 		s.onItemSelected = func(index int) {
-			guigui.DispatchEventHandler(s, segmentedControlEventItemSelected, index)
+			guigui.DispatchEvent(s, segmentedControlEventItemSelected, index)
 		}
 	}
 	s.abstractList.SetOnItemSelected(s.onItemSelected)

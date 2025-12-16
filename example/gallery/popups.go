@@ -175,7 +175,7 @@ func (p *popupClickHereText) Text() *basicwidget.Text {
 }
 
 func (b *popupClickHereText) SetOnClicked(f func(context *guigui.Context, pt image.Point)) {
-	guigui.RegisterEventHandler(b, popupClickHereTextEventClicked, f)
+	guigui.SetEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
 func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -194,7 +194,7 @@ func (b *popupClickHereText) Measure(context *guigui.Context, constraints guigui
 func (p *popupClickHereText) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
 		if widgetBounds.IsHitAtCursor() {
-			guigui.DispatchEventHandler(p, popupClickHereTextEventClicked, image.Pt(ebiten.CursorPosition()))
+			guigui.DispatchEvent(p, popupClickHereTextEventClicked, image.Pt(ebiten.CursorPosition()))
 			return guigui.HandleInputByWidget(p)
 		}
 	}

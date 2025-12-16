@@ -39,7 +39,7 @@ type PopupMenu[T comparable] struct {
 }
 
 func (p *PopupMenu[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(p, popupMenuEventItemSelected, f)
+	guigui.SetEventHandler(p, popupMenuEventItemSelected, f)
 }
 
 func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
@@ -54,7 +54,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	if p.onItemSelected == nil {
 		p.onItemSelected = func(context *guigui.Context, index int) {
 			p.popup.SetOpen(false)
-			guigui.DispatchEventHandler(p, popupMenuEventItemSelected, index)
+			guigui.DispatchEvent(p, popupMenuEventItemSelected, index)
 		}
 	}
 	list.list.SetOnItemSelected(p.onItemSelected)

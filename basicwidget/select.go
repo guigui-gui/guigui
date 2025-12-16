@@ -44,7 +44,7 @@ type Select[T comparable] struct {
 }
 
 func (s *Select[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.RegisterEventHandler(s, selectEventItemSelected, f)
+	guigui.SetEventHandler(s, selectEventItemSelected, f)
 }
 
 func (s *Select[T]) updatePopupMenuItems() {
@@ -108,7 +108,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	if s.onPopupMenuItemSelected == nil {
 		s.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
-			guigui.DispatchEventHandler(s, selectEventItemSelected, index)
+			guigui.DispatchEvent(s, selectEventItemSelected, index)
 		}
 	}
 	s.popupMenu.SetOnItemSelected(s.onPopupMenuItemSelected)

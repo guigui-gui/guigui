@@ -163,11 +163,11 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 }
 
 func (t *Text) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	guigui.RegisterEventHandler(t, textEventValueChanged, f)
+	guigui.SetEventHandler(t, textEventValueChanged, f)
 }
 
 func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	guigui.RegisterEventHandler(t, textEventKeyJustPressed, f)
+	guigui.SetEventHandler(t, textEventKeyJustPressed, f)
 }
 
 func (t *Text) resetCachedTextSize() {
@@ -267,7 +267,7 @@ func (t *Text) CommitWithCurrentInputValue() {
 		return
 	}
 	// Fire the event even if the text is not changed.
-	guigui.DispatchEventHandler(t, textEventValueChanged, t.field.Text(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
 }
 
 func (t *Text) setText(text string) bool {
@@ -310,7 +310,7 @@ func (t *Text) setTextAndSelection(text string, start, end int, shiftIndex int, 
 	guigui.RequestRedraw(t)
 	if textChanged {
 		t.resetCachedTextSize()
-		guigui.DispatchEventHandler(t, textEventValueChanged, t.field.Text(), false)
+		guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), false)
 	}
 
 	if !adjustScroll {
@@ -672,7 +672,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	// Handle a key input by user-setting callback, unless IME is working.
 	if t.field.UncommittedTextLengthInBytes() == 0 {
 		for _, key := range inpututil.AppendJustPressedKeys(nil) {
-			guigui.DispatchEventHandler(t, textEventKeyJustPressed, key)
+			guigui.DispatchEvent(t, textEventKeyJustPressed, key)
 		}
 	}
 
@@ -697,7 +697,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
 			if t.field.Text() != origText {
-				guigui.DispatchEventHandler(t, textEventValueChanged, t.field.Text(), false)
+				guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), false)
 			}
 			return guigui.HandleInputByWidget(t)
 		}
@@ -918,7 +918,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) commit() {
-	guigui.DispatchEventHandler(t, textEventValueChanged, t.field.Text(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
 	t.nextText = ""
 	t.nextTextSet = false
 }

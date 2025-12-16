@@ -66,19 +66,19 @@ func (n *NumberInput) SetEditable(editable bool) {
 }
 
 func (n *NumberInput) SetOnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChanged, f)
+	guigui.SetEventHandler(n, numberInputEventValueChanged, f)
 }
 
 func (n *NumberInput) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedBigInt, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedBigInt, f)
 }
 
 func (n *NumberInput) SetOnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedInt64, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedInt64, f)
 }
 
 func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
-	guigui.RegisterEventHandler(n, numberInputEventValueChangedUint64, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedUint64, f)
 }
 
 func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
@@ -207,28 +207,28 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChanged, value, committed)
+			guigui.DispatchEvent(n, numberInputEventValueChanged, value, committed)
 		}
 	}
 	n.abstractNumberInput.SetOnValueChanged(n.onValueChanged)
 
 	if n.onValueChangedBigInt == nil {
 		n.onValueChangedBigInt = func(value *big.Int, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedBigInt, value, committed)
+			guigui.DispatchEvent(n, numberInputEventValueChangedBigInt, value, committed)
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedBigInt(n.onValueChangedBigInt)
 
 	if n.onValueChangedInt64 == nil {
 		n.onValueChangedInt64 = func(value int64, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedInt64, value, committed)
+			guigui.DispatchEvent(n, numberInputEventValueChangedInt64, value, committed)
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedInt64(n.onValueChangedInt64)
 
 	if n.onValueChangedUint64 == nil {
 		n.onValueChangedUint64 = func(value uint64, committed bool) {
-			guigui.DispatchEventHandler(n, numberInputEventValueChangedUint64, value, committed)
+			guigui.DispatchEvent(n, numberInputEventValueChangedUint64, value, committed)
 		}
 	}
 	n.abstractNumberInput.SetOnValueChangedUint64(n.onValueChangedUint64)

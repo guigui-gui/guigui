@@ -143,7 +143,7 @@ const (
 )
 
 func (t *taskWidget) SetOnDoneButtonPressed(f func(context *guigui.Context)) {
-	guigui.RegisterEventHandler(t, taskWidgetEventDoneButtonPressed, f)
+	guigui.SetEventHandler(t, taskWidgetEventDoneButtonPressed, f)
 }
 
 func (t *taskWidget) SetText(text string) {
@@ -156,7 +156,7 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 
 	t.doneButton.SetText("Done")
 	t.doneButton.SetOnUp(func(context *guigui.Context) {
-		guigui.DispatchEventHandler(t, taskWidgetEventDoneButtonPressed)
+		guigui.DispatchEvent(t, taskWidgetEventDoneButtonPressed)
 	})
 
 	t.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
@@ -197,7 +197,7 @@ const (
 )
 
 func (t *tasksPanelContent) SetOnDeleted(f func(context *guigui.Context, id int)) {
-	guigui.RegisterEventHandler(t, tasksPanelContentEventDeleted, f)
+	guigui.SetEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -215,7 +215,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
 		t.taskWidgets[i].SetOnDoneButtonPressed(func(context *guigui.Context) {
-			guigui.DispatchEventHandler(t, tasksPanelContentEventDeleted, task.ID)
+			guigui.DispatchEvent(t, tasksPanelContentEventDeleted, task.ID)
 		})
 		t.taskWidgets[i].SetText(task.Text)
 	}

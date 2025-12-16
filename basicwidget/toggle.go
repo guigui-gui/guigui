@@ -31,7 +31,7 @@ type Toggle struct {
 }
 
 func (t *Toggle) SetOnValueChanged(f func(context *guigui.Context, value bool)) {
-	guigui.RegisterEventHandler(t, toggleEventValueChanged, f)
+	guigui.SetEventHandler(t, toggleEventValueChanged, f)
 }
 
 func (t *Toggle) Value() bool {
@@ -49,7 +49,7 @@ func (t *Toggle) SetValue(value bool) {
 	}
 	guigui.RequestRedraw(t)
 
-	guigui.DispatchEventHandler(t, toggleEventValueChanged, value)
+	guigui.DispatchEvent(t, toggleEventValueChanged, value)
 }
 
 func toggleMaxCount() int {

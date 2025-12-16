@@ -33,15 +33,15 @@ type baseButton struct {
 }
 
 func (b *baseButton) SetOnDown(f func(context *guigui.Context)) {
-	guigui.RegisterEventHandler(b, baseButtonEventDown, f)
+	guigui.SetEventHandler(b, baseButtonEventDown, f)
 }
 
 func (b *baseButton) SetOnUp(f func(context *guigui.Context)) {
-	guigui.RegisterEventHandler(b, baseButtonEventUp, f)
+	guigui.SetEventHandler(b, baseButtonEventUp, f)
 }
 
 func (b *baseButton) setOnRepeat(f func(context *guigui.Context)) {
-	guigui.RegisterEventHandler(b, baseButtonEventRepeat, f)
+	guigui.SetEventHandler(b, baseButtonEventRepeat, f)
 }
 
 func (b *baseButton) setPairedButton(pair *baseButton) {
@@ -75,9 +75,9 @@ func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *
 			}
 			context.SetFocused(b, true)
 			b.setPressed(true)
-			guigui.DispatchEventHandler(b, baseButtonEventDown)
+			guigui.DispatchEvent(b, baseButtonEventDown)
 			if isMouseButtonRepeating(ebiten.MouseButtonLeft) {
-				guigui.DispatchEventHandler(b, baseButtonEventRepeat)
+				guigui.DispatchEvent(b, baseButtonEventRepeat)
 			}
 			justPressedOrReleased = true
 		}
@@ -86,7 +86,7 @@ func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 			b.setPressed(false)
-			guigui.DispatchEventHandler(b, baseButtonEventUp)
+			guigui.DispatchEvent(b, baseButtonEventUp)
 			guigui.RequestRedraw(b)
 			justPressedOrReleased = true
 		}
@@ -94,7 +94,7 @@ func (b *baseButton) HandlePointingInput(context *guigui.Context, widgetBounds *
 			return guigui.HandleInputByWidget(b)
 		}
 		if (b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && isMouseButtonRepeating(ebiten.MouseButtonLeft) {
-			guigui.DispatchEventHandler(b, baseButtonEventRepeat)
+			guigui.DispatchEvent(b, baseButtonEventRepeat)
 			return guigui.HandleInputByWidget(b)
 		}
 	}

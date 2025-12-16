@@ -75,7 +75,7 @@ type scrollOverlay struct {
 }
 
 func (s *scrollOverlay) SetOnScroll(f func(context *guigui.Context, offsetX, offsetY float64)) {
-	guigui.RegisterEventHandler(s, scrollOverlayEventScroll, f)
+	guigui.SetEventHandler(s, scrollOverlayEventScroll, f)
 }
 
 func (s *scrollOverlay) Reset() {
@@ -213,7 +213,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 			}
 			s.adjustOffset(context, widgetBounds)
 			if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-				guigui.DispatchEventHandler(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
+				guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
 				guigui.RequestRedraw(s)
 			}
 		}
@@ -236,7 +236,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 		s.offsetY += dy * 4 * context.Scale()
 		s.adjustOffset(context, widgetBounds)
 		if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-			guigui.DispatchEventHandler(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
+			guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
 			guigui.RequestRedraw(s)
 			return guigui.HandleInputByWidget(s)
 		}
