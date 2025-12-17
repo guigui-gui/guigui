@@ -520,8 +520,6 @@ func (a *app) buildWidgets() error {
 	var adder ChildAdder
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
-		widgetState.hasVisibleBoundsCache = false
-		widgetState.visibleBoundsCache = image.Rectangle{}
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
 		adder.app = a
 		adder.widget = widget
@@ -545,6 +543,8 @@ func (a *app) layoutWidgets() {
 	var layouter ChildLayouter
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
+		widgetState.hasVisibleBoundsCache = false
+		widgetState.visibleBoundsCache = image.Rectangle{}
 
 		// Reset child layouts.
 		for _, child := range widgetState.children {
