@@ -113,7 +113,7 @@ type app struct {
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
 	maybeHitWidgets []widgetAndZ
 
-	redrawRequestedRegions image.Rectangle
+	redrawRequestedRegions redrawRequests
 	regionsToDraw          image.Rectangle
 
 	invalidatedRegionsForDebug []invalidatedRegionsForDebugItem
@@ -274,7 +274,7 @@ func (a *app) Update() error {
 	rootState.bounds = a.bounds()
 
 	// Call the first buildWidgets.
-	a.redrawRequestedRegions = image.Rectangle{}
+	a.redrawRequestedRegions.reset()
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -318,7 +318,7 @@ func (a *app) Update() error {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	}
-	if !a.redrawRequestedRegions.Empty() {
+	if !a.redrawRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
@@ -331,10 +331,10 @@ func (a *app) Update() error {
 		}
 	}
 
-	a.regionsToDraw = a.regionsToDraw.Union(a.redrawRequestedRegions)
+	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
-	a.redrawRequestedRegions = image.Rectangle{}
+	a.redrawRequestedRegions.reset()
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -387,14 +387,14 @@ func (a *app) Update() error {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	}
-	if !a.redrawRequestedRegions.Empty() {
+	if !a.redrawRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
 		}
 	}
 
-	a.regionsToDraw = a.regionsToDraw.Union(a.redrawRequestedRegions)
+	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
@@ -460,41 +460,8 @@ func (a *app) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	return a.screenWidth, a.screenHeight
 }
 
-type requestRedrawReason int
-
-const (
-	requestRedrawReasonUnknown requestRedrawReason = iota
-	requestRedrawReasonWidget
-	requestRedrawReasonLayout
-	requestRedrawReasonScreenSize
-	requestRedrawReasonScreenDeviceScale
-	requestRedrawReasonAppScale
-	requestRedrawReasonColorMode
-	requestRedrawReasonLocale
-)
-
 func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, widget Widget) {
-	a.redrawRequestedRegions = a.redrawRequestedRegions.Union(region)
-	if theDebugMode.showRenderingRegions {
-		switch reason {
-		case requestRedrawReasonWidget:
-			slog.Info("request redrawing", "reason", "widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
-		case requestRedrawReasonLayout:
-			slog.Info("request redrawing", "reason", "layout", "region", region)
-		case requestRedrawReasonScreenSize:
-			slog.Info("request redrawing", "reason", "screen size", "region", region)
-		case requestRedrawReasonScreenDeviceScale:
-			slog.Info("request redrawing", "reason", "screen device scale", "region", region)
-		case requestRedrawReasonAppScale:
-			slog.Info("request redrawing", "reason", "app scale", "region", region)
-		case requestRedrawReasonColorMode:
-			slog.Info("request redrawing", "reason", "color mode", "region", region)
-		case requestRedrawReasonLocale:
-			slog.Info("request redrawing", "reason", "locale", "region", region)
-		default:
-			slog.Info("request redrawing", "reason", "unknown", "region", region)
-		}
-	}
+	a.redrawRequestedRegions.add(region, reason, widget)
 }
 
 func (a *app) requestRedrawWidget(widget Widget) {
