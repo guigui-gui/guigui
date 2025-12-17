@@ -73,6 +73,22 @@ const (
 	requiredPhasesNone
 )
 
+func (r requiredPhases) addBuild() requiredPhases {
+	return requiredPhasesBuildAndLayout
+}
+
+func (r requiredPhases) addLayout() requiredPhases {
+	switch r {
+	case requiredPhasesBuildAndLayout:
+		return requiredPhasesBuildAndLayout
+	case requiredPhasesLayout:
+		return requiredPhasesLayout
+	case requiredPhasesNone:
+		return requiredPhasesLayout
+	}
+	return r
+}
+
 func (r requiredPhases) requiresBuild() bool {
 	return r == requiredPhasesBuildAndLayout
 }
@@ -297,17 +313,19 @@ func (a *app) Update() error {
 	a.updateRedrawRequestedRegionsByWidgets()
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
-		a.requiredPhases = requiredPhasesBuildAndLayout
+		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
-	} else if !a.redrawRequestedRegions.Empty() {
-		a.requiredPhases = requiredPhasesBuildAndLayout
+	}
+	if !a.redrawRequestedRegions.Empty() {
+		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
 		}
-	} else if inputHandledWidget != nil {
-		a.requiredPhases = requiredPhasesBuildAndLayout
+	}
+	if inputHandledWidget != nil {
+		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
@@ -364,12 +382,13 @@ func (a *app) Update() error {
 	a.updateRedrawRequestedRegionsByWidgets()
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
-		a.requiredPhases = requiredPhasesBuildAndLayout
+		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
-	} else if !a.redrawRequestedRegions.Empty() {
-		a.requiredPhases = requiredPhasesBuildAndLayout
+	}
+	if !a.redrawRequestedRegions.Empty() {
+		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
 		}
