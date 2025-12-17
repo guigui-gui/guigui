@@ -114,7 +114,7 @@ type app struct {
 	maybeHitWidgets []widgetAndZ
 
 	redrawRequestedRegions image.Rectangle
-	invalidatedRegions     image.Rectangle
+	regionsToDraw          image.Rectangle
 
 	invalidatedRegionsForDebug []invalidatedRegionsForDebugItem
 
@@ -331,7 +331,7 @@ func (a *app) Update() error {
 		}
 	}
 
-	a.invalidatedRegions = a.invalidatedRegions.Union(a.redrawRequestedRegions)
+	a.regionsToDraw = a.regionsToDraw.Union(a.redrawRequestedRegions)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
 	a.redrawRequestedRegions = image.Rectangle{}
@@ -394,7 +394,7 @@ func (a *app) Update() error {
 		}
 	}
 
-	a.invalidatedRegions = a.invalidatedRegions.Union(a.redrawRequestedRegions)
+	a.regionsToDraw = a.regionsToDraw.Union(a.redrawRequestedRegions)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
@@ -406,13 +406,13 @@ func (a *app) Update() error {
 			}
 		}
 
-		if !a.invalidatedRegions.Empty() {
+		if !a.regionsToDraw.Empty() {
 			idx := slices.IndexFunc(a.invalidatedRegionsForDebug, func(i invalidatedRegionsForDebugItem) bool {
-				return i.region.Eq(a.invalidatedRegions)
+				return i.region.Eq(a.regionsToDraw)
 			})
 			if idx < 0 {
 				a.invalidatedRegionsForDebug = append(a.invalidatedRegionsForDebug, invalidatedRegionsForDebugItem{
-					region: a.invalidatedRegions,
+					region: a.regionsToDraw,
 					time:   invalidatedRegionForDebugMaxTime(),
 				})
 			} else {
@@ -446,7 +446,7 @@ func (a *app) Draw(screen *ebiten.Image) {
 		origScreen.DrawImage(a.offscreen, op)
 		a.drawDebugIfNeeded(origScreen)
 	}
-	a.invalidatedRegions = image.Rectangle{}
+	a.regionsToDraw = image.Rectangle{}
 }
 
 func (a *app) Layout(outsideWidth, outsideHeight int) (int, int) {
@@ -735,10 +735,10 @@ func (a *app) resetPrevWidgets(widget Widget) {
 }
 
 func (a *app) drawWidget(screen *ebiten.Image) {
-	if a.invalidatedRegions.Empty() {
+	if a.regionsToDraw.Empty() {
 		return
 	}
-	dst := screen.SubImage(a.invalidatedRegions).(*ebiten.Image)
+	dst := screen.SubImage(a.regionsToDraw).(*ebiten.Image)
 	for _, z := range a.zs {
 		a.doDrawWidget(dst, a.root, z, false)
 		a.doDrawWidget(dst, a.root, z, true)
