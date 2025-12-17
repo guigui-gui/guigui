@@ -301,15 +301,15 @@ func (a *app) Update() error {
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
-	} else if inputHandledWidget != nil {
-		a.requiredPhases = requiredPhasesBuildAndLayout
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
-		}
 	} else if !a.redrawRequestedRegions.Empty() {
 		a.requiredPhases = requiredPhasesBuildAndLayout
 		if theDebugMode.showBuildLogs {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
+		}
+	} else if inputHandledWidget != nil {
+		a.requiredPhases = requiredPhasesBuildAndLayout
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
 	}
 
