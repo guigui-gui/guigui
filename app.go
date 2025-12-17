@@ -43,6 +43,7 @@ func init() {
 				slog.Error(err.Error())
 			}
 			theDebugMode.deviceScale = f
+		case token == "":
 		default:
 			slog.Warn("unknown debug option", "option", token)
 		}
