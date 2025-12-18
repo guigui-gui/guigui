@@ -540,7 +540,7 @@ func (a *app) layoutWidgets() {
 		}
 
 		// Call Layout.
-		bounds := widgetBoundsFromWidget(&a.context, widgetState)
+		bounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Layout(&a.context, bounds, &layouter)
 
 		a.visitedZs[widgetState.z()] = struct{}{}
@@ -620,7 +620,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 		return HandleInputResult{}
 	}
 
-	bounds := widgetBoundsFromWidget(&a.context, widgetState)
+	bounds := widgetBoundsFromWidget(&a.context, widget)
 
 	switch typ {
 	case handleInputTypePointing:
@@ -644,7 +644,7 @@ func (a *app) cursorShape() bool {
 		if !widgetState.isEnabled() {
 			return false
 		}
-		bounds := widgetBoundsFromWidget(&a.context, widgetState)
+		bounds := widgetBoundsFromWidget(&a.context, wz.widget)
 		shape, ok := wz.widget.CursorShape(&a.context, bounds)
 		if !ok {
 			continue
@@ -656,13 +656,12 @@ func (a *app) cursorShape() bool {
 }
 
 func (a *app) tickWidgets(widget Widget) error {
-	widgetState := widget.widgetState()
-	bounds := widgetBoundsFromWidget(&a.context, widgetState)
+	bounds := widgetBoundsFromWidget(&a.context, widget)
 	if err := widget.Tick(&a.context, bounds); err != nil {
 		return err
 	}
 
-	for _, child := range widgetState.children {
+	for _, child := range widget.widgetState().children {
 		if err := a.tickWidgets(child); err != nil {
 			return err
 		}
@@ -738,7 +737,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, floa
 			dst = widgetState.ensureOffscreen(dst.Bounds())
 			dst.Clear()
 		}
-		widgetBounds := widgetBoundsFromWidget(&a.context, widgetState)
+		widgetBounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Draw(&a.context, widgetBounds, dst.SubImage(vb).(*ebiten.Image))
 	}
 
@@ -786,7 +785,8 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 	screen.DrawImage(a.debugScreen, nil)
 }
 
-func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
+func (a *app) isWidgetHitAtCursor(widget Widget) bool {
+	widgetState := widget.widgetState()
 	if !widgetState.isInTree(a.buildCount) {
 		return false
 	}
@@ -794,6 +794,9 @@ func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 		return false
 	}
 	if widgetState.isPassThrough() {
+		return false
+	}
+	if widget.IsProxy() {
 		return false
 	}
 
@@ -812,10 +815,22 @@ func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 			return false
 		}
 
-		// w overlaps widget at point.
-		if z1 > z && wz.widget.widgetState().isVisible() && !wz.widget.widgetState().isPassThrough() {
-			return false
+		if z1 == z {
+			continue
 		}
+
+		if !wz.widget.widgetState().isVisible() {
+			continue
+		}
+		if wz.widget.widgetState().isPassThrough() {
+			continue
+		}
+		if wz.widget.IsProxy() {
+			continue
+		}
+
+		// w overlaps widget at point.
+		return false
 	}
 	return false
 }

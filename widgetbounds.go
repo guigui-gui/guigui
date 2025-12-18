@@ -6,18 +6,18 @@ package guigui
 import "image"
 
 type WidgetBounds struct {
-	context     *Context
-	widgetState *widgetState
+	context *Context
+	widget  Widget
 }
 
 func (w *WidgetBounds) Bounds() image.Rectangle {
-	return w.widgetState.bounds
+	return w.widget.widgetState().bounds
 }
 
 func (w *WidgetBounds) VisibleBounds() image.Rectangle {
-	return w.context.visibleBounds(w.widgetState)
+	return w.context.visibleBounds(w.widget.widgetState())
 }
 
 func (w *WidgetBounds) IsHitAtCursor() bool {
-	return w.context.app.isWidgetHitAtCursor(w.widgetState)
+	return w.context.app.isWidgetHitAtCursor(w.widget)
 }

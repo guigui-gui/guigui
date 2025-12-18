@@ -209,9 +209,9 @@ func (w *widgetState) z() int {
 	return z
 }
 
-func widgetBoundsFromWidget(context *Context, widgetState *widgetState) *WidgetBounds {
-	wb := &widgetState.widgetBounds_
-	wb.widgetState = widgetState
+func widgetBoundsFromWidget(context *Context, widget Widget) *WidgetBounds {
+	wb := &widget.widgetState().widgetBounds_
+	wb.widget = widget
 	wb.context = context
 	return wb
 }

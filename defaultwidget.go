@@ -61,6 +61,10 @@ func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image
 	return s
 }
 
+func (*DefaultWidget) IsProxy() bool {
+	return false
+}
+
 func (*DefaultWidget) OnFocusChanged(context *Context, focused bool) {
 }
 

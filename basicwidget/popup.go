@@ -109,6 +109,10 @@ func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints)
 	return p.popup.Measure(context, constraints)
 }
 
+func (p *Popup) IsProxy() bool {
+	return true
+}
+
 type popup struct {
 	guigui.DefaultWidget
 
