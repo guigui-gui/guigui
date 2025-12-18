@@ -309,6 +309,7 @@ func (p *popup) close(context *guigui.Context, reason PopupClosedReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
+	// TODO: Is this needed?
 	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 }
 
@@ -383,6 +384,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 	}
 
+	// TODO: Is this needed?
 	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
 	p.darkBackground.SetOpeningRate(p.openingRate())

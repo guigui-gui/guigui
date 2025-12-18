@@ -499,6 +499,8 @@ func (a *app) buildWidgets() error {
 		widgetState.visibleCacheValid = false
 		widgetState.enabledCache = false
 		widgetState.enabledCacheValid = false
+		widgetState.passThroughCacheValid = false
+		widgetState.passThroughCache = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 		return nil
 	})
@@ -584,7 +586,7 @@ func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 
 func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle int, ancestorFocused bool) HandleInputResult {
 	widgetState := widget.widgetState()
-	if widgetState.passThrough {
+	if widgetState.isPassThrough() {
 		return HandleInputResult{}
 	}
 
@@ -633,7 +635,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 func (a *app) cursorShape() bool {
 	for _, wz := range a.maybeHitWidgets {
 		widgetState := wz.widget.widgetState()
-		if widgetState.passThrough {
+		if widgetState.isPassThrough() {
 			continue
 		}
 		if !widgetState.isVisible() {
@@ -791,7 +793,7 @@ func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 	if !widgetState.isVisible() {
 		return false
 	}
-	if widgetState.passThrough {
+	if widgetState.isPassThrough() {
 		return false
 	}
 
@@ -811,7 +813,7 @@ func (a *app) isWidgetHitAtCursor(widgetState *widgetState) bool {
 		}
 
 		// w overlaps widget at point.
-		if z1 > z && wz.widget.widgetState().isVisible() && !wz.widget.widgetState().passThrough {
+		if z1 > z && wz.widget.widgetState().isVisible() && !wz.widget.widgetState().isPassThrough() {
 			return false
 		}
 	}

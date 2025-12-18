@@ -357,7 +357,7 @@ func (c *Context) Model(widget Widget, key any) any {
 }
 
 func (c *Context) PassThrough(widget Widget) bool {
-	return widget.widgetState().passThrough
+	return widget.widgetState().isPassThrough()
 }
 
 func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
@@ -366,6 +366,11 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 		return
 	}
 	widgetState.passThrough = passThrough
+	_ = traverseWidget(widget, func(w Widget) error {
+		w.widgetState().passThroughCacheValid = false
+		w.widgetState().passThroughCache = false
+		return nil
+	})
 	RequestRedraw(widget)
 }
 

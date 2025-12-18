@@ -108,11 +108,13 @@ type widgetState struct {
 	float           bool
 	focusDelegation Widget
 
-	zPlus1Cache       int
-	visibleCache      bool
-	visibleCacheValid bool
-	enabledCache      bool
-	enabledCacheValid bool
+	zPlus1Cache           int
+	visibleCache          bool
+	visibleCacheValid     bool
+	enabledCache          bool
+	enabledCacheValid     bool
+	passThroughCache      bool
+	passThroughCacheValid bool
 
 	offscreen *ebiten.Image
 
@@ -159,6 +161,21 @@ func (w *widgetState) isEnabled() bool {
 		w.enabledCache = true
 	}
 	return w.enabledCache
+}
+
+func (w *widgetState) isPassThrough() bool {
+	if w.passThroughCacheValid {
+		return w.passThroughCache
+	}
+	w.passThroughCacheValid = true
+	if w.passThrough {
+		w.passThroughCache = true
+	} else if w.parent != nil {
+		w.passThroughCache = w.parent.widgetState().isPassThrough()
+	} else {
+		w.passThroughCache = false
+	}
+	return w.passThroughCache
 }
 
 func (w *widgetState) opacity() float64 {
