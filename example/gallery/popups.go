@@ -23,6 +23,8 @@ type Popups struct {
 	blurBackgroundToggle         basicwidget.Toggle
 	closeByClickingOutsideText   basicwidget.Text
 	closeByClickingOutsideToggle basicwidget.Toggle
+	narrowBackgroundText         basicwidget.Text
+	narrowBackgroundToggle       basicwidget.Toggle
 	showButton                   basicwidget.Button
 
 	contextMenuPopupText          basicwidget.Text
@@ -43,9 +45,10 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddChild(&p.simplePopup)
 	adder.AddChild(&p.contextMenuPopup)
 
-	p.darkenBackgroundText.SetValue("Darken background")
-	p.blurBackgroundText.SetValue("Blur background")
+	p.darkenBackgroundText.SetValue("Darken the background")
+	p.blurBackgroundText.SetValue("Blur the background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
+	p.narrowBackgroundText.SetValue("Narrow the background")
 	p.showButton.SetText("Show")
 	p.showButton.SetOnUp(func(context *guigui.Context) {
 		p.simplePopup.SetOpen(true)
@@ -63,6 +66,10 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		{
 			PrimaryWidget:   &p.closeByClickingOutsideText,
 			SecondaryWidget: &p.closeByClickingOutsideToggle,
+		},
+		{
+			PrimaryWidget:   &p.narrowBackgroundText,
+			SecondaryWidget: &p.narrowBackgroundToggle,
 		},
 		{
 			SecondaryWidget: &p.showButton,
@@ -127,10 +134,16 @@ func (p *Popups) contentSize(context *guigui.Context) image.Point {
 
 func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	appBounds := context.AppBounds()
+
+	popupBounds := appBounds
+	if p.narrowBackgroundToggle.Value() {
+		popupBounds = widgetBounds.Bounds()
+	}
+	p.simplePopup.SetBackgroundBounds(popupBounds)
 	contentSize := p.contentSize(context)
 	center := image.Point{
-		X: appBounds.Min.X + (appBounds.Dx()-contentSize.X)/2,
-		Y: appBounds.Min.Y + (appBounds.Dy()-contentSize.Y)/2,
+		X: popupBounds.Min.X + (popupBounds.Dx()-contentSize.X)/2,
+		Y: popupBounds.Min.Y + (popupBounds.Dy()-contentSize.Y)/2,
 	}
 	layouter.LayoutWidget(&p.simplePopup, image.Rectangle{
 		Min: center,

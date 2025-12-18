@@ -89,6 +89,10 @@ func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.popup.SetAnimationDuringFade(animateOnFading)
 }
 
+func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
+	p.popup.SetBackgroundBounds(bounds)
+}
+
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
 	context.SetPassThrough(&p.popup, !p.IsOpen())
@@ -128,6 +132,7 @@ type popup struct {
 	nextContentPosition    image.Point
 	hasNextContentPosition bool
 	openAfterClose         bool
+	backgroundBounds       image.Rectangle
 }
 
 func (p *popup) setStyle(style popupStyle) {
@@ -183,6 +188,10 @@ func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 	p.animateOnFading = animateOnFading
 }
 
+func (p *popup) SetBackgroundBounds(bounds image.Rectangle) {
+	p.backgroundBounds = bounds
+}
+
 func (p *popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
 	guigui.SetEventHandler(p, popupEventClosed, f)
 }
@@ -221,14 +230,25 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	contentBounds := p.contentBounds(context, widgetBounds)
 	p.shadow.SetContentBounds(contentBounds)
 
-	appBounds := context.AppBounds()
-	layouter.LayoutWidget(&p.blurredBackground, appBounds)
-	layouter.LayoutWidget(&p.darkBackground, appBounds)
-	layouter.LayoutWidget(&p.shadow, appBounds)
+	bounds := p.backgroundBounds
+	if bounds.Empty() {
+		bounds = context.AppBounds()
+	}
+	layouter.LayoutWidget(&p.blurredBackground, bounds)
+	layouter.LayoutWidget(&p.darkBackground, bounds)
+	layouter.LayoutWidget(&p.shadow, bounds)
 	layouter.LayoutWidget(&p.contentAndFrame, contentBounds)
 }
 
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	bounds := p.backgroundBounds
+	if bounds.Empty() {
+		bounds = context.AppBounds()
+	}
+	if !image.Pt(ebiten.CursorPosition()).In(bounds) {
+		return guigui.HandleInputResult{}
+	}
+
 	if p.showing || p.hiding {
 		return guigui.AbortHandlingInputByWidget(p)
 	}
