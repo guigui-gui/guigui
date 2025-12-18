@@ -20,7 +20,7 @@ type Toolbar struct {
 func (t *Toolbar) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.panel)
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
-	t.panel.SetBorders(basicwidget.PanelBorder{
+	t.panel.SetBorders(basicwidget.PanelBorders{
 		Bottom: true,
 	})
 	t.panel.SetContent(&t.content)

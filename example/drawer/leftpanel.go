@@ -18,7 +18,7 @@ type LeftPanel struct {
 func (l *LeftPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.panel)
 	l.panel.SetStyle(basicwidget.PanelStyleSide)
-	l.panel.SetBorders(basicwidget.PanelBorder{
+	l.panel.SetBorders(basicwidget.PanelBorders{
 		End: true,
 	})
 	l.panel.SetContent(&l.content)

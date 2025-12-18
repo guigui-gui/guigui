@@ -20,7 +20,7 @@ type Sidebar struct {
 func (s *Sidebar) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.panel)
 	s.panel.SetStyle(basicwidget.PanelStyleSide)
-	s.panel.SetBorders(basicwidget.PanelBorder{
+	s.panel.SetBorders(basicwidget.PanelBorders{
 		End: true,
 	})
 	s.panel.SetContent(&s.panelContent)

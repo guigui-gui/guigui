@@ -29,7 +29,7 @@ const (
 	PanelContentConstraintsFixedHeight
 )
 
-type PanelBorder struct {
+type PanelBorders struct {
 	Start  bool
 	Top    bool
 	End    bool
@@ -54,7 +54,7 @@ func (p *Panel) SetContentConstraints(c PanelContentConstraints) {
 	p.panel.SetContentConstraints(c)
 }
 
-func (p *Panel) SetBorders(borders PanelBorder) {
+func (p *Panel) SetBorders(borders PanelBorders) {
 	p.panel.SetBorders(borders)
 }
 
@@ -115,7 +115,7 @@ func (p *panel) SetContentConstraints(c PanelContentConstraints) {
 	p.contentConstraints = c
 }
 
-func (p *panel) SetBorders(borders PanelBorder) {
+func (p *panel) SetBorders(borders PanelBorders) {
 	p.border.setBorders(borders)
 }
 
@@ -208,11 +208,11 @@ type panelBorder struct {
 	guigui.DefaultWidget
 
 	scrollOverlay *scrollOverlay
-	borders       PanelBorder
+	borders       PanelBorders
 	autoBorder    bool
 }
 
-func (b *panelBorder) setBorders(borders PanelBorder) {
+func (b *panelBorder) setBorders(borders PanelBorders) {
 	if b.borders == borders {
 		return
 	}
@@ -229,7 +229,7 @@ func (b *panelBorder) SetAutoBorder(auto bool) {
 }
 
 func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	if p.scrollOverlay == nil && p.borders == (PanelBorder{}) {
+	if p.scrollOverlay == nil && p.borders == (PanelBorders{}) {
 		return
 	}
 
