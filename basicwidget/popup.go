@@ -73,12 +73,12 @@ func (p *Popup) SetContent(widget guigui.Widget) {
 	p.popup.SetContent(widget)
 }
 
-func (p *Popup) SetBackgroundDarkened(darkenBackground bool) {
-	p.popup.SetBackgroundDarkened(darkenBackground)
+func (p *Popup) SetBackgroundDark(dark bool) {
+	p.popup.SetBackgroundDark(dark)
 }
 
-func (p *Popup) SetBackgroundBlurred(blurBackground bool) {
-	p.popup.SetBackgroundBlurred(blurBackground)
+func (p *Popup) SetBackgroundBlurred(blurred bool) {
+	p.popup.SetBackgroundBlurred(blurred)
 }
 
 func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
@@ -108,10 +108,10 @@ func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints)
 type popup struct {
 	guigui.DefaultWidget
 
-	blurredBackground  popupBlurredBackground
-	darkenedBackground popupDarkenBackground
-	shadow             popupShadow
-	contentAndFrame    popupContentAndFrame
+	blurredBackground popupBlurredBackground
+	darkBackground    popupDarkBackground
+	shadow            popupShadow
+	contentAndFrame   popupContentAndFrame
 
 	style                  popupStyle
 	toOpen                 bool
@@ -120,7 +120,7 @@ type popup struct {
 	showing                bool
 	hiding                 bool
 	closedReason           PopupClosedReason
-	backgroundDarkened     bool
+	backgroundDark         bool
 	backgroundBlurred      bool
 	closeByClickingOutside bool
 	animateOnFading        bool
@@ -166,12 +166,12 @@ func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.Widg
 	}
 }
 
-func (p *popup) SetBackgroundDarkened(darkenBackground bool) {
-	p.backgroundDarkened = darkenBackground
+func (p *popup) SetBackgroundDark(dark bool) {
+	p.backgroundDark = dark
 }
 
-func (p *popup) SetBackgroundBlurred(blurBackground bool) {
-	p.backgroundBlurred = blurBackground
+func (p *popup) SetBackgroundBlurred(blurred bool) {
+	p.backgroundBlurred = blurred
 }
 
 func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
@@ -192,15 +192,15 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
 		}
-		if p.backgroundDarkened {
-			adder.AddChild(&p.darkenedBackground)
+		if p.backgroundDark {
+			adder.AddChild(&p.darkBackground)
 		}
 		adder.AddChild(&p.shadow)
 		adder.AddChild(&p.contentAndFrame)
 	}
 
 	context.SetZDelta(&p.blurredBackground, 1)
-	context.SetZDelta(&p.darkenedBackground, 1)
+	context.SetZDelta(&p.darkBackground, 1)
 	context.SetZDelta(&p.shadow, 1)
 	context.SetZDelta(&p.contentAndFrame, 1)
 	return nil
@@ -223,7 +223,7 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 
 	appBounds := context.AppBounds()
 	layouter.LayoutWidget(&p.blurredBackground, appBounds)
-	layouter.LayoutWidget(&p.darkenedBackground, appBounds)
+	layouter.LayoutWidget(&p.darkBackground, appBounds)
 	layouter.LayoutWidget(&p.shadow, appBounds)
 	layouter.LayoutWidget(&p.contentAndFrame, contentBounds)
 }
@@ -361,7 +361,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 	context.SetPassThrough(&p.shadow, p.backgroundPassThrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
-	p.darkenedBackground.SetOpeningRate(p.openingRate())
+	p.darkBackground.SetOpeningRate(p.openingRate())
 	p.shadow.SetOpeningRate(p.openingRate())
 
 	// SetOpacity cannot be called for p.blurredBackground so far.
@@ -489,13 +489,13 @@ func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *gui
 	draw.DrawBlurredImage(context, dst, p.backgroundCache, rate)
 }
 
-type popupDarkenBackground struct {
+type popupDarkBackground struct {
 	guigui.DefaultWidget
 
 	openingRate float64
 }
 
-func (p *popupDarkenBackground) SetOpeningRate(rate float64) {
+func (p *popupDarkBackground) SetOpeningRate(rate float64) {
 	if p.openingRate == rate {
 		return
 	}
@@ -503,7 +503,7 @@ func (p *popupDarkenBackground) SetOpeningRate(rate float64) {
 	guigui.RequestRedraw(p)
 }
 
-func (p *popupDarkenBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
 	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.1), 0.75*p.openingRate)

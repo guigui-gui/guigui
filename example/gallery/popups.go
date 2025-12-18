@@ -81,7 +81,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	p.simplePopupContent.Widget().SetPopup(&p.simplePopup)
 	p.simplePopup.SetContent(&p.simplePopupContent)
-	p.simplePopup.SetBackgroundDarkened(p.darkenBackgroundToggle.Value())
+	p.simplePopup.SetBackgroundDark(p.darkenBackgroundToggle.Value())
 	p.simplePopup.SetBackgroundBlurred(p.blurBackgroundToggle.Value())
 	p.simplePopup.SetCloseByClickingOutside(p.closeByClickingOutsideToggle.Value())
 	p.simplePopup.SetAnimationDuringFade(true)
