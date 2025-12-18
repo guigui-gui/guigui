@@ -265,7 +265,7 @@ func (c *Context) resolveFocusedWidget(widget Widget) Widget {
 
 func (c *Context) focus(widget Widget) {
 	ws := c.resolveFocusedWidget(widget)
-	if c.app.focusedWidget == ws {
+	if areWidgetsSame(c.app.focusedWidget, ws) {
 		return
 	}
 
@@ -273,6 +273,10 @@ func (c *Context) focus(widget Widget) {
 }
 
 func (c *Context) blur(widget Widget) {
+	if c.app.focusedWidget == nil {
+		return
+	}
+
 	widgetState := widget.widgetState()
 	if !widgetState.isInTree(c.app.buildCount) {
 		return
@@ -282,8 +286,7 @@ func (c *Context) blur(widget Widget) {
 			return nil
 		}
 		for ; w != nil && w.widgetState() != nil; w = w.widgetState().parent {
-			if ws := c.resolveFocusedWidget(w); ws != nil {
-				// TODO: What if ws is the same as the current focused widget?
+			if ws := c.resolveFocusedWidget(w); ws != nil && !areWidgetsSame(ws, c.app.focusedWidget) {
 				c.app.focusWidget(ws)
 				break
 			}
