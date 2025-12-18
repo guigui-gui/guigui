@@ -241,6 +241,10 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 }
 
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if p.openingRate() == 0 {
+		return guigui.HandleInputResult{}
+	}
+
 	bounds := p.backgroundBounds
 	if bounds.Empty() {
 		bounds = context.AppBounds()
