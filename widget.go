@@ -22,10 +22,6 @@ type Widget interface {
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
 	Measure(context *Context, constraints Constraints) image.Point
 
-	// IsProxy returns true if the widget is a proxy.
-	// A proxy widget mainly manages its children, and doesn't handle input.
-	IsProxy() bool
-
 	// OnFocusChanged is called when the widget is focused or unfocused.
 	// OnFocusChanged can be called even when the widget is not in the tree.
 	OnFocusChanged(context *Context, focused bool)

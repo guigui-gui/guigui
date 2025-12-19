@@ -6,8 +6,9 @@ package guigui
 import "image"
 
 type WidgetBounds struct {
-	context *Context
-	widget  Widget
+	context     *Context
+	widget      Widget
+	hitDisabled bool
 }
 
 func (w *WidgetBounds) Bounds() image.Rectangle {
@@ -19,5 +20,8 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 }
 
 func (w *WidgetBounds) IsHitAtCursor() bool {
+	if w.hitDisabled {
+		return false
+	}
 	return w.context.app.isWidgetHitAtCursor(w.widget)
 }

@@ -65,6 +65,8 @@ type Context struct {
 	defaultColorWarnOnce       sync.Once
 	locales                    []language.Tag
 	allLocales                 []language.Tag
+
+	defaultMethodCalled bool
 }
 
 func (c *Context) Scale() float64 {
@@ -455,4 +457,16 @@ func (c *Context) DelegateFocus(from Widget, to Widget) {
 
 func (c *Context) SetWindowTitle(title string) {
 	ebiten.SetWindowTitle(title)
+}
+
+func (c *Context) isDefaultMethodCalled() bool {
+	return c.defaultMethodCalled
+}
+
+func (c *Context) resetDefaultMethodCalled() {
+	c.defaultMethodCalled = false
+}
+
+func (c *Context) setDefaultMethodCalledFlag() {
+	c.defaultMethodCalled = true
 }

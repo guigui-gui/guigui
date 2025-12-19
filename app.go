@@ -796,7 +796,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	if widgetState.isPassThrough() {
 		return false
 	}
-	if widget.IsProxy() {
+	if isProxyWidget(&a.context, widget) {
 		return false
 	}
 
@@ -825,7 +825,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 		if wz.widget.widgetState().isPassThrough() {
 			continue
 		}
-		if wz.widget.IsProxy() {
+		if isProxyWidget(&a.context, wz.widget) {
 			continue
 		}
 

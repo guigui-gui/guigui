@@ -126,6 +126,9 @@ type widgetState struct {
 
 	widgetBounds_ WidgetBounds
 
+	isProxyCacheValid bool
+	isProxyCache      bool
+
 	_ noCopy
 }
 
@@ -207,6 +210,46 @@ func (w *widgetState) z() int {
 	}
 	w.zPlus1Cache = z + 1
 	return z
+}
+
+var (
+	dummyImage = ebiten.NewImage(1, 1)
+)
+
+// isProxyWidget returns true if the widget is a proxy.
+// A proxy widget is a widget whose Draw and HandlePointingInput are the default implementation.
+// A proxy widget mainly manages its children and doesn't handle pointing input and drawing.
+// A proxy widget is ignored for cursor hit tests.
+func isProxyWidget(context *Context, widget Widget) bool {
+	if widget.widgetState().isProxyCacheValid {
+		return widget.widgetState().isProxyCache
+	}
+
+	// Do not use widgetBoundsFromWidget returning a cached WidgetBounds.
+	// Disable the hit test, or isProxyWidget will be recursively called at HandlePointingInput.
+	wb := WidgetBounds{
+		widget:      widget,
+		context:     context,
+		hitDisabled: true,
+	}
+
+	isProxy := true
+	// Actually invoke HandlePointingInput and Draw to check if they are the default implementation.
+	// TODO: Is this safe?
+	context.resetDefaultMethodCalled()
+	widget.HandlePointingInput(context, &wb)
+	if !context.isDefaultMethodCalled() {
+		isProxy = false
+	}
+	context.resetDefaultMethodCalled()
+	widget.Draw(context, &wb, dummyImage)
+	if !context.isDefaultMethodCalled() {
+		isProxy = false
+	}
+
+	widget.widgetState().isProxyCacheValid = true
+	widget.widgetState().isProxyCache = isProxy
+	return isProxy
 }
 
 func widgetBoundsFromWidget(context *Context, widget Widget) *WidgetBounds {

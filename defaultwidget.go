@@ -27,6 +27,7 @@ func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, layou
 }
 
 func (*DefaultWidget) HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {
+	context.setDefaultMethodCalledFlag()
 	return HandleInputResult{}
 }
 
@@ -43,6 +44,7 @@ func (*DefaultWidget) CursorShape(context *Context, widgetBounds *WidgetBounds) 
 }
 
 func (*DefaultWidget) Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image) {
+	context.setDefaultMethodCalledFlag()
 }
 
 func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image.Point {
@@ -59,10 +61,6 @@ func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image
 		s.Y = h
 	}
 	return s
-}
-
-func (*DefaultWidget) IsProxy() bool {
-	return false
 }
 
 func (*DefaultWidget) OnFocusChanged(context *Context, focused bool) {
