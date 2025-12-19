@@ -18,7 +18,7 @@ import (
 const popupZ = 16
 
 const (
-	popupEventClosed = "closed"
+	popupEventClose = "close"
 )
 
 func easeOutQuad(t float64) float64 {
@@ -38,13 +38,13 @@ const (
 	popupStyleMenu
 )
 
-type PopupClosedReason int
+type PopupCloseReason int
 
 const (
-	PopupClosedReasonNone PopupClosedReason = iota
-	PopupClosedReasonFuncCall
-	PopupClosedReasonClickOutside
-	PopupClosedReasonReopen
+	PopupCloseReasonNone PopupCloseReason = iota
+	PopupCloseReasonFuncCall
+	PopupCloseReasonClickOutside
+	PopupCloseReasonReopen
 )
 
 type Popup struct {
@@ -65,8 +65,8 @@ func (p *Popup) IsOpen() bool {
 	return p.popup.IsOpen()
 }
 
-func (p *Popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
-	p.popup.SetOnClosed(f)
+func (p *Popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
+	p.popup.SetOnClose(f)
 }
 
 func (p *Popup) SetContent(widget guigui.Widget) {
@@ -123,7 +123,7 @@ type popup struct {
 	openingCount           int
 	showing                bool
 	hiding                 bool
-	closedReason           PopupClosedReason
+	closeReason            PopupCloseReason
 	backgroundDark         bool
 	backgroundBlurred      bool
 	closeByClickingOutside bool
@@ -192,8 +192,8 @@ func (p *popup) SetBackgroundBounds(bounds image.Rectangle) {
 	p.backgroundBounds = bounds
 }
 
-func (p *popup) SetOnClosed(f func(context *guigui.Context, reason PopupClosedReason)) {
-	guigui.SetEventHandler(p, popupEventClosed, f)
+func (p *popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
+	guigui.SetEventHandler(p, popupEventClose, f)
 }
 
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -262,7 +262,7 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 	}
 
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		p.close(context, PopupClosedReasonClickOutside)
+		p.close(context, PopupCloseReasonClickOutside)
 		// Continue handling inputs so that clicking a right button can be handled by other widgets.
 		// This is a little tricky, but this is needed to reopen context menu popups.
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
@@ -283,29 +283,29 @@ func (p *popup) SetOpen(open bool) {
 	}
 }
 
-func (p *popup) setClosedReason(reason PopupClosedReason) {
-	if p.closedReason == PopupClosedReasonNone {
-		p.closedReason = reason
+func (p *popup) setCloseReason(reason PopupCloseReason) {
+	if p.closeReason == PopupCloseReasonNone {
+		p.closeReason = reason
 		return
 	}
-	if reason != PopupClosedReasonReopen {
+	if reason != PopupCloseReasonReopen {
 		return
 	}
-	// Overwrite the closed reason if it is PopupClosedReasonReopen.
+	// Overwrite the closed reason if it is PopupCloseReasonReopen.
 	// A popup might already be closed by clicking outside.
-	p.closedReason = reason
+	p.closeReason = reason
 }
 
-func (p *popup) close(context *guigui.Context, reason PopupClosedReason) {
+func (p *popup) close(context *guigui.Context, reason PopupCloseReason) {
 	if p.hiding {
-		p.setClosedReason(reason)
+		p.setCloseReason(reason)
 		return
 	}
 	if p.openingCount == 0 {
 		return
 	}
 
-	p.setClosedReason(reason)
+	p.setCloseReason(reason)
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
@@ -328,7 +328,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	if p.toOpen {
 		if !p.showing {
 			if p.openingCount > 0 {
-				p.close(context, PopupClosedReasonReopen)
+				p.close(context, PopupCloseReasonReopen)
 				p.openAfterClose = true
 			} else {
 				p.showing = true
@@ -336,7 +336,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			}
 		}
 	} else if p.toClose {
-		p.close(context, PopupClosedReasonFuncCall)
+		p.close(context, PopupCloseReasonFuncCall)
 	}
 	p.toOpen = false
 	p.toClose = false
@@ -361,7 +361,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	}
 	if p.hiding {
 		if 0 < p.openingCount {
-			if p.closedReason == PopupClosedReasonReopen || p.style == popupStyleMenu {
+			if p.closeReason == PopupCloseReasonReopen || p.style == popupStyleMenu {
 				p.openingCount -= 4
 			} else {
 				p.openingCount--
@@ -371,8 +371,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
-			guigui.DispatchEvent(p, popupEventClosed, p.closedReason)
-			p.closedReason = PopupClosedReasonNone
+			guigui.DispatchEvent(p, popupEventClose, p.closeReason)
+			p.closeReason = PopupCloseReasonNone
 			if p.openAfterClose {
 				if p.hasNextContentPosition {
 					p.contentPosition = p.nextContentPosition
