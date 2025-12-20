@@ -36,6 +36,7 @@ type popupStyle int
 const (
 	popupStyleNormal popupStyle = iota
 	popupStyleMenu
+	popupStyleDrawer
 )
 
 type PopupCloseReason int
@@ -93,6 +94,10 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 	p.popup.SetBackgroundBounds(bounds)
 }
 
+func (p *Popup) setDrawerEdge(edge DrawerEdge) {
+	p.popup.SetDrawerEdge(edge)
+}
+
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
 	context.SetPassThrough(&p.popup, !p.IsOpen())
@@ -133,6 +138,7 @@ type popup struct {
 	hasNextContentPosition bool
 	openAfterClose         bool
 	backgroundBounds       image.Rectangle
+	drawerEdge             DrawerEdge
 }
 
 func (p *popup) setStyle(style popupStyle) {
@@ -140,6 +146,7 @@ func (p *popup) setStyle(style popupStyle) {
 		return
 	}
 	p.style = style
+	p.contentAndFrame.setStyle(style)
 	guigui.RequestRedraw(p)
 }
 
@@ -156,14 +163,35 @@ func (p *popup) openingRate() float64 {
 }
 
 func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	if !p.contentAndFrame.hasContent() {
-		return image.Rectangle{}
-	}
 	pt := p.contentPosition
 	if p.animateOnFading {
 		rate := p.openingRate()
-		dy := int(-float64(UnitSize(context)) * (1 - rate))
-		pt = pt.Add(image.Pt(0, dy))
+		if p.style != popupStyleDrawer {
+			dy := int(-float64(UnitSize(context)) * (1 - rate))
+			pt = pt.Add(image.Pt(0, dy))
+		} else {
+			bgBounds := p.backgroundBounds
+			if bgBounds.Empty() {
+				bgBounds = context.AppBounds()
+			}
+			srcPt := widgetBounds.Bounds().Min
+			switch p.drawerEdge {
+			case DrawerEdgeStart:
+				srcPt.X = bgBounds.Min.X - widgetBounds.Bounds().Dx()
+			case DrawerEdgeTop:
+				srcPt.Y = bgBounds.Min.Y - widgetBounds.Bounds().Dy()
+			case DrawerEdgeEnd:
+				srcPt.X = bgBounds.Max.X
+			case DrawerEdgeBottom:
+				srcPt.Y = bgBounds.Max.Y
+			}
+			dstPt := p.contentPosition
+			// Mix srcPt and dstPt by rate.
+			pt = image.Pt(
+				int(float64(srcPt.X)*(1-rate)+float64(dstPt.X)*rate),
+				int(float64(srcPt.Y)*(1-rate)+float64(dstPt.Y)*rate),
+			)
+		}
 	}
 	return image.Rectangle{
 		Min: pt,
@@ -190,6 +218,11 @@ func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
 
 func (p *popup) SetBackgroundBounds(bounds image.Rectangle) {
 	p.backgroundBounds = bounds
+}
+
+func (p *popup) SetDrawerEdge(edge DrawerEdge) {
+	p.drawerEdge = edge
+	p.contentAndFrame.setDrawerEdge(edge)
 }
 
 func (p *popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
@@ -404,10 +437,21 @@ type popupContentAndFrame struct {
 
 	content popupContent
 	frame   popupFrame
+	style   popupStyle
 }
 
 func (p *popupContentAndFrame) setContent(widget guigui.Widget) {
 	p.content.setContent(widget)
+}
+
+func (p *popupContentAndFrame) setStyle(style popupStyle) {
+	p.style = style
+	p.content.setStyle(style)
+	p.frame.setStyle(style)
+}
+
+func (p *popupContentAndFrame) setDrawerEdge(edge DrawerEdge) {
+	p.frame.setDrawerEdge(edge)
 }
 
 func (p *popupContentAndFrame) hasContent() bool {
@@ -421,10 +465,12 @@ func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.Chil
 }
 
 func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	// CustomDraw might be too generic and overkill for this case.
-	context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-		draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
-	})
+	if p.style != popupStyleDrawer {
+		// CustomDraw might be too generic and overkill for this case.
+		context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
+			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
+		})
+	}
 	layouter.LayoutWidget(&p.content, widgetBounds.Bounds())
 	layouter.LayoutWidget(&p.frame, widgetBounds.Bounds())
 }
@@ -433,10 +479,15 @@ type popupContent struct {
 	guigui.DefaultWidget
 
 	content guigui.Widget
+	style   popupStyle
 }
 
 func (p *popupContent) setContent(widget guigui.Widget) {
 	p.content = widget
+}
+
+func (p *popupContent) setStyle(style popupStyle) {
+	p.style = style
 }
 
 func (p *popupContent) hasContent() bool {
@@ -466,17 +517,62 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 1)
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	if p.style != popupStyleDrawer {
+		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	} else {
+		vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
+	}
 }
 
 type popupFrame struct {
 	guigui.DefaultWidget
+
+	style      popupStyle
+	drawerEdge DrawerEdge
+}
+
+func (p *popupFrame) setStyle(style popupStyle) {
+	p.style = style
+}
+
+func (p *popupFrame) setDrawerEdge(edge DrawerEdge) {
+	p.drawerEdge = edge
 }
 
 func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset, false)
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeOutset)
+
+	width := float32(1 * context.Scale())
+	if p.style != popupStyleDrawer {
+		basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, basicwidgetdraw.RoundedRectBorderTypeOutset)
+	} else {
+		var x0, y0, x1, y1 float32
+		switch p.drawerEdge {
+		case DrawerEdgeStart:
+			x0 = float32(bounds.Max.X) - width/2
+			y0 = float32(bounds.Min.Y)
+			x1 = float32(bounds.Max.X) - width/2
+			y1 = float32(bounds.Max.Y)
+		case DrawerEdgeTop:
+			x0 = float32(bounds.Min.X)
+			y0 = float32(bounds.Max.Y) - width/2
+			x1 = float32(bounds.Max.X)
+			y1 = float32(bounds.Max.Y) - width/2
+		case DrawerEdgeEnd:
+			x0 = float32(bounds.Min.X) + width/2
+			y0 = float32(bounds.Min.Y)
+			x1 = float32(bounds.Min.X) + width/2
+			y1 = float32(bounds.Max.Y)
+		case DrawerEdgeBottom:
+			x0 = float32(bounds.Min.X)
+			y0 = float32(bounds.Min.Y) + width/2
+			x1 = float32(bounds.Max.X)
+			y1 = float32(bounds.Min.Y) + width/2
+		}
+		// TODO: Use clr2 as a gradation
+		vector.StrokeLine(dst, x0, y0, x1, y1, width, clr1, true)
+	}
 }
 
 type popupBlurredBackground struct {

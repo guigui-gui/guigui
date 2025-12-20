@@ -11,7 +11,6 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
-	_ "github.com/guigui-gui/guigui/basicwidget/cjkfont"
 )
 
 type Root struct {
