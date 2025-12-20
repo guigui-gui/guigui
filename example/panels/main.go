@@ -95,13 +95,15 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	r.model.Tick()
+	if r.model.Tick() {
+		guigui.RequestRedraw(r)
+	}
 	return nil
 }
 
 func main() {
 	op := &guigui.RunOptions{
-		Title:      "Drawers",
+		Title:      "Panels",
 		WindowSize: image.Pt(800, 600),
 		RunGameOptions: &ebiten.RunGameOptions{
 			ApplePressAndHoldEnabled: true,

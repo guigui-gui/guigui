@@ -22,31 +22,37 @@ func panelMaxClosingCount() int {
 	return ebiten.TPS() / 10
 }
 
-func (m *Model) Tick() {
-	if m.leftOpening {
+func (m *Model) Tick() bool {
+	var updated bool
+	if m.leftOpening && m.leftClosingCount > 0 {
 		m.leftClosingCount--
 		if m.leftClosingCount == 0 {
 			m.leftOpening = false
 		}
+		updated = true
 	}
-	if m.leftClosing {
+	if m.leftClosing && m.leftClosingCount < panelMaxClosingCount() {
 		m.leftClosingCount++
 		if m.leftClosingCount == panelMaxClosingCount() {
 			m.leftClosing = false
 		}
+		updated = true
 	}
-	if m.rightOpening {
+	if m.rightOpening && m.rightClosingCount > 0 {
 		m.rightClosingCount--
 		if m.rightClosingCount == 0 {
 			m.rightOpening = false
 		}
+		updated = true
 	}
-	if m.rightClosing {
+	if m.rightClosing && m.rightClosingCount < panelMaxClosingCount() {
 		m.rightClosingCount++
 		if m.rightClosingCount == panelMaxClosingCount() {
 			m.rightClosing = false
 		}
+		updated = true
 	}
+	return updated
 }
 
 func (m *Model) DefaultPanelWidth(context *guigui.Context) int {
