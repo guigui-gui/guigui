@@ -147,6 +147,7 @@ func (p *popup) setStyle(style popupStyle) {
 	}
 	p.style = style
 	p.contentAndFrame.setStyle(style)
+	p.shadow.setStyle(style)
 	guigui.RequestRedraw(p)
 }
 
@@ -423,11 +424,17 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	p.darkBackground.SetOpeningRate(p.openingRate())
 	p.shadow.SetOpeningRate(p.openingRate())
 
+	var opacity float64
+	if p.style != popupStyleDrawer {
+		opacity = p.openingRate()
+	} else {
+		opacity = 1
+	}
 	// SetOpacity cannot be called for p.blurredBackground so far.
 	// If opacity is less than 1, the dst argument of Draw will an empty image in the current implementation.
 	// Use an original implementation by SetOpeningRate anyway as this is more performant.
 	// TODO: This is too tricky. Refactor this.
-	context.SetOpacity(&p.contentAndFrame, p.openingRate())
+	context.SetOpacity(&p.contentAndFrame, opacity)
 
 	return nil
 }
@@ -637,6 +644,7 @@ type popupShadow struct {
 
 	contentBounds image.Rectangle
 	openingRate   float64
+	style         popupStyle
 }
 
 func (p *popupShadow) SetOpeningRate(rate float64) {
@@ -655,6 +663,10 @@ func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
 	guigui.RequestRedraw(p)
 }
 
+func (p *popupShadow) setStyle(style popupStyle) {
+	p.style = style
+}
+
 func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := p.contentBounds
 	bounds.Min.X -= int(16 * context.Scale())
@@ -662,6 +674,11 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
 	// TODO: When openingRate < 1, only the edges should be rendered.
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0), 0.25*p.openingRate)
+	clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0)
+	alpha := 0.25
+	if p.style != popupStyleDrawer {
+		alpha *= p.openingRate
+	}
+	clr = draw.ScaleAlpha(clr, alpha)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
 }
