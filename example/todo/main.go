@@ -49,8 +49,6 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.createButton)
 	adder.AddChild(&r.tasksPanel)
 
-	basicwidget.SetAutoFaceSources(context)
-
 	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if key == ebiten.KeyEnter {
 			r.tryCreateTask(r.textInput.Value())

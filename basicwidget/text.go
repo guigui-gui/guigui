@@ -505,7 +505,7 @@ func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
 			lang = t.tmpLocales[0]
 		}
 	}
-	return fontFace(size, weight, liga, tnum, lang)
+	return fontFace(context, size, weight, liga, tnum, lang)
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {

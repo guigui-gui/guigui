@@ -32,11 +32,6 @@ type FaceSourceEntry struct {
 	UnicodeRanges []UnicodeRange
 }
 
-var (
-	theFaceCache         map[faceCacheKey]text.Face
-	theFaceSourceEntries []FaceSourceEntry
-)
-
 func init() {
 	r, err := gzip.NewReader(bytes.NewReader(interVariableTTFGz))
 	if err != nil {
@@ -53,15 +48,45 @@ func init() {
 		FaceSource: f,
 	}
 	theDefaultFaceSource = e
-	theFaceSourceEntries = []FaceSourceEntry{e}
 }
 
 var (
+	tagWght = text.MustParseTag("wght")
 	tagLiga = text.MustParseTag("liga")
 	tagTnum = text.MustParseTag("tnum")
 )
 
-func fontFace(size float64, weight text.Weight, liga bool, tnum bool, lang language.Tag) text.Face {
+type faceCacheKey struct {
+	size   float64
+	weight text.Weight
+	liga   bool
+	tnum   bool
+	lang   language.Tag
+}
+
+var (
+	theFaceCache map[faceCacheKey]text.Face
+)
+
+var (
+	tmpFaceSourceEntries []FaceSourceEntry
+)
+
+var (
+	tmpLocales  []language.Tag
+	prevLocales []language.Tag
+)
+
+func fontFace(context *guigui.Context, size float64, weight text.Weight, liga bool, tnum bool, lang language.Tag) text.Face {
+	// As font entires registered by [RegisterFonts] might be affected by locales,
+	// clear the cache when the locales change.
+	tmpLocales = context.AppendLocales(tmpLocales[:0])
+	if !slices.Equal(prevLocales, tmpLocales) {
+		clear(theFaceCache)
+		prevLocales = slices.Grow(prevLocales, len(tmpLocales))[:len(tmpLocales)]
+		copy(prevLocales, tmpLocales)
+	}
+
 	key := faceCacheKey{
 		size:   size,
 		weight: weight,
@@ -73,14 +98,17 @@ func fontFace(size float64, weight text.Weight, liga bool, tnum bool, lang langu
 		return f
 	}
 
+	tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
+	tmpFaceSourceEntries = appendFontFaceEntries(tmpFaceSourceEntries, context)
+
 	var fs []text.Face
-	for _, entry := range theFaceSourceEntries {
+	for _, entry := range tmpFaceSourceEntries {
 		gtf := &text.GoTextFace{
 			Source:   entry.FaceSource,
 			Size:     size,
 			Language: lang,
 		}
-		gtf.SetVariation(text.MustParseTag("wght"), float32(weight))
+		gtf.SetVariation(tagWght, float32(weight))
 		if liga {
 			gtf.SetFeature(tagLiga, 1)
 		} else {
@@ -136,34 +164,24 @@ func areFaceSourceEntriesEqual(a, b []FaceSourceEntry) bool {
 	return true
 }
 
-// SetFaceSources sets the face sources explicitly.
-//
-// SetFaceSources and [SetAutoFaceSources] are exclusive.
-func SetFaceSources(entries []FaceSourceEntry) {
-	if len(entries) == 0 {
-		entries = []FaceSourceEntry{theDefaultFaceSource}
-	}
+var (
+	theCustomFaceSourceEntries []FaceSourceEntry
+)
 
-	if areFaceSourceEntriesEqual(theFaceSourceEntries, entries) {
+// SetFaceSources sets the face sources.
+func SetFaceSources(entries []FaceSourceEntry) {
+	if areFaceSourceEntriesEqual(theCustomFaceSourceEntries, entries) {
 		return
 	}
 
-	if len(theFaceSourceEntries) < len(entries) {
-		theFaceSourceEntries = slices.Grow(theFaceSourceEntries, len(entries))[:len(entries)]
-	} else if len(theFaceSourceEntries) > len(entries) {
-		theFaceSourceEntries = slices.Delete(theFaceSourceEntries, len(entries), len(theFaceSourceEntries))
+	if len(theCustomFaceSourceEntries) < len(entries) {
+		theCustomFaceSourceEntries = slices.Grow(theCustomFaceSourceEntries, len(entries))[:len(entries)]
+	} else if len(theCustomFaceSourceEntries) > len(entries) {
+		theCustomFaceSourceEntries = slices.Delete(theCustomFaceSourceEntries, len(entries), len(theCustomFaceSourceEntries))
 	}
-	copy(theFaceSourceEntries, entries)
+	copy(theCustomFaceSourceEntries, entries)
 
 	clear(theFaceCache)
-}
-
-type faceCacheKey struct {
-	size   float64
-	weight text.Weight
-	liga   bool
-	tnum   bool
-	lang   language.Tag
 }
 
 type appendFunc struct {
@@ -199,17 +217,9 @@ func RegisterFonts(appendEntries func([]FaceSourceEntry, *guigui.Context) []Face
 	})
 }
 
-var (
-	theFontFaceEntries []FaceSourceEntry
-)
+func appendFontFaceEntries(entries []FaceSourceEntry, context *guigui.Context) []FaceSourceEntry {
+	entries = append(entries, theCustomFaceSourceEntries...)
 
-// SetAutoFaceSources sets the face sources based on the registered fonts by [RegisterFonts].
-//
-// SetAutoFaceSources should be called every Build in case the locales are changed.
-//
-// SetAutoFaceSources and [SetFaceSources] are exclusive.
-func SetAutoFaceSources(context *guigui.Context) {
-	theFontFaceEntries = slices.Delete(theFontFaceEntries, 0, len(theFontFaceEntries))
 	slices.SortFunc(theAppendFuncs, func(a, b appendFunc) int {
 		if a.priority1 != b.priority1 {
 			return int(b.priority1 - a.priority1)
@@ -217,8 +227,7 @@ func SetAutoFaceSources(context *guigui.Context) {
 		return b.priority2 - a.priority2
 	})
 	for _, f := range theAppendFuncs {
-		theFontFaceEntries = f.f(theFontFaceEntries, context)
+		entries = f.f(entries, context)
 	}
-	theFontFaceEntries = append(theFontFaceEntries, theDefaultFaceSource)
-	SetFaceSources(theFontFaceEntries)
+	return append(entries, theDefaultFaceSource)
 }

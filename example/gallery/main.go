@@ -81,9 +81,6 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if content := r.contentWidgeet(); content != nil {
 		adder.AddChild(content)
 	}
-
-	basicwidget.SetAutoFaceSources(context)
-
 	return nil
 }
 
