@@ -143,10 +143,18 @@ func SetFaceSources(entries []FaceSourceEntry) {
 	if len(entries) == 0 {
 		entries = []FaceSourceEntry{theDefaultFaceSource}
 	}
+
 	if areFaceSourceEntriesEqual(theFaceSourceEntries, entries) {
 		return
 	}
-	theFaceSourceEntries = slices.Clone(entries)
+
+	if len(theFaceSourceEntries) < len(entries) {
+		theFaceSourceEntries = slices.Grow(theFaceSourceEntries, len(entries))[:len(entries)]
+	} else if len(theFaceSourceEntries) > len(entries) {
+		theFaceSourceEntries = slices.Delete(theFaceSourceEntries, len(entries), len(theFaceSourceEntries))
+	}
+	copy(theFaceSourceEntries, entries)
+
 	clear(theFaceCache)
 }
 
