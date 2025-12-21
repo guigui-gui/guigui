@@ -98,7 +98,7 @@ var (
 	hk = language.MustParseRegion("HK")
 )
 
-func FaceSourceFromLocale(locale language.Tag) *text.GoTextFaceSource {
+func faceSourceFromLocale(locale language.Tag) *text.GoTextFaceSource {
 	if locale == language.Und {
 		return nil
 	}
@@ -133,7 +133,7 @@ func AppendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSour
 	var isCJKPrimary bool
 	var cjkFaceSource *text.GoTextFaceSource
 	for i, locale := range locales {
-		fs := FaceSourceFromLocale(locale)
+		fs := faceSourceFromLocale(locale)
 		if fs == nil {
 			continue
 		}
