@@ -8,7 +8,6 @@ import (
 	"image"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
@@ -120,12 +119,12 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			case 0:
 				switch s.direction {
 				case SegmentedControlDirectionHorizontal:
-					s.buttons[i].SetSharpCorners(basicwidgetdraw.Corners{
+					s.buttons[i].SetSharpCorners(Corners{
 						TopEnd:    true,
 						BottomEnd: true,
 					})
 				case SegmentedControlDirectionVertical:
-					s.buttons[i].SetSharpCorners(basicwidgetdraw.Corners{
+					s.buttons[i].SetSharpCorners(Corners{
 						BottomStart: true,
 						BottomEnd:   true,
 					})
@@ -133,18 +132,18 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			case s.abstractList.ItemCount() - 1:
 				switch s.direction {
 				case SegmentedControlDirectionHorizontal:
-					s.buttons[i].SetSharpCorners(basicwidgetdraw.Corners{
+					s.buttons[i].SetSharpCorners(Corners{
 						TopStart:    true,
 						BottomStart: true,
 					})
 				case SegmentedControlDirectionVertical:
-					s.buttons[i].SetSharpCorners(basicwidgetdraw.Corners{
+					s.buttons[i].SetSharpCorners(Corners{
 						TopEnd:   true,
 						TopStart: true,
 					})
 				}
 			default:
-				s.buttons[i].SetSharpCorners(basicwidgetdraw.Corners{
+				s.buttons[i].SetSharpCorners(Corners{
 					TopStart:    true,
 					BottomStart: true,
 					TopEnd:      true,

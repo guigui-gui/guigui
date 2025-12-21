@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 const (
@@ -265,7 +264,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	}
 
 	n.upButton.SetIcon(imgUp)
-	n.upButton.SetSharpCorners(basicwidgetdraw.Corners{
+	n.upButton.SetSharpCorners(Corners{
 		BottomStart: true,
 		BottomEnd:   true,
 	})
@@ -279,7 +278,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	context.SetEnabled(&n.upButton, n.IsEditable() && n.abstractNumberInput.CanIncrement())
 
 	n.downButton.SetIcon(imgDown)
-	n.downButton.SetSharpCorners(basicwidgetdraw.Corners{
+	n.downButton.SetSharpCorners(Corners{
 		TopStart: true,
 		TopEnd:   true,
 	})

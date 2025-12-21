@@ -14,6 +14,13 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type Corners struct {
+	TopStart    bool
+	TopEnd      bool
+	BottomStart bool
+	BottomEnd   bool
+}
+
 const (
 	baseButtonEventDown   = "down"
 	baseButtonEventUp     = "up"
@@ -28,7 +35,7 @@ type baseButton struct {
 	useAccentColor  bool
 	borderInvisible bool
 	prevHovered     bool
-	sharpCorners    basicwidgetdraw.Corners
+	sharpCorners    Corners
 	pairedButton    *baseButton
 }
 
@@ -138,7 +145,7 @@ func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	}
 	bounds := widgetBounds.Bounds()
 	if border || b.isPressed(context, widgetBounds) {
-		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, backgroundColor, r, b.sharpCorners)
+		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, backgroundColor, r, basicwidgetdraw.Corners(b.sharpCorners))
 	}
 
 	if border {
@@ -147,7 +154,7 @@ func (b *baseButton) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
 		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType), b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
-		basicwidgetdraw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, b.sharpCorners)
+		basicwidgetdraw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, basicwidgetdraw.Corners(b.sharpCorners))
 	}
 }
 
@@ -179,7 +186,7 @@ func (b *baseButton) Measure(context *guigui.Context, constraints guigui.Constra
 	return defaultButtonSize(context)
 }
 
-func (b *baseButton) SetSharpCorners(sharpCorners basicwidgetdraw.Corners) {
+func (b *baseButton) SetSharpCorners(sharpCorners Corners) {
 	if b.sharpCorners == sharpCorners {
 		return
 	}
