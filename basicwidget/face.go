@@ -11,6 +11,8 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
+
+	"github.com/guigui-gui/guigui"
 )
 
 //go:generate go run gen.go
@@ -134,6 +136,9 @@ func areFaceSourceEntriesEqual(a, b []FaceSourceEntry) bool {
 	return true
 }
 
+// SetFaceSources sets the face sources explicitly.
+//
+// SetFaceSources and [SetAutoFaceSources] are exclusive.
 func SetFaceSources(entries []FaceSourceEntry) {
 	if len(entries) == 0 {
 		entries = []FaceSourceEntry{theDefaultFaceSource}
@@ -151,4 +156,61 @@ type faceCacheKey struct {
 	liga   bool
 	tnum   bool
 	lang   language.Tag
+}
+
+type appendFunc struct {
+	f         func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry
+	priority1 FontPriority
+	priority2 int
+}
+
+var (
+	theAppendFuncs []appendFunc
+)
+
+// FontPriority is used to determine the order of the fonts for [RegisterFonts].
+type FontPriority int
+
+const (
+	FontPriorityLow    = 100
+	FontPriorityNormal = 200
+	FontPriorityHigh   = 300
+)
+
+// RegisterFonts registers the fonts.
+//
+// priority is used to determine the order of the fonts.
+// The order of the fonts is determined by the priority.
+// The bigger priority value, the higher priority.
+// If the priority is the same, the order of the fonts is determined by the order of registration.
+func RegisterFonts(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FontPriority) {
+	theAppendFuncs = append(theAppendFuncs, appendFunc{
+		f:         appendEntries,
+		priority1: priority,
+		priority2: -len(theAppendFuncs),
+	})
+}
+
+var (
+	theFontFaceEntries []FaceSourceEntry
+)
+
+// SetAutoFaceSources sets the face sources based on the registered fonts by [RegisterFonts].
+//
+// SetAutoFaceSources should be called every Build in case the locales are changed.
+//
+// SetAutoFaceSources and [SetFaceSources] are exclusive.
+func SetAutoFaceSources(context *guigui.Context) {
+	theFontFaceEntries = slices.Delete(theFontFaceEntries, 0, len(theFontFaceEntries))
+	slices.SortFunc(theAppendFuncs, func(a, b appendFunc) int {
+		if a.priority1 != b.priority1 {
+			return int(b.priority1 - a.priority1)
+		}
+		return b.priority2 - a.priority2
+	})
+	for _, f := range theAppendFuncs {
+		theFontFaceEntries = f.f(theFontFaceEntries, context)
+	}
+	theFontFaceEntries = append(theFontFaceEntries, theDefaultFaceSource)
+	SetFaceSources(theFontFaceEntries)
 }

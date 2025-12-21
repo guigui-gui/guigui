@@ -8,10 +8,12 @@ import (
 	"compress/gzip"
 	_ "embed"
 	"fmt"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
+	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
@@ -129,10 +131,17 @@ func faceSourceFromLocale(locale language.Tag) *text.GoTextFaceSource {
 	return nil
 }
 
-func AppendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSourceEntry, locales []language.Tag) []basicwidget.FaceSourceEntry {
+var (
+	theLocales []language.Tag
+)
+
+func appendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSourceEntry, context *guigui.Context) []basicwidget.FaceSourceEntry {
+	theLocales = slices.Delete(theLocales, 0, len(theLocales))
+	theLocales = context.AppendLocales(theLocales)
+
 	var isCJKPrimary bool
 	var cjkFaceSource *text.GoTextFaceSource
-	for i, locale := range locales {
+	for i, locale := range theLocales {
 		fs := faceSourceFromLocale(locale)
 		if fs == nil {
 			continue
@@ -192,8 +201,7 @@ func AppendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSour
 			},
 			basicwidget.FaceSourceEntry{
 				FaceSource: cjkFaceSource,
-			},
-			basicwidget.DefaultFaceSourceEntry())
+			})
 	} else {
 		faceSourceEntries = append(faceSourceEntries,
 			basicwidget.DefaultFaceSourceEntry(),
@@ -203,4 +211,8 @@ func AppendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSour
 	}
 
 	return faceSourceEntries
+}
+
+func init() {
+	basicwidget.RegisterFonts(appendRecommendedFaceSourceEntries, basicwidget.FontPriorityNormal)
 }

@@ -10,11 +10,10 @@ import (
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
-	"github.com/guigui-gui/guigui/basicwidget/cjkfont"
+	_ "github.com/guigui-gui/guigui/basicwidget/cjkfont"
 )
 
 type modelKey int
@@ -33,18 +32,6 @@ type Root struct {
 	tasksPanelContent tasksPanelContent
 
 	model Model
-
-	locales           []language.Tag
-	faceSourceEntries []basicwidget.FaceSourceEntry
-}
-
-func (r *Root) updateFontFaceSources(context *guigui.Context) {
-	r.locales = slices.Delete(r.locales, 0, len(r.locales))
-	r.locales = context.AppendLocales(r.locales)
-
-	r.faceSourceEntries = slices.Delete(r.faceSourceEntries, 0, len(r.faceSourceEntries))
-	r.faceSourceEntries = cjkfont.AppendRecommendedFaceSourceEntries(r.faceSourceEntries, r.locales)
-	basicwidget.SetFaceSources(r.faceSourceEntries)
 }
 
 func (r *Root) Model(key any) any {
@@ -62,7 +49,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.createButton)
 	adder.AddChild(&r.tasksPanel)
 
-	r.updateFontFaceSources(context)
+	basicwidget.SetAutoFaceSources(context)
 
 	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if key == ebiten.KeyEnter {
