@@ -265,7 +265,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	}
 
 	n.upButton.SetIcon(imgUp)
-	n.upButton.setSharpCorners(basicwidgetdraw.Corners{
+	n.upButton.SetSharpCorners(basicwidgetdraw.Corners{
 		BottomStart: true,
 		BottomEnd:   true,
 	})
@@ -279,7 +279,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	context.SetEnabled(&n.upButton, n.IsEditable() && n.abstractNumberInput.CanIncrement())
 
 	n.downButton.SetIcon(imgDown)
-	n.downButton.setSharpCorners(basicwidgetdraw.Corners{
+	n.downButton.SetSharpCorners(basicwidgetdraw.Corners{
 		TopStart: true,
 		TopEnd:   true,
 	})

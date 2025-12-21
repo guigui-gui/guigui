@@ -179,7 +179,7 @@ func (b *baseButton) Measure(context *guigui.Context, constraints guigui.Constra
 	return defaultButtonSize(context)
 }
 
-func (b *baseButton) setSharpCorners(sharpCorners basicwidgetdraw.Corners) {
+func (b *baseButton) SetSharpCorners(sharpCorners basicwidgetdraw.Corners) {
 	if b.sharpCorners == sharpCorners {
 		return
 	}
