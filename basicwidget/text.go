@@ -139,6 +139,8 @@ type Text struct {
 
 	tmpLocales []language.Tag
 
+	drawOptions textutil.DrawOptions
+
 	prevStart int
 	prevEnd   int
 }
@@ -959,18 +961,15 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		textColor = draw.ScaleAlpha(textColor, 1-t.transparent)
 	}
 	face := t.face(context, false)
-	op := &textutil.DrawOptions{
-		Options: textutil.Options{
-			AutoWrap:         t.autoWrap,
-			Face:             face,
-			LineHeight:       t.lineHeight(context),
-			HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
-			VerticalAlign:    textutil.VerticalAlign(t.vAlign),
-			TabWidth:         t.actualTabWidth(context),
-			KeepTailingSpace: t.keepTailingSpace,
-		},
-		TextColor: textColor,
-	}
+	op := &t.drawOptions
+	op.Options.AutoWrap = t.autoWrap
+	op.Options.Face = face
+	op.Options.LineHeight = t.lineHeight(context)
+	op.Options.HorizontalAlign = textutil.HorizontalAlign(t.hAlign)
+	op.Options.VerticalAlign = textutil.VerticalAlign(t.vAlign)
+	op.Options.TabWidth = t.actualTabWidth(context)
+	op.Options.KeepTailingSpace = t.keepTailingSpace
+	op.TextColor = textColor
 	if start, end, ok := t.selectionToDraw(context); ok {
 		if context.IsFocused(t) {
 			op.DrawSelection = true
