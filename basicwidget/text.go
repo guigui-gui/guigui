@@ -132,9 +132,10 @@ type Text struct {
 
 	tmpClipboard string
 
-	cachedTextSizes [4][4]cachedTextSizeEntry
-	lastFace        text.Face
-	lastScale       float64
+	cachedTextSizes       [4][4]cachedTextSizeEntry
+	cachedDefaultTabWidth float64
+	lastFace              text.Face
+	lastScale             float64
 
 	tmpLocales []language.Tag
 
@@ -172,6 +173,7 @@ func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Ke
 
 func (t *Text) resetCachedTextSize() {
 	clear(t.cachedTextSizes[:])
+	t.cachedDefaultTabWidth = 0
 }
 
 func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -361,8 +363,12 @@ func (t *Text) actualTabWidth(context *guigui.Context) float64 {
 	if t.tabWidth > 0 {
 		return t.tabWidth
 	}
+	if t.cachedDefaultTabWidth > 0 {
+		return t.cachedDefaultTabWidth
+	}
 	face := t.face(context, false)
-	return text.Advance("        ", face)
+	t.cachedDefaultTabWidth = text.Advance("        ", face)
+	return t.cachedDefaultTabWidth
 }
 
 func (t *Text) SetScale(scale float64) {
