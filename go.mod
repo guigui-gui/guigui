@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/ebitengine/purego v0.10.0-alpha.3
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.7.0.20251210155341-7d0692124a95
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.7.0.20251222071550-4d51505eb5cb
 	github.com/hajimehoshi/iro v0.1.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.9.0
@@ -19,7 +19,7 @@ require (
 require (
 	github.com/ebitengine/gomobile v0.0.0-20250923094054-ea854a63cce1 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
-	github.com/go-text/typesetting v0.3.0 // indirect
+	github.com/go-text/typesetting v0.3.2 // indirect
 	github.com/jezek/xgb v1.2.0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/image v0.33.0 // indirect
