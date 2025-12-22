@@ -114,17 +114,16 @@ func (p *PopupMenu[T]) IsOpen() bool {
 func (p *PopupMenu[T]) updateListItems() {
 	p.listItems = adjustSliceSize(p.listItems, len(p.items))
 	for i, item := range p.items {
-		p.listItems[i] = ListItem[T]{
-			Text:         item.Text,
-			TextColor:    item.TextColor,
-			Header:       item.Header,
-			Content:      item.Content,
-			KeyText:      item.KeyText,
-			Unselectable: item.Unselectable,
-			Border:       item.Border,
-			Disabled:     item.Disabled,
-			Value:        item.Value,
-		}
+		// Copy each member one by one to avoid runtime.duffcopy.
+		p.listItems[i].Text = item.Text
+		p.listItems[i].TextColor = item.TextColor
+		p.listItems[i].Header = item.Header
+		p.listItems[i].Content = item.Content
+		p.listItems[i].KeyText = item.KeyText
+		p.listItems[i].Unselectable = item.Unselectable
+		p.listItems[i].Border = item.Border
+		p.listItems[i].Disabled = item.Disabled
+		p.listItems[i].Value = item.Value
 	}
 	p.list.Widget().SetItems(p.listItems)
 }
