@@ -86,8 +86,8 @@ func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.popup.SetCloseByClickingOutside(closeByClickingOutside)
 }
 
-func (p *Popup) SetAnimationDuringFade(animateOnFading bool) {
-	p.popup.SetAnimationDuringFade(animateOnFading)
+func (p *Popup) SetAnimated(animateOnFading bool) {
+	p.popup.SetAnimated(animateOnFading)
 }
 
 func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
@@ -212,7 +212,7 @@ func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.closeByClickingOutside = closeByClickingOutside
 }
 
-func (p *popup) SetAnimationDuringFade(animateOnFading bool) {
+func (p *popup) SetAnimated(animateOnFading bool) {
 	// TODO: Rename Popup to basePopup and create Popup with animateOnFading true.
 	p.animateOnFading = animateOnFading
 }

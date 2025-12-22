@@ -52,8 +52,8 @@ func (d *Drawer) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	d.popup.SetCloseByClickingOutside(closeByClickingOutside)
 }
 
-func (d *Drawer) SetAnimationDuringFade(animateOnFading bool) {
-	d.popup.SetAnimationDuringFade(animateOnFading)
+func (d *Drawer) SetAnimated(animateOnFading bool) {
+	d.popup.SetAnimated(animateOnFading)
 }
 
 func (d *Drawer) SetBackgroundBounds(bounds image.Rectangle) {

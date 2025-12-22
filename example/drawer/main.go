@@ -77,7 +77,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	r.drawer.SetDrawerEdge(r.edge)
-	r.drawer.SetAnimationDuringFade(true)
+	r.drawer.SetAnimated(true)
 	r.drawer.SetCloseByClickingOutside(true)
 	r.drawer.SetBackgroundDark(true)
 	r.drawer.SetContent(&r.drawerContent)
