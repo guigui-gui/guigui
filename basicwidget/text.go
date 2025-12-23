@@ -1013,8 +1013,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	bold := t.bold || forceBold
 	key := newTextSizeCacheKey(t.autoWrap, bold)
 	for i := range t.cachedTextSizes[key] {
-		// Use a pointer to avoid runtime.duffcopy.
-		entry := &t.cachedTextSizes[key][i]
+		entry := t.cachedTextSizes[key][i]
 		if entry.constraintWidth == 0 {
 			continue
 		}
@@ -1024,7 +1023,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		// Move the used entry to the head.
 		if i != 0 {
 			copy(t.cachedTextSizes[key][1:i+1], t.cachedTextSizes[key][:i])
-			t.cachedTextSizes[key][0] = *entry
+			t.cachedTextSizes[key][0] = entry
 		}
 		return entry.size
 	}
