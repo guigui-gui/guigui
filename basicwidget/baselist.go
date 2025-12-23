@@ -784,17 +784,19 @@ func (b *baseListContent[T]) itemYFromIndex(context *guigui.Context, index int) 
 	}
 
 	baseY := b.itemBoundsForLayoutFromIndex[0].Min.Y
-	var itemRelY int
-	if index == len(b.itemBoundsForLayoutFromIndex) {
-		itemRelY = b.itemBoundsForLayoutFromIndex[index-1].Max.Y - baseY
-	} else {
-		itemRelY = b.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
-	}
 	head := RoundedCornerRadius(context)
 	var padding guigui.Padding
 	if item, ok := b.abstractList.ItemByIndex(index); ok {
 		padding = item.Padding
 	}
+
+	var itemRelY int
+	if index == len(b.itemBoundsForLayoutFromIndex) {
+		itemRelY = b.itemBoundsForLayoutFromIndex[index-1].Max.Y - baseY
+		return itemRelY + head + padding.Bottom, true
+	}
+
+	itemRelY = b.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
 	return itemRelY + head - padding.Top, true
 }
 
