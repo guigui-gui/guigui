@@ -280,12 +280,15 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 		Direction: guigui.LayoutDirectionHorizontal,
 	}
 	for i := range t.table.columnWidthsInPixels {
-		if t.row.Cells[i].Content != nil {
+		if i < len(t.row.Cells) && t.row.Cells[i].Content != nil {
 			l.Items = append(l.Items, guigui.LinearLayoutItem{
 				Widget: t.row.Cells[i].Content,
 				Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
 			})
 		} else {
+			if i >= len(t.texts) {
+				break
+			}
 			l.Items = append(l.Items,
 				guigui.LinearLayoutItem{
 					Layout: guigui.LinearLayout{
