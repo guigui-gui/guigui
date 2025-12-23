@@ -1021,13 +1021,15 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		if entry.constraintWidth != constraintWidth {
 			continue
 		}
-		// Move the used entry to the head.
-		if i != 0 {
-			e := *entry
-			copy(t.cachedTextSizes[key][1:i+1], t.cachedTextSizes[key][:i])
-			t.cachedTextSizes[key][0] = e
+		if i == 0 {
+			return entry.size
 		}
-		return entry.size
+
+		// Move the used entry to the head.
+		e := *entry
+		copy(t.cachedTextSizes[key][1:i+1], t.cachedTextSizes[key][:i])
+		t.cachedTextSizes[key][0] = e
+		return e.size
 	}
 
 	txt := t.textToDraw(context, true)
