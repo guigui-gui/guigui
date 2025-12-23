@@ -19,8 +19,8 @@ import (
 type Table[T comparable] struct {
 	guigui.DefaultWidget
 
-	list            baseList[T]
-	baseListItems   []baseListItem[T]
+	list            List[T]
+	listItems       []ListItem[T]
 	tableRows       []TableRow[T]
 	tableRowWidgets []tableRowWidget[T]
 	columnTexts     []Text
@@ -84,13 +84,13 @@ func (t *Table[T]) SetFooterHeight(height int) {
 
 func (t *Table[T]) updateTableRows() {
 	t.tableRowWidgets = adjustSliceSize(t.tableRowWidgets, len(t.tableRows))
-	t.baseListItems = adjustSliceSize(t.baseListItems, len(t.tableRows))
+	t.listItems = adjustSliceSize(t.listItems, len(t.tableRows))
 
 	for i, row := range t.tableRows {
 		t.tableRowWidgets[i].setTableRow(row)
-		t.baseListItems[i] = t.tableRowWidgets[i].listItem()
+		t.listItems[i] = t.tableRowWidgets[i].listItem()
 	}
-	t.list.SetItems(t.baseListItems)
+	t.list.SetItems(t.listItems)
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -148,12 +148,12 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		contentWidth += width
 	}
 	contentWidth += 2 * RoundedCornerRadius(context)
-	t.list.SetContentWidth(contentWidth)
+	t.list.setContentWidth(contentWidth)
 
 	layouter.LayoutWidget(&t.list, bounds)
 	layouter.LayoutWidget(&t.tableHeader, bounds)
 
-	offsetX, _ := t.list.ScrollOffset()
+	offsetX, _ := t.list.scrollOffset()
 	pt := bounds.Min
 	pt.X += int(offsetX)
 	pt.X += RoundedCornerRadius(context)
@@ -340,12 +340,12 @@ func (t *tableRowWidget[T]) selectable() bool {
 	return t.row.selectable()
 }
 
-func (t *tableRowWidget[T]) listItem() baseListItem[T] {
-	return baseListItem[T]{
-		Content:    t,
-		Selectable: t.selectable(),
-		Movable:    t.row.Movable,
-		Value:      t.row.Value,
+func (t *tableRowWidget[T]) listItem() ListItem[T] {
+	return ListItem[T]{
+		Content:      t,
+		Unselectable: !t.selectable(),
+		Movable:      t.row.Movable,
+		Value:        t.row.Value,
 	}
 }
 
@@ -362,7 +362,7 @@ func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	u := UnitSize(context)
 	b := widgetBounds.Bounds()
 	x := b.Min.X + RoundedCornerRadius(context)
-	offsetX, _ := t.table.list.ScrollOffset()
+	offsetX, _ := t.table.list.scrollOffset()
 	x += int(offsetX)
 	for _, width := range t.table.columnWidthsInPixels[:len(t.table.columnWidthsInPixels)-1] {
 		x += width

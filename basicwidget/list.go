@@ -221,6 +221,14 @@ func (l *List[T]) SetItemString(str string, index int) {
 	l.listItemWidgets[index].item.Text = str
 }
 
+func (l *List[T]) setContentWidth(width int) {
+	l.list.SetContentWidth(width)
+}
+
+func (l *List[T]) scrollOffset() (float64, float64) {
+	return l.list.ScrollOffset()
+}
+
 func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return l.list.Measure(context, constraints)
 }
