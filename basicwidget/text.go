@@ -989,6 +989,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.InactiveCompositionColor = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
 		op.ActiveCompositionColor = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4)
 		op.CompositionBorderWidth = float32(textCursorWidth(context))
+	} else {
+		op.DrawComposition = false
 	}
 	textutil.Draw(textBounds, dst, t.textToDraw(context, true), op)
 }
