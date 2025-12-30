@@ -148,7 +148,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 }
 
 func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	//layouter.LayoutWidget(&l.list, widgetBounds.Bounds())
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y += l.headerHeight
 	bounds.Max.Y -= l.footerHeight
