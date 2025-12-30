@@ -176,10 +176,11 @@ func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 	if index < 0 || index >= len(l.listItemWidgets) {
 		return -1
 	}
-	if !l.abstractListItems[index].selectable() {
+	item := &l.listItemWidgets[index]
+	if !item.selectable() {
 		return -1
 	}
-	if !context.IsEnabled(&l.listItemWidgets[index]) {
+	if !context.IsEnabled(item) {
 		return -1
 	}
 	return index
@@ -201,7 +202,10 @@ func (l *List[T]) SelectedItemIndex() int {
 }
 
 func (l *List[T]) SelectedItem() (ListItem[T], bool) {
-	return l.ItemByIndex(l.content.SelectedItemIndex())
+	if l.content.SelectedItemIndex() < 0 || l.content.SelectedItemIndex() >= len(l.listItemWidgets) {
+		return ListItem[T]{}, false
+	}
+	return l.listItemWidgets[l.content.SelectedItemIndex()].item, true
 }
 
 func (l *List[T]) ItemByIndex(index int) (ListItem[T], bool) {
@@ -227,25 +231,17 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 		l.listItemWidgets[i].setListItem(item)
 		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
 		l.listItemWidgets[i].setStyle(l.content.Style())
-		l.abstractListItems[i] = abstractListItem[T]{
-			Content:      l,
-			Unselectable: !item.selectable(),
-			Movable:      item.Movable,
-			Value:        item.Value,
-			IndentLevel:  item.IndentLevel,
-			Padding:      item.Padding,
-			Collapsed:    item.Collapsed,
-		}
+		l.abstractListItems[i] = l.listItemWidgets[i].listItem()
 	}
 	l.content.SetItems(l.abstractListItems)
 }
 
 func (l *List[T]) ItemCount() int {
-	return len(l.abstractListItems)
+	return len(l.listItemWidgets)
 }
 
 func (l *List[T]) ID(index int) any {
-	return l.abstractListItems[index].Value
+	return l.listItemWidgets[index].item.Value
 }
 
 func (l *List[T]) SelectItemByIndex(index int) {
@@ -408,6 +404,22 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 		bounds := widgetBounds.Bounds()
 		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), RoundedCornerRadius(context))
 	}*/
+}
+
+func (l *listItemWidget[T]) selectable() bool {
+	return l.item.selectable() && !l.item.Border
+}
+
+func (l *listItemWidget[T]) listItem() abstractListItem[T] {
+	return abstractListItem[T]{
+		Content:      l,
+		Unselectable: !l.selectable(),
+		Movable:      l.item.Movable,
+		Value:        l.item.Value,
+		IndentLevel:  l.item.IndentLevel,
+		Padding:      l.item.Padding,
+		Collapsed:    l.item.Collapsed,
+	}
 }
 
 func ListItemTextPadding(context *guigui.Context) guigui.Padding {
