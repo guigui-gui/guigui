@@ -375,7 +375,8 @@ func (a *app) Update() error {
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
 		a.requestRedrawIfTreeChanged(a.root)
 	}
-
+	// The previous widget state affects requestRedrawIfTreeChanged.
+	// After its call, reset the previous widget state.
 	a.resetPrevWidgets(a.root)
 
 	dispatchedWidget = a.updateEventDispatchStates()
