@@ -32,12 +32,16 @@ func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
-	list            baseList[T]
 	baseListItems   []baseListItem[T]
 	listItems       []ListItem[T]
 	listItemWidgets []listItemWidget[T]
+	background1     listBackground1[T]
+	content         listContent[T]
+	frame           listFrame
 
 	listItemHeightPlus1 int
+	headerHeight        int
+	footerHeight        int
 }
 
 type ListItem[T comparable] struct {
@@ -61,11 +65,11 @@ func (l *ListItem[T]) selectable() bool {
 }
 
 func (l *List[T]) SetBackground(widget guigui.Widget) {
-	l.list.SetBackground(widget)
+	l.content.SetBackground(widget)
 }
 
 func (l *List[T]) SetStripeVisible(visible bool) {
-	l.list.SetStripeVisible(visible)
+	l.content.SetStripeVisible(visible)
 }
 
 func (l *List[T]) SetItemHeight(height int) {
@@ -77,31 +81,45 @@ func (l *List[T]) SetItemHeight(height int) {
 }
 
 func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	l.list.SetOnItemSelected(f)
+	l.content.SetOnItemSelected(f)
 }
 
 func (l *List[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	l.list.SetOnItemsMoved(f)
+	l.content.SetOnItemsMoved(f)
 }
 
 func (l *List[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	l.list.SetOnItemExpanderToggled(f)
+	l.content.SetOnItemExpanderToggled(f)
 }
 
 func (l *List[T]) SetCheckmarkIndex(index int) {
-	l.list.SetCheckmarkIndex(index)
+	l.content.SetCheckmarkIndex(index)
 }
 
 func (l *List[T]) SetHeaderHeight(height int) {
-	l.list.SetHeaderHeight(height)
+	if l.headerHeight == height {
+		return
+	}
+	l.headerHeight = height
+	l.frame.SetHeaderHeight(height)
+	guigui.RequestRedraw(l)
 }
 
 func (l *List[T]) SetFooterHeight(height int) {
-	l.list.SetFooterHeight(height)
+	if l.footerHeight == height {
+		return
+	}
+	l.footerHeight = height
+	l.frame.SetFooterHeight(height)
+	guigui.RequestRedraw(l)
 }
 
 func (l *List[T]) ItemBounds(index int) image.Rectangle {
-	return l.list.ItemBounds(index)
+	return l.content.ItemBounds(index)
+}
+
+func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
+	return l.content.itemYFromIndexForMenu(context, index)
 }
 
 func (l *List[T]) updateListItems() {
@@ -111,19 +129,24 @@ func (l *List[T]) updateListItems() {
 	for i, item := range l.listItems {
 		l.listItemWidgets[i].setListItem(item)
 		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
-		l.listItemWidgets[i].setStyle(l.list.Style())
+		l.listItemWidgets[i].setStyle(l.content.Style())
 		l.baseListItems[i] = l.listItemWidgets[i].listItem()
 	}
-	l.list.SetItems(l.baseListItems)
+	l.content.SetItems(l.baseListItems)
 }
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&l.list)
+	adder.AddChild(&l.background1)
+	adder.AddChild(&l.content)
+	adder.AddChild(&l.frame)
+	context.SetContainer(l, true)
+
+	l.background1.setListContent(&l.content)
 
 	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
-		item.text.SetBold(item.item.Header || l.list.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
+		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
 		context.SetEnabled(item, !item.item.Disabled)
@@ -132,19 +155,29 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 }
 
 func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layouter.LayoutWidget(&l.list, widgetBounds.Bounds())
+	//layouter.LayoutWidget(&l.list, widgetBounds.Bounds())
+	bounds := widgetBounds.Bounds()
+	bounds.Min.Y += l.headerHeight
+	bounds.Max.Y -= l.footerHeight
+	layouter.LayoutWidget(&l.background1, widgetBounds.Bounds())
+	layouter.LayoutWidget(&l.content, bounds)
+	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
+}
+
+func (l *List[T]) hoveredItemIndex() int {
+	return l.content.hoveredItemIndexPlus1 - 1
 }
 
 func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 	index := -1
-	switch l.list.Style() {
+	switch l.content.Style() {
 	case ListStyleNormal, ListStyleSidebar:
-		index = l.list.SelectedItemIndex()
+		index = l.content.SelectedItemIndex()
 	case ListStyleMenu:
-		if !l.list.IsHoveringVisible() {
+		if !l.content.IsHoveringVisible() {
 			return -1
 		}
-		index = l.list.HoveredItemIndex()
+		index = l.hoveredItemIndex()
 	}
 	if index < 0 || index >= len(l.listItemWidgets) {
 		return -1
@@ -171,14 +204,14 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 }
 
 func (l *List[T]) SelectedItemIndex() int {
-	return l.list.SelectedItemIndex()
+	return l.content.SelectedItemIndex()
 }
 
 func (l *List[T]) SelectedItem() (ListItem[T], bool) {
-	if l.list.SelectedItemIndex() < 0 || l.list.SelectedItemIndex() >= len(l.listItemWidgets) {
+	if l.content.SelectedItemIndex() < 0 || l.content.SelectedItemIndex() >= len(l.listItemWidgets) {
 		return ListItem[T]{}, false
 	}
-	return l.listItemWidgets[l.list.SelectedItemIndex()].item, true
+	return l.listItemWidgets[l.content.SelectedItemIndex()].item, true
 }
 
 func (l *List[T]) ItemByIndex(index int) (ListItem[T], bool) {
@@ -211,23 +244,24 @@ func (l *List[T]) ID(index int) any {
 }
 
 func (l *List[T]) SelectItemByIndex(index int) {
-	l.list.SelectItemByIndex(index)
+	l.content.SelectItemByIndex(index)
 }
 
 func (l *List[T]) SelectItemByValue(value T) {
-	l.list.SelectItemByValue(value)
+	l.content.SelectItemByValue(value)
 }
 
 func (l *List[T]) JumpToItemByIndex(index int) {
-	l.list.JumpToItemByIndex(index)
+	l.content.JumpToItemByIndex(index)
 }
 
 func (l *List[T]) EnsureItemVisibleByIndex(index int) {
-	l.list.EnsureItemVisibleByIndex(index)
+	l.content.EnsureItemVisibleByIndex(index)
 }
 
 func (l *List[T]) SetStyle(style ListStyle) {
-	l.list.SetStyle(style)
+	l.content.SetStyle(style)
+	l.frame.SetStyle(style)
 }
 
 func (l *List[T]) SetItemString(str string, index int) {
@@ -235,15 +269,15 @@ func (l *List[T]) SetItemString(str string, index int) {
 }
 
 func (l *List[T]) setContentWidth(width int) {
-	l.list.SetContentWidth(width)
+	l.content.SetContentWidth(width)
 }
 
 func (l *List[T]) scrollOffset() (float64, float64) {
-	return l.list.ScrollOffset()
+	return l.content.ScrollOffset()
 }
 
 func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return l.list.Measure(context, constraints)
+	return l.content.Measure(context, constraints)
 }
 
 type listItemWidget[T comparable] struct {

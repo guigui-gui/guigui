@@ -57,7 +57,7 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 			guigui.DispatchEvent(p, popupMenuEventItemSelected, index)
 		}
 	}
-	list.list.SetOnItemSelected(p.onItemSelected)
+	list.SetOnItemSelected(p.onItemSelected)
 
 	p.popup.setStyle(popupStyleMenu)
 	p.popup.SetContent(&p.list)
@@ -181,5 +181,5 @@ func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.C
 }
 
 func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
-	return p.list.Widget().list.ItemYFromIndexForMenu(context, index)
+	return p.list.Widget().itemYFromIndexForMenu(context, index)
 }
