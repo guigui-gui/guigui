@@ -143,7 +143,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
-		context.SetEnabled(item, !item.item.Disabled)
 	}
 	return nil
 }
@@ -176,11 +175,10 @@ func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 	if index < 0 || index >= len(l.listItemWidgets) {
 		return -1
 	}
-	item := &l.listItemWidgets[index]
-	if !item.selectable() {
+	if !l.abstractListItems[index].selectable() {
 		return -1
 	}
-	if !context.IsEnabled(item) {
+	if !context.IsEnabled(&l.listItemWidgets[index]) {
 		return -1
 	}
 	return index
@@ -191,8 +189,8 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 		return DefaultActiveListItemTextColor(context)
 	}
 	item := &l.listItemWidgets[index]
-	if item.item.TextColor != nil {
-		return item.item.TextColor
+	if clr := item.textColor(); clr != nil {
+		return clr
 	}
 	return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
 }
@@ -202,10 +200,7 @@ func (l *List[T]) SelectedItemIndex() int {
 }
 
 func (l *List[T]) SelectedItem() (ListItem[T], bool) {
-	if l.content.SelectedItemIndex() < 0 || l.content.SelectedItemIndex() >= len(l.listItemWidgets) {
-		return ListItem[T]{}, false
-	}
-	return l.listItemWidgets[l.content.SelectedItemIndex()].item, true
+	return l.ItemByIndex(l.content.SelectedItemIndex())
 }
 
 func (l *List[T]) ItemByIndex(index int) (ListItem[T], bool) {
@@ -231,17 +226,23 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 		l.listItemWidgets[i].setListItem(item)
 		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
 		l.listItemWidgets[i].setStyle(l.content.Style())
-		l.abstractListItems[i] = l.listItemWidgets[i].listItem()
+		l.abstractListItems[i].Content = &l.listItemWidgets[i]
+		l.abstractListItems[i].Unselectable = !item.selectable()
+		l.abstractListItems[i].Movable = item.Movable
+		l.abstractListItems[i].Value = item.Value
+		l.abstractListItems[i].IndentLevel = item.IndentLevel
+		l.abstractListItems[i].Padding = item.Padding
+		l.abstractListItems[i].Collapsed = item.Collapsed
 	}
 	l.content.SetItems(l.abstractListItems)
 }
 
 func (l *List[T]) ItemCount() int {
-	return len(l.listItemWidgets)
+	return len(l.abstractListItems)
 }
 
 func (l *List[T]) ID(index int) any {
-	return l.listItemWidgets[index].item.Value
+	return l.abstractListItems[index].Value
 }
 
 func (l *List[T]) SelectItemByIndex(index int) {
@@ -284,10 +285,10 @@ func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraint
 type listItemWidget[T comparable] struct {
 	guigui.DefaultWidget
 
-	item    ListItem[T]
 	text    Text
 	keyText Text
 
+	item        ListItem[T]
 	heightPlus1 int
 	style       ListStyle
 
@@ -296,8 +297,7 @@ type listItemWidget[T comparable] struct {
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
 	l.item = listItem
-	l.text.SetValue(listItem.Text)
-	l.keyText.SetValue(listItem.KeyText)
+	// TODO: Should this call guigui.RequestRedraw(l) when the item changes?
 }
 
 func (l *listItemWidget[T]) setHeight(height int) {
@@ -305,15 +305,27 @@ func (l *listItemWidget[T]) setHeight(height int) {
 		return
 	}
 	l.heightPlus1 = height + 1
+	guigui.RequestRedraw(l)
 }
 
 func (l *listItemWidget[T]) setStyle(style ListStyle) {
+	if l.style == style {
+		return
+	}
 	l.style = style
+	guigui.RequestRedraw(l)
 }
 
 func (l *listItemWidget[T]) setText(text string) {
+	if l.item.Text == text {
+		return
+	}
 	l.item.Text = text
-	l.text.SetValue(text)
+	guigui.RequestRedraw(l)
+}
+
+func (l *listItemWidget[T]) textColor() color.Color {
+	return l.item.TextColor
 }
 
 func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -330,6 +342,9 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	l.keyText.SetValue(l.item.KeyText)
 	l.keyText.SetVerticalAlign(VerticalAlignMiddle)
 	l.keyText.SetHorizontalAlign(HorizontalAlignEnd)
+
+	context.SetEnabled(l, !l.item.Disabled)
+
 	return nil
 }
 
@@ -404,22 +419,6 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 		bounds := widgetBounds.Bounds()
 		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), RoundedCornerRadius(context))
 	}*/
-}
-
-func (l *listItemWidget[T]) selectable() bool {
-	return l.item.selectable() && !l.item.Border
-}
-
-func (l *listItemWidget[T]) listItem() abstractListItem[T] {
-	return abstractListItem[T]{
-		Content:      l,
-		Unselectable: !l.selectable(),
-		Movable:      l.item.Movable,
-		Value:        l.item.Value,
-		IndentLevel:  l.item.IndentLevel,
-		Padding:      l.item.Padding,
-		Collapsed:    l.item.Collapsed,
-	}
 }
 
 func ListItemTextPadding(context *guigui.Context) guigui.Padding {
