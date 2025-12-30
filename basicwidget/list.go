@@ -270,7 +270,7 @@ func (l *List[T]) SetStyle(style ListStyle) {
 }
 
 func (l *List[T]) SetItemString(str string, index int) {
-	l.listItemWidgets[index].item.Text = str
+	l.listItemWidgets[index].setText(str)
 }
 
 func (l *List[T]) setContentWidth(width int) {
@@ -313,6 +313,11 @@ func (l *listItemWidget[T]) setHeight(height int) {
 
 func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.style = style
+}
+
+func (l *listItemWidget[T]) setText(text string) {
+	l.item.Text = text
+	l.text.SetValue(text)
 }
 
 func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
