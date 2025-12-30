@@ -16,6 +16,19 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type ListStyle int
+
+const (
+	ListStyleNormal ListStyle = iota
+	ListStyleSidebar
+	ListStyleMenu
+)
+
+// TODO: Clean up functions for colors.
+func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
+	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 1)
+}
+
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
