@@ -41,12 +41,12 @@ func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
-	baseListItems   []baseListItem[T]
-	listItems       []ListItem[T]
-	listItemWidgets []listItemWidget[T]
-	background1     listBackground1[T]
-	content         listContent[T]
-	frame           listFrame
+	abstractListItems []abstractListItem[T]
+	listItems         []ListItem[T]
+	listItemWidgets   []listItemWidget[T]
+	background1       listBackground1[T]
+	content           listContent[T]
+	frame             listFrame
 
 	listItemHeightPlus1 int
 	headerHeight        int
@@ -133,15 +133,15 @@ func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int
 
 func (l *List[T]) updateListItems() {
 	l.listItemWidgets = adjustSliceSize(l.listItemWidgets, len(l.listItems))
-	l.baseListItems = adjustSliceSize(l.baseListItems, len(l.listItems))
+	l.abstractListItems = adjustSliceSize(l.abstractListItems, len(l.listItems))
 
 	for i, item := range l.listItems {
 		l.listItemWidgets[i].setListItem(item)
 		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
 		l.listItemWidgets[i].setStyle(l.content.Style())
-		l.baseListItems[i] = l.listItemWidgets[i].listItem()
+		l.abstractListItems[i] = l.listItemWidgets[i].listItem()
 	}
-	l.content.SetItems(l.baseListItems)
+	l.content.SetItems(l.abstractListItems)
 }
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -413,8 +413,8 @@ func (l *listItemWidget[T]) selectable() bool {
 	return l.item.selectable() && !l.item.Border
 }
 
-func (l *listItemWidget[T]) listItem() baseListItem[T] {
-	return baseListItem[T]{
+func (l *listItemWidget[T]) listItem() abstractListItem[T] {
+	return abstractListItem[T]{
 		Content:      l,
 		Unselectable: !l.selectable(),
 		Movable:      l.item.Movable,
@@ -435,7 +435,7 @@ func ListItemTextPadding(context *guigui.Context) guigui.Padding {
 	}
 }
 
-type baseListItem[T comparable] struct {
+type abstractListItem[T comparable] struct {
 	Content      guigui.Widget
 	Unselectable bool
 	Movable      bool
@@ -445,12 +445,12 @@ type baseListItem[T comparable] struct {
 	Collapsed    bool
 }
 
-func (b baseListItem[T]) value() T {
-	return b.Value
+func (a abstractListItem[T]) value() T {
+	return a.Value
 }
 
-func (b baseListItem[T]) selectable() bool {
-	return !b.Unselectable
+func (a abstractListItem[T]) selectable() bool {
+	return !a.Unselectable
 }
 
 type listContent[T comparable] struct {
@@ -462,7 +462,7 @@ type listContent[T comparable] struct {
 	expanderImages   []Image
 	scrollOverlay    scrollOverlay
 
-	abstractList              abstractList[T, baseListItem[T]]
+	abstractList              abstractList[T, abstractListItem[T]]
 	stripeVisible             bool
 	style                     ListStyle
 	checkmarkIndexPlus1       int
@@ -541,8 +541,8 @@ func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
 	return l.itemBoundsForLayoutFromIndex[index]
 }
 
-func (l *listContent[T]) visibleItems() iter.Seq2[int, baseListItem[T]] {
-	return func(yield func(int, baseListItem[T]) bool) {
+func (l *listContent[T]) visibleItems() iter.Seq2[int, abstractListItem[T]] {
+	return func(yield func(int, abstractListItem[T]) bool) {
 		var lastCollapsedIndentLevel int
 		for i := range l.abstractList.ItemCount() {
 			item, _ := l.abstractList.ItemByIndex(i)
@@ -793,7 +793,7 @@ func (l *listContent[T]) hasMovableItems() bool {
 	return false
 }
 
-func (l *listContent[T]) ItemByIndex(index int) (baseListItem[T], bool) {
+func (l *listContent[T]) ItemByIndex(index int) (abstractListItem[T], bool) {
 	return l.abstractList.ItemByIndex(index)
 }
 
@@ -801,7 +801,7 @@ func (l *listContent[T]) SelectedItemIndex() int {
 	return l.abstractList.SelectedItemIndex()
 }
 
-func (l *listContent[T]) SetItems(items []baseListItem[T]) {
+func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 	l.abstractList.SetItems(items)
 }
 
