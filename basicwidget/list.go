@@ -731,7 +731,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 
 	l.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
 	cs := image.Pt(cw, l.contentHeight)
-	// TODO: Now scrollOverlay's widgetBounds doens't match with baseList's widgetBounds.
+	// TODO: Now scrollOverlay's widgetBounds doens't match with List's widgetBounds.
 	// Separate a content part and use Panel.
 	l.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
@@ -1040,8 +1040,8 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 	return nil
 }
 
-// itemYFromIndex returns the Y position of the item at the given index relative to the top of the baseList widget.
-// itemYFromIndex returns the same value whatever the baseList position is.
+// itemYFromIndex returns the Y position of the item at the given index relative to the top of the List widget.
+// itemYFromIndex returns the same value whatever the List position is.
 //
 // itemYFromIndex is available after Build is called, so do not use this from a parent widget.
 func (l *listContent[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
@@ -1070,8 +1070,8 @@ func (l *listContent[T]) itemYFromIndex(context *guigui.Context, index int) (int
 	return itemRelY + head - padding.Top, true
 }
 
-// itemYFromIndexForMenu returns the Y position of the item at the given index relative to the top of the baseList widget.
-// itemYFromIndexForMenu returns the same value whatever the baseList position is.
+// itemYFromIndexForMenu returns the Y position of the item at the given index relative to the top of the List widget.
+// itemYFromIndexForMenu returns the same value whatever the List position is.
 //
 // itemYFromIndexForMenu is available anytime even before Build is called.
 func (l *listContent[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
