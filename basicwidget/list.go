@@ -872,25 +872,31 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	return l.abstractList.ItemCount()
 }
 
+func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
+	if !widgetBounds.IsHitAtCursor() {
+		return -1
+	}
+
+	cp := image.Pt(ebiten.CursorPosition())
+	listBounds := widgetBounds.Bounds()
+	for i := range l.visibleItems() {
+		bounds := l.itemBounds(context, i)
+		bounds.Min.X = listBounds.Min.X
+		bounds.Max.X = listBounds.Max.X
+		if cp.In(bounds) {
+			return i
+		}
+	}
+
+	return -1
+}
+
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if r := l.scrollOverlay.handlePointingInput(context, widgetBounds); r != (guigui.HandleInputResult{}) {
 		return r
 	}
 
-	l.hoveredItemIndexPlus1 = 0
-	if widgetBounds.IsHitAtCursor() {
-		cp := image.Pt(ebiten.CursorPosition())
-		listBounds := widgetBounds.Bounds()
-		for i := range l.visibleItems() {
-			bounds := l.itemBounds(context, i)
-			bounds.Min.X = listBounds.Min.X
-			bounds.Max.X = listBounds.Max.X
-			hovered := cp.In(bounds)
-			if hovered {
-				l.hoveredItemIndexPlus1 = i + 1
-			}
-		}
-	}
+	l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
 
 	colorMode := context.ColorMode()
 	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
@@ -1198,7 +1204,9 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		}
 	}
 
-	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
+	// l.content.hoveredItemIndexPlus1 might be not updated at HandlePointingInput yet (#266).
+	// Calculate the hovered item index here.
+	hoveredItemIndex := l.content.hoveredItemIndex(context, widgetBounds)
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
 	if ok && l.content.IsHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemVisible(hoveredItemIndex) {
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
