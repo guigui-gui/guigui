@@ -1205,6 +1205,8 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	}
 
 	// l.content.hoveredItemIndexPlus1 might be not updated at HandlePointingInput yet (#266).
+	// This happens for a popup menu. When a popup menu is added by HandlePointingInput, the next
+	// HandlePointingInput for the popup menu will be called at the next cycle.
 	// Calculate the hovered item index here.
 	hoveredItemIndex := l.content.hoveredItemIndex(context, widgetBounds)
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
