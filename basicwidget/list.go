@@ -42,7 +42,6 @@ type List[T comparable] struct {
 	guigui.DefaultWidget
 
 	abstractListItems []abstractListItem[T]
-	listItems         []ListItem[T]
 	listItemWidgets   []listItemWidget[T]
 	background1       listBackground1[T]
 	content           listContent[T]
@@ -131,19 +130,6 @@ func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int
 	return l.content.itemYFromIndexForMenu(context, index)
 }
 
-func (l *List[T]) updateListItems() {
-	l.listItemWidgets = adjustSliceSize(l.listItemWidgets, len(l.listItems))
-	l.abstractListItems = adjustSliceSize(l.abstractListItems, len(l.listItems))
-
-	for i, item := range l.listItems {
-		l.listItemWidgets[i].setListItem(item)
-		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
-		l.listItemWidgets[i].setStyle(l.content.Style())
-		l.abstractListItems[i] = l.listItemWidgets[i].listItem()
-	}
-	l.content.SetItems(l.abstractListItems)
-}
-
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.content)
@@ -152,7 +138,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 
 	l.background1.setListContent(&l.content)
 
-	l.updateListItems()
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
@@ -239,9 +224,16 @@ func (l *List[T]) SetItemsByStrings(strs []string) {
 }
 
 func (l *List[T]) SetItems(items []ListItem[T]) {
-	l.listItems = adjustSliceSize(l.listItems, len(items))
-	copy(l.listItems, items)
-	l.updateListItems()
+	l.abstractListItems = adjustSliceSize(l.abstractListItems, len(items))
+	l.listItemWidgets = adjustSliceSize(l.listItemWidgets, len(items))
+
+	for i, item := range items {
+		l.listItemWidgets[i].setListItem(item)
+		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
+		l.listItemWidgets[i].setStyle(l.content.Style())
+		l.abstractListItems[i] = l.listItemWidgets[i].listItem()
+	}
+	l.content.SetItems(l.abstractListItems)
 }
 
 func (l *List[T]) ItemCount() int {
