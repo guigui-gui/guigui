@@ -602,9 +602,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 	}
 
 	if typ == handleInputTypeButton && !a.context.IsFocusedOrHasFocusedChild(widget) && !ancestorFocused {
-		if !ancestorFocused {
-			return HandleInputResult{}
-		}
+		return HandleInputResult{}
 	}
 
 	// Iterate the children in the reverse order of rendering.
