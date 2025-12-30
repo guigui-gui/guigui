@@ -33,13 +33,13 @@ const (
 )
 
 type baseListItem[T comparable] struct {
-	Content     guigui.Widget
-	Selectable  bool
-	Movable     bool
-	Value       T
-	IndentLevel int
-	Padding     guigui.Padding
-	Collapsed   bool
+	Content      guigui.Widget
+	Unselectable bool
+	Movable      bool
+	Value        T
+	IndentLevel  int
+	Padding      guigui.Padding
+	Collapsed    bool
 }
 
 func (b baseListItem[T]) value() T {
@@ -47,7 +47,7 @@ func (b baseListItem[T]) value() T {
 }
 
 func (b baseListItem[T]) selectable() bool {
-	return b.Selectable
+	return !b.Unselectable
 }
 
 func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
@@ -694,7 +694,7 @@ func (b *baseListContent[T]) HandlePointingInput(context *guigui.Context, widget
 				}
 				return guigui.AbortHandlingInputByWidget(b)
 			}
-			if !item.Selectable {
+			if item.Unselectable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 
@@ -939,7 +939,7 @@ func (b *baseListBackground2[T]) Draw(context *guigui.Context, widgetBounds *gui
 
 	hoveredItemIndex := b.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := b.content.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && b.content.IsHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.content.abstractList.ItemCount() && hoveredItem.Selectable && b.content.isItemVisible(hoveredItemIndex) {
+	if ok && b.content.IsHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < b.content.abstractList.ItemCount() && !hoveredItem.Unselectable && b.content.isItemVisible(hoveredItemIndex) {
 		bounds := b.content.itemBounds(context, hoveredItemIndex)
 		if b.content.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)

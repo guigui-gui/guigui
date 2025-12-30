@@ -359,13 +359,13 @@ func (l *listItemWidget[T]) selectable() bool {
 
 func (l *listItemWidget[T]) listItem() baseListItem[T] {
 	return baseListItem[T]{
-		Content:     l,
-		Selectable:  l.selectable(),
-		Movable:     l.item.Movable,
-		Value:       l.item.Value,
-		IndentLevel: l.item.IndentLevel,
-		Padding:     l.item.Padding,
-		Collapsed:   l.item.Collapsed,
+		Content:      l,
+		Unselectable: !l.selectable(),
+		Movable:      l.item.Movable,
+		Value:        l.item.Value,
+		IndentLevel:  l.item.IndentLevel,
+		Padding:      l.item.Padding,
+		Collapsed:    l.item.Collapsed,
 	}
 }
 
