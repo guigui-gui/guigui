@@ -934,8 +934,8 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyY):
 		// 'Yank' the killed text.
 		if t.tmpClipboard != "" {
-			start, _ := t.field.Selection()
-			text := t.field.Text()[:start] + t.tmpClipboard + t.field.Text()[start:]
+			start, end := t.field.Selection()
+			text := t.field.Text()[:start] + t.tmpClipboard + t.field.Text()[end:]
 			t.setTextAndSelection(text, start+len(t.tmpClipboard), start+len(t.tmpClipboard), -1, true)
 		}
 		return guigui.HandleInputByWidget(t)
