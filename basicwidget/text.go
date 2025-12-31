@@ -754,7 +754,8 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				text := t.field.Text()[:start] + t.field.Text()[end:]
 				t.setTextAndSelection(text, start, start, -1, true)
 			} else if start > 0 {
-				text, pos := textutil.BackspaceOnGraphemes(t.field.Text(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
+				text := t.field.Text()[:pos] + t.field.Text()[start:]
 				t.setTextAndSelection(text, pos, pos, -1, true)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -766,15 +767,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				text := t.field.Text()[:start] + t.field.Text()[end:]
 				t.setTextAndSelection(text, start, start, -1, true)
 			} else if useEmacsKeybind() && end < len(t.field.Text()) {
-				text, pos := textutil.DeleteOnGraphemes(t.field.Text(), end)
-				t.setTextAndSelection(text, pos, pos, -1, true)
+				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
+				text := t.field.Text()[:start] + t.field.Text()[pos:]
+				t.setTextAndSelection(text, start, start, -1, true)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if _, end := t.field.Selection(); end < len(t.field.Text()) {
-				text, pos := textutil.DeleteOnGraphemes(t.field.Text(), end)
-				t.setTextAndSelection(text, pos, pos, -1, true)
+				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
+				text := t.field.Text()[:start] + t.field.Text()[pos:]
+				t.setTextAndSelection(text, start, start, -1, true)
 			}
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyX) ||

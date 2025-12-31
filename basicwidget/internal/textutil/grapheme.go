@@ -22,34 +22,6 @@ func graphemes(str string) iter.Seq[string] {
 	}
 }
 
-func BackspaceOnGraphemes(str string, position int) (string, int) {
-	var pos int
-	for c := range graphemes(str) {
-		startPos := pos
-		endPos := pos + len(c)
-		if position > endPos {
-			pos = endPos
-			continue
-		}
-		return str[:startPos] + str[endPos:], startPos
-	}
-	return str, position
-}
-
-func DeleteOnGraphemes(str string, position int) (string, int) {
-	var pos int
-	for c := range graphemes(str) {
-		startPos := pos
-		endPos := pos + len(c)
-		if position > startPos {
-			pos = endPos
-			continue
-		}
-		return str[:startPos] + str[endPos:], startPos
-	}
-	return str, position
-}
-
 func PrevPositionOnGraphemes(str string, position int) int {
 	var pos int
 	for c := range graphemes(str) {
