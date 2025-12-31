@@ -218,7 +218,7 @@ func (t *Text) SetSelectable(selectable bool) {
 	t.selectionDragEndPlus1 = 0
 	t.selectionShiftIndexPlus1 = 0
 	if !t.selectable {
-		t.setTextAndSelection(t.field.Text(), 0, 0, -1, false)
+		t.setSelection(0, 0, -1, false)
 	}
 	guigui.RequestRedraw(t)
 }
@@ -293,7 +293,27 @@ func (t *Text) selectAll() {
 }
 
 func (t *Text) doSelectAll() {
-	t.setTextAndSelection(t.field.Text(), 0, len(t.field.Text()), -1, false)
+	t.setSelection(0, len(t.field.Text()), -1, false)
+}
+
+func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) bool {
+	t.selectionShiftIndexPlus1 = shiftIndex + 1
+	if start > end {
+		start, end = end, start
+	}
+
+	if s, e := t.field.Selection(); s == start && e == end {
+		return false
+	}
+	t.field.SetSelection(start, end)
+	guigui.RequestRedraw(t)
+
+	if !adjustScroll {
+		t.prevStart = start
+		t.prevEnd = end
+	}
+
+	return true
 }
 
 func (t *Text) setTextAndSelection(text string, start, end int, shiftIndex int, adjustScroll bool) bool {
@@ -310,12 +330,14 @@ func (t *Text) setTextAndSelection(text string, start, end int, shiftIndex int, 
 	if s, e := t.field.Selection(); t.field.Text() == text && s == start && e == end {
 		return false
 	}
-	t.field.SetTextAndSelection(text, start, end)
-	guigui.RequestRedraw(t)
 	if textChanged {
+		t.field.SetTextAndSelection(text, start, end)
 		t.resetCachedTextSize()
 		guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), false)
+	} else {
+		t.field.SetSelection(start, end)
 	}
+	guigui.RequestRedraw(t)
 
 	if !adjustScroll {
 		t.prevStart = start
@@ -536,7 +558,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 			if t.selectionDragEndPlus1-1 >= 0 {
 				end = max(idx, t.selectionDragEndPlus1-1)
 			}
-			if t.setTextAndSelection(t.field.Text(), start, end, -1, true) {
+			if t.setSelection(start, end, -1, true) {
 				return guigui.HandleInputByWidget(t)
 			} else {
 				return guigui.AbortHandlingInputByWidget(t)
@@ -606,7 +628,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 		if leftClick || !context.IsFocusedOrHasFocusedChild(t) {
 			if start, end := t.field.Selection(); start != idx || end != idx {
-				t.setTextAndSelection(t.field.Text(), idx, idx, -1, false)
+				t.setSelection(idx, idx, -1, false)
 			}
 		}
 	case 2:
@@ -778,17 +800,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == end {
 				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), end)
-				t.setTextAndSelection(t.field.Text(), start, pos, pos, true)
+				t.setSelection(start, pos, pos, true)
 			} else {
 				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
-				t.setTextAndSelection(t.field.Text(), pos, end, pos, true)
+				t.setSelection(pos, end, pos, true)
 			}
 		} else {
 			if start != end {
-				t.setTextAndSelection(t.field.Text(), start, start, -1, true)
+				t.setSelection(start, start, -1, true)
 			} else if start > 0 {
 				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
-				t.setTextAndSelection(t.field.Text(), pos, pos, -1, true)
+				t.setSelection(pos, pos, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -798,17 +820,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == start {
 				pos := textutil.NextPositionOnGraphemes(t.field.Text(), start)
-				t.setTextAndSelection(t.field.Text(), pos, end, pos, true)
+				t.setSelection(pos, end, pos, true)
 			} else {
 				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
-				t.setTextAndSelection(t.field.Text(), start, pos, pos, true)
+				t.setSelection(start, pos, pos, true)
 			}
 		} else {
 			if start != end {
-				t.setTextAndSelection(t.field.Text(), end, end, -1, true)
+				t.setSelection(end, end, -1, true)
 			} else if start < len(t.field.Text()) {
 				pos := textutil.NextPositionOnGraphemes(t.field.Text(), start)
-				t.setTextAndSelection(t.field.Text(), pos, pos, -1, true)
+				t.setSelection(pos, pos, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -828,12 +850,12 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveEnd {
-					t.setTextAndSelection(t.field.Text(), start, idx, idx, true)
+					t.setSelection(start, idx, idx, true)
 				} else {
-					t.setTextAndSelection(t.field.Text(), idx, end, idx, true)
+					t.setSelection(idx, end, idx, true)
 				}
 			} else {
-				t.setTextAndSelection(t.field.Text(), idx, idx, -1, true)
+				t.setSelection(idx, idx, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -853,12 +875,12 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			if shift {
 				if moveStart {
-					t.setTextAndSelection(t.field.Text(), idx, end, idx, true)
+					t.setSelection(idx, end, idx, true)
 				} else {
-					t.setTextAndSelection(t.field.Text(), start, idx, idx, true)
+					t.setSelection(start, idx, idx, true)
 				}
 			} else {
-				t.setTextAndSelection(t.field.Text(), idx, idx, -1, true)
+				t.setSelection(idx, idx, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -869,9 +891,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx = i + 1
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			t.setTextAndSelection(t.field.Text(), idx, end, idx, true)
+			t.setSelection(idx, end, idx, true)
 		} else {
-			t.setTextAndSelection(t.field.Text(), idx, idx, -1, true)
+			t.setSelection(idx, idx, -1, true)
 		}
 		return guigui.HandleInputByWidget(t)
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyE):
@@ -881,9 +903,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx = end + i
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			t.setTextAndSelection(t.field.Text(), start, idx, idx, true)
+			t.setSelection(start, idx, idx, true)
 		} else {
-			t.setTextAndSelection(t.field.Text(), idx, idx, -1, true)
+			t.setSelection(idx, idx, -1, true)
 		}
 		return guigui.HandleInputByWidget(t)
 	case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyA) ||
