@@ -266,10 +266,8 @@ func (t *Text) ReplaceValueAtSelection(text string) {
 }
 
 func (t *Text) CommitWithCurrentInputValue() {
-	changed := t.setText(t.field.Text())
-	if changed {
-		return
-	}
+	t.nextText = ""
+	t.nextTextSet = false
 	// Fire the event even if the text is not changed.
 	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
 }
@@ -633,11 +631,10 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 	case 2:
 		t.dragging = true
-		text := t.field.Text()
-		start, end := findWordBoundaries(text, idx)
+		start, end := findWordBoundaries(t.field.Text(), idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
-		t.setTextAndSelection(text, start, end, -1, false)
+		t.setSelection(start, end, -1, false)
 	case 3:
 		t.doSelectAll()
 	}
