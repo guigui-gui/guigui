@@ -274,7 +274,7 @@ func (t *Text) setText(text string) bool {
 	start, end := t.field.Selection()
 	start = min(start, len(text))
 	end = min(end, len(text))
-	changed := t.setTextAndSelection(text, start, end, -1, false)
+	changed := t.setTextAndSelection(text, start, end, false)
 	t.nextText = ""
 	t.nextTextSet = false
 	return changed
@@ -314,30 +314,29 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 
 func (t *Text) replaceTextAtSelection(text string) {
 	start, end := t.field.Selection()
+	start = min(start, len(t.field.Text()))
+	end = min(end, len(t.field.Text()))
+	t.replaceTextAt(text, start, end)
+}
+
+func (t *Text) replaceTextAt(text string, start, end int) {
+	if start == end && text == "" {
+		return
+	}
 	newText := t.field.Text()[:start] + text + t.field.Text()[end:]
-	t.doSetTextAndSelection(newText, start+len(text), start+len(text), -1, true)
+	t.doSetTextAndSelection(newText, start+len(text), start+len(text), true)
 }
 
-func (t *Text) deleteTextAtSelection() {
-	start, end := t.field.Selection()
-	t.deleteTextAt(start, end)
+func (t *Text) setTextAndSelection(text string, start, end int, adjustScroll bool) bool {
+	return t.doSetTextAndSelection(text, start, end, adjustScroll)
 }
 
-func (t *Text) deleteTextAt(start, end int) {
-	newText := t.field.Text()[:start] + t.field.Text()[end:]
-	t.doSetTextAndSelection(newText, start, start, -1, true)
-}
-
-func (t *Text) setTextAndSelection(text string, start, end int, shiftIndex int, adjustScroll bool) bool {
-	return t.doSetTextAndSelection(text, start, end, shiftIndex, adjustScroll)
-}
-
-func (t *Text) doSetTextAndSelection(text string, start, end int, shiftIndex int, adjustScroll bool) bool {
+func (t *Text) doSetTextAndSelection(text string, start, end int, adjustScroll bool) bool {
 	if !t.multiline {
-		text, start, end, shiftIndex = replaceNewLinesWithSpace(text, start, end, shiftIndex)
+		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
 
-	t.selectionShiftIndexPlus1 = shiftIndex + 1
+	t.selectionShiftIndexPlus1 = 0
 	if start > end {
 		start, end = end, start
 	}
@@ -767,10 +766,10 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyH):
 			start, end := t.field.Selection()
 			if start != end {
-				t.deleteTextAtSelection()
+				t.replaceTextAtSelection("")
 			} else if start > 0 {
 				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
-				t.deleteTextAt(pos, start)
+				t.replaceTextAt("", pos, start)
 			}
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyD) ||
@@ -778,17 +777,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			// Delete
 			start, end := t.field.Selection()
 			if start != end {
-				t.deleteTextAtSelection()
+				t.replaceTextAtSelection("")
 			} else if useEmacsKeybind() && end < len(t.field.Text()) {
 				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
-				t.deleteTextAt(start, pos)
+				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if _, end := t.field.Selection(); end < len(t.field.Text()) {
 				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
-				t.deleteTextAt(start, pos)
+				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyX) ||
@@ -942,7 +941,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 		}
 		t.tmpClipboard = t.field.Text()[start:end]
-		t.deleteTextAtSelection()
+		t.replaceTextAt("", start, end)
 		return guigui.HandleInputByWidget(t)
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyY):
 		// 'Yank' the killed text.
@@ -964,7 +963,7 @@ func (t *Text) commit() {
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if !context.IsFocused(t) && t.nextTextSet {
 		if t.nextSelectAll {
-			t.setTextAndSelection(t.nextText, 0, len(t.nextText), -1, false)
+			t.setTextAndSelection(t.nextText, 0, len(t.nextText), false)
 		} else {
 			t.setText(t.nextText)
 		}
@@ -1250,7 +1249,7 @@ func (t *Text) Cut() bool {
 		slog.Error(err.Error())
 		return false
 	}
-	t.deleteTextAtSelection()
+	t.replaceTextAtSelection("")
 	return true
 }
 
@@ -1334,7 +1333,7 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
 }
 
-func replaceNewLinesWithSpace(text string, start, end, shiftIndex int) (string, int, int, int) {
+func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	var buf strings.Builder
 	for {
 		pos, len := textutil.FirstLineBreakPositionAndLen(text)
@@ -1361,17 +1360,10 @@ func replaceNewLinesWithSpace(text string, start, end, shiftIndex int) (string, 
 					end = origLen + 1
 				}
 			}
-			if shiftIndex >= 0 && origLen < shiftIndex {
-				if shiftIndex >= origLen+len {
-					shiftIndex -= diff
-				} else {
-					shiftIndex = origLen + 1
-				}
-			}
 		}
 		text = text[pos+len:]
 	}
 	text = buf.String()
 
-	return text, start, end, shiftIndex
+	return text, start, end
 }

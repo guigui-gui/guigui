@@ -3,6 +3,6 @@
 
 package basicwidget
 
-func ReplaceNewLinesWithSpace(text string, start, end, shiftIndex int) (string, int, int, int) {
-	return replaceNewLinesWithSpace(text, start, end, shiftIndex)
+func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
+	return replaceNewLinesWithSpace(text, start, end)
 }
