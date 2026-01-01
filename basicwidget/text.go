@@ -258,8 +258,6 @@ func (t *Text) ReplaceValueAtSelection(text string) {
 		return
 	}
 	t.replaceTextAtSelection(text)
-	t.nextText = ""
-	t.nextTextSet = false
 	t.resetCachedTextSize()
 }
 
@@ -268,16 +266,6 @@ func (t *Text) CommitWithCurrentInputValue() {
 	t.nextTextSet = false
 	// Fire the event even if the text is not changed.
 	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
-}
-
-func (t *Text) setText(text string) bool {
-	start, end := t.field.Selection()
-	start = min(start, len(text))
-	end = min(end, len(text))
-	changed := t.setTextAndSelection(text, start, end, false)
-	t.nextText = ""
-	t.nextTextSet = false
-	return changed
 }
 
 func (t *Text) selectAll() {
@@ -310,6 +298,14 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 	}
 
 	return true
+}
+
+func (t *Text) setText(text string) {
+	start, end := t.field.Selection()
+	t.replaceTextAt(text, 0, len(t.field.Text()))
+	start = min(start, len(text))
+	end = min(end, len(text))
+	t.setSelection(start, end, -1, false)
 }
 
 func (t *Text) replaceTextAtSelection(text string) {
@@ -358,6 +354,9 @@ func (t *Text) doSetTextAndSelection(text string, start, end int, adjustScroll b
 		t.prevStart = start
 		t.prevEnd = end
 	}
+
+	t.nextText = ""
+	t.nextTextSet = false
 
 	return true
 }
@@ -967,8 +966,6 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 		} else {
 			t.setText(t.nextText)
 		}
-		t.nextTextSet = false
-		t.nextText = ""
 		t.nextSelectAll = false
 	}
 	return nil
