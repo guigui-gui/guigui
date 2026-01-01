@@ -306,8 +306,6 @@ func (t *Text) setText(text string) {
 
 func (t *Text) replaceTextAtSelection(text string) {
 	start, end := t.field.Selection()
-	start = min(start, len(t.field.Text()))
-	end = min(end, len(t.field.Text()))
 	t.replaceTextAt(text, start, end)
 }
 
