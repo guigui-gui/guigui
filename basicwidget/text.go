@@ -301,11 +301,7 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 }
 
 func (t *Text) setText(text string) {
-	start, end := t.field.Selection()
 	t.replaceTextAt(text, 0, len(t.field.Text()))
-	start = min(start, len(text))
-	end = min(end, len(text))
-	t.setSelection(start, end, -1, false)
 }
 
 func (t *Text) replaceTextAtSelection(text string) {
