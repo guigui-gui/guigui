@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/ebitengine/purego v0.10.0-alpha.3
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.7.0.20260102143153-f679635d4e8e
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.7.0.20260102153150-989f9ac5d44e
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.9.0

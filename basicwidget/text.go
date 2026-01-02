@@ -329,18 +329,29 @@ func (t *Text) replaceTextAtSelection(text string) {
 }
 
 func (t *Text) replaceTextAt(text string, start, end int) {
-	if start == end && text == "" {
+	if !t.multiline {
+		text, start, end = replaceNewLinesWithSpace(text, start, end)
+	}
+
+	t.selectionShiftIndexPlus1 = 0
+	if start > end {
+		start, end = end, start
+	}
+	if s, e := t.field.Selection(); text == t.stringValueWithRange(start, end) && s == start && e == end {
 		return
 	}
-	newText := t.stringValueWithRange(0, start) + text + t.stringValueWithRange(end, -1)
-	t.doSetTextAndSelection(newText, start+len(text), start+len(text), true)
+	t.field.ReplaceText(text, start, end)
+	if text != "" {
+		t.resetCachedTextSize()
+		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+	}
+	guigui.RequestRedraw(t)
+
+	t.nextText = ""
+	t.nextTextSet = false
 }
 
-func (t *Text) setTextAndSelection(text string, start, end int, adjustScroll bool) bool {
-	return t.doSetTextAndSelection(text, start, end, adjustScroll)
-}
-
-func (t *Text) doSetTextAndSelection(text string, start, end int, adjustScroll bool) bool {
+func (t *Text) setTextAndSelection(text string, start, end int) bool {
 	if !t.multiline {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
@@ -363,11 +374,9 @@ func (t *Text) doSetTextAndSelection(text string, start, end int, adjustScroll b
 	}
 	guigui.RequestRedraw(t)
 
-	if !adjustScroll {
-		t.prevStart = start
-		t.prevEnd = end
-	}
-
+	// Do not adjust scroll.
+	t.prevStart = start
+	t.prevEnd = end
 	t.nextText = ""
 	t.nextTextSet = false
 
@@ -975,7 +984,7 @@ func (t *Text) commit() {
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if !context.IsFocused(t) && t.nextTextSet {
 		if t.nextSelectAll {
-			t.setTextAndSelection(t.nextText, 0, len(t.nextText), false)
+			t.setTextAndSelection(t.nextText, 0, len(t.nextText))
 		} else {
 			t.setText(t.nextText)
 		}
