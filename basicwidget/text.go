@@ -96,6 +96,7 @@ type Text struct {
 	guigui.DefaultWidget
 
 	field         textinput.Field
+	valueBuilder  stringBuilderWithRange
 	nextTextSet   bool
 	nextText      string
 	nextSelectAll bool
@@ -223,18 +224,36 @@ func (t *Text) SetSelectable(selectable bool) {
 	guigui.RequestRedraw(t)
 }
 
+func (t *Text) stringValue() string {
+	t.valueBuilder.Reset()
+	_ = t.field.WriteText(&t.valueBuilder)
+	return t.valueBuilder.String()
+}
+
+func (t *Text) stringValueWithRange(start, end int) string {
+	t.valueBuilder.ResetWithRange(start, end)
+	_ = t.field.WriteText(&t.valueBuilder)
+	return t.valueBuilder.String()
+}
+
+func (t *Text) stringValueForRendering() string {
+	t.valueBuilder.Reset()
+	_ = t.field.WriteTextForRendering(&t.valueBuilder)
+	return t.valueBuilder.String()
+}
+
 func (t *Text) Value() string {
 	if t.nextTextSet {
 		return t.nextText
 	}
-	return t.field.Text()
+	return t.stringValue()
 }
 
 func (t *Text) SetValue(text string) {
 	if t.nextTextSet && t.nextText == text {
 		return
 	}
-	if !t.nextTextSet && t.field.Text() == text {
+	if !t.nextTextSet && t.stringValue() == text {
 		return
 	}
 
@@ -265,7 +284,7 @@ func (t *Text) CommitWithCurrentInputValue() {
 	t.nextText = ""
 	t.nextTextSet = false
 	// Fire the event even if the text is not changed.
-	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
 }
 
 func (t *Text) selectAll() {
@@ -277,7 +296,7 @@ func (t *Text) selectAll() {
 }
 
 func (t *Text) doSelectAll() {
-	t.setSelection(0, len(t.field.Text()), -1, false)
+	t.setSelection(0, t.field.TextLengthInBytes(), -1, false)
 }
 
 func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) bool {
@@ -301,7 +320,7 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 }
 
 func (t *Text) setText(text string) {
-	t.replaceTextAt(text, 0, len(t.field.Text()))
+	t.replaceTextAt(text, 0, t.field.TextLengthInBytes())
 }
 
 func (t *Text) replaceTextAtSelection(text string) {
@@ -313,7 +332,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 	if start == end && text == "" {
 		return
 	}
-	newText := t.field.Text()[:start] + text + t.field.Text()[end:]
+	newText := t.stringValueWithRange(0, start) + text + t.stringValueWithRange(end, -1)
 	t.doSetTextAndSelection(newText, start+len(text), start+len(text), true)
 }
 
@@ -331,14 +350,14 @@ func (t *Text) doSetTextAndSelection(text string, start, end int, adjustScroll b
 		start, end = end, start
 	}
 
-	textChanged := t.field.Text() != text
-	if s, e := t.field.Selection(); t.field.Text() == text && s == start && e == end {
+	textChanged := t.stringValue() != text
+	if s, e := t.field.Selection(); !textChanged && s == start && e == end {
 		return false
 	}
 	if textChanged {
 		t.field.SetTextAndSelection(text, start, end)
 		t.resetCachedTextSize()
-		guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), false)
+		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 	} else {
 		t.field.SetSelection(start, end)
 	}
@@ -641,7 +660,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 	case 2:
 		t.dragging = true
-		start, end := findWordBoundaries(t.field.Text(), idx)
+		start, end := findWordBoundaries(t.stringValue(), idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
 		t.setSelection(start, end, -1, false)
@@ -657,9 +676,9 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 
 func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string {
 	if showComposition {
-		return t.field.TextForRendering()
+		return t.stringValueForRendering()
 	}
-	return t.field.Text()
+	return t.stringValue()
 }
 
 func (t *Text) selectionToDraw(context *guigui.Context) (start, end int, ok bool) {
@@ -718,7 +737,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	if t.editable {
-		origText := t.field.Text()
+		origText := t.stringValue()
 		start, _ := t.field.Selection()
 		var processed bool
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
@@ -731,10 +750,10 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		if processed {
 			guigui.RequestRedraw(t)
-			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
+			// Reset the cache size before adjust the scroll offset in order to get the correct text size.gi
 			t.resetCachedTextSize()
-			if t.field.Text() != origText {
-				guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), false)
+			if v := t.stringValue(); v != origText {
+				guigui.DispatchEvent(t, textEventValueChanged, v, false)
 			}
 			return guigui.HandleInputByWidget(t)
 		}
@@ -761,7 +780,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if start != end {
 				t.replaceTextAtSelection("")
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
 				t.replaceTextAt("", pos, start)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -771,15 +790,15 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			start, end := t.field.Selection()
 			if start != end {
 				t.replaceTextAtSelection("")
-			} else if useEmacsKeybind() && end < len(t.field.Text()) {
-				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
+			} else if useEmacsKeybind() && end < t.field.TextLengthInBytes() {
+				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
-			if _, end := t.field.Selection(); end < len(t.field.Text()) {
-				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
+			if _, end := t.field.Selection(); end < t.field.TextLengthInBytes() {
+				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -802,17 +821,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == end {
-				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), end)
+				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), end)
 				t.setSelection(start, pos, pos, true)
 			} else {
-				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
 				t.setSelection(pos, end, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(start, start, -1, true)
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.field.Text(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
@@ -822,17 +841,17 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == start {
-				pos := textutil.NextPositionOnGraphemes(t.field.Text(), start)
+				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
 				t.setSelection(pos, end, pos, true)
 			} else {
-				pos := textutil.NextPositionOnGraphemes(t.field.Text(), end)
+				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
 				t.setSelection(start, pos, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(end, end, -1, true)
-			} else if start < len(t.field.Text()) {
-				pos := textutil.NextPositionOnGraphemes(t.field.Text(), start)
+			} else if start < t.field.TextLengthInBytes() {
+				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
@@ -890,7 +909,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyA):
 		idx := 0
 		start, end := t.field.Selection()
-		if i := strings.LastIndex(t.field.Text()[:start], "\n"); i >= 0 {
+		if i := strings.LastIndex(t.stringValueWithRange(0, start), "\n"); i >= 0 {
 			idx = i + 1
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
@@ -900,9 +919,9 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		return guigui.HandleInputByWidget(t)
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyE):
-		idx := len(t.field.Text())
+		idx := t.field.TextLengthInBytes()
 		start, end := t.field.Selection()
-		if i := strings.Index(t.field.Text()[end:], "\n"); i >= 0 {
+		if i := strings.Index(t.stringValueWithRange(end, -1), "\n"); i >= 0 {
 			idx = end + i
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
@@ -924,16 +943,16 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		// 'Kill' the text after the cursor or the selection.
 		start, end := t.field.Selection()
 		if start == end {
-			end = strings.Index(t.field.Text()[start:], "\n")
+			end = strings.Index(t.stringValueWithRange(start, -1), "\n")
 			if end < 0 {
-				end = len(t.field.Text())
+				end = t.field.TextLengthInBytes()
 			} else if end == 0 {
 				end += start + 1
 			} else {
 				end += start
 			}
 		}
-		t.tmpClipboard = t.field.Text()[start:end]
+		t.tmpClipboard = t.stringValueWithRange(start, end)
 		t.replaceTextAt("", start, end)
 		return guigui.HandleInputByWidget(t)
 	case useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyY):
@@ -948,7 +967,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) commit() {
-	guigui.DispatchEvent(t, textEventValueChanged, t.field.Text(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
 	t.nextText = ""
 	t.nextTextSet = false
 }
@@ -1236,7 +1255,7 @@ func (t *Text) Cut() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
+	if err := clipboard.WriteAll(t.stringValueWithRange(start, end)); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -1249,7 +1268,7 @@ func (t *Text) Copy() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.field.Text()[start:end]); err != nil {
+	if err := clipboard.WriteAll(t.stringValueWithRange(start, end)); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -1357,4 +1376,56 @@ func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	text = buf.String()
 
 	return text, start, end
+}
+
+type stringBuilderWithRange struct {
+	builder  strings.Builder
+	start    int
+	endPlus1 int
+	offset   int
+}
+
+func (s *stringBuilderWithRange) Reset() {
+	s.builder.Reset()
+	s.start = 0
+	s.endPlus1 = 0
+	s.offset = 0
+}
+
+func (s *stringBuilderWithRange) ResetWithRange(start, end int) {
+	s.builder.Reset()
+	s.start = start
+	s.endPlus1 = end + 1
+	s.offset = 0
+}
+
+func (s *stringBuilderWithRange) Write(b []byte) (int, error) {
+	origN := len(b)
+	defer func() {
+		s.offset += origN
+	}()
+
+	start := s.start
+	end := math.MaxInt
+	if s.endPlus1 > 0 {
+		end = s.endPlus1 - 1
+	}
+
+	// Calculate the intersection of [s.offset, s.offset+len(b)) and [start, end).
+	idx0 := max(s.offset, start)
+	idx1 := min(s.offset+len(b), end)
+
+	if idx0 >= idx1 {
+		return origN, nil
+	}
+
+	if n, err := s.builder.Write(b[idx0-s.offset : idx1-s.offset]); err != nil {
+		n += idx0 - s.offset
+		return n, err
+	}
+	return origN, nil
+}
+
+func (s *stringBuilderWithRange) String() string {
+	return s.builder.String()
 }
