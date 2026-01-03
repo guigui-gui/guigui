@@ -257,14 +257,11 @@ func (t *Text) SetValue(text string) {
 		return
 	}
 
-	// When a user is editing, the text should not be changed.
-	// Update the actual value later.
-	if t.editable {
-		t.nextText = text
-		t.nextTextSet = true
-	} else {
-		t.setText(text)
-	}
+	// Do not call t.setValue here. Update the actual value later.
+	// For example, when a user is editing, the text should not be changed.
+	// Another case is that SetMultiline might be called later.
+	t.nextText = text
+	t.nextTextSet = true
 	t.resetCachedTextSize()
 }
 
@@ -813,13 +810,19 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyX) ||
 			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyX):
-			// Cut
 			t.Cut()
 			return guigui.HandleInputByWidget(t)
 		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyV) ||
 			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyV):
-			// Paste
 			t.Paste()
+			return guigui.HandleInputByWidget(t)
+		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyY) ||
+			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyZ):
+			t.Redo()
+			return guigui.HandleInputByWidget(t)
+		case !useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyZ) ||
+			useEmacsKeybind() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyZ):
+			t.Undo()
 			return guigui.HandleInputByWidget(t)
 		}
 	}
@@ -982,7 +985,7 @@ func (t *Text) commit() {
 }
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if !context.IsFocused(t) && t.nextTextSet {
+	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
 		if t.nextSelectAll {
 			t.setTextAndSelection(t.nextText, 0, len(t.nextText))
 		} else {
@@ -1259,6 +1262,20 @@ func (t *Text) CanPaste() bool {
 	return ct != ""
 }
 
+func (t *Text) CanUndo() bool {
+	if !t.editable {
+		return false
+	}
+	return t.field.CanUndo()
+}
+
+func (t *Text) CanRedo() bool {
+	if !t.editable {
+		return false
+	}
+	return t.field.CanRedo()
+}
+
 func (t *Text) Cut() bool {
 	start, end := t.field.Selection()
 	if start == end {
@@ -1292,6 +1309,22 @@ func (t *Text) Paste() bool {
 	}
 	t.replaceTextAtSelection(ct)
 	return true
+}
+
+func (t *Text) Undo() {
+	if t.field.CanUndo() {
+		t.field.Undo()
+		t.resetCachedTextSize()
+		guigui.RequestRedraw(t)
+	}
+}
+
+func (t *Text) Redo() {
+	if t.field.CanRedo() {
+		t.field.Redo()
+		t.resetCachedTextSize()
+		guigui.RequestRedraw(t)
+	}
 }
 
 type textCursor struct {
