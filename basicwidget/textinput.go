@@ -92,7 +92,7 @@ func (t *TextInput) SetStyle(style TextInputStyle) {
 	}
 	t.style = style
 	t.textInput.SetStyle(style)
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *TextInput) SetEditable(editable bool) {
@@ -244,7 +244,7 @@ func (t *textInput) SetStyle(style TextInputStyle) {
 		return
 	}
 	t.style = style
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) SetEditable(editable bool) {
@@ -253,7 +253,7 @@ func (t *textInput) SetEditable(editable bool) {
 	}
 	t.readonly = !editable
 	t.text.SetEditable(editable)
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) setPaddingStart(padding int) {
@@ -261,7 +261,7 @@ func (t *textInput) setPaddingStart(padding int) {
 		return
 	}
 	t.paddingStart = padding
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) setPaddingEnd(padding int) {
@@ -269,7 +269,7 @@ func (t *textInput) setPaddingEnd(padding int) {
 		return
 	}
 	t.paddingEnd = padding
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) SetIcon(icon *ebiten.Image) {

@@ -93,7 +93,7 @@ func (s *scrollOverlay) SetContentSize(context *guigui.Context, widgetBounds *gu
 
 	s.contentSize = contentSize
 	s.adjustOffset(context, widgetBounds)
-	guigui.RequestRedraw(s)
+	guigui.RequestRebuild(s)
 }
 
 // SetOffsetByDelta sets the offset by adding dx and dy to the current offset.
@@ -118,7 +118,7 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.
 	if s.onceDraw {
 		s.showBars(context, widgetBounds)
 	}
-	guigui.RequestRedraw(s)
+	guigui.RequestRebuild(s)
 }
 
 func (s *scrollOverlay) setDragging(draggingX, draggingY bool) {
@@ -214,7 +214,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 			s.adjustOffset(context, widgetBounds)
 			if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
 				guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
-				guigui.RequestRedraw(s)
+				guigui.RequestRebuild(s)
 			}
 		}
 		return guigui.HandleInputByWidget(s)
@@ -237,7 +237,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 		s.adjustOffset(context, widgetBounds)
 		if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
 			guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
-			guigui.RequestRedraw(s)
+			guigui.RequestRebuild(s)
 			return guigui.HandleInputByWidget(s)
 		}
 		return guigui.HandleInputResult{}
@@ -355,7 +355,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	newOpacity := scrollBarOpacity(s.barCount)
 
 	if newOpacity != oldOpacity {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 
 	if s.barCount == 0 {
@@ -371,7 +371,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	s.barCount--
 	newOpacity = scrollBarOpacity(s.barCount)
 	if newOpacity != oldOpacity {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 
 	return nil

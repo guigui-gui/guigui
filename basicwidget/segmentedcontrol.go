@@ -57,7 +57,7 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 		return
 	}
 	s.direction = direction
-	guigui.RequestRedraw(s)
+	guigui.RequestRebuild(s)
 }
 
 func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
@@ -82,13 +82,13 @@ func (s *SegmentedControl[T]) ItemByIndex(index int) (SegmentedControlItem[T], b
 
 func (s *SegmentedControl[T]) SelectItemByIndex(index int) {
 	if s.abstractList.SelectItemByIndex(index, false) {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 
 func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 	if s.abstractList.SelectItemByValue(value, false) {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 

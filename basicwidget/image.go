@@ -63,5 +63,5 @@ func (i *Image) SetImage(image *ebiten.Image) {
 		return
 	}
 	i.image = image
-	guigui.RequestRedraw(i)
+	guigui.RequestRebuild(i)
 }

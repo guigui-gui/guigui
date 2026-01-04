@@ -218,12 +218,12 @@ func (a *app) focusWidget(widget Widget) {
 		return
 	}
 	if a.focusedWidget != nil {
-		RequestRedraw(a.focusedWidget)
+		RequestRebuild(a.focusedWidget)
 		a.focusedWidget.OnFocusChanged(&a.context, false)
 	}
 	a.focusedWidget = widget
 	if a.focusedWidget != nil {
-		RequestRedraw(a.focusedWidget)
+		RequestRebuild(a.focusedWidget)
 		a.focusedWidget.OnFocusChanged(&a.context, true)
 	}
 }
@@ -246,14 +246,14 @@ func (a *app) updateEventDispatchStates() Widget {
 func (a *app) updateRedrawRequestedRegionsByWidgets() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
-		if !widgetState.redrawRequested {
+		if !widgetState.rebuildRequested {
 			return nil
 		}
 		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
 			a.requestRedrawWidget(widget)
 		}
-		widgetState.redrawRequested = false
-		widgetState.redrawRequestedAt = ""
+		widgetState.rebuildRequested = false
+		widgetState.rebuildRequestedAt = ""
 		return nil
 	})
 }

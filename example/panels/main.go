@@ -96,7 +96,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if r.model.Tick() {
-		guigui.RequestRedraw(r)
+		guigui.RequestRebuild(r)
 	}
 	return nil
 }

@@ -217,7 +217,7 @@ func (c *Context) SetVisible(widget Widget, visible bool) {
 		w.widgetState().visibleCache = false
 		return nil
 	})
-	RequestRedraw(widget)
+	RequestRebuild(widget)
 }
 
 func (c *Context) IsVisible(widget Widget) bool {
@@ -238,7 +238,7 @@ func (c *Context) SetEnabled(widget Widget, enabled bool) {
 		w.widgetState().enabledCache = false
 		return nil
 	})
-	RequestRedraw(widget)
+	RequestRebuild(widget)
 }
 
 func (c *Context) IsEnabled(widget Widget) bool {
@@ -342,7 +342,7 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 		return
 	}
 	widgetState.transparency = 1 - opacity
-	RequestRedraw(widget)
+	RequestRebuild(widget)
 }
 
 func (c *Context) SetCustomDraw(widget Widget, customDraw CustomDrawFunc) {
@@ -373,7 +373,7 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 		w.widgetState().passThroughCache = false
 		return nil
 	})
-	RequestRedraw(widget)
+	RequestRebuild(widget)
 }
 
 func (c *Context) ZDelta(widget Widget) int {
@@ -393,7 +393,7 @@ func (c *Context) SetZDelta(widget Widget, zDelta int) {
 		w.widgetState().zPlus1Cache = 0
 		return nil
 	})
-	RequestRedraw(widget)
+	RequestRebuild(widget)
 }
 
 func (c *Context) visibleBounds(state *widgetState) image.Rectangle {

@@ -84,7 +84,7 @@ func (s *Slider) SetValue(value int) {
 	changed := value != s.abstractNumberInput.Value()
 	s.abstractNumberInput.SetValue(value, true)
 	if changed {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 
@@ -92,7 +92,7 @@ func (s *Slider) SetValueBigInt(value *big.Int) {
 	changed := value.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(value, true)
 	if changed {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 
@@ -100,7 +100,7 @@ func (s *Slider) SetValueInt64(value int64) {
 	changed := value != s.abstractNumberInput.ValueInt64()
 	s.abstractNumberInput.SetValueInt64(value, true)
 	if changed {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 
@@ -108,7 +108,7 @@ func (s *Slider) SetValueUint64(value uint64) {
 	changed := value != s.abstractNumberInput.ValueUint64()
 	s.abstractNumberInput.SetValueUint64(value, true)
 	if changed {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 
@@ -187,7 +187,7 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 func (s *Slider) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if hovered := s.isThumbHovered(context, widgetBounds); s.prevThumbHovered != hovered {
 		s.prevThumbHovered = hovered
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 	return nil
 }
@@ -208,13 +208,13 @@ func (s *Slider) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 		x, _ := ebiten.CursorPosition()
 		s.draggingStartX = x
 		s.draggingStartValue.Set(s.abstractNumberInput.ValueBigInt())
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 		return guigui.HandleInputByWidget(s)
 	}
 
 	if !context.IsEnabled(s) || !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		if s.dragging {
-			guigui.RequestRedraw(s)
+			guigui.RequestRebuild(s)
 		}
 		s.dragging = false
 		s.draggingStartX = 0
@@ -261,7 +261,7 @@ func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	changed := v.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(&v, true)
 	if changed {
-		guigui.RequestRedraw(s)
+		guigui.RequestRebuild(s)
 	}
 }
 

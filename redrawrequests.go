@@ -43,7 +43,7 @@ func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason,
 	if theDebugMode.showRenderingRegions {
 		switch reason {
 		case requestRedrawReasonWidget:
-			slog.Info("request redrawing", "reason", "widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
+			slog.Info("request redrawing", "reason", "widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().rebuildRequestedAt, "region", region)
 		case requestRedrawReasonLayout:
 			slog.Info("request redrawing", "reason", "layout", "region", region)
 		case requestRedrawReasonScreenSize:

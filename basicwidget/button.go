@@ -79,7 +79,7 @@ func (b *Button) setPressed(pressed bool) {
 		return
 	}
 	b.pressed = pressed
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetContent(content guigui.Widget) {
@@ -103,7 +103,7 @@ func (b *Button) SetIconAlign(align IconAlign) {
 		return
 	}
 	b.iconAlign = align
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetTextColor(clr color.Color) {
@@ -111,7 +111,7 @@ func (b *Button) SetTextColor(clr color.Color) {
 		return
 	}
 	b.textColor = clr
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) setKeepPressed(keep bool) {
@@ -119,7 +119,7 @@ func (b *Button) setKeepPressed(keep bool) {
 		return
 	}
 	b.keepPressed = keep
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetSharpCorners(sharpCorners Corners) {
@@ -127,7 +127,7 @@ func (b *Button) SetSharpCorners(sharpCorners Corners) {
 		return
 	}
 	b.sharpCorners = sharpCorners
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) setUseAccentColor(use bool) {
@@ -135,7 +135,7 @@ func (b *Button) setUseAccentColor(use bool) {
 		return
 	}
 	b.useAccentColor = use
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -297,7 +297,7 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if hovered := widgetBounds.IsHitAtCursor(); b.prevHovered != hovered {
 		b.prevHovered = hovered
-		guigui.RequestRedraw(b)
+		guigui.RequestRebuild(b)
 	}
 	return nil
 }
@@ -325,7 +325,7 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 			}
 			b.setPressed(false)
 			guigui.DispatchEvent(b, buttonEventUp)
-			guigui.RequestRedraw(b)
+			guigui.RequestRebuild(b)
 			justPressedOrReleased = true
 		}
 		if justPressedOrReleased {

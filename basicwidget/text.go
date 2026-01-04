@@ -221,7 +221,7 @@ func (t *Text) SetSelectable(selectable bool) {
 	if !t.selectable {
 		t.setSelection(0, 0, -1, false)
 	}
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) stringValue() string {
@@ -306,7 +306,7 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 		return false
 	}
 	t.field.SetSelection(start, end)
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 
 	if !adjustScroll {
 		t.prevStart = start
@@ -342,7 +342,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		t.resetCachedTextSize()
 		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 	}
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 
 	t.nextText = ""
 	t.nextTextSet = false
@@ -369,7 +369,7 @@ func (t *Text) setTextAndSelection(text string, start, end int) bool {
 	} else {
 		t.field.SetSelection(start, end)
 	}
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 
 	// Do not adjust scroll.
 	t.prevStart = start
@@ -386,7 +386,7 @@ func (t *Text) SetLocales(locales []language.Tag) {
 	}
 
 	t.locales = append([]language.Tag(nil), locales...)
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetBold(bold bool) {
@@ -395,7 +395,7 @@ func (t *Text) SetBold(bold bool) {
 	}
 
 	t.bold = bold
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetTabular(tabular bool) {
@@ -404,7 +404,7 @@ func (t *Text) SetTabular(tabular bool) {
 	}
 
 	t.tabular = tabular
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {
@@ -413,7 +413,7 @@ func (t *Text) SetTabWidth(tabWidth float64) {
 	}
 	t.tabWidth = tabWidth
 	t.resetCachedTextSize()
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) actualTabWidth(context *guigui.Context) float64 {
@@ -434,7 +434,7 @@ func (t *Text) SetScale(scale float64) {
 	}
 
 	t.scaleMinus1 = scale - 1
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) HorizontalAlign() HorizontalAlign {
@@ -447,7 +447,7 @@ func (t *Text) SetHorizontalAlign(align HorizontalAlign) {
 	}
 
 	t.hAlign = align
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) VerticalAlign() VerticalAlign {
@@ -460,7 +460,7 @@ func (t *Text) SetVerticalAlign(align VerticalAlign) {
 	}
 
 	t.vAlign = align
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetColor(color color.Color) {
@@ -469,7 +469,7 @@ func (t *Text) SetColor(color color.Color) {
 	}
 
 	t.color = color
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetOpacity(opacity float64) {
@@ -478,7 +478,7 @@ func (t *Text) SetOpacity(opacity float64) {
 	}
 
 	t.transparent = 1 - opacity
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) IsEditable() bool {
@@ -496,7 +496,7 @@ func (t *Text) SetEditable(editable bool) {
 		t.selectionShiftIndexPlus1 = 0
 	}
 	t.editable = editable
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) IsMultiline() bool {
@@ -509,7 +509,7 @@ func (t *Text) SetMultiline(multiline bool) {
 	}
 
 	t.multiline = multiline
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetAutoWrap(autoWrap bool) {
@@ -518,7 +518,7 @@ func (t *Text) SetAutoWrap(autoWrap bool) {
 	}
 
 	t.autoWrap = autoWrap
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) setKeepTailingSpace(keep bool) {
@@ -527,7 +527,7 @@ func (t *Text) setKeepTailingSpace(keep bool) {
 	}
 
 	t.keepTailingSpace = keep
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
@@ -622,7 +622,7 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 	if !context.IsFocused(t) {
 		if t.field.IsFocused() {
 			t.field.Blur()
-			guigui.RequestRedraw(t)
+			guigui.RequestRebuild(t)
 		}
 		return guigui.HandleInputResult{}
 	}
@@ -755,7 +755,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 		}
 		if processed {
-			guigui.RequestRedraw(t)
+			guigui.RequestRebuild(t)
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.gi
 			t.resetCachedTextSize()
 			if v := t.stringValue(); v != origText {
@@ -1315,7 +1315,7 @@ func (t *Text) Undo() {
 	if t.field.CanUndo() {
 		t.field.Undo()
 		t.resetCachedTextSize()
-		guigui.RequestRedraw(t)
+		guigui.RequestRebuild(t)
 	}
 }
 
@@ -1323,7 +1323,7 @@ func (t *Text) Redo() {
 	if t.field.CanRedo() {
 		t.field.Redo()
 		t.resetCachedTextSize()
-		guigui.RequestRedraw(t)
+		guigui.RequestRebuild(t)
 	}
 }
 
@@ -1354,7 +1354,7 @@ func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	if r := t.shouldRenderCursor(context, widgetBounds, t.text); t.prevShown != r {
 		t.prevShown = r
 		// TODO: This is not efficient. Improve this.
-		guigui.RequestRedraw(t)
+		guigui.RequestRebuild(t)
 	}
 	return nil
 }

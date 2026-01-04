@@ -108,7 +108,7 @@ func (p *panel) SetStyle(typ PanelStyle) {
 		return
 	}
 	p.style = typ
-	guigui.RequestRedraw(p)
+	guigui.RequestRebuild(p)
 }
 
 func (p *panel) SetContentConstraints(c PanelContentConstraints) {
@@ -217,7 +217,7 @@ func (b *panelBorder) setBorders(borders PanelBorders) {
 		return
 	}
 	b.borders = borders
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (b *panelBorder) SetAutoBorder(auto bool) {
@@ -225,7 +225,7 @@ func (b *panelBorder) SetAutoBorder(auto bool) {
 		return
 	}
 	b.autoBorder = auto
-	guigui.RequestRedraw(b)
+	guigui.RequestRebuild(b)
 }
 
 func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

@@ -85,7 +85,7 @@ func (l *List[T]) SetItemHeight(height int) {
 		return
 	}
 	l.listItemHeightPlus1 = height + 1
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
@@ -110,7 +110,7 @@ func (l *List[T]) SetHeaderHeight(height int) {
 	}
 	l.headerHeight = height
 	l.frame.SetHeaderHeight(height)
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) SetFooterHeight(height int) {
@@ -119,7 +119,7 @@ func (l *List[T]) SetFooterHeight(height int) {
 	}
 	l.footerHeight = height
 	l.frame.SetFooterHeight(height)
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) ItemBounds(index int) image.Rectangle {
@@ -304,7 +304,7 @@ func (l *listItemWidget[T]) setHeight(height int) {
 		return
 	}
 	l.heightPlus1 = height + 1
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setStyle(style ListStyle) {
@@ -312,7 +312,7 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 		return
 	}
 	l.style = style
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setText(text string) {
@@ -320,7 +320,7 @@ func (l *listItemWidget[T]) setText(text string) {
 		return
 	}
 	l.item.Text = text
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) textColor() color.Color {
@@ -509,7 +509,7 @@ func (l *listContent[T]) SetCheckmarkIndex(index int) {
 		return
 	}
 	l.checkmarkIndexPlus1 = index + 1
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) SetContentWidth(width int) {
@@ -517,7 +517,7 @@ func (l *listContent[T]) SetContentWidth(width int) {
 		return
 	}
 	l.contentWidthPlus1 = width + 1
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) contentWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
@@ -806,13 +806,13 @@ func (l *listContent[T]) SelectItemByIndex(index int) {
 
 func (l *listContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
 	if l.abstractList.SelectItemByIndex(index, forceFireEvents) {
-		guigui.RequestRedraw(l)
+		guigui.RequestRebuild(l)
 	}
 }
 
 func (l *listContent[T]) SelectItemByValue(value T) {
 	if l.abstractList.SelectItemByValue(value, false) {
-		guigui.RequestRedraw(l)
+		guigui.RequestRebuild(l)
 	}
 }
 
@@ -839,7 +839,7 @@ func (l *listContent[T]) SetStripeVisible(visible bool) {
 		return
 	}
 	l.stripeVisible = visible
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) IsHoveringVisible() bool {
@@ -855,7 +855,7 @@ func (l *listContent[T]) SetStyle(style ListStyle) {
 		return
 	}
 	l.style = style
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) ScrollOffset() (float64, float64) {
@@ -911,7 +911,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	if l.IsHoveringVisible() || l.hasMovableItems() {
 		if l.lastHoveredItemIndexPlus1 != l.hoveredItemIndexPlus1 {
 			l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
-			guigui.RequestRedraw(l)
+			guigui.RequestRebuild(l)
 		}
 	}
 
@@ -931,7 +931,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, l.contentSize(context, widgetBounds), 0, dy)
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				l.dragDstIndexPlus1 = i + 1
-				guigui.RequestRedraw(l)
+				guigui.RequestRebuild(l)
 				return guigui.HandleInputByWidget(l)
 			}
 			return guigui.AbortHandlingInputByWidget(l)
@@ -942,7 +942,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			l.dragDstIndexPlus1 = 0
 		}
 		l.dragSrcIndexPlus1 = 0
-		guigui.RequestRedraw(l)
+		guigui.RequestRebuild(l)
 		return guigui.HandleInputByWidget(l)
 	}
 
@@ -1275,7 +1275,7 @@ func (l *listFrame) SetHeaderHeight(height int) {
 		return
 	}
 	l.headerHeight = height
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) SetFooterHeight(height int) {
@@ -1283,7 +1283,7 @@ func (l *listFrame) SetFooterHeight(height int) {
 		return
 	}
 	l.footerHeight = height
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) SetStyle(style ListStyle) {
@@ -1291,7 +1291,7 @@ func (l *listFrame) SetStyle(style ListStyle) {
 		return
 	}
 	l.style = style
-	guigui.RequestRedraw(l)
+	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {

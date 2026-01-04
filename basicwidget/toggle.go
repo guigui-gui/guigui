@@ -47,7 +47,7 @@ func (t *Toggle) SetValue(value bool) {
 	if t.onceRendered {
 		t.count = toggleMaxCount() - t.count
 	}
-	guigui.RequestRedraw(t)
+	guigui.RequestRebuild(t)
 
 	guigui.DispatchEvent(t, toggleEventValueChanged, value)
 }
@@ -72,11 +72,11 @@ func (t *Toggle) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 func (t *Toggle) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.count > 0 {
 		t.count--
-		guigui.RequestRedraw(t)
+		guigui.RequestRebuild(t)
 	}
 	if hovered := widgetBounds.IsHitAtCursor(); t.prevHovered != hovered {
 		t.prevHovered = hovered
-		guigui.RequestRedraw(t)
+		guigui.RequestRebuild(t)
 	}
 	return nil
 }
