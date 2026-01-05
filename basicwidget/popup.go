@@ -677,7 +677,8 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0)
 	alpha := 0.25
 	if p.style != popupStyleDrawer {
-		alpha *= p.openingRate
+		// As the popup itself is also transparent, the shadow should be more transparent.
+		alpha *= p.openingRate * p.openingRate
 	}
 	clr = draw.ScaleAlpha(clr, alpha)
 	draw.DrawRoundedShadowRect(context, dst, bounds, clr, int(16*context.Scale())+RoundedCornerRadius(context))
