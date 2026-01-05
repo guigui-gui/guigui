@@ -115,6 +115,14 @@ func (t *TextInput) CanPaste() bool {
 	return t.textInput.CanPaste()
 }
 
+func (t *TextInput) CanUndo() bool {
+	return t.textInput.CanUndo()
+}
+
+func (t *TextInput) CanRedo() bool {
+	return t.textInput.CanRedo()
+}
+
 func (t *TextInput) Cut() bool {
 	return t.textInput.Cut()
 }
@@ -125,6 +133,14 @@ func (t *TextInput) Copy() bool {
 
 func (t *TextInput) Paste() bool {
 	return t.textInput.Paste()
+}
+
+func (t *TextInput) Undo() bool {
+	return t.textInput.Undo()
+}
+
+func (t *TextInput) Redo() bool {
+	return t.textInput.Redo()
 }
 
 func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -453,6 +469,14 @@ func (t *textInput) CanPaste() bool {
 	return t.text.CanPaste()
 }
 
+func (t *textInput) CanUndo() bool {
+	return t.text.CanUndo()
+}
+
+func (t *textInput) CanRedo() bool {
+	return t.text.CanRedo()
+}
+
 func (t *textInput) Cut() bool {
 	return t.text.Cut()
 }
@@ -463,6 +487,14 @@ func (t *textInput) Copy() bool {
 
 func (t *textInput) Paste() bool {
 	return t.text.Paste()
+}
+
+func (t *textInput) Undo() bool {
+	return t.text.Undo()
+}
+
+func (t *textInput) Redo() bool {
+	return t.text.Redo()
 }
 
 type textInputBackground struct {

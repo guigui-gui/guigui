@@ -1311,20 +1311,24 @@ func (t *Text) Paste() bool {
 	return true
 }
 
-func (t *Text) Undo() {
-	if t.field.CanUndo() {
-		t.field.Undo()
-		t.resetCachedTextSize()
-		guigui.RequestRebuild(t)
+func (t *Text) Undo() bool {
+	if !t.field.CanUndo() {
+		return false
 	}
+	t.field.Undo()
+	t.resetCachedTextSize()
+	guigui.RequestRebuild(t)
+	return true
 }
 
-func (t *Text) Redo() {
-	if t.field.CanRedo() {
-		t.field.Redo()
-		t.resetCachedTextSize()
-		guigui.RequestRebuild(t)
+func (t *Text) Redo() bool {
+	if !t.field.CanRedo() {
+		return false
 	}
+	t.field.Redo()
+	t.resetCachedTextSize()
+	guigui.RequestRebuild(t)
+	return true
 }
 
 type textCursor struct {
