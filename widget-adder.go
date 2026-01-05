@@ -8,10 +8,6 @@ type WidgetAdder struct {
 	widget Widget
 }
 
-func (c *WidgetAdder) AddChild(widget Widget){
-	c.AddWidget(widget)
-}
-
 func (c *WidgetAdder) AddWidget(widget Widget) {
 	widgetState := widget.widgetState()
 	widgetState.parent = c.widget

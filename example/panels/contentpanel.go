@@ -16,7 +16,7 @@ type ContentPanel struct {
 }
 
 func (c *ContentPanel) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&c.panel)
+	adder.AddWidget(&c.panel)
 	c.panel.SetContent(&c.content)
 	return nil
 }
@@ -33,7 +33,7 @@ type contentPanelContent struct {
 }
 
 func (c *contentPanelContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&c.text)
+	adder.AddWidget(&c.text)
 	c.text.SetValue("Content panel: " + dummyText)
 	c.text.SetAutoWrap(true)
 	c.text.SetSelectable(true)

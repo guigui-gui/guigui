@@ -144,8 +144,8 @@ func (t *TextInput) Redo() bool {
 }
 
 func (t *TextInput) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&t.textInput)
-	adder.AddChild(&t.focus)
+	adder.AddWidget(&t.textInput)
+	adder.AddWidget(&t.focus)
 	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
@@ -318,14 +318,14 @@ func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *gui
 }
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&t.background)
-	adder.AddChild(&t.text)
+	adder.AddWidget(&t.background)
+	adder.AddWidget(&t.text)
 	if t.icon.HasImage() {
-		adder.AddChild(&t.iconBackground)
-		adder.AddChild(&t.icon)
+		adder.AddWidget(&t.iconBackground)
+		adder.AddWidget(&t.icon)
 	}
-	adder.AddChild(&t.frame)
-	adder.AddChild(&t.scrollOverlay)
+	adder.AddWidget(&t.frame)
+	adder.AddWidget(&t.scrollOverlay)
 
 	t.background.textInput = t
 

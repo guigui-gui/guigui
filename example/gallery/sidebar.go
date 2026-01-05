@@ -18,7 +18,7 @@ type Sidebar struct {
 }
 
 func (s *Sidebar) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&s.panel)
+	adder.AddWidget(&s.panel)
 	s.panel.SetStyle(basicwidget.PanelStyleSide)
 	s.panel.SetBorders(basicwidget.PanelBorders{
 		End: true,
@@ -45,7 +45,7 @@ func (s *sidebarContent) setSize(size image.Point) {
 }
 
 func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&s.list)
+	adder.AddWidget(&s.list)
 
 	model := context.Model(s, modelKeyModel).(*Model)
 

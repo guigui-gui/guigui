@@ -34,8 +34,8 @@ type NumberInputs struct {
 }
 
 func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&n.numberInputForm)
-	adder.AddChild(&n.configForm)
+	adder.AddWidget(&n.numberInputForm)
+	adder.AddWidget(&n.configForm)
 
 	model := context.Model(n, modelKeyModel).(*Model)
 

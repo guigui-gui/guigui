@@ -94,7 +94,7 @@ func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 
 func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	for i := range s.buttons {
-		adder.AddChild(&s.buttons[i])
+		adder.AddWidget(&s.buttons[i])
 	}
 
 	if s.onItemSelected == nil {

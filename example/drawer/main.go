@@ -28,9 +28,9 @@ type Root struct {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.configForm)
-	adder.AddChild(&r.drawer)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.configForm)
+	adder.AddWidget(&r.drawer)
 
 	r.edgeText.SetValue("Edge")
 
@@ -135,7 +135,7 @@ func (d *drawerContent) SetOnClose(f func(context *guigui.Context)) {
 }
 
 func (d *drawerContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&d.closeButton)
+	adder.AddWidget(&d.closeButton)
 
 	d.closeButton.SetText("Close")
 	d.closeButton.SetOnDown(func(context *guigui.Context) {

@@ -181,7 +181,7 @@ func (t *Text) resetCachedTextSize() {
 
 func (t *Text) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if t.selectable || t.editable {
-		adder.AddChild(&t.cursor)
+		adder.AddWidget(&t.cursor)
 	}
 
 	if f := t.face(context, false); t.lastFace != f {

@@ -71,7 +71,7 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 }
 
 func (p *Panel) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&p.panel)
+	adder.AddWidget(&p.panel)
 	context.SetContainer(&p.panel, true)
 	return nil
 }
@@ -139,10 +139,10 @@ func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 
 func (p *panel) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if p.content != nil {
-		adder.AddChild(p.content)
+		adder.AddWidget(p.content)
 	}
-	adder.AddChild(&p.scrollOverlay)
-	adder.AddChild(&p.border)
+	adder.AddWidget(&p.scrollOverlay)
+	adder.AddWidget(&p.border)
 	if p.content == nil {
 		return nil
 	}

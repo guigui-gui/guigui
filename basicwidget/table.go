@@ -94,11 +94,11 @@ func (t *Table[T]) updateTableRows() {
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&t.list)
+	adder.AddWidget(&t.list)
 	for i := range t.columnTexts {
-		adder.AddChild(&t.columnTexts[i])
+		adder.AddWidget(&t.columnTexts[i])
 	}
-	adder.AddChild(&t.tableHeader)
+	adder.AddWidget(&t.tableHeader)
 
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
@@ -271,9 +271,9 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.WidgetA
 	t.ensureTexts()
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {
-			adder.AddChild(cell.Content)
+			adder.AddWidget(cell.Content)
 		} else {
-			adder.AddChild(&t.texts[i])
+			adder.AddWidget(&t.texts[i])
 		}
 	}
 	l := guigui.LinearLayout{

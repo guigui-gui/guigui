@@ -100,7 +100,7 @@ func (w *WidgetWithSize[T]) Widget() T {
 }
 
 func (w *WidgetWithSize[T]) Build(context *Context, adder *WidgetAdder) error {
-	adder.AddChild(w.Widget())
+	adder.AddWidget(w.Widget())
 	return nil
 }
 
@@ -144,7 +144,7 @@ func (w *WidgetWithPadding[T]) Widget() T {
 }
 
 func (w *WidgetWithPadding[T]) Build(context *Context, adder *WidgetAdder) error {
-	adder.AddChild(w.Widget())
+	adder.AddWidget(w.Widget())
 	return nil
 }
 

@@ -35,8 +35,8 @@ type Buttons struct {
 }
 
 func (b *Buttons) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&b.buttonsForm)
-	adder.AddChild(&b.configForm)
+	adder.AddWidget(&b.buttonsForm)
+	adder.AddWidget(&b.configForm)
 
 	model := context.Model(b, modelKeyModel).(*Model)
 

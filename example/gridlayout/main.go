@@ -30,10 +30,10 @@ type Root struct {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.configForm)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.configForm)
 	for i := range r.buttons {
-		adder.AddChild(&r.buttons[i])
+		adder.AddWidget(&r.buttons[i])
 	}
 
 	r.fillText.SetValue("Fill Widgets into Grid Cells")

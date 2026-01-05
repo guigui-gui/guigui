@@ -44,11 +44,11 @@ func (r *Root) Model(key any) any {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.toolbar)
-	adder.AddChild(&r.leftPanel)
-	adder.AddChild(&r.contentPanel)
-	adder.AddChild(&r.rightPanel)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.toolbar)
+	adder.AddWidget(&r.leftPanel)
+	adder.AddWidget(&r.contentPanel)
+	adder.AddWidget(&r.rightPanel)
 	return nil
 }
 

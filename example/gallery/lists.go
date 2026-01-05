@@ -42,9 +42,9 @@ type Lists struct {
 }
 
 func (l *Lists) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&l.listFormPanel)
-	adder.AddChild(&l.jumpForm)
-	adder.AddChild(&l.configForm)
+	adder.AddWidget(&l.listFormPanel)
+	adder.AddWidget(&l.jumpForm)
+	adder.AddWidget(&l.configForm)
 
 	model := context.Model(l, modelKeyModel).(*Model)
 

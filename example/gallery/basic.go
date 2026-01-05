@@ -27,7 +27,7 @@ type Basic struct {
 }
 
 func (b *Basic) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
-	adder.AddChild(&b.form)
+	adder.AddWidget(&b.form)
 
 	b.buttonText.SetValue("Button")
 	b.button.SetText("Click me!")
