@@ -632,7 +632,15 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 }
 
 func (a *app) cursorShape() bool {
-	for _, wz := range a.maybeHitWidgets {
+	var z int
+	for i, wz := range a.maybeHitWidgets {
+		if i == 0 {
+			z = wz.z
+		}
+		if z > wz.z {
+			return false
+		}
+
 		widgetState := wz.widget.widgetState()
 		if widgetState.isPassThrough() {
 			continue
@@ -640,6 +648,7 @@ func (a *app) cursorShape() bool {
 		if !widgetState.isVisible() {
 			continue
 		}
+		// TODO: What if the widget is a proxy widget?
 		if !widgetState.isEnabled() {
 			return false
 		}
