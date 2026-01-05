@@ -130,7 +130,7 @@ func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int
 	return l.content.itemYFromIndexForMenu(context, index)
 }
 
-func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (l *List[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.content)
 	adder.AddChild(&l.frame)
@@ -327,7 +327,7 @@ func (l *listItemWidget[T]) textColor() color.Color {
 	return l.item.TextColor
 }
 
-func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if l.item.Content != nil {
 		adder.AddChild(l.item.Content)
 	} else {
@@ -584,7 +584,7 @@ func (l *listContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if l.customBackground != nil {
 		adder.AddChild(l.customBackground)
 	}

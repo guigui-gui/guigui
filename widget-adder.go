@@ -3,13 +3,16 @@
 
 package guigui
 
-type ChildAdder struct {
+type WidgetAdder struct {
 	app    *app
 	widget Widget
 }
 
-// TODO: Rename this to AddWidget.
-func (c *ChildAdder) AddChild(widget Widget) {
+func (c *WidgetAdder) AddChild(widget Widget){
+	c.AddWidget(widget)
+}
+
+func (c *WidgetAdder) AddWidget(widget Widget) {
 	widgetState := widget.widgetState()
 	widgetState.parent = c.widget
 	widgetState.builtAt = c.app.buildCount

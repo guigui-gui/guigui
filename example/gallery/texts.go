@@ -29,7 +29,7 @@ type Texts struct {
 	sampleText                      basicwidget.Text
 }
 
-func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *Texts) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
 

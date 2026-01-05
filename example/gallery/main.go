@@ -75,7 +75,7 @@ func (r *Root) contentWidgeet() guigui.Widget {
 	return nil
 }
 
-func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.sidebar)
 	if content := r.contentWidgeet(); content != nil {

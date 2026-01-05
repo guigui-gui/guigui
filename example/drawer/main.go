@@ -27,7 +27,7 @@ type Root struct {
 	edge basicwidget.DrawerEdge
 }
 
-func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.configForm)
 	adder.AddChild(&r.drawer)
@@ -134,7 +134,7 @@ func (d *drawerContent) SetOnClose(f func(context *guigui.Context)) {
 	guigui.SetEventHandler(d, "close", f)
 }
 
-func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (d *drawerContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&d.closeButton)
 
 	d.closeButton.SetText("Close")

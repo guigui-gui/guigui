@@ -73,7 +73,7 @@ func (s *Select[T]) updatePopupMenuItems() {
 	s.popupMenu.SetItems(s.popupMenuItems)
 }
 
-func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *Select[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&s.button)
 	adder.AddChild(&s.popupMenu)
 
@@ -217,7 +217,7 @@ func (s *selectButtonContent) SetText(text string) {
 	s.text.SetValue(text)
 }
 
-func (s *selectButtonContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *selectButtonContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if s.content != nil {
 		adder.AddChild(s.content)
 	}
@@ -299,7 +299,7 @@ func (s *selectItemContent) SetContent(content guigui.Widget) {
 	s.content = content
 }
 
-func (s *selectItemContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *selectItemContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(s.content)
 	return nil
 }

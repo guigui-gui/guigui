@@ -43,7 +43,7 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.textInput)
 	adder.AddChild(&r.createButton)
@@ -135,7 +135,7 @@ func (t *taskWidget) SetText(text string) {
 	t.text.SetValue(text)
 }
 
-func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *taskWidget) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.doneButton)
 	adder.AddChild(&t.text)
 
@@ -185,7 +185,7 @@ func (t *tasksPanelContent) SetOnDeleted(f func(context *guigui.Context, id int)
 	guigui.SetEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
-func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
 	if model.TaskCount() > len(t.taskWidgets) {

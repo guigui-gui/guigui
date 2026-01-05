@@ -46,7 +46,7 @@ func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
 	p.list.Widget().SetCheckmarkIndex(index)
 }
 
-func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&p.popup)
 
 	list := p.list.Widget()

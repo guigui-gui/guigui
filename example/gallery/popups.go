@@ -38,7 +38,7 @@ type Popups struct {
 	contextMenuPopupPosition image.Point
 }
 
-func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *Popups) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	for i := range p.forms {
 		adder.AddChild(&p.forms[i])
 	}
@@ -191,7 +191,7 @@ func (b *popupClickHereText) SetOnClicked(f func(context *guigui.Context, pt ima
 	guigui.SetEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
-func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&p.text)
 	return nil
 }
@@ -227,7 +227,7 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 	s.popup = popup
 }
 
-func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&s.titleText)
 	adder.AddChild(&s.closeButton)
 	s.titleText.SetValue("Hello!")

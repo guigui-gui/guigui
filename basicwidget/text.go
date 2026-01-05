@@ -179,7 +179,7 @@ func (t *Text) resetCachedTextSize() {
 	t.cachedDefaultTabWidth = 0
 }
 
-func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *Text) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if t.selectable || t.editable {
 		adder.AddChild(&t.cursor)
 	}

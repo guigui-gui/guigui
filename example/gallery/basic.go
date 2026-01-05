@@ -26,7 +26,7 @@ type Basic struct {
 	list            basicwidget.List[int]
 }
 
-func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (b *Basic) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&b.form)
 
 	b.buttonText.SetValue("Button")

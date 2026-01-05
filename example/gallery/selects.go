@@ -31,7 +31,7 @@ type Selects struct {
 	select2ItemWidgets []selectItem
 }
 
-func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *Selects) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&s.listForm)
 	adder.AddChild(&s.configForm)
 
@@ -162,7 +162,7 @@ func (s *selectItem) SetTextColor(clr color.Color) {
 	s.text.SetColor(clr)
 }
 
-func (s *selectItem) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *selectItem) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&s.image)
 	adder.AddChild(&s.text)
 	s.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)

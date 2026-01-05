@@ -28,7 +28,7 @@ type Tables struct {
 	tableRows []basicwidget.TableRow[int]
 }
 
-func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *Tables) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.table)
 	adder.AddChild(&t.configForm)
 

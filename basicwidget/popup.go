@@ -98,7 +98,7 @@ func (p *Popup) setDrawerEdge(edge DrawerEdge) {
 	p.popup.SetDrawerEdge(edge)
 }
 
-func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *Popup) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&p.popup)
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
@@ -230,7 +230,7 @@ func (p *popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReas
 	guigui.SetEventHandler(p, popupEventClose, f)
 }
 
-func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *popup) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
 			adder.AddChild(&p.blurredBackground)
@@ -465,7 +465,7 @@ func (p *popupContentAndFrame) hasContent() bool {
 	return p.content.hasContent()
 }
 
-func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&p.content)
 	adder.AddChild(&p.frame)
 	return nil
@@ -501,7 +501,7 @@ func (p *popupContent) hasContent() bool {
 	return p.content != nil
 }
 
-func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *popupContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if p.content != nil {
 		adder.AddChild(p.content)
 	}

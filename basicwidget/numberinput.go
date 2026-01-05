@@ -199,7 +199,7 @@ func (n *NumberInput) CommitWithCurrentInputValue() {
 	n.textInput.CommitWithCurrentInputValue()
 }
 
-func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (n *NumberInput) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&n.textInput)
 	adder.AddChild(&n.upButton)
 	adder.AddChild(&n.downButton)

@@ -19,7 +19,7 @@ func (*DefaultWidget) Model(key any) any {
 	return nil
 }
 
-func (*DefaultWidget) Build(context *Context, adder *ChildAdder) error {
+func (*DefaultWidget) Build(context *Context, adder *WidgetAdder) error {
 	return nil
 }
 

@@ -29,7 +29,7 @@ type Root struct {
 	buttons    [16]basicwidget.Button
 }
 
-func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.configForm)
 	for i := range r.buttons {

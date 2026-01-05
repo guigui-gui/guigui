@@ -152,7 +152,7 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 	s.abstractNumberInput.SetMaximumValueUint64(maximum)
 }
 
-func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *Slider) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if s.onValueChanged == nil {
 		s.onValueChanged = func(value int, committed bool) {
 			guigui.DispatchEvent(s, sliderEventValueChanged, value, committed)

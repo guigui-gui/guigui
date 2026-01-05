@@ -17,7 +17,7 @@ type Toolbar struct {
 	content guigui.WidgetWithSize[*toolbarContent]
 }
 
-func (t *Toolbar) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *Toolbar) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.panel)
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
 	t.panel.SetBorders(basicwidget.PanelBorders{
@@ -44,7 +44,7 @@ type toolbarContent struct {
 	rightPanelButton basicwidget.Button
 }
 
-func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.leftPanelButton)
 	adder.AddChild(&t.rightPanelButton)
 

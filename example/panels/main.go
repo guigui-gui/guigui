@@ -43,7 +43,7 @@ func (r *Root) Model(key any) any {
 	}
 }
 
-func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (r *Root) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&r.background)
 	adder.AddChild(&r.toolbar)
 	adder.AddChild(&r.leftPanel)

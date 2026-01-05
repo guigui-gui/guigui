@@ -41,7 +41,7 @@ type Lists struct {
 	treeItems []basicwidget.ListItem[int]
 }
 
-func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (l *Lists) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&l.listFormPanel)
 	adder.AddChild(&l.jumpForm)
 	adder.AddChild(&l.configForm)

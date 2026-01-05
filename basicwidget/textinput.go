@@ -143,7 +143,7 @@ func (t *TextInput) Redo() bool {
 	return t.textInput.Redo()
 }
 
-func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *TextInput) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 	context.SetContainer(&t.textInput, true)
@@ -317,7 +317,7 @@ func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *gui
 	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(start+end, top+bottom))
 }
 
-func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *textInput) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.background)
 	adder.AddChild(&t.text)
 	if t.icon.HasImage() {

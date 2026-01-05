@@ -36,7 +36,7 @@ type TextInputs struct {
 	enabledToggle                   basicwidget.Toggle
 }
 
-func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *TextInputs) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.textInputForm)
 	adder.AddChild(&t.configForm)
 
@@ -270,7 +270,7 @@ func (c *inlineTextInputContainer) SetHorizontalAlign(align basicwidget.Horizont
 	c.textInput.SetHorizontalAlign(align)
 }
 
-func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&c.textInput)
 	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
 	return nil

@@ -506,7 +506,7 @@ func (a *app) buildWidgets() error {
 		return nil
 	})
 
-	var adder ChildAdder
+	var adder WidgetAdder
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))

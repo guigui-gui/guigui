@@ -138,7 +138,7 @@ func (b *Button) setUseAccentColor(use bool) {
 	guigui.RequestRebuild(b)
 }
 
-func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (b *Button) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	if b.content != nil {
 		adder.AddChild(b.content)
 	}

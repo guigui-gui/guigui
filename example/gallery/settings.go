@@ -26,7 +26,7 @@ type Settings struct {
 
 var hongKongChinese = language.MustParse("zh-HK")
 
-func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (s *Settings) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&s.form)
 
 	lightModeImg, err := theImageCache.GetMonochrome("light_mode", context.ColorMode())
@@ -203,7 +203,7 @@ type textWithSubText struct {
 	subText basicwidget.Text
 }
 
-func (t *textWithSubText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *textWithSubText) Build(context *guigui.Context, adder *guigui.WidgetAdder) error {
 	adder.AddChild(&t.text)
 	adder.AddChild(&t.subText)
 	t.subText.SetScale(0.875)
