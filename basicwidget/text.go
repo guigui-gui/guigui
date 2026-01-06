@@ -100,6 +100,7 @@ type Text struct {
 	nextTextSet   bool
 	nextText      string
 	nextSelectAll bool
+	textInited    bool
 
 	hAlign      HorizontalAlign
 	vAlign      VerticalAlign
@@ -364,7 +365,13 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	// Reset the selection to (0, 0).
 
 	if textChanged {
-		t.field.SetTextAndSelection(text, start, end)
+		if t.textInited || t.field.TextLengthInBytes() > 0 {
+			t.field.SetTextAndSelection(text, start, end)
+		} else {
+			// Reset the text so that the undo history's first item is the initial text.
+			t.field.ResetText(text)
+			t.field.SetSelection(start, end)
+		}
 		t.resetCachedTextSize()
 		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 	} else {
@@ -377,6 +384,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	t.prevEnd = end
 	t.nextText = ""
 	t.nextTextSet = false
+	t.textInited = true
 
 	return true
 }
@@ -986,6 +994,10 @@ func (t *Text) commit() {
 }
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Once a text is input, it is regarded as initialized.
+	if t.field.TextLengthInBytes() > 0 {
+		t.textInited = true
+	}
 	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
 		t.setText(t.nextText, t.nextSelectAll)
 		t.nextSelectAll = false
