@@ -266,7 +266,7 @@ func (t *Text) SetValue(text string) {
 }
 
 func (t *Text) ForceSetValue(text string) {
-	t.setText(text)
+	t.setText(text, false)
 }
 
 func (t *Text) ReplaceValueAtSelection(text string) {
@@ -316,10 +316,6 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 	return true
 }
 
-func (t *Text) setText(text string) {
-	t.replaceTextAt(text, 0, t.field.TextLengthInBytes())
-}
-
 func (t *Text) replaceTextAtSelection(text string) {
 	start, end := t.field.Selection()
 	t.replaceTextAt(text, start, end)
@@ -348,26 +344,31 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 	t.nextTextSet = false
 }
 
-func (t *Text) setTextAndSelection(text string, start, end int) bool {
+func (t *Text) setText(text string, selectAll bool) bool {
 	if !t.multiline {
-		text, start, end = replaceNewLinesWithSpace(text, start, end)
+		text, _, _ = replaceNewLinesWithSpace(text, 0, 0)
 	}
 
 	t.selectionShiftIndexPlus1 = 0
-	if start > end {
-		start, end = end, start
-	}
 
 	textChanged := t.stringValue() != text
-	if s, e := t.field.Selection(); !textChanged && s == start && e == end {
+	if s, e := t.field.Selection(); !textChanged && (!selectAll || s == 0 && e == len(text)) {
 		return false
 	}
+
+	var start, end int
+	if selectAll {
+		end = len(text)
+	}
+	// When selectAll is false, the current selection range might be no longer valid.
+	// Reset the selection to (0, 0).
+
 	if textChanged {
 		t.field.SetTextAndSelection(text, start, end)
 		t.resetCachedTextSize()
 		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 	} else {
-		t.field.SetSelection(start, end)
+		t.field.SetSelection(0, len(text))
 	}
 	guigui.RequestRebuild(t)
 
@@ -986,11 +987,7 @@ func (t *Text) commit() {
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
-		if t.nextSelectAll {
-			t.setTextAndSelection(t.nextText, 0, len(t.nextText))
-		} else {
-			t.setText(t.nextText)
-		}
+		t.setText(t.nextText, t.nextSelectAll)
 		t.nextSelectAll = false
 	}
 	return nil
