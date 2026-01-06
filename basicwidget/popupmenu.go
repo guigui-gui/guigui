@@ -104,6 +104,15 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 }
 
 func (p *PopupMenu[T]) SetOpen(open bool) {
+	// Reset the hovered item index explicitly (#266).
+	// As the hovered item index is updated at HandlePointingInput,
+	// the previous selected item might be unexpectedly recognized as hovered.
+	// Detecting a hovered item should be done after layouting, but a list item color is
+	// updated at Build before layouting. Now the hovered item index in the previous frame is used.
+	// TODO: Fix this. This is tricky.
+	if !p.popup.IsOpen() && open {
+		p.list.Widget().resetHoveredItemIndex()
+	}
 	p.popup.SetOpen(open)
 }
 

@@ -130,6 +130,10 @@ func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int
 	return l.content.itemYFromIndexForMenu(context, index)
 }
 
+func (l *List[T]) resetHoveredItemIndex() {
+	l.content.resetHoveredItemIndex()
+}
+
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.content)
@@ -870,6 +874,14 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 		}
 	}
 	return l.abstractList.ItemCount()
+}
+
+func (l *listContent[T]) resetHoveredItemIndex() {
+	if l.hoveredItemIndexPlus1 == 0 {
+		return
+	}
+	l.hoveredItemIndexPlus1 = 0
+	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
