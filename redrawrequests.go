@@ -30,6 +30,7 @@ type requestRedrawReason int
 const (
 	requestRedrawReasonUnknown requestRedrawReason = iota
 	requestRedrawReasonRebuildWidget
+	requestRedrawReasonRedrawWidget
 	requestRedrawReasonLayout
 	requestRedrawReasonScreenSize
 	requestRedrawReasonScreenDeviceScale
@@ -44,6 +45,8 @@ func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason,
 		switch reason {
 		case requestRedrawReasonRebuildWidget:
 			slog.Info("request redrawing", "reason", "rebuild widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().rebuildRequestedAt, "region", region)
+		case requestRedrawReasonRedrawWidget:
+			slog.Info("request redrawing", "reason", "redraw widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
 		case requestRedrawReasonLayout:
 			slog.Info("request redrawing", "reason", "layout", "region", region)
 		case requestRedrawReasonScreenSize:

@@ -78,7 +78,7 @@ func (w *widgetsAndVisibleBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
 		if bounds3D.zDelta != 0 || bounds3D.float {
 			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
-			requestRebuild(widgetState)
+			requestRedraw(widgetState)
 		}
 	}
 }
@@ -120,6 +120,8 @@ type widgetState struct {
 
 	rebuildRequested   bool
 	rebuildRequestedAt string
+	redrawRequested    bool
+	redrawRequestedAt  string
 
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
@@ -282,6 +284,19 @@ func requestRebuild(widgetState *widgetState) {
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.rebuildRequestedAt = fmt.Sprintf("%s:%d", file, line)
+		}
+	}
+}
+
+func RequestRedraw(widget Widget) {
+	requestRedraw(widget.widgetState())
+}
+
+func requestRedraw(widgetState *widgetState) {
+	widgetState.redrawRequested = true
+	if theDebugMode.showRenderingRegions {
+		if _, file, line, ok := runtime.Caller(2); ok {
+			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
 		}
 	}
 }

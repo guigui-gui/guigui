@@ -113,8 +113,9 @@ type app struct {
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
 	maybeHitWidgets []widgetAndZ
 
-	redrawRequestedRegions redrawRequests
-	regionsToDraw          image.Rectangle
+	redrawRequestedRegions           redrawRequests
+	redrawAndRebuildRequestedRegions redrawRequests
+	regionsToDraw                    image.Rectangle
 
 	invalidatedRegionsForDebug []invalidatedRegionsForDebugItem
 
@@ -246,14 +247,21 @@ func (a *app) updateEventDispatchStates() Widget {
 func (a *app) updateRedrawRequestedRegionsByWidgets() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
-		if !widgetState.rebuildRequested {
-			return nil
-		}
-		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-			a.requestRedrawWidget(widget, requestRedrawReasonRebuildWidget)
+		if widgetState.rebuildRequested || widgetState.redrawRequested {
+			if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
+				var reason requestRedrawReason
+				if widgetState.rebuildRequested {
+					reason = requestRedrawReasonRebuildWidget
+				} else {
+					reason = requestRedrawReasonRedrawWidget
+				}
+				a.requestRedrawWidget(widget, reason)
+			}
 		}
 		widgetState.rebuildRequested = false
 		widgetState.rebuildRequestedAt = ""
+		widgetState.redrawRequested = false
+		widgetState.redrawRequestedAt = ""
 		return nil
 	})
 }
@@ -275,6 +283,7 @@ func (a *app) Update() error {
 
 	// Call the first buildWidgets.
 	a.redrawRequestedRegions.reset()
+	a.redrawAndRebuildRequestedRegions.reset()
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -318,10 +327,10 @@ func (a *app) Update() error {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	}
-	if !a.redrawRequestedRegions.empty() {
+	if !a.redrawAndRebuildRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
 		}
 	}
 	if inputHandledWidget != nil {
@@ -332,9 +341,11 @@ func (a *app) Update() error {
 	}
 
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
+	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
 	a.redrawRequestedRegions.reset()
+	a.redrawAndRebuildRequestedRegions.reset()
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
@@ -388,14 +399,15 @@ func (a *app) Update() error {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	}
-	if !a.redrawRequestedRegions.empty() {
+	if !a.redrawAndRebuildRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawRequestedRegions)
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
 		}
 	}
 
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
+	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
@@ -462,7 +474,12 @@ func (a *app) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 }
 
 func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, widget Widget) {
-	a.redrawRequestedRegions.add(region, reason, widget)
+	switch reason {
+	case requestRedrawReasonRedrawWidget, requestRedrawReasonLayout:
+		a.redrawRequestedRegions.add(region, reason, widget)
+	default:
+		a.redrawAndRebuildRequestedRegions.add(region, reason, widget)
+	}
 }
 
 func (a *app) requestRedrawWidget(widget Widget, reason requestRedrawReason) {
