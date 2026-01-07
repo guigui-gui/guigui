@@ -72,11 +72,11 @@ func (t *Toggle) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 func (t *Toggle) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.count > 0 {
 		t.count--
-		guigui.RequestRebuild(t)
+		guigui.RequestRedraw(t)
 	}
 	if hovered := widgetBounds.IsHitAtCursor(); t.prevHovered != hovered {
 		t.prevHovered = hovered
-		guigui.RequestRebuild(t)
+		guigui.RequestRedraw(t)
 	}
 	return nil
 }

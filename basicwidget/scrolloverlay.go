@@ -355,7 +355,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	newOpacity := scrollBarOpacity(s.barCount)
 
 	if newOpacity != oldOpacity {
-		guigui.RequestRebuild(s)
+		guigui.RequestRedraw(s)
 	}
 
 	if s.barCount == 0 {
@@ -371,7 +371,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	s.barCount--
 	newOpacity = scrollBarOpacity(s.barCount)
 	if newOpacity != oldOpacity {
-		guigui.RequestRebuild(s)
+		guigui.RequestRedraw(s)
 	}
 
 	return nil

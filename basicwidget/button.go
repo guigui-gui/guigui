@@ -297,7 +297,7 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if hovered := widgetBounds.IsHitAtCursor(); b.prevHovered != hovered {
 		b.prevHovered = hovered
-		guigui.RequestRebuild(b)
+		guigui.RequestRedraw(b)
 	}
 	return nil
 }

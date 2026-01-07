@@ -383,7 +383,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.openingCount += 2
 			}
 			p.openingCount = min(p.openingCount, popupMaxOpeningCount())
-			guigui.RequestRebuild(p)
+			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == popupMaxOpeningCount() {
 			p.showing = false
@@ -401,7 +401,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.openingCount--
 			}
 			p.openingCount = max(p.openingCount, 0)
-			guigui.RequestRebuild(p)
+			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == 0 {
 			p.hiding = false
@@ -595,7 +595,7 @@ func (p *popupBlurredBackground) SetOpeningRate(rate float64) {
 		return
 	}
 	p.openingRate = rate
-	guigui.RequestRebuild(p)
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -629,7 +629,7 @@ func (p *popupDarkBackground) SetOpeningRate(rate float64) {
 		return
 	}
 	p.openingRate = rate
-	guigui.RequestRebuild(p)
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -652,7 +652,7 @@ func (p *popupShadow) SetOpeningRate(rate float64) {
 		return
 	}
 	p.openingRate = rate
-	guigui.RequestRebuild(p)
+	guigui.RequestRedraw(p)
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {

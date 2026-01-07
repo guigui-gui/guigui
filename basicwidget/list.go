@@ -843,7 +843,7 @@ func (l *listContent[T]) SetStripeVisible(visible bool) {
 		return
 	}
 	l.stripeVisible = visible
-	guigui.RequestRebuild(l)
+	guigui.RequestRedraw(l)
 }
 
 func (l *listContent[T]) IsHoveringVisible() bool {
@@ -937,7 +937,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, l.contentSize(context, widgetBounds), 0, dy)
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				l.dragDstIndexPlus1 = i + 1
-				guigui.RequestRebuild(l)
+				guigui.RequestRedraw(l)
 				return guigui.HandleInputByWidget(l)
 			}
 			return guigui.AbortHandlingInputByWidget(l)
@@ -948,7 +948,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			l.dragDstIndexPlus1 = 0
 		}
 		l.dragSrcIndexPlus1 = 0
-		guigui.RequestRebuild(l)
+		guigui.RequestRedraw(l)
 		return guigui.HandleInputByWidget(l)
 	}
 
