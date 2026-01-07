@@ -16,24 +16,24 @@ var (
 	isIPad      = regexp.MustCompile(`\biPad\b`)
 )
 
-var isDarwin bool
+var darwin bool
 
 func init() {
 	ua := js.Global().Get("navigator").Get("userAgent").String()
 	if isMacintosh.MatchString(ua) {
-		isDarwin = true
+		darwin = true
 		return
 	}
 	if isIPhone.MatchString(ua) {
-		isDarwin = true
+		darwin = true
 		return
 	}
 	if isIPad.MatchString(ua) {
-		isDarwin = true
+		darwin = true
 		return
 	}
 }
 
-func useEmacsKeybind() bool {
-	return isDarwin
+func isDarwin() bool {
+	return darwin
 }

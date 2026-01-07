@@ -3,6 +3,6 @@
 
 package basicwidget
 
-func useEmacsKeybind() bool {
+func isDarwin() bool {
 	return true
 }
