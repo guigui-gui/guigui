@@ -227,6 +227,10 @@ func (a *app) focusWidget(widget Widget) {
 		RequestRebuild(a.focusedWidget)
 		a.focusedWidget.OnFocusChanged(&a.context, true)
 	}
+
+	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
+	// requestRedrawReasonFocus also requests rebuilding a tree.
+	a.requestRedraw(a.bounds(), requestRedrawReasonFocus, nil)
 }
 
 func (a *app) updateEventDispatchStates() Widget {
