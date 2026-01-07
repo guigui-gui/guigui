@@ -250,7 +250,7 @@ func (a *app) updateRedrawRequestedRegionsByWidgets() {
 			return nil
 		}
 		if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-			a.requestRedrawWidget(widget)
+			a.requestRedrawWidget(widget, requestRedrawReasonRebuildWidget)
 		}
 		widgetState.rebuildRequested = false
 		widgetState.rebuildRequestedAt = ""
@@ -465,22 +465,22 @@ func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, 
 	a.redrawRequestedRegions.add(region, reason, widget)
 }
 
-func (a *app) requestRedrawWidget(widget Widget) {
+func (a *app) requestRedrawWidget(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
-	a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonWidget, widget)
+	a.requestRedraw(a.context.visibleBounds(widgetState), reason, widget)
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentZ(child)
+		a.requestRedrawIfDifferentParentZ(child, reason)
 	}
 }
 
-func (a *app) requestRedrawIfDifferentParentZ(widget Widget) {
+func (a *app) requestRedrawIfDifferentParentZ(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
 	if widgetState.zDelta != 0 {
-		a.requestRedrawWidget(widget)
+		a.requestRedrawWidget(widget, reason)
 		return
 	}
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentZ(child)
+		a.requestRedrawIfDifferentParentZ(child, reason)
 	}
 }
 
