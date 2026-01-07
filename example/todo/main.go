@@ -119,33 +119,30 @@ func (r *Root) tryCreateTask(text string) {
 type taskWidget struct {
 	guigui.DefaultWidget
 
-	doneButton basicwidget.Button
-	text       basicwidget.Text
+	checkbox   basicwidget.Checkbox
+	delete_btn basicwidget.Button
 }
 
 const (
-	taskWidgetEventDoneButtonPressed = "doneButtonPressed"
+	taskWidgetEventDeleteButtonPressed = "deleteButtonPressed"
 )
 
-func (t *taskWidget) SetOnDoneButtonPressed(f func(context *guigui.Context)) {
-	guigui.SetEventHandler(t, taskWidgetEventDoneButtonPressed, f)
+func (t *taskWidget) SetOnDeleteButtonPressed(f func(context *guigui.Context)) {
+	guigui.SetEventHandler(t, taskWidgetEventDeleteButtonPressed, f)
 }
 
 func (t *taskWidget) SetText(text string) {
-	t.text.SetValue(text)
+	t.checkbox.SetText(text)
 }
 
 func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.doneButton)
-	adder.AddChild(&t.text)
+	adder.AddChild(&t.checkbox)
 
-	t.doneButton.SetText("Done")
-	t.doneButton.SetOnUp(func(context *guigui.Context) {
-		guigui.DispatchEvent(t, taskWidgetEventDoneButtonPressed)
+	t.delete_btn.SetText("Delete")
+	t.delete_btn.SetOnUp(func(context *guigui.Context) {
+		guigui.DispatchEvent(t, taskWidgetEventDeleteButtonPressed)
 	})
-
-	t.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
-
+	adder.AddChild(&t.delete_btn)
 	return nil
 }
 
@@ -155,20 +152,15 @@ func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items: []guigui.LinearLayoutItem{
 			{
-				Widget: &t.doneButton,
-				Size:   guigui.FixedSize(3 * u),
+				Widget: &t.checkbox,
+				Size:   guigui.FlexibleSize(1),
 			},
 			{
-				Widget: &t.text,
-				Size:   guigui.FlexibleSize(1),
+				Widget: &t.delete_btn,
 			},
 		},
 		Gap: u / 2,
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
-}
-
-func (t *taskWidget) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return image.Pt(6*int(basicwidget.UnitSize(context)), t.doneButton.Measure(context, guigui.Constraints{}).Y)
 }
 
 type tasksPanelContent struct {
@@ -199,7 +191,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
-		t.taskWidgets[i].SetOnDoneButtonPressed(func(context *guigui.Context) {
+		t.taskWidgets[i].SetOnDeleteButtonPressed(func(context *guigui.Context) {
 			guigui.DispatchEvent(t, tasksPanelContentEventDeleted, task.ID)
 		})
 		t.taskWidgets[i].SetText(task.Text)
@@ -215,25 +207,12 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui
 	}
 	layout.Items = make([]guigui.LinearLayoutItem, len(t.taskWidgets))
 	for i := range t.taskWidgets {
-		w := widgetBounds.Bounds().Dx()
-		h := t.taskWidgets[i].Measure(context, guigui.FixedWidthConstraints(w)).Y
 		layout.Items[i] = guigui.LinearLayoutItem{
 			Widget: &t.taskWidgets[i],
-			Size:   guigui.FixedSize(h),
+			Size:   guigui.FixedSize(u),
 		}
 	}
 	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
-}
-
-func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	u := basicwidget.UnitSize(context)
-	var h int
-	for i := range t.taskWidgets {
-		h += t.taskWidgets[i].Measure(context, constraints).Y
-		h += int(u / 4)
-	}
-	w := t.DefaultWidget.Measure(context, constraints).X
-	return image.Pt(w, h)
 }
 
 func main() {
