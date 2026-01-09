@@ -377,6 +377,11 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 	if p.showing {
 		if p.animateOnFading {
+			// An animated popup always requires relayout.
+			guigui.RequestRebuild(p)
+		}
+		if p.openingCount == 0 {
+			// When starting to show a popup, rebulding the wiget tree is required.
 			guigui.RequestRebuild(p)
 		}
 		if p.openingCount < popupMaxOpeningCount() {
@@ -398,6 +403,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	}
 	if p.hiding {
 		if p.animateOnFading {
+			// An animated popup always requires relayout.
 			guigui.RequestRebuild(p)
 		}
 		if 0 < p.openingCount {
@@ -410,6 +416,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == 0 {
+			// When finishing to hide a popup, rebulding the wiget tree is required.
+			guigui.RequestRebuild(p)
 			p.hiding = false
 			guigui.DispatchEvent(p, popupEventClose, p.closeReason)
 			p.closeReason = PopupCloseReasonNone
