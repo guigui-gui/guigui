@@ -104,7 +104,6 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 	s.button.SetOnDown(s.onDown)
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
-	s.button.SetIconAlign(IconAlignEnd)
 
 	if s.onPopupMenuItemSelected == nil {
 		s.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
@@ -254,6 +253,12 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 	iconSize := defaultIconSize(context)
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
+			Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
 			Widget: &s.icon,
 			Size:   guigui.FixedSize(iconSize),
 		})
@@ -266,7 +271,6 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Gap:       buttonTextAndImagePadding(context),
 		Items:     s.layoutItems,
 		Padding: guigui.Padding{
 			Start:  buttonEdgeAndTextPadding(context),
