@@ -376,6 +376,9 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	p.toClose = false
 
 	if p.showing {
+		if p.animateOnFading {
+			guigui.RequestRebuild(p)
+		}
 		if p.openingCount < popupMaxOpeningCount() {
 			if p.style == popupStyleMenu {
 				p.openingCount += 4
@@ -394,6 +397,9 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 	}
 	if p.hiding {
+		if p.animateOnFading {
+			guigui.RequestRebuild(p)
+		}
 		if 0 < p.openingCount {
 			if p.closeReason == PopupCloseReasonReopen || p.style == popupStyleMenu {
 				p.openingCount -= 4
