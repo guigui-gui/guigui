@@ -40,6 +40,7 @@ func (*DefaultWidget) Tick(context *Context, widgetBounds *WidgetBounds) error {
 }
 
 func (*DefaultWidget) CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool) {
+	context.setDefaultMethodCalledFlag()
 	return 0, false
 }
 

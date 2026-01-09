@@ -219,7 +219,7 @@ var (
 )
 
 // isProxyWidget returns true if the widget is a proxy.
-// A proxy widget is a widget whose Draw and HandlePointingInput are the default implementation.
+// A proxy widget is a widget whose Draw, HandlePointingInput, and CursorShape are the default implementation.
 // A proxy widget mainly manages its children and doesn't handle pointing input and drawing.
 // A proxy widget is ignored for cursor hit tests.
 func isProxyWidget(context *Context, widget Widget) bool {
@@ -245,6 +245,11 @@ func isProxyWidget(context *Context, widget Widget) bool {
 	}
 	context.resetDefaultMethodCalled()
 	widget.Draw(context, &wb, dummyImage)
+	if !context.isDefaultMethodCalled() {
+		isProxy = false
+	}
+	context.resetDefaultMethodCalled()
+	widget.CursorShape(context, &wb)
 	if !context.isDefaultMethodCalled() {
 		isProxy = false
 	}

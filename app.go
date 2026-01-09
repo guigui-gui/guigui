@@ -660,13 +660,15 @@ func (a *app) cursorShape() bool {
 		}
 
 		widgetState := wz.widget.widgetState()
-		if widgetState.isPassThrough() {
-			continue
-		}
 		if !widgetState.isVisible() {
 			continue
 		}
-		// TODO: What if the widget is a proxy widget?
+		if widgetState.isPassThrough() {
+			continue
+		}
+		if isProxyWidget(&a.context, wz.widget) {
+			continue
+		}
 		if !widgetState.isEnabled() {
 			return false
 		}
