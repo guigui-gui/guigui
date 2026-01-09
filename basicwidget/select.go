@@ -118,13 +118,9 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 }
 
 func (s *Select[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	p := widgetBounds.Bounds().Min
-	layouter.LayoutWidget(&s.button, image.Rectangle{
-		Min: p,
-		Max: p.Add(s.button.Measure(context, guigui.Constraints{})),
-	})
+	layouter.LayoutWidget(&s.button, widgetBounds.Bounds())
 
-	p = widgetBounds.Bounds().Min
+	p := widgetBounds.Bounds().Min
 	p.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 	p.X = max(p.X, 0)
 	// TODO: The item content in a button and a select might have different heights. Handle this case properly.
