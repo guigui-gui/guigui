@@ -654,10 +654,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 
 func (a *app) cursorShape() bool {
 	var z int
-	for i, wz := range a.maybeHitWidgets {
-		if i == 0 {
-			z = wz.z
-		}
+	for _, wz := range a.maybeHitWidgets {
 		if z > wz.z {
 			return false
 		}
@@ -676,6 +673,7 @@ func (a *app) cursorShape() bool {
 		bounds := widgetBoundsFromWidget(&a.context, wz.widget)
 		shape, ok := wz.widget.CursorShape(&a.context, bounds)
 		if !ok {
+			z = wz.z
 			continue
 		}
 		ebiten.SetCursorShape(shape)
