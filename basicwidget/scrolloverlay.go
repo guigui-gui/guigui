@@ -19,6 +19,16 @@ const (
 	scrollOverlayEventScroll = "scroll"
 )
 
+func adjustedWheel() (float64, float64) {
+	x, y := ebiten.Wheel()
+	switch runtime.GOOS {
+	case "darwin":
+		x *= 2
+		y *= 2
+	}
+	return x, y
+}
+
 func scrollBarFadingInTime() int {
 	return ebiten.TPS() / 15
 }
@@ -45,6 +55,14 @@ func scrollBarOpacity(count int) float64 {
 	default:
 		return float64(count) / float64(scrollBarFadingOutTime())
 	}
+}
+
+func scrollBarStrokeWidth(context *guigui.Context) float64 {
+	return 8 * context.Scale()
+}
+
+func scrollBarPadding(context *guigui.Context) float64 {
+	return 2 * context.Scale()
 }
 
 // scrollOverlay is a widget that shows scroll bars overlayed on its content.
@@ -119,16 +137,6 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.
 		s.showBars(context, widgetBounds)
 	}
 	guigui.RequestRebuild(s)
-}
-
-func adjustedWheel() (float64, float64) {
-	x, y := ebiten.Wheel()
-	switch runtime.GOOS {
-	case "darwin":
-		x *= 2
-		y *= 2
-	}
-	return x, y
 }
 
 func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
@@ -397,26 +405,18 @@ func (s *scrollOverlay) Draw(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 }
 
-func scrollOverlayBarStrokeWidth(context *guigui.Context) float64 {
-	return 8 * context.Scale()
-}
-
-func scrollOverlayPadding(context *guigui.Context) float64 {
-	return 2 * context.Scale()
-}
-
 func (s *scrollOverlay) barSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (float64, float64) {
 	bounds := widgetBounds.Bounds()
-	padding := scrollOverlayPadding(context)
+	padding := scrollBarPadding(context)
 
 	var w, h float64
 	if s.contentSize.X > bounds.Dx() {
 		w = (float64(bounds.Dx()) - 2*padding) * float64(bounds.Dx()) / float64(s.contentSize.X)
-		w = max(w, scrollOverlayBarStrokeWidth(context))
+		w = max(w, scrollBarStrokeWidth(context))
 	}
 	if s.contentSize.Y > bounds.Dy() {
 		h = (float64(bounds.Dy()) - 2*padding) * float64(bounds.Dy()) / float64(s.contentSize.Y)
-		h = max(h, scrollOverlayBarStrokeWidth(context))
+		h = max(h, scrollBarStrokeWidth(context))
 	}
 	return w, h
 }
@@ -427,7 +427,7 @@ func (s *scrollOverlay) barBounds(context *guigui.Context, widgetBounds *guigui.
 	offsetX, offsetY := s.Offset()
 	barWidth, barHeight := s.barSize(context, widgetBounds)
 
-	padding := scrollOverlayPadding(context)
+	padding := scrollBarPadding(context)
 
 	var horizontalBarBounds, verticalBarBounds image.Rectangle
 	if s.contentSize.X > bounds.Dx() {
@@ -435,11 +435,11 @@ func (s *scrollOverlay) barBounds(context *guigui.Context, widgetBounds *guigui.
 		x0 := float64(bounds.Min.X) + padding + rate*(float64(bounds.Dx())-2*padding-barWidth)
 		x1 := x0 + float64(barWidth)
 		var y0, y1 float64
-		if scrollOverlayBarStrokeWidth(context) > float64(bounds.Dy())*0.3 {
+		if scrollBarStrokeWidth(context) > float64(bounds.Dy())*0.3 {
 			y0 = float64(bounds.Max.Y) - float64(bounds.Dy())*0.3
 			y1 = float64(bounds.Max.Y)
 		} else {
-			y0 = float64(bounds.Max.Y) - padding - scrollOverlayBarStrokeWidth(context)
+			y0 = float64(bounds.Max.Y) - padding - scrollBarStrokeWidth(context)
 			y1 = float64(bounds.Max.Y) - padding
 		}
 		horizontalBarBounds = image.Rect(int(x0), int(y0), int(x1), int(y1))
@@ -449,11 +449,11 @@ func (s *scrollOverlay) barBounds(context *guigui.Context, widgetBounds *guigui.
 		y0 := float64(bounds.Min.Y) + padding + rate*(float64(bounds.Dy())-2*padding-barHeight)
 		y1 := y0 + float64(barHeight)
 		var x0, x1 float64
-		if scrollOverlayBarStrokeWidth(context) > float64(bounds.Dx())*0.3 {
+		if scrollBarStrokeWidth(context) > float64(bounds.Dx())*0.3 {
 			x0 = float64(bounds.Max.X) - float64(bounds.Dx())*0.3
 			x1 = float64(bounds.Max.X)
 		} else {
-			x0 = float64(bounds.Max.X) - padding - scrollOverlayBarStrokeWidth(context)
+			x0 = float64(bounds.Max.X) - padding - scrollBarStrokeWidth(context)
 			x1 = float64(bounds.Max.X) - padding
 		}
 		verticalBarBounds = image.Rect(int(x0), int(y0), int(x1), int(y1))
