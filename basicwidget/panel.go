@@ -244,7 +244,7 @@ func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	var r image.Rectangle
 	if p.scrollOverlay != nil {
 		offsetX, offsetY = p.scrollOverlay.Offset()
-		r = p.scrollOverlay.scrollRange(context, widgetBounds)
+		r = p.scrollOverlay.scrollRange(widgetBounds)
 	}
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
 	if (p.scrollOverlay != nil && p.autoBorder && offsetX < float64(r.Max.X)) || p.borders.Start {
