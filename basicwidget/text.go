@@ -335,11 +335,8 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		return
 	}
 	t.field.ReplaceText(text, start, end)
-	if text != "" {
-		t.resetCachedTextSize()
-		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
-	}
-	guigui.RequestRebuild(t)
+	t.resetCachedTextSize()
+	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 
 	t.nextText = ""
 	t.nextTextSet = false
