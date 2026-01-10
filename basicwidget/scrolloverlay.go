@@ -189,10 +189,11 @@ func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBound
 
 func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	hovered := widgetBounds.IsHitAtCursor()
+
+	wheelX, wheelY := adjustedWheel()
 	if hovered {
-		dx, dy := adjustedWheel()
-		s.lastWheelX = dx
-		s.lastWheelY = dy
+		s.lastWheelX = wheelX
+		s.lastWheelY = wheelY
 	} else {
 		s.lastWheelX = 0
 		s.lastWheelY = 0
@@ -215,7 +216,7 @@ func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBound
 		}
 	}
 
-	if dx, dy := adjustedWheel(); dx != 0 || dy != 0 {
+	if wheelX != 0 || wheelY != 0 {
 		s.draggingX = false
 		s.draggingY = false
 	}
@@ -257,17 +258,16 @@ func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBound
 		s.draggingY = false
 	}
 
-	if dx, dy := adjustedWheel(); dx != 0 || dy != 0 {
+	if wheelX != 0 || wheelY != 0 {
 		if !hovered {
 			return guigui.HandleInputResult{}
 		}
-		s.draggingX = false
-		s.draggingY = false
 
+		// TODO: If there is an inner scrollOverlay, wheels should not be handled here (#204).
 		prevOffsetX := s.offsetX
 		prevOffsetY := s.offsetY
-		s.offsetX += dx * 4 * context.Scale()
-		s.offsetY += dy * 4 * context.Scale()
+		s.offsetX += wheelX * 4 * context.Scale()
+		s.offsetY += wheelY * 4 * context.Scale()
 		s.adjustOffset(widgetBounds)
 		if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
 			guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
