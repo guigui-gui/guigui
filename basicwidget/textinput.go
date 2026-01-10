@@ -369,8 +369,6 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 
 func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
-	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
 
 	bounds := widgetBounds.Bounds()
 
@@ -454,6 +452,9 @@ func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
+	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
+	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
 	return nil
 }
 
