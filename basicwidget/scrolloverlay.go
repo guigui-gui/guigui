@@ -249,7 +249,7 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 func (s *scrollOverlay) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	x, y := ebiten.CursorPosition()
 	hb, vb := s.barBounds(context, widgetBounds)
-	if image.Pt(x, y).In(hb) || image.Pt(x, y).In(vb) {
+	if !vb.Empty() && x >= vb.Min.X || !hb.Empty() && y >= hb.Min.Y {
 		return ebiten.CursorShapeDefault, true
 	}
 	return 0, false
