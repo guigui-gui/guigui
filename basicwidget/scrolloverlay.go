@@ -371,8 +371,8 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 
 	if s.barCount == 0 {
-		context.SetOpacity(&s.hBar, 0)
-		context.SetOpacity(&s.vBar, 0)
+		s.hBar.setAlpha(0)
+		s.vBar.setAlpha(0)
 		return nil
 	}
 
@@ -389,8 +389,8 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 	}
 
 	alpha := scrollBarOpacity(s.barCount) * 3 / 4
-	context.SetOpacity(&s.hBar, alpha)
-	context.SetOpacity(&s.vBar, alpha)
+	s.hBar.setAlpha(alpha)
+	s.vBar.setAlpha(alpha)
 
 	return nil
 }
@@ -459,6 +459,7 @@ type scrollOverlayBar struct {
 	guigui.DefaultWidget
 
 	thumbBounds image.Rectangle
+	alpha       float64
 }
 
 func (s *scrollOverlayBar) setThumbBounds(bounds image.Rectangle) {
@@ -469,11 +470,26 @@ func (s *scrollOverlayBar) setThumbBounds(bounds image.Rectangle) {
 	guigui.RequestRedraw(s)
 }
 
+func (s *scrollOverlayBar) setAlpha(alpha float64) {
+	if s.alpha == alpha {
+		return
+	}
+	s.alpha = alpha
+	guigui.RequestRedraw(s)
+}
+
 func (s *scrollOverlayBar) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	return ebiten.CursorShapeDefault, true
 }
 
 func (s *scrollOverlayBar) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	if s.thumbBounds.Empty() {
+		return
+	}
+	if s.alpha == 0 {
+		return
+	}
 	barColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.2)
+	barColor = draw.ScaleAlpha(barColor, s.alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
 }
