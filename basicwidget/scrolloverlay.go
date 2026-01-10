@@ -73,6 +73,9 @@ func scrollBarPadding(context *guigui.Context) float64 {
 type scrollOverlay struct {
 	guigui.DefaultWidget
 
+	hBar scrollOverlayBar
+	vBar scrollOverlayBar
+
 	contentSize image.Point
 	offsetX     float64
 	offsetY     float64
@@ -137,6 +140,28 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.
 		s.showBars(context, widgetBounds)
 	}
 	guigui.RequestRebuild(s)
+}
+
+func (s *scrollOverlay) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddChild(&s.hBar)
+	adder.AddChild(&s.vBar)
+	return nil
+}
+
+func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	cs := widgetBounds.Bounds().Size()
+	if s.lastSize != cs {
+		s.adjustOffset(context, widgetBounds)
+		s.lastSize = cs
+	}
+
+	hb, vb := s.barBounds(context, widgetBounds)
+	if !hb.Empty() {
+		layouter.LayoutWidget(&s.hBar, hb)
+	}
+	if !vb.Empty() {
+		layouter.LayoutWidget(&s.vBar, vb)
+	}
 }
 
 func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
@@ -248,15 +273,6 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 	return guigui.HandleInputResult{}
 }
 
-func (s *scrollOverlay) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	x, y := ebiten.CursorPosition()
-	hb, vb := s.barBounds(context, widgetBounds)
-	if !vb.Empty() && x >= vb.Min.X || !hb.Empty() && y >= hb.Min.Y {
-		return ebiten.CursorShapeDefault, true
-	}
-	return 0, false
-}
-
 func (s *scrollOverlay) Offset() (float64, float64) {
 	return s.offsetX, s.offsetY
 }
@@ -312,14 +328,6 @@ func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds
 		return true
 	}
 	return false
-}
-
-func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	cs := widgetBounds.Bounds().Size()
-	if s.lastSize != cs {
-		s.adjustOffset(context, widgetBounds)
-		s.lastSize = cs
-	}
 }
 
 func (s *scrollOverlay) showBars(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
@@ -459,4 +467,12 @@ func (s *scrollOverlay) barBounds(context *guigui.Context, widgetBounds *guigui.
 		verticalBarBounds = image.Rect(int(x0), int(y0), int(x1), int(y1))
 	}
 	return horizontalBarBounds, verticalBarBounds
+}
+
+type scrollOverlayBar struct {
+	guigui.DefaultWidget
+}
+
+func (s *scrollOverlayBar) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	return ebiten.CursorShapeDefault, true
 }
