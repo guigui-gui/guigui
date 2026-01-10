@@ -1234,9 +1234,10 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 
 	cx, cy := ebiten.CursorPosition()
 	if pos, ok := t.textPosition(context, textBounds, end, true); ok {
-		deltaX := min(float64(contentBounds.Max.X)-pos.X, 0)
-		deltaY := min(float64(contentBounds.Max.Y)-pos.Bottom, 0)
+		var deltaX, deltaY float64
 		if t.dragging {
+			deltaX = float64(contentBounds.Max.X) - float64(cx)
+			deltaY = float64(contentBounds.Max.Y) - float64(cy)
 			if cx > contentBounds.Max.X {
 				deltaX /= 4
 			} else {
@@ -1247,14 +1248,20 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 			} else {
 				deltaY = 0
 			}
+		} else {
+			deltaX = float64(contentBounds.Max.X) - pos.X
+			deltaY = float64(contentBounds.Max.Y) - pos.Bottom
 		}
+		deltaX = min(deltaX, 0)
+		deltaY = min(deltaY, 0)
 		dx += deltaX
 		dy += deltaY
 	}
 	if pos, ok := t.textPosition(context, textBounds, start, true); ok {
-		deltaX := max(float64(contentBounds.Min.X)-pos.X, 0)
-		deltaY := max(float64(contentBounds.Min.Y)-pos.Top, 0)
+		var deltaX, deltaY float64
 		if t.dragging {
+			deltaX = float64(contentBounds.Min.X) - float64(cx)
+			deltaY = float64(contentBounds.Min.Y) - float64(cy)
 			if cx < contentBounds.Min.X {
 				deltaX /= 4
 			} else {
@@ -1265,7 +1272,12 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 			} else {
 				deltaY = 0
 			}
+		} else {
+			deltaX = float64(contentBounds.Min.X) - pos.X
+			deltaY = float64(contentBounds.Min.Y) - pos.Top
 		}
+		deltaX = max(deltaX, 0)
+		deltaY = max(deltaY, 0)
 		dx += deltaX
 		dy += deltaY
 	}
