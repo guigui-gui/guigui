@@ -121,15 +121,6 @@ func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.
 	guigui.RequestRebuild(s)
 }
 
-func (s *scrollOverlay) setDragging(draggingX, draggingY bool) {
-	if s.draggingX == draggingX && s.draggingY == draggingY {
-		return
-	}
-
-	s.draggingX = draggingX
-	s.draggingY = draggingY
-}
-
 func adjustedWheel() (float64, float64) {
 	x, y := ebiten.Wheel()
 	switch runtime.GOOS {
@@ -170,12 +161,12 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 	if !s.draggingX && !s.draggingY && hovered && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		hb, vb := s.barBounds(context, widgetBounds)
-		if image.Pt(x, y).In(hb) {
-			s.setDragging(true, s.draggingY)
+		if !hb.Empty() && y >= hb.Min.Y {
+			s.draggingX = true
 			s.draggingStartPosition.X = x
 			s.draggingStartOffsetX = s.offsetX
-		} else if image.Pt(x, y).In(vb) {
-			s.setDragging(s.draggingX, true)
+		} else if !vb.Empty() && x >= vb.Min.X {
+			s.draggingY = true
 			s.draggingStartPosition.Y = y
 			s.draggingStartOffsetY = s.offsetY
 		}
@@ -185,7 +176,8 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 	}
 
 	if dx, dy := adjustedWheel(); dx != 0 || dy != 0 {
-		s.setDragging(false, false)
+		s.draggingX = false
+		s.draggingY = false
 	}
 
 	if (s.draggingX || s.draggingY) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -221,14 +213,16 @@ func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBound
 	}
 
 	if (s.draggingX || s.draggingY) && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		s.setDragging(false, false)
+		s.draggingX = false
+		s.draggingY = false
 	}
 
 	if dx, dy := adjustedWheel(); dx != 0 || dy != 0 {
 		if !hovered {
 			return guigui.HandleInputResult{}
 		}
-		s.setDragging(false, false)
+		s.draggingX = false
+		s.draggingY = false
 
 		prevOffsetX := s.offsetX
 		prevOffsetY := s.offsetY
