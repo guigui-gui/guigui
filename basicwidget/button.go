@@ -53,7 +53,7 @@ type Button struct {
 	keepPressed     bool
 	useAccentColor  bool
 	borderInvisible bool
-	prevHovered     bool
+	prevPressed     bool
 	sharpCorners    Corners
 	pairedButton    *Button
 }
@@ -294,15 +294,16 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 	return image.Pt(w, h)
 }
 
-func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if hovered := widgetBounds.IsHitAtCursor(); b.prevHovered != hovered {
-		b.prevHovered = hovered
-		guigui.RequestRedraw(b)
+func (b *Button) checkPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	if hovered := b.isPressed(context, widgetBounds); b.prevPressed != hovered {
+		b.prevPressed = hovered
+		guigui.RequestRebuild(b)
 	}
-	return nil
 }
 
 func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	b.checkPressed(context, widgetBounds)
+
 	if widgetBounds.IsHitAtCursor() {
 		// IsMouseButtonJustPressed and IsMouseButtonJustReleased can be true at the same time as of Ebitengine v2.9.
 		// Check both.
@@ -340,6 +341,11 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 		b.setPressed(false)
 	}
 	return guigui.HandleInputResult{}
+}
+
+func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	b.checkPressed(context, widgetBounds)
+	return nil
 }
 
 func (b *Button) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
