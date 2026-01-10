@@ -415,9 +415,6 @@ func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBo
 }
 
 func (t *textInput) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if r := t.scrollOverlay.handlePointingInput(context, widgetBounds); r != (guigui.HandleInputResult{}) {
-		return r
-	}
 	if widgetBounds.IsHitAtCursor() {
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 		right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)

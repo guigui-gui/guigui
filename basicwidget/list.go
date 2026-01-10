@@ -885,10 +885,6 @@ func (l *listContent[T]) resetHoveredItemIndex() {
 }
 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if r := l.scrollOverlay.handlePointingInput(context, widgetBounds); r != (guigui.HandleInputResult{}) {
-		return r
-	}
-
 	l.hoveredItemIndexPlus1 = 0
 	if widgetBounds.IsHitAtCursor() {
 		cp := image.Pt(ebiten.CursorPosition())

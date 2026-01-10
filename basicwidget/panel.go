@@ -193,10 +193,6 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	layouter.LayoutWidget(&p.border, bounds)
 }
 
-func (p *panel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	return p.scrollOverlay.handlePointingInput(context, widgetBounds)
-}
-
 func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	switch p.style {
 	case PanelStyleSide:

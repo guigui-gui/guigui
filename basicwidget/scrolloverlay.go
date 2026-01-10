@@ -187,13 +187,7 @@ func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBound
 	return !s.isCursorInEdgeArea(context, widgetBounds)
 }
 
-// handlePointingInput process pointing input for scrollOverlay as Widget.HandlePointingInput does.
-//
-// Guigui's input handling system does not invoke this method automatically.
-// Instead, handlePointingInput must be invoked from the parent widget's HandlePointingInput method.
-// This is because the scroll of the widget that is closest to the leaf in the tree should be handled first.
-// If scrollOverlay is treated as an independent widget, the input handling order would become counterintuitive.
-func (s *scrollOverlay) handlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	hovered := widgetBounds.IsHitAtCursor()
 	if hovered {
 		dx, dy := adjustedWheel()
