@@ -7,7 +7,6 @@ import (
 	"image"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
@@ -414,21 +413,6 @@ func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBo
 
 	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context, widgetBounds))
 	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
-}
-
-func (t *textInput) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if widgetBounds.IsHitAtCursor() {
-		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
-		right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
-		if left || right {
-			t.text.handleClick(context, t.textBounds(context, widgetBounds), image.Pt(ebiten.CursorPosition()), left)
-			if left {
-				return guigui.HandleInputByWidget(t)
-			}
-			return guigui.HandleInputResult{}
-		}
-	}
-	return guigui.HandleInputResult{}
 }
 
 func (t *textInput) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
