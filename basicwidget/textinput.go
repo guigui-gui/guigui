@@ -292,7 +292,7 @@ func (t *textInput) SetIcon(icon *ebiten.Image) {
 	t.icon.SetImage(icon)
 }
 
-func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (start, top, end, bottom int) {
+func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.Padding {
 	var x, y int
 	switch t.style {
 	case TextInputStyleNormal:
@@ -301,20 +301,22 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 	case TextInputStyleInline:
 		x = UnitSize(context) / 4
 	}
-	start = x + t.paddingStart
+	start := x + t.paddingStart
 	if t.icon.HasImage() {
 		start += defaultIconSize(context)
 	}
-	top = y
-	end = x + t.paddingEnd
-	bottom = y
-	return
+	return guigui.Padding{
+		Start:  start,
+		Top:    y,
+		End:    x + t.paddingEnd,
+		Bottom: y,
+	}
 }
 
 func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
-	start, top, end, bottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
-	w := widgetBounds.Bounds().Dx() - start - end
-	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(start+end, top+bottom))
+	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	w := widgetBounds.Bounds().Dx() - padding.Start - padding.End
+	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(padding.Start+padding.End, padding.Top+padding.Bottom))
 }
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -346,17 +348,17 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 }
 
 func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	bt := widgetBounds.Bounds()
 	pt := bt.Min
-	s := t.text.Measure(context, guigui.FixedWidthConstraints(bt.Dx()-paddingStart-paddingEnd))
-	s.X = max(s.X, bt.Dx()-paddingStart-paddingEnd)
-	s.Y = max(s.Y, bt.Dy()-paddingTop-paddingBottom)
+	s := t.text.Measure(context, guigui.FixedWidthConstraints(bt.Dx()-padding.Start-padding.End))
+	s.X = max(s.X, bt.Dx()-padding.Start-padding.End)
+	s.Y = max(s.Y, bt.Dy()-padding.Top-padding.Bottom)
 	b := image.Rectangle{
 		Min: pt,
 		Max: pt.Add(s),
 	}
-	b = b.Add(image.Pt(paddingStart, paddingTop))
+	b = b.Add(image.Pt(padding.Start, padding.Top))
 
 	// As the text is rendered in an inset box, shift the text bounds down by 0.5 pixel.
 	b = b.Add(image.Pt(0, int(0.5*context.Scale())))
@@ -404,11 +406,11 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 	bounds := widgetBounds.Bounds()
-	paddingStart, paddingTop, paddingEnd, paddingBottom := t.textInputPaddingInScrollableContent(context, widgetBounds)
-	bounds.Max.X -= paddingEnd
-	bounds.Min.X += paddingStart
-	bounds.Max.Y -= paddingBottom
-	bounds.Min.Y += paddingTop
+	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	bounds.Max.X -= padding.End
+	bounds.Min.X += padding.Start
+	bounds.Max.Y -= padding.Bottom
+	bounds.Min.Y += padding.Top
 
 	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context, widgetBounds))
 	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
@@ -436,12 +438,12 @@ func (t *textInput) CursorShape(context *guigui.Context, widgetBounds *guigui.Wi
 func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	if t.style == TextInputStyleInline {
 		// WidgetBounds is not needed for inline text input.
-		start, _, end, _ := t.textInputPaddingInScrollableContent(context, nil)
+		padding := t.textInputPaddingInScrollableContent(context, nil)
 		if fixedWidth, ok := constraints.FixedWidth(); ok {
-			constraints = guigui.FixedWidthConstraints(fixedWidth - start - end)
+			constraints = guigui.FixedWidthConstraints(fixedWidth - padding.Start - padding.End)
 		}
 		s := t.text.Measure(context, constraints)
-		w := max(s.X+start+end, UnitSize(context))
+		w := max(s.X+padding.Start+padding.End, UnitSize(context))
 		h := s.Y
 		return image.Pt(w, h)
 	}
