@@ -197,7 +197,7 @@ type textInput struct {
 	paddingStart int
 	paddingEnd   int
 
-	onTextScroll func(context *guigui.Context, deltaX, deltaY float64)
+	onTextScrollDelta func(context *guigui.Context, deltaX, deltaY float64)
 }
 
 func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -330,12 +330,12 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.iconBackground.setEditable(!t.readonly)
 	t.text.setEditable(!t.readonly)
 
-	if t.onTextScroll == nil {
-		t.onTextScroll = func(context *guigui.Context, deltaX, deltaY float64) {
+	if t.onTextScrollDelta == nil {
+		t.onTextScrollDelta = func(context *guigui.Context, deltaX, deltaY float64) {
 			t.panel.SetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
-	t.text.Text().setOnScroll(t.onTextScroll)
+	t.text.Text().setOnScrollDelta(t.onTextScrollDelta)
 
 	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
 	context.SetPassThrough(&t.frame, true)

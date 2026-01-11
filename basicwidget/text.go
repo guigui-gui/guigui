@@ -48,7 +48,7 @@ const (
 const (
 	textEventKeyJustPressed = "keyJustPressed"
 	textEventValueChanged   = "valueChanged"
-	textEventScroll         = "scroll"
+	textEventScrollDelta    = "scrollDelta"
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
@@ -177,8 +177,8 @@ func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Ke
 	guigui.SetEventHandler(t, textEventKeyJustPressed, f)
 }
 
-func (t *Text) setOnScroll(f func(context *guigui.Context, deltaX, deltaY float64)) {
-	guigui.SetEventHandler(t, textEventScroll, f)
+func (t *Text) setOnScrollDelta(f func(context *guigui.Context, deltaX, deltaY float64)) {
+	guigui.SetEventHandler(t, textEventScrollDelta, f)
 }
 
 func (t *Text) resetCachedTextSize() {
@@ -1013,7 +1013,7 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
 	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
 	if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
-		guigui.DispatchEvent(t, textEventScroll, dx, dy)
+		guigui.DispatchEvent(t, textEventScrollDelta, dx, dy)
 	}
 
 	return nil
