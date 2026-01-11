@@ -478,7 +478,6 @@ type listContent[T comparable] struct {
 	pressStartPlus1           image.Point
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
-	contentHeight             int
 
 	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex []image.Rectangle
@@ -532,18 +531,6 @@ func (l *listContent[T]) SetContentWidth(width int) {
 	}
 	l.contentWidthPlus1 = width + 1
 	guigui.RequestRebuild(l)
-}
-
-func (l *listContent[T]) contentWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
-	if l.contentWidthPlus1 > 0 {
-		return l.contentWidthPlus1 - 1
-	}
-	return widgetBounds.Bounds().Dx()
-}
-
-func (l *listContent[T]) contentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
-	w := l.contentWidth(context, widgetBounds)
-	return image.Pt(w, l.contentHeight)
 }
 
 func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
@@ -667,13 +654,16 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		}
 	}
 
-	cw := l.contentWidth(context, widgetBounds)
+	cw := widgetBounds.Bounds().Dx()
+	if l.contentWidthPlus1 > 0 {
+		cw = l.contentWidthPlus1 - 1
+	}
 
 	p := widgetBounds.Bounds().Min
 	offsetX, offsetY := l.scrollOverlay.Offset()
 	p.X += RoundedCornerRadius(context) + int(offsetX)
 	p.Y += RoundedCornerRadius(context) + int(offsetY)
-	origY := p.Y
+
 	clear(l.widgetBoundsForLayout)
 	if l.widgetBoundsForLayout == nil {
 		l.widgetBoundsForLayout = map[guigui.Widget]image.Rectangle{}
@@ -754,10 +744,9 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
 	}
 
-	l.contentHeight = p.Y - origY + 2*RoundedCornerRadius(context)
-	cs := image.Pt(cw, l.contentHeight)
 	// TODO: Now scrollOverlay's widgetBounds doens't match with List's widgetBounds.
 	// Separate a content part and use Panel.
+	cs := l.measure(context, cw)
 	l.scrollOverlay.SetContentSize(context, widgetBounds, cs)
 
 	// Adjust the scroll offset to show the selected item if needed.
@@ -784,25 +773,47 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 }
 
 func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	// Measure is mainly for a menu list.
-	var itemConstraints guigui.Constraints
-	if fixedWidth, ok := constraints.FixedWidth(); ok {
-		itemConstraints = guigui.FixedWidthConstraints(fixedWidth - 2*RoundedCornerRadius(context))
+	var width int
+	if l.contentWidthPlus1 > 0 {
+		width = l.contentWidthPlus1 - 1
+	} else if fixedWidth, ok := constraints.FixedWidth(); ok {
+		width = fixedWidth
 	}
-	var size image.Point
-	for i := range l.abstractList.ItemCount() {
-		item, _ := l.abstractList.ItemByIndex(i)
-		s := item.Content.Measure(context, itemConstraints)
-		size.X = max(size.X, s.X+listItemIndentSize(context, item.IndentLevel))
-		size.Y += s.Y
-	}
+	return l.measure(context, width)
+}
 
-	if l.checkmarkIndexPlus1 > 0 {
-		size.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+func (l *listContent[T]) measure(context *guigui.Context, width int) image.Point {
+	hasCheckmark := l.checkmarkIndexPlus1 > 0
+	offsetForCheckmark := listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+
+	var w, h int
+	for i := range l.visibleItems() {
+		item, _ := l.abstractList.ItemByIndex(i)
+		var constraint guigui.Constraints
+		// If width is 0, there is no constraint.
+		// This is used mainly for a menu list.
+		if width > 0 {
+			itemW := width - 2*RoundedCornerRadius(context)
+			if hasCheckmark {
+				itemW -= offsetForCheckmark
+			}
+			itemW -= listItemIndentSize(context, item.IndentLevel)
+			itemW -= item.Padding.Start + item.Padding.End
+			guigui.FixedWidthConstraints(itemW)
+		}
+		s := item.Content.Measure(context, constraint)
+		w = max(w, s.X+listItemIndentSize(context, item.IndentLevel)+item.Padding.Start+item.Padding.End)
+		h += s.Y + item.Padding.Top + item.Padding.Bottom
 	}
-	size.X += 2 * RoundedCornerRadius(context)
-	size.Y += 2 * RoundedCornerRadius(context)
-	return size
+	w += 2 * RoundedCornerRadius(context)
+	h += 2 * RoundedCornerRadius(context)
+	if hasCheckmark {
+		w += offsetForCheckmark
+	}
+	if width > 0 {
+		w = width
+	}
+	return image.Pt(w, h)
 }
 
 func (l *listContent[T]) hasMovableItems() bool {
@@ -1037,14 +1048,17 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 }
 
 func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	cw := widgetBounds.Bounds().Dx()
+	if l.contentWidthPlus1 > 0 {
+		cw = l.contentWidthPlus1 - 1
+	}
+	cs := l.measure(context, cw)
 	if l.scrollOffsetX != 0 || l.scrollOffsetY != 0 {
-		cs := l.contentSize(context, widgetBounds)
 		l.scrollOverlay.SetOffset(context, widgetBounds, cs, l.scrollOffsetX, l.scrollOffsetY)
 		l.scrollOffsetX = 0
 		l.scrollOffsetY = 0
 	}
 	if l.scrollOffsetDeltaX != 0 || l.scrollOffsetDeltaY != 0 {
-		cs := l.contentSize(context, widgetBounds)
 		l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, cs, l.scrollOffsetDeltaX, l.scrollOffsetDeltaY)
 		l.scrollOffsetDeltaX = 0
 		l.scrollOffsetDeltaY = 0
@@ -1286,7 +1300,11 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		offsetX, _ := l.content.scrollOverlay.Offset()
 		x0 := float32(p.X) + float32(RoundedCornerRadius(context))
 		x0 += float32(offsetX)
-		x1 := x0 + float32(l.content.contentSize(context, widgetBounds).X)
+		cw := widgetBounds.Bounds().Dx()
+		if l.content.contentWidthPlus1 > 0 {
+			cw = l.content.contentWidthPlus1 - 1
+		}
+		x1 := x0 + float32(cw)
 		x1 -= 2 * float32(RoundedCornerRadius(context))
 		y := float32(p.Y)
 		if itemY, ok := l.content.itemYFromIndex(context, l.content.dragDstIndexPlus1-1); ok {
