@@ -347,6 +347,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
+	t.text.setContainerBounds(widgetBounds.Bounds())
 	t.text.setPadding(padding)
 	s := t.text.Measure(context, guigui.FixedWidthConstraints(widgetBounds.Bounds().Dx()))
 	s.X = max(s.X, widgetBounds.Bounds().Dx())
@@ -359,24 +360,8 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 		Min: bounds.Min,
 		Max: bounds.Min.Add(s),
 	}
-	// As the text is rendered in an inset box, shift the text bounds down by 0.5 pixel.
-	textBounds = textBounds.Add(image.Pt(0, int(0.5*context.Scale())))
 	offsetX, offsetY := t.scrollOverlay.Offset()
 	textBounds = textBounds.Add(image.Pt(int(offsetX), int(offsetY)))
-
-	if draw.OverlapsWithRoundedCorner(bounds, RoundedCornerRadius(context), image.Rect(
-		textBounds.Min.X+padding.Start,
-		textBounds.Min.Y+padding.Top,
-		textBounds.Max.X-padding.End,
-		textBounds.Max.Y-padding.Bottom,
-	)) {
-		// CustomDraw might be too generic and overkill for this case.
-		context.SetCustomDraw(&t.text, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
-		})
-	} else {
-		context.SetCustomDraw(&t.text, nil)
-	}
 
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
@@ -523,12 +508,21 @@ type textInputText struct {
 
 	text Text
 
-	editable bool
-	padding  guigui.Padding
+	editable        bool
+	containerBounds image.Rectangle
+	padding         guigui.Padding
 }
 
 func (t *textInputText) setEditable(editable bool) {
 	t.text.SetEditable(editable)
+}
+
+func (t *textInputText) setContainerBounds(bounds image.Rectangle) {
+	if t.containerBounds == bounds {
+		return
+	}
+	t.containerBounds = bounds
+	guigui.RequestRebuild(t)
 }
 
 func (t *textInputText) setPadding(padding guigui.Padding) {
@@ -564,7 +558,19 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	bounds.Min.Y += t.padding.Top
 	bounds.Max.X -= t.padding.End
 	bounds.Max.Y -= t.padding.Bottom
+
+	// As the text is rendered in an inset box, shift the text bounds down by 0.5 pixel.
+	bounds = bounds.Add(image.Pt(0, int(0.5*context.Scale())))
 	layouter.LayoutWidget(&t.text, bounds)
+
+	if draw.OverlapsWithRoundedCorner(t.containerBounds, RoundedCornerRadius(context), bounds) {
+		// CustomDraw might be too generic and overkill for this case.
+		context.SetCustomDraw(&t.text, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
+			draw.DrawInRoundedCornerRect(context, dst, t.containerBounds, RoundedCornerRadius(context), widgetImage, op)
+		})
+	} else {
+		context.SetCustomDraw(&t.text, nil)
+	}
 }
 
 func (t *textInputText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
