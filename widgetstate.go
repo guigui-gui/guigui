@@ -315,23 +315,22 @@ func SetEventHandler(widget Widget, eventName string, handler any) {
 }
 
 func DispatchEvent(widget Widget, eventName string, args ...any) {
-	dispatchEvent(&theApp.context, widget.widgetState(), eventName, args...)
-}
-
-func dispatchEvent(context *Context, widgetState *widgetState, eventName string, args ...any) {
+	widgetState := widget.widgetState()
 	hanlder, ok := widgetState.eventHandlers[eventName]
 	if !ok {
 		return
 	}
 	f := reflect.ValueOf(hanlder)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(context))
+	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
 	for _, arg := range args {
 		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
 	}
 	f.Call(widgetState.tmpArgs)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 	widgetState.eventDispatched = true
+
+	RequestRebuild(widget)
 }
 
 // noCopy is a struct to warn that the struct should not be copied.
