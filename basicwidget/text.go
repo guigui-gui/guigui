@@ -1235,7 +1235,11 @@ func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.Widget
 }
 
 func (t *Text) setPaddingForScrollOffset(padding guigui.Padding) {
+	if t.paddingForScrollOffset == padding {
+		return
+	}
 	t.paddingForScrollOffset = padding
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) adjustScrollOffset(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (dx, dy float64) {
