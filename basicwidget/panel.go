@@ -70,6 +70,10 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.panel.SetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
+func (p *Panel) setScrolBarVisible(visible bool) {
+	p.panel.setScrolBarVisible(visible)
+}
+
 func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.panel)
 	context.SetContainer(&p.panel, true)
@@ -97,6 +101,7 @@ type panel struct {
 	nextOffsetX       float64
 	nextOffsetY       float64
 	isNextOffsetDelta bool
+	scrollBarHidden   bool
 }
 
 func (p *panel) SetContent(widget guigui.Widget) {
@@ -123,18 +128,52 @@ func (p *panel) SetAutoBorder(auto bool) {
 	p.border.SetAutoBorder(auto)
 }
 
+func (p *panel) scrollOffset() (float64, float64) {
+	if p.hasNextOffset {
+		if p.isNextOffsetDelta {
+			x, y := p.scrollOverlay.Offset()
+			return x + p.nextOffsetX, y + p.nextOffsetY
+		}
+		return p.nextOffsetX, p.nextOffsetY
+	}
+	return p.scrollOverlay.Offset()
+}
+
+func (p *panel) nextScrollOffsetDelta() (float64, float64) {
+	if !p.hasNextOffset {
+		return 0, 0
+	}
+	if p.isNextOffsetDelta {
+		return p.nextOffsetX, p.nextOffsetY
+	}
+	x, y := p.scrollOverlay.Offset()
+	return p.nextOffsetX - x, p.nextOffsetY - y
+}
+
 func (p *panel) SetScrollOffset(offsetX, offsetY float64) {
+	if x, y := p.scrollOffset(); x == offsetX && y == offsetY {
+		return
+	}
 	p.hasNextOffset = true
 	p.nextOffsetX = offsetX
 	p.nextOffsetY = offsetY
 	p.isNextOffsetDelta = false
+	guigui.RequestRebuild(p)
 }
 
 func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
+	if dx, dy := p.nextScrollOffsetDelta(); dx == offsetXDelta && dy == offsetYDelta {
+		return
+	}
 	p.hasNextOffset = true
 	p.nextOffsetX = offsetXDelta
 	p.nextOffsetY = offsetYDelta
 	p.isNextOffsetDelta = true
+	guigui.RequestRebuild(p)
+}
+
+func (p *panel) setScrolBarVisible(visible bool) {
+	p.scrollBarHidden = !visible
 }
 
 func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -147,6 +186,9 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		return nil
 	}
 	p.border.scrollOverlay = &p.scrollOverlay
+
+	context.SetVisible(&p.scrollOverlay, !p.scrollBarHidden)
+
 	return nil
 }
 

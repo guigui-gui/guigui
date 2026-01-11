@@ -187,10 +187,10 @@ type textInput struct {
 
 	background     textInputBackground
 	text           textInputText
+	panel          Panel
 	iconBackground textInputIconBackground
 	icon           Image
 	frame          textInputFrame
-	scrollOverlay  scrollOverlay
 
 	style        TextInputStyle
 	readonly     bool
@@ -198,8 +198,6 @@ type textInput struct {
 	paddingEnd   int
 
 	onTextScroll func(context *guigui.Context, deltaX, deltaY float64)
-	scrollDeltaX float64
-	scrollDeltaY float64
 }
 
 func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -318,13 +316,15 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.background)
-	adder.AddChild(&t.text)
+	adder.AddChild(&t.panel)
 	if t.icon.HasImage() {
 		adder.AddChild(&t.iconBackground)
 		adder.AddChild(&t.icon)
 	}
 	adder.AddChild(&t.frame)
-	adder.AddChild(&t.scrollOverlay)
+
+	t.panel.SetContent(&t.text)
+	t.panel.SetContentConstraints(PanelContentConstraintsFixedWidth)
 
 	t.background.setEditable(!t.readonly)
 	t.iconBackground.setEditable(!t.readonly)
@@ -332,13 +332,12 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	if t.onTextScroll == nil {
 		t.onTextScroll = func(context *guigui.Context, deltaX, deltaY float64) {
-			t.scrollDeltaX += deltaX
-			t.scrollDeltaY += deltaY
+			t.panel.SetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
 	t.text.Text().setOnScroll(t.onTextScroll)
 
-	context.SetVisible(&t.scrollOverlay, t.text.Text().IsMultiline())
+	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
 	context.SetPassThrough(&t.frame, true)
 	context.DelegateFocus(t, t.text.Text())
 
@@ -349,22 +348,11 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	t.text.setContainerBounds(widgetBounds.Bounds())
 	t.text.setPadding(padding)
-	s := t.text.Measure(context, guigui.FixedWidthConstraints(widgetBounds.Bounds().Dx()))
-	t.scrollOverlay.SetContentSize(context, widgetBounds, s)
 
 	bounds := widgetBounds.Bounds()
-
-	textBounds := image.Rectangle{
-		Min: bounds.Min,
-		Max: bounds.Min.Add(s),
-	}
-	offsetX, offsetY := t.scrollOverlay.Offset()
-	textBounds = textBounds.Add(image.Pt(int(offsetX), int(offsetY)))
-
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
-	layouter.LayoutWidget(&t.scrollOverlay, bounds)
-	layouter.LayoutWidget(&t.text, textBounds)
+	layouter.LayoutWidget(&t.panel, bounds)
 
 	if t.icon.HasImage() {
 		iconSize := defaultIconSize(context)
@@ -399,16 +387,6 @@ func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constrai
 		return image.Pt(6*u, 4*u)
 	}
 	return image.Pt(6*u, u)
-}
-
-func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if t.scrollDeltaX != 0 || t.scrollDeltaY != 0 {
-		s := t.text.Measure(context, guigui.FixedWidthConstraints(widgetBounds.Bounds().Dx()))
-		t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, s, t.scrollDeltaX, t.scrollDeltaY)
-		t.scrollDeltaX = 0
-		t.scrollDeltaY = 0
-	}
-	return nil
 }
 
 func (t *textInput) CanCut() bool {
