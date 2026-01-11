@@ -48,6 +48,7 @@ const (
 const (
 	textEventKeyJustPressed = "keyJustPressed"
 	textEventValueChanged   = "valueChanged"
+	textEventScroll         = "scroll"
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
@@ -143,8 +144,9 @@ type Text struct {
 
 	drawOptions textutil.DrawOptions
 
-	prevStart int
-	prevEnd   int
+	prevStart              int
+	prevEnd                int
+	paddingForScrollOffset guigui.Padding
 }
 
 type cachedTextSizeEntry struct {
@@ -173,6 +175,10 @@ func (t *Text) SetOnValueChanged(f func(context *guigui.Context, text string, co
 
 func (t *Text) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
 	guigui.SetEventHandler(t, textEventKeyJustPressed, f)
+}
+
+func (t *Text) setOnScroll(f func(context *guigui.Context, deltaX, deltaY float64)) {
+	guigui.SetEventHandler(t, textEventScroll, f)
 }
 
 func (t *Text) resetCachedTextSize() {
@@ -999,6 +1005,13 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 		t.setText(t.nextText, t.nextSelectAll)
 		t.nextSelectAll = false
 	}
+
+	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
+	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
+	if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
+		guigui.DispatchEvent(t, textEventScroll, dx, dy)
+	}
+
 	return nil
 }
 
@@ -1221,7 +1234,11 @@ func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.Widget
 	return image.Rect(int(pos.X)-w/2, int(pos.Top), int(pos.X)+w/2, int(pos.Bottom))
 }
 
-func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.Rectangle, textBounds image.Rectangle) (dx, dy float64) {
+func (t *Text) setPaddingForScrollOffset(padding guigui.Padding) {
+	t.paddingForScrollOffset = padding
+}
+
+func (t *Text) adjustScrollOffset(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (dx, dy float64) {
 	start, end, ok := t.selectionToDraw(context)
 	if !ok {
 		return
@@ -1232,25 +1249,28 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 	t.prevStart = start
 	t.prevEnd = end
 
+	textBounds := widgetBounds.Bounds()
+	textVisibleBounds := widgetBounds.VisibleBounds()
+
 	cx, cy := ebiten.CursorPosition()
 	if pos, ok := t.textPosition(context, textBounds, end, true); ok {
 		var deltaX, deltaY float64
 		if t.dragging {
-			deltaX = float64(contentBounds.Max.X) - float64(cx)
-			deltaY = float64(contentBounds.Max.Y) - float64(cy)
-			if cx > contentBounds.Max.X {
+			deltaX = float64(textVisibleBounds.Max.X) - float64(cx) - float64(t.paddingForScrollOffset.End)
+			deltaY = float64(textVisibleBounds.Max.Y) - float64(cy) - float64(t.paddingForScrollOffset.Bottom)
+			if cx > textVisibleBounds.Max.X {
 				deltaX /= 4
 			} else {
 				deltaX = 0
 			}
-			if cy > contentBounds.Max.Y {
+			if cy > textVisibleBounds.Max.Y {
 				deltaY /= 4
 			} else {
 				deltaY = 0
 			}
 		} else {
-			deltaX = float64(contentBounds.Max.X) - pos.X
-			deltaY = float64(contentBounds.Max.Y) - pos.Bottom
+			deltaX = float64(textVisibleBounds.Max.X) - pos.X - float64(t.paddingForScrollOffset.End)
+			deltaY = float64(textVisibleBounds.Max.Y) - pos.Bottom - float64(t.paddingForScrollOffset.Bottom)
 		}
 		deltaX = min(deltaX, 0)
 		deltaY = min(deltaY, 0)
@@ -1260,21 +1280,21 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, contentBounds image.R
 	if pos, ok := t.textPosition(context, textBounds, start, true); ok {
 		var deltaX, deltaY float64
 		if t.dragging {
-			deltaX = float64(contentBounds.Min.X) - float64(cx)
-			deltaY = float64(contentBounds.Min.Y) - float64(cy)
-			if cx < contentBounds.Min.X {
+			deltaX = float64(textVisibleBounds.Min.X) - float64(cx) + float64(t.paddingForScrollOffset.Start)
+			deltaY = float64(textVisibleBounds.Min.Y) - float64(cy) + float64(t.paddingForScrollOffset.Top)
+			if cx < textVisibleBounds.Min.X {
 				deltaX /= 4
 			} else {
 				deltaX = 0
 			}
-			if cy < contentBounds.Min.Y {
+			if cy < textVisibleBounds.Min.Y {
 				deltaY /= 4
 			} else {
 				deltaY = 0
 			}
 		} else {
-			deltaX = float64(contentBounds.Min.X) - pos.X
-			deltaY = float64(contentBounds.Min.Y) - pos.Top
+			deltaX = float64(textVisibleBounds.Min.X) - pos.X + float64(t.paddingForScrollOffset.Start)
+			deltaY = float64(textVisibleBounds.Min.Y) - pos.Top + float64(t.paddingForScrollOffset.Top)
 		}
 		deltaX = max(deltaX, 0)
 		deltaY = max(deltaY, 0)

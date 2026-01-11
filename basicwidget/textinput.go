@@ -196,6 +196,10 @@ type textInput struct {
 	readonly     bool
 	paddingStart int
 	paddingEnd   int
+
+	onTextScroll func(context *guigui.Context, deltaX, deltaY float64)
+	scrollDeltaX float64
+	scrollDeltaY float64
 }
 
 func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -334,6 +338,13 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.text.SetSelectable(true)
 	t.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.setKeepTailingSpace(!t.text.autoWrap)
+	if t.onTextScroll == nil {
+		t.onTextScroll = func(context *guigui.Context, deltaX, deltaY float64) {
+			t.scrollDeltaX += deltaX
+			t.scrollDeltaY += deltaY
+		}
+	}
+	t.text.setOnScroll(t.onTextScroll)
 
 	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
 	context.SetPassThrough(&t.frame, true)
@@ -366,6 +377,7 @@ func (t *textInput) textBounds(context *guigui.Context, widgetBounds *guigui.Wid
 
 func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.scrollOverlay.SetContentSize(context, widgetBounds, t.scrollContentSize(context, widgetBounds))
+	t.text.setPaddingForScrollOffset(t.textInputPaddingInScrollableContent(context, widgetBounds))
 
 	bounds := widgetBounds.Bounds()
 
@@ -419,17 +431,11 @@ func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
-	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	bounds := widgetBounds.Bounds()
-	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
-	bounds.Max.X -= padding.End
-	bounds.Min.X += padding.Start
-	bounds.Max.Y -= padding.Bottom
-	bounds.Min.Y += padding.Top
-
-	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context, widgetBounds))
-	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
+	if t.scrollDeltaX != 0 || t.scrollDeltaY != 0 {
+		t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), t.scrollDeltaX, t.scrollDeltaY)
+		t.scrollDeltaX = 0
+		t.scrollDeltaY = 0
+	}
 	return nil
 }
 
