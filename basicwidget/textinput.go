@@ -327,16 +327,13 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddChild(&t.frame)
 	adder.AddChild(&t.scrollOverlay)
 
-	t.background.textInput = t
+	t.background.setEditable(!t.readonly)
+	t.iconBackground.setEditable(!t.readonly)
 
 	t.text.SetEditable(!t.readonly)
 	t.text.SetSelectable(true)
 	t.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.setKeepTailingSpace(!t.text.autoWrap)
-
-	if t.icon.HasImage() {
-		t.iconBackground.textInput = t
-	}
 
 	context.SetVisible(&t.scrollOverlay, t.text.IsMultiline())
 	context.SetPassThrough(&t.frame, true)
@@ -479,24 +476,40 @@ func (t *textInput) Redo() bool {
 type textInputBackground struct {
 	guigui.DefaultWidget
 
-	textInput *textInput
+	editable bool
+}
+
+func (t *textInputBackground) setEditable(editable bool) {
+	if t.editable == editable {
+		return
+	}
+	t.editable = editable
+	guigui.RequestRedraw(t)
 }
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
+	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
 type textInputIconBackground struct {
 	guigui.DefaultWidget
 
-	textInput *textInput
+	editable bool
+}
+
+func (t *textInputIconBackground) setEditable(editable bool) {
+	if t.editable == editable {
+		return
+	}
+	t.editable = editable
+	guigui.RequestRedraw(t)
 }
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.textInput.IsEditable())
+	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
