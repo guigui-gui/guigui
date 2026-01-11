@@ -350,8 +350,6 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	t.text.setContainerBounds(widgetBounds.Bounds())
 	t.text.setPadding(padding)
 	s := t.text.Measure(context, guigui.FixedWidthConstraints(widgetBounds.Bounds().Dx()))
-	s.X = max(s.X, widgetBounds.Bounds().Dx())
-	s.Y = max(s.Y, widgetBounds.Bounds().Dy())
 	t.scrollOverlay.SetContentSize(context, widgetBounds, s)
 
 	bounds := widgetBounds.Bounds()
@@ -579,6 +577,8 @@ func (t *textInputText) Measure(context *guigui.Context, constraints guigui.Cons
 	s := t.measureText(context, constraints)
 	s.X += t.padding.Start + t.padding.End
 	s.Y += t.padding.Top + t.padding.Bottom
+	s.X = max(s.X, t.containerBounds.Dx())
+	s.Y = max(s.Y, t.containerBounds.Dy())
 	return s
 }
 
