@@ -314,8 +314,7 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 
 func (t *textInput) scrollContentSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Point {
 	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
-	w := widgetBounds.Bounds().Dx() - padding.Start - padding.End
-	return t.text.Measure(context, guigui.FixedWidthConstraints(w)).Add(image.Pt(padding.Start+padding.End, padding.Top+padding.Bottom))
+	return t.textBounds(context, widgetBounds).Size().Add(image.Pt(padding.Start+padding.End, padding.Top+padding.Bottom))
 }
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -403,7 +402,28 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	}
 }
 
-func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	u := UnitSize(context)
+	if t.style == TextInputStyleInline {
+		// WidgetBounds is not needed for inline text input.
+		padding := t.textInputPaddingInScrollableContent(context, nil)
+		if fixedWidth, ok := constraints.FixedWidth(); ok {
+			constraints = guigui.FixedWidthConstraints(fixedWidth - padding.Start - padding.End)
+		}
+		s := t.text.Measure(context, constraints)
+		w := max(s.X+padding.Start+padding.End, u)
+		h := s.Y
+		return image.Pt(w, h)
+	}
+	if t.text.IsMultiline() {
+		return image.Pt(6*u, 4*u)
+	}
+	return image.Pt(6*u, u)
+}
+
+func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
+	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
 	bounds := widgetBounds.Bounds()
 	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
 	bounds.Max.X -= padding.End
@@ -413,34 +433,6 @@ func (t *textInput) adjustScrollOffsetIfNeeded(context *guigui.Context, widgetBo
 
 	dx, dy := t.text.adjustScrollOffset(context, bounds, t.textBounds(context, widgetBounds))
 	t.scrollOverlay.SetOffsetByDelta(context, widgetBounds, t.scrollContentSize(context, widgetBounds), dx, dy)
-}
-
-func (t *textInput) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	return t.text.CursorShape(context, nil)
-}
-
-func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	if t.style == TextInputStyleInline {
-		// WidgetBounds is not needed for inline text input.
-		padding := t.textInputPaddingInScrollableContent(context, nil)
-		if fixedWidth, ok := constraints.FixedWidth(); ok {
-			constraints = guigui.FixedWidthConstraints(fixedWidth - padding.Start - padding.End)
-		}
-		s := t.text.Measure(context, constraints)
-		w := max(s.X+padding.Start+padding.End, UnitSize(context))
-		h := s.Y
-		return image.Pt(w, h)
-	}
-	if t.text.IsMultiline() {
-		return image.Pt(6*UnitSize(context), 4*UnitSize(context))
-	}
-	return image.Pt(6*UnitSize(context), UnitSize(context))
-}
-
-func (t *textInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
-	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	t.adjustScrollOffsetIfNeeded(context, widgetBounds)
 	return nil
 }
 
