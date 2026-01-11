@@ -440,6 +440,10 @@ func (t *Text) actualTabWidth(context *guigui.Context) float64 {
 	return t.cachedDefaultTabWidth
 }
 
+func (t *Text) scale() float64 {
+	return t.scaleMinus1 + 1
+}
+
 func (t *Text) SetScale(scale float64) {
 	if t.scaleMinus1 == scale-1 {
 		return
