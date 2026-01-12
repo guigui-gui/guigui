@@ -101,11 +101,7 @@ type panel struct {
 	style              PanelStyle
 	contentConstraints PanelContentConstraints
 
-	hasNextOffset     bool
-	nextOffsetX       float64
-	nextOffsetY       float64
-	isNextOffsetDelta bool
-	scrollBarHidden   bool
+	scrollBarHidden bool
 }
 
 func (p *panel) SetContent(widget guigui.Widget) {
@@ -137,37 +133,12 @@ func (p *panel) scrollOffset() (float64, float64) {
 	return p.scrollOverlay.Offset()
 }
 
-func (p *panel) nextScrollOffsetDelta() (float64, float64) {
-	if !p.hasNextOffset {
-		return 0, 0
-	}
-	if p.isNextOffsetDelta {
-		return p.nextOffsetX, p.nextOffsetY
-	}
-	x, y := p.scrollOverlay.Offset()
-	return p.nextOffsetX - x, p.nextOffsetY - y
-}
-
 func (p *panel) SetScrollOffset(offsetX, offsetY float64) {
-	if x, y := p.scrollOffset(); x == offsetX && y == offsetY {
-		return
-	}
-	p.hasNextOffset = true
-	p.nextOffsetX = offsetX
-	p.nextOffsetY = offsetY
-	p.isNextOffsetDelta = false
-	guigui.RequestRebuild(p)
+	p.scrollOverlay.SetOffset(offsetX, offsetY)
 }
 
 func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
-	if dx, dy := p.nextScrollOffsetDelta(); dx == offsetXDelta && dy == offsetYDelta {
-		return
-	}
-	p.hasNextOffset = true
-	p.nextOffsetX = offsetXDelta
-	p.nextOffsetY = offsetYDelta
-	p.isNextOffsetDelta = true
-	guigui.RequestRebuild(p)
+	p.scrollOverlay.SetOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
 func (p *panel) setScrolBarVisible(visible bool) {
@@ -208,17 +179,6 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
-		if p.hasNextOffset {
-			if p.isNextOffsetDelta {
-				p.scrollOverlay.SetOffsetByDelta(p.nextOffsetX, p.nextOffsetY)
-			} else {
-				p.scrollOverlay.SetOffset(p.nextOffsetX, p.nextOffsetY)
-			}
-			p.hasNextOffset = false
-			p.nextOffsetX = 0
-			p.nextOffsetY = 0
-		}
-
 		contentSize := p.contentSize(context, widgetBounds)
 		p.scrollOverlay.SetContentSize(context, widgetBounds, contentSize)
 
