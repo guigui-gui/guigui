@@ -103,19 +103,6 @@ type scrollOverlay struct {
 	barCount int
 }
 
-func (s *scrollOverlay) Reset() {
-	if s.offsetX == 0 && s.offsetY == 0 {
-		return
-	}
-	s.offsetX = 0
-	s.offsetY = 0
-	s.nextOffsetSet = false
-	s.nextOffsetX = 0
-	s.nextOffsetY = 0
-	s.isNextOffsetDelta = false
-	guigui.RequestRebuild(s)
-}
-
 // SetContentSize sets the size of the content inside the scrollOverlay.
 //
 // widgetBounds can be the parent widget's widgetBounds, assuming that scrollOverlay's bounds is the same as its parent widget's bounds.
