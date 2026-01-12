@@ -274,12 +274,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 
 	if s.barCount > 0 {
 		if !shouldShowBar || s.barCount != scrollBarMaxCount()-scrollBarFadingInTime() {
-			oldOpacity = scrollThumbOpacity(s.barCount)
 			s.barCount--
-			newOpacity = scrollThumbOpacity(s.barCount)
-			if newOpacity != oldOpacity {
-				guigui.RequestRedraw(s)
-			}
 		}
 	}
 
@@ -447,7 +442,9 @@ func (s *scrollBar) setAlpha(alpha float64) {
 		return
 	}
 	s.alpha = alpha
-	guigui.RequestRedraw(s)
+	if !s.thumbBounds.Empty() {
+		guigui.RequestRedraw(s)
+	}
 }
 
 func (s *scrollBar) isDragging() bool {
