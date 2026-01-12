@@ -98,7 +98,6 @@ type scrollOverlay struct {
 	nextOffsetY       float64
 
 	lastSize image.Point
-	onceDraw bool
 
 	barCount int
 }
@@ -268,7 +267,7 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 		s.nextOffsetX = 0
 		s.nextOffsetY = 0
 		s.isNextOffsetDelta = false
-		if s.onceDraw {
+		if s.scrollHBar.isOnceDrawn() || s.scrollVBar.isOnceDrawn() {
 			shouldShowBar = true
 		}
 	}
@@ -302,7 +301,8 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 }
 
 func (s *scrollOverlay) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	s.onceDraw = true
+	// This is a dummy Draw implementation.
+	// Without this, scrollOverly would always fail hit testing.
 }
 
 func (s *scrollOverlay) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
@@ -417,6 +417,7 @@ type scrollBar struct {
 	dragging              bool
 	draggingStartPosition int
 	draggingStartOffset   float64
+	onceDraw              bool
 }
 
 func (s *scrollBar) setOffsetGetSetter(offsetGetSetter offsetGetSetter) {
@@ -461,6 +462,10 @@ func (s *scrollBar) setAlpha(alpha float64) {
 
 func (s *scrollBar) isDragging() bool {
 	return s.dragging
+}
+
+func (s *scrollBar) isOnceDrawn() bool {
+	return s.onceDraw
 }
 
 func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -536,6 +541,7 @@ func (s *scrollBar) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if s.alpha == 0 {
 		return
 	}
+	s.onceDraw = true
 	barColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.2)
 	barColor = draw.ScaleAlpha(barColor, s.alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
