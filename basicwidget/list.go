@@ -818,7 +818,7 @@ func (l *listContent[T]) measure(context *guigui.Context, width int) image.Point
 			}
 			itemW -= listItemIndentSize(context, item.IndentLevel)
 			itemW -= item.Padding.Start + item.Padding.End
-			guigui.FixedWidthConstraints(itemW)
+			constraint = guigui.FixedWidthConstraints(itemW)
 		}
 		s := item.Content.Measure(context, constraint)
 		w = max(w, s.X+listItemIndentSize(context, item.IndentLevel)+item.Padding.Start+item.Padding.End)
