@@ -188,12 +188,7 @@ func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 }
 
 func (s *scrollOverlay) Offset() (float64, float64) {
-	if s.nextOffsetSet {
-		if !s.isNextOffsetDelta {
-			return s.nextOffsetX, s.nextOffsetY
-		}
-		return s.offsetX + s.nextOffsetX, s.offsetY + s.nextOffsetY
-	}
+	// As the next offset might not be a valid offset, return the current offset.
 	return s.offsetX, s.offsetY
 }
 

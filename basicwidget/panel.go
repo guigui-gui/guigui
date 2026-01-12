@@ -133,13 +133,7 @@ func (p *panel) SetAutoBorder(auto bool) {
 }
 
 func (p *panel) scrollOffset() (float64, float64) {
-	if p.hasNextOffset {
-		if p.isNextOffsetDelta {
-			x, y := p.scrollOverlay.Offset()
-			return x + p.nextOffsetX, y + p.nextOffsetY
-		}
-		return p.nextOffsetX, p.nextOffsetY
-	}
+	// As the next offset might not be a valid offset, return the current offset.
 	return p.scrollOverlay.Offset()
 }
 
