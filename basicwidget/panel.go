@@ -130,15 +130,15 @@ func (p *panel) SetAutoBorder(auto bool) {
 
 func (p *panel) scrollOffset() (float64, float64) {
 	// As the next offset might not be a valid offset, return the current offset.
-	return p.scrollOverlay.Offset()
+	return p.scrollOverlay.offset()
 }
 
 func (p *panel) SetScrollOffset(offsetX, offsetY float64) {
-	p.scrollOverlay.SetOffset(offsetX, offsetY)
+	p.scrollOverlay.setOffset(offsetX, offsetY)
 }
 
 func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
-	p.scrollOverlay.SetOffsetByDelta(offsetXDelta, offsetYDelta)
+	p.scrollOverlay.setOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
 func (p *panel) setScrolVisible(visible bool) {
@@ -180,9 +180,9 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
 		contentSize := p.contentSize(context, widgetBounds)
-		p.scrollOverlay.SetContentSize(context, widgetBounds, contentSize)
+		p.scrollOverlay.setContentSize(widgetBounds, contentSize)
 
-		offsetX, offsetY := p.scrollOverlay.Offset()
+		offsetX, offsetY := p.scrollOverlay.offset()
 		pt := bounds.Min.Add(image.Pt(int(offsetX), int(offsetY)))
 		layouter.LayoutWidget(p.content, image.Rectangle{
 			Min: pt,
@@ -239,7 +239,7 @@ func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	var offsetX, offsetY float64
 	var r image.Rectangle
 	if p.scrollOverlay != nil {
-		offsetX, offsetY = p.scrollOverlay.Offset()
+		offsetX, offsetY = p.scrollOverlay.offset()
 		r = p.scrollOverlay.scrollRange(widgetBounds)
 	}
 	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
