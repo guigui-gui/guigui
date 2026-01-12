@@ -28,11 +28,12 @@ const (
 )
 
 const (
-	listEventItemSelected        = "itemSelected"
-	listEventItemsMoved          = "itemsMoved"
-	listEventItemExpanderToggled = "itemExpanderToggled"
-	listEventScrollY             = "scrollY"
-	listEventScrollDeltaY        = "scrollDeltaY"
+	listEventItemSelected         = "itemSelected"
+	listEventItemsMoved           = "itemsMoved"
+	listEventItemExpanderToggled  = "itemExpanderToggled"
+	listEventScrollY              = "scrollY"
+	listEventScrollYEnsureVisible = "scrollYEnsureVisible"
+	listEventScrollDeltaY         = "scrollDeltaY"
 )
 
 // TODO: Clean up functions for colors.
@@ -487,13 +488,16 @@ type listContent[T comparable] struct {
 
 	prevWidth int
 
-	onItemSelected func(index int)
-	onScrollY      func(context *guigui.Context, offsetY float64)
-	onScrollDeltaY func(context *guigui.Context, deltaY float64)
+	onItemSelected         func(index int)
+	onScrollY              func(context *guigui.Context, offsetY float64)
+	onScrollYEnsureVisible func(context *guigui.Context, offsetYTop, offsetYBottom float64)
+	onScrollDeltaY         func(context *guigui.Context, deltaY float64)
 
 	// TODO: Remove these members by introducing Panel.
-	scrollOffsetYPlus1 float64
-	scrollOffsetDeltaY float64
+	scrollOffsetYMinus1       float64
+	scrollOffsetDeltaY        float64
+	scrollOffsetYTopMinus1    float64
+	scrollOffsetYBottomMinus1 float64
 }
 
 func (l *listContent[T]) SetBackground(widget guigui.Widget) {
@@ -610,10 +614,18 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 	if l.onScrollY == nil {
 		l.onScrollY = func(context *guigui.Context, offsetY float64) {
-			l.scrollOffsetYPlus1 = offsetY + 1
+			l.scrollOffsetYMinus1 = offsetY - 1
 		}
 	}
 	guigui.SetEventHandler(l, listEventScrollY, l.onScrollY)
+
+	if l.onScrollYEnsureVisible == nil {
+		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
+			l.scrollOffsetYTopMinus1 = offsetYTop - 1
+			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
+		}
+	}
+	guigui.SetEventHandler(l, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
 
 	if l.onScrollDeltaY == nil {
 		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
@@ -1048,10 +1060,32 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 		cw = l.contentWidthPlus1 - 1
 	}
 	cs := l.measure(context, cw)
-	if l.scrollOffsetYPlus1 != 0 {
+	if l.scrollOffsetYMinus1 != 0 {
 		offsetX, _ := l.scrollOverlay.Offset()
-		l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, l.scrollOffsetYPlus1-1)
-		l.scrollOffsetYPlus1 = 0
+		l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, l.scrollOffsetYMinus1+1)
+		l.scrollOffsetYMinus1 = 0
+	}
+	if l.scrollOffsetYTopMinus1 != 0 || l.scrollOffsetYBottomMinus1 != 0 {
+		// Adjust the bottom first.
+		if l.scrollOffsetYBottomMinus1 != 0 {
+			y := l.scrollOffsetYBottomMinus1 + 1
+			y += float64(widgetBounds.Bounds().Dy())
+			y -= float64(RoundedCornerRadius(context))
+			if offsetX, offsetY := l.scrollOverlay.Offset(); y < offsetY {
+				l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, y)
+			}
+		}
+		// Then adjust the top.
+		if l.scrollOffsetYTopMinus1 != 0 {
+			y := l.scrollOffsetYTopMinus1 + 1
+			y += float64(RoundedCornerRadius(context))
+			// Reget the offset as it may be changed by the above bottom adjustment.
+			if offsetX, offsetY := l.scrollOverlay.Offset(); y > offsetY {
+				l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, y)
+			}
+		}
+		l.scrollOffsetYTopMinus1 = 0
+		l.scrollOffsetYBottomMinus1 = 0
 	}
 	if l.scrollOffsetDeltaY != 0 {
 		l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, cs, 0, l.scrollOffsetDeltaY)
@@ -1069,18 +1103,10 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 			l.indexToJumpPlus1 = 0
 		}
 		if idx := l.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < l.abstractList.ItemCount() {
-			if y, ok := l.itemYFromIndex(context, idx+1); ok {
-				y -= widgetBounds.Bounds().Dy()
-				y += RoundedCornerRadius(context)
-				if _, offsetY := l.scrollOverlay.Offset(); float64(y) > -offsetY {
-					guigui.DispatchEvent(l, listEventScrollY, float64(-y))
-				}
-			}
-			if y, ok := l.itemYFromIndex(context, idx); ok {
-				y -= RoundedCornerRadius(context)
-				if _, offsetY := l.scrollOverlay.Offset(); float64(y) < -offsetY {
-					guigui.DispatchEvent(l, listEventScrollY, float64(-y))
-				}
+			topY, topOK := l.itemYFromIndex(context, idx)
+			bottomY, bottomOK := l.itemYFromIndex(context, idx+1)
+			if topOK && bottomOK {
+				guigui.DispatchEvent(l, listEventScrollYEnsureVisible, float64(-topY), float64(-bottomY))
 			}
 			l.indexToEnsureVisiblePlus1 = 0
 		}
