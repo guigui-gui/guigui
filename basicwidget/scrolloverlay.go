@@ -97,8 +97,6 @@ type scrollOverlay struct {
 	nextOffsetX       float64
 	nextOffsetY       float64
 
-	lastSize image.Point
-
 	barCount int
 }
 
@@ -159,10 +157,7 @@ func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	layouter.LayoutWidget(&s.scrollHBar, s.horizontalBarBounds(context, widgetBounds))
 	layouter.LayoutWidget(&s.scrollVBar, s.verticalBarBounds(context, widgetBounds))
 
-	if cs := widgetBounds.Bounds().Size(); s.lastSize != cs {
-		s.SetOffset(s.adjustOffset(widgetBounds, s.offsetX, s.offsetY))
-		s.lastSize = cs
-	}
+	s.SetOffset(s.adjustOffset(widgetBounds, s.offsetX, s.offsetY))
 
 	hb, vb := s.thumbBounds(context, widgetBounds)
 	s.scrollHBar.setThumbBounds(hb)
