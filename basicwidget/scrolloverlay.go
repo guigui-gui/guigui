@@ -15,10 +15,6 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	scrollOverlayEventScroll = "scroll"
-)
-
 func adjustedWheel() (float64, float64) {
 	x, y := ebiten.Wheel()
 	switch runtime.GOOS {
@@ -95,11 +91,10 @@ type scrollOverlay struct {
 	barCount int
 }
 
-func (s *scrollOverlay) SetOnScroll(f func(context *guigui.Context, offsetX, offsetY float64)) {
-	guigui.SetEventHandler(s, scrollOverlayEventScroll, f)
-}
-
 func (s *scrollOverlay) Reset() {
+	if s.offsetX == 0 && s.offsetY == 0 {
+		return
+	}
 	s.offsetX = 0
 	s.offsetY = 0
 }
@@ -113,7 +108,8 @@ func (s *scrollOverlay) SetContentSize(context *guigui.Context, widgetBounds *gu
 	}
 
 	s.contentSize = contentSize
-	s.adjustOffset(widgetBounds)
+	offsetX, offsetY := s.adjustOffset(widgetBounds, s.offsetX, s.offsetY)
+	s.SetOffset(context, widgetBounds, s.contentSize, offsetX, offsetY)
 	guigui.RequestRebuild(s)
 }
 
@@ -130,7 +126,7 @@ func (s *scrollOverlay) SetOffsetByDelta(context *guigui.Context, widgetBounds *
 func (s *scrollOverlay) SetOffset(context *guigui.Context, widgetBounds *guigui.WidgetBounds, contentSize image.Point, x, y float64) {
 	s.SetContentSize(context, widgetBounds, contentSize)
 
-	x, y = s.doAdjustOffset(widgetBounds, x, y)
+	x, y = s.adjustOffset(widgetBounds, x, y)
 	if s.offsetX == x && s.offsetY == y {
 		return
 	}
@@ -156,7 +152,8 @@ func (s *scrollOverlay) Build(context *guigui.Context, adder *guigui.ChildAdder)
 func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	cs := widgetBounds.Bounds().Size()
 	if s.lastSize != cs {
-		s.adjustOffset(widgetBounds)
+		offsetX, offsetY := s.adjustOffset(widgetBounds, s.offsetX, s.offsetY)
+		s.SetOffset(context, widgetBounds, s.contentSize, offsetX, offsetY)
 		s.lastSize = cs
 	}
 
@@ -221,24 +218,20 @@ func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBound
 			dy = float64(y - s.draggingStartPosition.Y)
 		}
 		if dx != 0 || dy != 0 {
-			prevOffsetX := s.offsetX
-			prevOffsetY := s.offsetY
+			offsetX := s.offsetX
+			offsetY := s.offsetY
 
 			cs := widgetBounds.Bounds().Size()
 			barWidth, barHeight := s.barSize(context, widgetBounds)
 			if s.draggingX && barWidth > 0 && s.contentSize.X-cs.X > 0 {
 				offsetPerPixel := float64(s.contentSize.X-cs.X) / (float64(cs.X) - barWidth)
-				s.offsetX = s.draggingStartOffsetX + float64(-dx)*offsetPerPixel
+				offsetX = s.draggingStartOffsetX + float64(-dx)*offsetPerPixel
 			}
 			if s.draggingY && barHeight > 0 && s.contentSize.Y-cs.Y > 0 {
 				offsetPerPixel := float64(s.contentSize.Y-cs.Y) / (float64(cs.Y) - barHeight)
-				s.offsetY = s.draggingStartOffsetY + float64(-dy)*offsetPerPixel
+				offsetY = s.draggingStartOffsetY + float64(-dy)*offsetPerPixel
 			}
-			s.adjustOffset(widgetBounds)
-			if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-				guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
-				guigui.RequestRebuild(s)
-			}
+			s.SetOffset(context, widgetBounds, s.contentSize, offsetX, offsetY)
 		}
 		return guigui.HandleInputByWidget(s)
 	}
@@ -254,16 +247,11 @@ func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBound
 		}
 
 		// TODO: If there is an inner scrollOverlay, wheels should not be handled here (#204).
-		prevOffsetX := s.offsetX
-		prevOffsetY := s.offsetY
-		s.offsetX += wheelX * 4 * context.Scale()
-		s.offsetY += wheelY * 4 * context.Scale()
-		s.adjustOffset(widgetBounds)
-		if prevOffsetX != s.offsetX || prevOffsetY != s.offsetY {
-			guigui.DispatchEvent(s, scrollOverlayEventScroll, s.offsetX, s.offsetY)
-			guigui.RequestRebuild(s)
-			return guigui.HandleInputByWidget(s)
-		}
+		offsetX := s.offsetX
+		offsetY := s.offsetY
+		offsetX += wheelX * 4 * context.Scale()
+		offsetY += wheelY * 4 * context.Scale()
+		s.SetOffset(context, widgetBounds, s.contentSize, offsetX, offsetY)
 		return guigui.HandleInputResult{}
 	}
 
@@ -274,11 +262,7 @@ func (s *scrollOverlay) Offset() (float64, float64) {
 	return s.offsetX, s.offsetY
 }
 
-func (s *scrollOverlay) adjustOffset(widgetBounds *guigui.WidgetBounds) {
-	s.offsetX, s.offsetY = s.doAdjustOffset(widgetBounds, s.offsetX, s.offsetY)
-}
-
-func (s *scrollOverlay) doAdjustOffset(widgetBounds *guigui.WidgetBounds, x, y float64) (float64, float64) {
+func (s *scrollOverlay) adjustOffset(widgetBounds *guigui.WidgetBounds, x, y float64) (float64, float64) {
 	r := s.scrollRange(widgetBounds)
 	x = min(max(x, float64(r.Min.X)), float64(r.Max.X))
 	y = min(max(y, float64(r.Min.Y)), float64(r.Max.Y))
@@ -343,12 +327,6 @@ func (s *scrollOverlay) startShowingBarsIfNeeded(context *guigui.Context, widget
 
 func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowBar := s.isBarVisible(context, widgetBounds)
-
-	if s.lastOffsetX != s.offsetX || s.lastOffsetY != s.offsetY {
-		shouldShowBar = true
-	}
-	s.lastOffsetX = s.offsetX
-	s.lastOffsetY = s.offsetY
 
 	oldOpacity := scrollBarOpacity(s.barCount)
 	if shouldShowBar {
