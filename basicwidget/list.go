@@ -777,7 +777,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	if l.prevWidth != widgetBounds.Bounds().Dx() && headToSelectedItem != 0 {
 		if y0, ok := l.itemYFromIndex(context, l.SelectedItemIndex()); ok {
 			newOffsetY := -float64(y0 - headToSelectedItem)
-			guigui.DispatchEvent(l, listEventScrollY, context, newOffsetY)
+			guigui.DispatchEvent(l, listEventScrollY, newOffsetY)
 		}
 	}
 	l.prevWidth = widgetBounds.Bounds().Dx()
