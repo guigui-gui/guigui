@@ -79,8 +79,6 @@ type scrollOverlay struct {
 	lastSize              image.Point
 	lastWheelX            float64
 	lastWheelY            float64
-	lastOffsetX           float64
-	lastOffsetY           float64
 	draggingX             bool
 	draggingY             bool
 	draggingStartPosition image.Point
