@@ -77,12 +77,7 @@ func scrollThumbSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds,
 	return w, h
 }
 
-// scrollOverlay is a widget that shows scroll bars overlayed on its content.
-//
-// scrollOverlay's bounds must be the same as its parent widget's bounds.
-// Some methods of scrollOverlay takes widgetBounds parameter.
-// You can pass the parent widget's widgetBounds to those methods.
-type scrollOverlay struct {
+type panelScroll struct {
 	guigui.DefaultWidget
 
 	scrollWheel scrollWheel
@@ -102,204 +97,204 @@ type scrollOverlay struct {
 // setContentSize sets the size of the content inside the scrollOverlay.
 //
 // widgetBounds can be the parent widget's widgetBounds, assuming that scrollOverlay's bounds is the same as its parent widget's bounds.
-func (s *scrollOverlay) setContentSize(widgetBounds *guigui.WidgetBounds, contentSize image.Point) {
-	if s.contentSize == contentSize {
+func (p *panelScroll) setContentSize(widgetBounds *guigui.WidgetBounds, contentSize image.Point) {
+	if p.contentSize == contentSize {
 		return
 	}
 
-	s.contentSize = contentSize
-	s.scrollWheel.setContentSize(contentSize)
-	s.scrollHBar.setContentSize(contentSize)
-	s.scrollVBar.setContentSize(contentSize)
-	s.setOffset(s.adjustOffset(widgetBounds, s.offsetX, s.offsetY))
-	guigui.RequestRebuild(s)
+	p.contentSize = contentSize
+	p.scrollWheel.setContentSize(contentSize)
+	p.scrollHBar.setContentSize(contentSize)
+	p.scrollVBar.setContentSize(contentSize)
+	p.setOffset(p.adjustOffset(widgetBounds, p.offsetX, p.offsetY))
+	guigui.RequestRebuild(p)
 }
 
 // setOffsetByDelta sets the offset by adding dx and dy to the current offset.
-func (s *scrollOverlay) setOffsetByDelta(dx, dy float64) {
-	s.nextOffsetSet = true
-	s.isNextOffsetDelta = true
-	s.nextOffsetX = dx
-	s.nextOffsetY = dy
+func (p *panelScroll) setOffsetByDelta(dx, dy float64) {
+	p.nextOffsetSet = true
+	p.isNextOffsetDelta = true
+	p.nextOffsetX = dx
+	p.nextOffsetY = dy
 }
 
 // setOffset sets the offset to (x, y).
-func (s *scrollOverlay) setOffset(x, y float64) {
-	if s.offsetX == x && s.offsetY == y {
+func (p *panelScroll) setOffset(x, y float64) {
+	if p.offsetX == x && p.offsetY == y {
 		return
 	}
-	s.nextOffsetSet = true
-	s.isNextOffsetDelta = false
-	s.nextOffsetX = x
-	s.nextOffsetY = y
+	p.nextOffsetSet = true
+	p.isNextOffsetDelta = false
+	p.nextOffsetX = x
+	p.nextOffsetY = y
 }
 
-func (s *scrollOverlay) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&s.scrollWheel)
-	adder.AddChild(&s.scrollHBar)
-	adder.AddChild(&s.scrollVBar)
+func (p *panelScroll) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddChild(&p.scrollWheel)
+	adder.AddChild(&p.scrollHBar)
+	adder.AddChild(&p.scrollVBar)
 
-	s.scrollWheel.setOffsetGetSetter(s)
-	s.scrollHBar.setOffsetGetSetter(s)
-	s.scrollHBar.setHorizontal(true)
-	s.scrollVBar.setOffsetGetSetter(s)
-	s.scrollVBar.setHorizontal(false)
+	p.scrollWheel.setOffsetGetSetter(p)
+	p.scrollHBar.setOffsetGetSetter(p)
+	p.scrollHBar.setHorizontal(true)
+	p.scrollVBar.setOffsetGetSetter(p)
+	p.scrollVBar.setHorizontal(false)
 
-	context.SetFloat(&s.scrollHBar, true)
-	context.SetFloat(&s.scrollVBar, true)
+	context.SetFloat(&p.scrollHBar, true)
+	context.SetFloat(&p.scrollVBar, true)
 
 	return nil
 }
 
-func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layouter.LayoutWidget(&s.scrollWheel, widgetBounds.Bounds())
-	layouter.LayoutWidget(&s.scrollHBar, s.horizontalBarBounds(context, widgetBounds))
-	layouter.LayoutWidget(&s.scrollVBar, s.verticalBarBounds(context, widgetBounds))
+func (p *panelScroll) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layouter.LayoutWidget(&p.scrollWheel, widgetBounds.Bounds())
+	layouter.LayoutWidget(&p.scrollHBar, p.horizontalBarBounds(context, widgetBounds))
+	layouter.LayoutWidget(&p.scrollVBar, p.verticalBarBounds(context, widgetBounds))
 
-	s.setOffset(s.adjustOffset(widgetBounds, s.offsetX, s.offsetY))
+	p.setOffset(p.adjustOffset(widgetBounds, p.offsetX, p.offsetY))
 
-	hb, vb := s.thumbBounds(context, widgetBounds)
-	s.scrollHBar.setThumbBounds(hb)
-	s.scrollVBar.setThumbBounds(vb)
+	hb, vb := p.thumbBounds(context, widgetBounds)
+	p.scrollHBar.setThumbBounds(hb)
+	p.scrollVBar.setThumbBounds(vb)
 }
 
-func (s *scrollOverlay) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *panelScroll) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-UnitSize(context)/2)
 	return bounds
 }
 
-func (s *scrollOverlay) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *panelScroll) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.X = max(bounds.Min.X, bounds.Max.X-UnitSize(context)/2)
 	return bounds
 }
 
-func (s *scrollOverlay) offset() (float64, float64) {
+func (p *panelScroll) offset() (float64, float64) {
 	// As the next offset might not be a valid offset, return the current offset.
-	return s.offsetX, s.offsetY
+	return p.offsetX, p.offsetY
 }
 
-func (s *scrollOverlay) adjustOffset(widgetBounds *guigui.WidgetBounds, x, y float64) (float64, float64) {
-	r := s.scrollRange(widgetBounds)
+func (p *panelScroll) adjustOffset(widgetBounds *guigui.WidgetBounds, x, y float64) (float64, float64) {
+	r := p.scrollRange(widgetBounds)
 	x = min(max(x, float64(r.Min.X)), float64(r.Max.X))
 	y = min(max(y, float64(r.Min.Y)), float64(r.Max.Y))
 	return x, y
 }
 
-func (s *scrollOverlay) scrollRange(widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *panelScroll) scrollRange(widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	return image.Rectangle{
-		Min: image.Pt(min(bounds.Dx()-s.contentSize.X, 0), min(bounds.Dy()-s.contentSize.Y, 0)),
+		Min: image.Pt(min(bounds.Dx()-p.contentSize.X, 0), min(bounds.Dy()-p.contentSize.Y, 0)),
 		Max: image.Pt(0, 0),
 	}
 }
 
-func (s *scrollOverlay) isBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if s.scrollWheel.isScrolling() {
+func (p *panelScroll) isBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if p.scrollWheel.isScrolling() {
 		return true
 	}
-	if s.scrollHBar.isDragging() || s.scrollVBar.isDragging() {
+	if p.scrollHBar.isDragging() || p.scrollVBar.isDragging() {
 		return true
 	}
 	if !widgetBounds.IsHitAtCursor() {
 		return false
 	}
 	pt := image.Pt(ebiten.CursorPosition())
-	if pt.In(s.horizontalBarBounds(context, widgetBounds)) {
+	if pt.In(p.horizontalBarBounds(context, widgetBounds)) {
 		return true
 	}
-	if pt.In(s.verticalBarBounds(context, widgetBounds)) {
+	if pt.In(p.verticalBarBounds(context, widgetBounds)) {
 		return true
 	}
 	return false
 }
 
-func (s *scrollOverlay) startShowingBarsIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
-	if hb, vb := s.thumbBounds(context, widgetBounds); hb.Empty() && vb.Empty() {
+func (p *panelScroll) startShowingBarsIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	if hb, vb := p.thumbBounds(context, widgetBounds); hb.Empty() && vb.Empty() {
 		return
 	}
 
 	switch {
-	case s.scrollBarCount >= scrollBarMaxCount()-scrollBarFadingInTime():
+	case p.scrollBarCount >= scrollBarMaxCount()-scrollBarFadingInTime():
 		// If the scroll bar is being fading in, do nothing.
-	case s.scrollBarCount >= scrollBarFadingOutTime():
+	case p.scrollBarCount >= scrollBarFadingOutTime():
 		// If the scroll bar is shown, reset the count.
-		s.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
-	case s.scrollBarCount > 0:
+		p.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
+	case p.scrollBarCount > 0:
 		// If the scroll bar is fading out, reset the count.
-		s.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
+		p.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
 	default:
-		s.scrollBarCount = scrollBarMaxCount()
+		p.scrollBarCount = scrollBarMaxCount()
 	}
 }
 
-func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	shouldShowBar := s.isBarVisible(context, widgetBounds)
+func (p *panelScroll) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	shouldShowBar := p.isBarVisible(context, widgetBounds)
 
-	if s.nextOffsetSet {
+	if p.nextOffsetSet {
 		var newOffsetX, newOffsetY float64
-		if s.isNextOffsetDelta {
-			newOffsetX = s.offsetX + s.nextOffsetX
-			newOffsetY = s.offsetY + s.nextOffsetY
+		if p.isNextOffsetDelta {
+			newOffsetX = p.offsetX + p.nextOffsetX
+			newOffsetY = p.offsetY + p.nextOffsetY
 		} else {
-			newOffsetX = s.nextOffsetX
-			newOffsetY = s.nextOffsetY
+			newOffsetX = p.nextOffsetX
+			newOffsetY = p.nextOffsetY
 		}
-		newOffsetX, newOffsetY = s.adjustOffset(widgetBounds, newOffsetX, newOffsetY)
-		if s.offsetX != newOffsetX || s.offsetY != newOffsetY {
-			s.offsetX = newOffsetX
-			s.offsetY = newOffsetY
-			guigui.RequestRebuild(s)
+		newOffsetX, newOffsetY = p.adjustOffset(widgetBounds, newOffsetX, newOffsetY)
+		if p.offsetX != newOffsetX || p.offsetY != newOffsetY {
+			p.offsetX = newOffsetX
+			p.offsetY = newOffsetY
+			guigui.RequestRebuild(p)
 		}
-		s.nextOffsetSet = false
-		s.nextOffsetX = 0
-		s.nextOffsetY = 0
-		s.isNextOffsetDelta = false
-		if s.scrollHBar.isOnceDrawn() || s.scrollVBar.isOnceDrawn() {
+		p.nextOffsetSet = false
+		p.nextOffsetX = 0
+		p.nextOffsetY = 0
+		p.isNextOffsetDelta = false
+		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
 			shouldShowBar = true
 		}
 	}
 
-	oldOpacity := scrollThumbOpacity(s.scrollBarCount)
+	oldOpacity := scrollThumbOpacity(p.scrollBarCount)
 	if shouldShowBar {
-		s.startShowingBarsIfNeeded(context, widgetBounds)
+		p.startShowingBarsIfNeeded(context, widgetBounds)
 	}
-	newOpacity := scrollThumbOpacity(s.scrollBarCount)
+	newOpacity := scrollThumbOpacity(p.scrollBarCount)
 
 	if newOpacity != oldOpacity {
-		guigui.RequestRedraw(s)
+		guigui.RequestRedraw(p)
 	}
 
-	if s.scrollBarCount > 0 {
-		if !shouldShowBar || s.scrollBarCount != scrollBarMaxCount()-scrollBarFadingInTime() {
-			s.scrollBarCount--
+	if p.scrollBarCount > 0 {
+		if !shouldShowBar || p.scrollBarCount != scrollBarMaxCount()-scrollBarFadingInTime() {
+			p.scrollBarCount--
 		}
 	}
 
-	alpha := scrollThumbOpacity(s.scrollBarCount) * 3 / 4
-	s.scrollHBar.setAlpha(alpha)
-	s.scrollVBar.setAlpha(alpha)
+	alpha := scrollThumbOpacity(p.scrollBarCount) * 3 / 4
+	p.scrollHBar.setAlpha(alpha)
+	p.scrollVBar.setAlpha(alpha)
 
 	return nil
 }
 
-func (s *scrollOverlay) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (p *panelScroll) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	// This is a dummy Draw implementation.
 	// Without this, scrollOverly would always fail hit testing.
 }
 
-func (s *scrollOverlay) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
+func (p *panelScroll) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
 	bounds := widgetBounds.Bounds()
 
-	offsetX, offsetY := s.offset()
-	barWidth, barHeight := scrollThumbSize(context, widgetBounds, s.contentSize)
+	offsetX, offsetY := p.offset()
+	barWidth, barHeight := scrollThumbSize(context, widgetBounds, p.contentSize)
 
 	padding := scrollThumbPadding(context)
 
 	var horizontalBarBounds, verticalBarBounds image.Rectangle
-	if s.contentSize.X > bounds.Dx() {
-		rate := -offsetX / float64(s.contentSize.X-bounds.Dx())
+	if p.contentSize.X > bounds.Dx() {
+		rate := -offsetX / float64(p.contentSize.X-bounds.Dx())
 		x0 := float64(bounds.Min.X) + padding + rate*(float64(bounds.Dx())-2*padding-barWidth)
 		x1 := x0 + float64(barWidth)
 		var y0, y1 float64
@@ -312,8 +307,8 @@ func (s *scrollOverlay) thumbBounds(context *guigui.Context, widgetBounds *guigu
 		}
 		horizontalBarBounds = image.Rect(int(x0), int(y0), int(x1), int(y1))
 	}
-	if s.contentSize.Y > bounds.Dy() {
-		rate := -offsetY / float64(s.contentSize.Y-bounds.Dy())
+	if p.contentSize.Y > bounds.Dy() {
+		rate := -offsetY / float64(p.contentSize.Y-bounds.Dy())
 		y0 := float64(bounds.Min.Y) + padding + rate*(float64(bounds.Dy())-2*padding-barHeight)
 		y1 := y0 + float64(barHeight)
 		var x0, x1 float64
