@@ -247,6 +247,8 @@ func (s *scrollOverlay) startShowingBarsIfNeeded(context *guigui.Context, widget
 }
 
 func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	shouldShowBar := s.isBarVisible(context, widgetBounds)
+
 	if s.nextOffsetSet {
 		var newOffsetX, newOffsetY float64
 		if s.isNextOffsetDelta {
@@ -266,9 +268,10 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 		s.nextOffsetX = 0
 		s.nextOffsetY = 0
 		s.isNextOffsetDelta = false
+		if s.onceDraw {
+			shouldShowBar = true
+		}
 	}
-
-	shouldShowBar := s.isBarVisible(context, widgetBounds)
 
 	oldOpacity := scrollThumbOpacity(s.barCount)
 	if shouldShowBar {
