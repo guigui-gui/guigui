@@ -177,16 +177,6 @@ func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	}
 }
 
-func (s *scrollOverlay) isWidgetHitAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if !widgetBounds.IsHitAtCursor() {
-		return false
-	}
-	if !s.isBarVisible(context, widgetBounds) {
-		return true
-	}
-	return !s.isCursorInEdgeArea(context, widgetBounds)
-}
-
 func (s *scrollOverlay) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	hovered := widgetBounds.IsHitAtCursor()
 

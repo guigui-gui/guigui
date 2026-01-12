@@ -48,11 +48,18 @@ type List[T comparable] struct {
 	listItemWidgets   []listItemWidget[T]
 	background1       listBackground1[T]
 	content           listContent[T]
+	panel             Panel
 	frame             listFrame
 
 	listItemHeightPlus1 int
 	headerHeight        int
 	footerHeight        int
+
+	onScrollY                 func(context *guigui.Context, offsetY float64)
+	onScrollYEnsureVisible    func(context *guigui.Context, offsetYTop, offsetYBottom float64)
+	onScrollDeltaY            func(context *guigui.Context, deltaY float64)
+	scrollOffsetYTopMinus1    float64
+	scrollOffsetYBottomMinus1 float64
 }
 
 type ListItem[T comparable] struct {
@@ -139,11 +146,36 @@ func (l *List[T]) resetHoveredItemIndex() {
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.background1)
-	adder.AddChild(&l.content)
+	adder.AddChild(&l.panel)
 	adder.AddChild(&l.frame)
 	context.SetContainer(l, true)
 
 	l.background1.setListContent(&l.content)
+	l.panel.SetContent(&l.content)
+	l.panel.SetContentConstraints(PanelContentConstraintsFixedWidth)
+
+	if l.onScrollY == nil {
+		l.onScrollY = func(context *guigui.Context, offsetY float64) {
+			offsetX, _ := l.panel.scrollOffset()
+			l.panel.SetScrollOffset(offsetX, offsetY)
+		}
+	}
+	guigui.SetEventHandler(&l.content, listEventScrollY, l.onScrollY)
+
+	if l.onScrollYEnsureVisible == nil {
+		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
+			l.scrollOffsetYTopMinus1 = offsetYTop - 1
+			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
+		}
+	}
+	guigui.SetEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
+
+	if l.onScrollDeltaY == nil {
+		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
+			l.panel.SetScrollOffsetByDelta(0, deltaY)
+		}
+	}
+	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
 	for i := range l.listItemWidgets {
 		item := &l.listItemWidgets[i]
@@ -159,7 +191,7 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	bounds.Min.Y += l.headerHeight
 	bounds.Max.Y -= l.footerHeight
 	layouter.LayoutWidget(&l.background1, widgetBounds.Bounds())
-	layouter.LayoutWidget(&l.content, bounds)
+	layouter.LayoutWidget(&l.panel, bounds)
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
 }
 
@@ -281,11 +313,37 @@ func (l *List[T]) setContentWidth(width int) {
 }
 
 func (l *List[T]) scrollOffset() (float64, float64) {
-	return l.content.ScrollOffset()
+	return l.panel.scrollOffset()
 }
 
 func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return l.content.Measure(context, constraints)
+}
+
+func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if l.scrollOffsetYTopMinus1 != 0 || l.scrollOffsetYBottomMinus1 != 0 {
+		// Adjust the bottom first.
+		if l.scrollOffsetYBottomMinus1 != 0 {
+			y := l.scrollOffsetYBottomMinus1 + 1
+			y += float64(widgetBounds.Bounds().Dy())
+			y -= float64(RoundedCornerRadius(context))
+			if offsetX, offsetY := l.panel.scrollOffset(); y < offsetY {
+				l.panel.SetScrollOffset(offsetX, y)
+			}
+		}
+		// Then adjust the top.
+		if l.scrollOffsetYTopMinus1 != 0 {
+			y := l.scrollOffsetYTopMinus1 + 1
+			y += float64(RoundedCornerRadius(context))
+			// Reget the offset as it may be changed by the above bottom adjustment.
+			if offsetX, offsetY := l.panel.scrollOffset(); y > offsetY {
+				l.panel.SetScrollOffset(offsetX, y)
+			}
+		}
+		l.scrollOffsetYTopMinus1 = 0
+		l.scrollOffsetYBottomMinus1 = 0
+	}
+	return nil
 }
 
 type listItemWidget[T comparable] struct {
@@ -462,7 +520,6 @@ type listContent[T comparable] struct {
 	background2      listBackground2[T]
 	checkmark        Image
 	expanderImages   []Image
-	scrollOverlay    scrollOverlay
 
 	abstractList              abstractList[T, abstractListItem[T]]
 	stripeVisible             bool
@@ -488,16 +545,7 @@ type listContent[T comparable] struct {
 
 	prevWidth int
 
-	onItemSelected         func(index int)
-	onScrollY              func(context *guigui.Context, offsetY float64)
-	onScrollYEnsureVisible func(context *guigui.Context, offsetYTop, offsetYBottom float64)
-	onScrollDeltaY         func(context *guigui.Context, deltaY float64)
-
-	// TODO: Remove these members by introducing Panel.
-	scrollOffsetYMinus1       float64
-	scrollOffsetDeltaY        float64
-	scrollOffsetYTopMinus1    float64
-	scrollOffsetYBottomMinus1 float64
+	onItemSelected func(index int)
 }
 
 func (l *listContent[T]) SetBackground(widget guigui.Widget) {
@@ -603,7 +651,6 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 		adder.AddChild(item.Content)
 	}
-	adder.AddChild(&l.scrollOverlay)
 
 	if l.onItemSelected == nil {
 		l.onItemSelected = func(index int) {
@@ -611,28 +658,6 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 	}
 	l.abstractList.SetOnItemSelected(l.onItemSelected)
-
-	if l.onScrollY == nil {
-		l.onScrollY = func(context *guigui.Context, offsetY float64) {
-			l.scrollOffsetYMinus1 = offsetY - 1
-		}
-	}
-	guigui.SetEventHandler(l, listEventScrollY, l.onScrollY)
-
-	if l.onScrollYEnsureVisible == nil {
-		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
-			l.scrollOffsetYTopMinus1 = offsetYTop - 1
-			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
-		}
-	}
-	guigui.SetEventHandler(l, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
-
-	if l.onScrollDeltaY == nil {
-		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
-			l.scrollOffsetDeltaY = deltaY
-		}
-	}
-	guigui.SetEventHandler(l, listEventScrollDeltaY, l.onScrollDeltaY)
 
 	l.background2.setListContent(l)
 
@@ -652,10 +677,8 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	// Record the current position of the selected item.
 	var headToSelectedItem int
 	if idx := l.SelectedItemIndex(); idx >= 0 {
-		if y0, ok := l.itemYFromIndex(context, idx); ok {
-			_, offsetY := l.scrollOverlay.Offset()
-			y := int(-offsetY)
-			headToSelectedItem = y0 - y
+		if y, ok := l.itemYFromIndex(context, idx); ok {
+			headToSelectedItem = y
 			if headToSelectedItem < 0 || headToSelectedItem >= widgetBounds.Bounds().Dy() {
 				headToSelectedItem = 0
 			}
@@ -668,9 +691,8 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	}
 
 	p := widgetBounds.Bounds().Min
-	offsetX, offsetY := l.scrollOverlay.Offset()
-	p.X += RoundedCornerRadius(context) + int(offsetX)
-	p.Y += RoundedCornerRadius(context) + int(offsetY)
+	p.X += RoundedCornerRadius(context)
+	p.Y += RoundedCornerRadius(context)
 
 	clear(l.widgetBoundsForLayout)
 	if l.widgetBoundsForLayout == nil {
@@ -751,11 +773,6 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
 	}
 
-	// TODO: Now scrollOverlay's widgetBounds doens't match with List's widgetBounds.
-	// Separate a content part and use Panel.
-	cs := l.measure(context, cw)
-	l.scrollOverlay.SetContentSize(context, widgetBounds, cs)
-
 	// Adjust the scroll offset to show the selected item if needed.
 	if l.prevWidth != widgetBounds.Bounds().Dx() && headToSelectedItem != 0 {
 		if y0, ok := l.itemYFromIndex(context, l.SelectedItemIndex()); ok {
@@ -769,7 +786,6 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
 	}
 	layouter.LayoutWidget(&l.background2, widgetBounds.Bounds())
-	layouter.LayoutWidget(&l.scrollOverlay, widgetBounds.Bounds())
 	for widget, bounds := range l.widgetBoundsForLayout {
 		layouter.LayoutWidget(widget, bounds)
 	}
@@ -902,10 +918,6 @@ func (l *listContent[T]) SetStyle(style ListStyle) {
 	guigui.RequestRebuild(l)
 }
 
-func (l *listContent[T]) ScrollOffset() (float64, float64) {
-	return l.scrollOverlay.Offset()
-}
-
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	_, y := ebiten.CursorPosition()
 	for i := range l.visibleItems() {
@@ -961,8 +973,8 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	if l.dragSrcIndexPlus1 > 0 {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			_, y := ebiten.CursorPosition()
-			p := widgetBounds.Bounds().Min
-			h := widgetBounds.Bounds().Dy()
+			p := widgetBounds.VisibleBounds().Min
+			h := widgetBounds.VisibleBounds().Dy()
 			var dy float64
 			if upperY := p.Y + UnitSize(context); y < upperY {
 				dy = float64(upperY-y) / 4
@@ -970,7 +982,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if lowerY := p.Y + h - UnitSize(context); y >= lowerY {
 				dy = float64(lowerY-y) / 4
 			}
-			guigui.DispatchEvent(l, listEventScrollDeltaY, dy)
+			if dy != 0 {
+				guigui.DispatchEvent(l, listEventScrollDeltaY, dy)
+			}
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				l.dragDstIndexPlus1 = i + 1
 				guigui.RequestRedraw(l)
@@ -994,7 +1008,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
 		right := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight)
 		switch {
-		case (left || right) && l.scrollOverlay.isWidgetHitAtCursor(context, widgetBounds):
+		case (left || right):
 			item, _ := l.abstractList.ItemByIndex(index)
 			if c.X < l.itemBoundsForLayoutFromIndex[index].Min.X {
 				if left {
@@ -1030,7 +1044,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			// TODO: This behavior seems a little ad-hoc. Consider a better way.
 			return guigui.HandleInputResult{}
 
-		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && l.scrollOverlay.isWidgetHitAtCursor(context, widgetBounds):
+		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
 			item, _ := l.abstractList.ItemByIndex(index)
 			if item.Movable && l.SelectedItemIndex() == index && l.startPressingIndexPlus1-1 == index && (l.pressStartPlus1 != c.Add(image.Pt(1, 1))) {
 				l.dragSrcIndexPlus1 = index + 1
@@ -1051,43 +1065,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 }
 
 func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	cw := widgetBounds.Bounds().Dx()
-	if l.contentWidthPlus1 > 0 {
-		cw = l.contentWidthPlus1 - 1
-	}
-	cs := l.measure(context, cw)
-	if l.scrollOffsetYMinus1 != 0 {
-		offsetX, _ := l.scrollOverlay.Offset()
-		l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, l.scrollOffsetYMinus1+1)
-		l.scrollOffsetYMinus1 = 0
-	}
-	if l.scrollOffsetYTopMinus1 != 0 || l.scrollOffsetYBottomMinus1 != 0 {
-		// Adjust the bottom first.
-		if l.scrollOffsetYBottomMinus1 != 0 {
-			y := l.scrollOffsetYBottomMinus1 + 1
-			y += float64(widgetBounds.Bounds().Dy())
-			y -= float64(RoundedCornerRadius(context))
-			if offsetX, offsetY := l.scrollOverlay.Offset(); y < offsetY {
-				l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, y)
-			}
-		}
-		// Then adjust the top.
-		if l.scrollOffsetYTopMinus1 != 0 {
-			y := l.scrollOffsetYTopMinus1 + 1
-			y += float64(RoundedCornerRadius(context))
-			// Reget the offset as it may be changed by the above bottom adjustment.
-			if offsetX, offsetY := l.scrollOverlay.Offset(); y > offsetY {
-				l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, y)
-			}
-		}
-		l.scrollOffsetYTopMinus1 = 0
-		l.scrollOffsetYBottomMinus1 = 0
-	}
-	if l.scrollOffsetDeltaY != 0 {
-		l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, cs, 0, l.scrollOffsetDeltaY)
-		l.scrollOffsetDeltaY = 0
-	}
-
 	// Jump to the item if requested.
 	// This is done in Tick to wait for the list items are updated, or an item cannot be measured correctly.
 	if l.jumpTick > 0 && ebiten.Tick() >= l.jumpTick {
@@ -1313,9 +1290,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	// Draw a dragging guideline.
 	if l.content.dragDstIndexPlus1 > 0 {
 		p := widgetBounds.Bounds().Min
-		offsetX, _ := l.content.scrollOverlay.Offset()
 		x0 := float32(p.X) + float32(RoundedCornerRadius(context))
-		x0 += float32(offsetX)
 		cw := widgetBounds.Bounds().Dx()
 		if l.content.contentWidthPlus1 > 0 {
 			cw = l.content.contentWidthPlus1 - 1
@@ -1325,8 +1300,6 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		y := float32(p.Y)
 		if itemY, ok := l.content.itemYFromIndex(context, l.content.dragDstIndexPlus1-1); ok {
 			y += float32(itemY)
-			_, offsetY := l.content.scrollOverlay.Offset()
-			y += float32(offsetY)
 			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
 		}
 	}

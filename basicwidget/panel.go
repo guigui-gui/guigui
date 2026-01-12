@@ -62,6 +62,10 @@ func (p *Panel) SetAutoBorder(auto bool) {
 	p.panel.SetAutoBorder(auto)
 }
 
+func (p *Panel) scrollOffset() (float64, float64) {
+	return p.panel.scrollOffset()
+}
+
 func (p *Panel) SetScrollOffset(offsetX, offsetY float64) {
 	p.panel.SetScrollOffset(offsetX, offsetY)
 }
