@@ -156,16 +156,8 @@ func (s *scrollOverlay) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&s.scrollWheel, widgetBounds.Bounds())
-	{
-		bounds := widgetBounds.Bounds()
-		bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-UnitSize(context)/2)
-		layouter.LayoutWidget(&s.scrollHBar, bounds)
-	}
-	{
-		bounds := widgetBounds.Bounds()
-		bounds.Min.X = max(bounds.Min.X, bounds.Max.X-UnitSize(context)/2)
-		layouter.LayoutWidget(&s.scrollVBar, bounds)
-	}
+	layouter.LayoutWidget(&s.scrollHBar, s.horizontalBarBounds(context, widgetBounds))
+	layouter.LayoutWidget(&s.scrollVBar, s.verticalBarBounds(context, widgetBounds))
 
 	if cs := widgetBounds.Bounds().Size(); s.lastSize != cs {
 		s.SetOffset(s.adjustOffset(widgetBounds, s.offsetX, s.offsetY))
@@ -175,6 +167,18 @@ func (s *scrollOverlay) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	hb, vb := s.thumbBounds(context, widgetBounds)
 	s.scrollHBar.setThumbBounds(hb)
 	s.scrollVBar.setThumbBounds(vb)
+}
+
+func (s *scrollOverlay) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	bounds := widgetBounds.Bounds()
+	bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-UnitSize(context)/2)
+	return bounds
+}
+
+func (s *scrollOverlay) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	bounds := widgetBounds.Bounds()
+	bounds.Min.X = max(bounds.Min.X, bounds.Max.X-UnitSize(context)/2)
+	return bounds
 }
 
 func (s *scrollOverlay) Offset() (float64, float64) {
@@ -198,29 +202,20 @@ func (s *scrollOverlay) scrollRange(widgetBounds *guigui.WidgetBounds) image.Rec
 }
 
 func (s *scrollOverlay) isBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if hb, vb := s.thumbBounds(context, widgetBounds); hb.Empty() && vb.Empty() {
-		return false
-	}
-
 	if s.scrollWheel.isScrolling() {
 		return true
 	}
 	if s.scrollHBar.isDragging() || s.scrollVBar.isDragging() {
 		return true
 	}
-	return s.isCursorInEdgeArea(context, widgetBounds)
-}
-
-func (s *scrollOverlay) isCursorInEdgeArea(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
 	if !widgetBounds.IsHitAtCursor() {
 		return false
 	}
 	pt := image.Pt(ebiten.CursorPosition())
-	bounds := widgetBounds.Bounds()
-	if s.contentSize.X > bounds.Dx() && bounds.Max.Y-UnitSize(context)/2 <= pt.Y-1 {
+	if pt.In(s.horizontalBarBounds(context, widgetBounds)) {
 		return true
 	}
-	if s.contentSize.Y > bounds.Dy() && bounds.Max.X-UnitSize(context)/2 <= pt.X-1 {
+	if pt.In(s.verticalBarBounds(context, widgetBounds)) {
 		return true
 	}
 	return false
