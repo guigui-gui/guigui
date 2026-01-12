@@ -145,18 +145,6 @@ func (s *scrollOverlay) SetOffset(x, y float64) {
 	s.isNextOffsetDelta = false
 	s.nextOffsetX = x
 	s.nextOffsetY = y
-	/*s.SetContentSize(context, widgetBounds, contentSize)
-
-	x, y = s.adjustOffset(widgetBounds, x, y)
-	if s.offsetX == x && s.offsetY == y {
-		return
-	}
-	s.offsetX = x
-	s.offsetY = y
-	if s.onceDraw {
-		s.startShowingBarsIfNeeded(context, widgetBounds)
-	}
-	guigui.RequestRebuild(s)*/
 }
 
 func (s *scrollOverlay) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
