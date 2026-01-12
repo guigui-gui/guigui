@@ -214,18 +214,18 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
-		contentSize := p.contentSize(context, widgetBounds)
 		if p.hasNextOffset {
 			if p.isNextOffsetDelta {
-				p.scrollOverlay.SetOffsetByDelta(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
+				p.scrollOverlay.SetOffsetByDelta(p.nextOffsetX, p.nextOffsetY)
 			} else {
-				p.scrollOverlay.SetOffset(context, widgetBounds, contentSize, p.nextOffsetX, p.nextOffsetY)
+				p.scrollOverlay.SetOffset(p.nextOffsetX, p.nextOffsetY)
 			}
 			p.hasNextOffset = false
 			p.nextOffsetX = 0
 			p.nextOffsetY = 0
 		}
 
+		contentSize := p.contentSize(context, widgetBounds)
 		p.scrollOverlay.SetContentSize(context, widgetBounds, contentSize)
 
 		offsetX, offsetY := p.scrollOverlay.Offset()
