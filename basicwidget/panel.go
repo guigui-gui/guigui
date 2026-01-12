@@ -75,7 +75,7 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 }
 
 func (p *Panel) setScrolBarVisible(visible bool) {
-	p.panel.setScrolBarVisible(visible)
+	p.panel.setScrolVisible(visible)
 }
 
 func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -101,7 +101,7 @@ type panel struct {
 	style              PanelStyle
 	contentConstraints PanelContentConstraints
 
-	scrollBarHidden bool
+	scrollHidden bool
 }
 
 func (p *panel) SetContent(widget guigui.Widget) {
@@ -141,8 +141,8 @@ func (p *panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.scrollOverlay.SetOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
-func (p *panel) setScrolBarVisible(visible bool) {
-	p.scrollBarHidden = !visible
+func (p *panel) setScrolVisible(visible bool) {
+	p.scrollHidden = !visible
 }
 
 func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -156,7 +156,7 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 	p.border.scrollOverlay = &p.scrollOverlay
 
-	context.SetVisible(&p.scrollOverlay, !p.scrollBarHidden)
+	context.SetVisible(&p.scrollOverlay, !p.scrollHidden)
 
 	return nil
 }
