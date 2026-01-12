@@ -492,7 +492,7 @@ type listContent[T comparable] struct {
 	onScrollDeltaY func(context *guigui.Context, deltaY float64)
 
 	// TODO: Remove these members by introducing Panel.
-	scrollOffsetY      float64
+	scrollOffsetYPlus1 float64
 	scrollOffsetDeltaY float64
 }
 
@@ -610,7 +610,7 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 	if l.onScrollY == nil {
 		l.onScrollY = func(context *guigui.Context, offsetY float64) {
-			l.scrollOffsetY = offsetY
+			l.scrollOffsetYPlus1 = offsetY + 1
 		}
 	}
 	guigui.SetEventHandler(l, listEventScrollY, l.onScrollY)
@@ -1048,10 +1048,10 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 		cw = l.contentWidthPlus1 - 1
 	}
 	cs := l.measure(context, cw)
-	if l.scrollOffsetY != 0 {
+	if l.scrollOffsetYPlus1 != 0 {
 		offsetX, _ := l.scrollOverlay.Offset()
-		l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, l.scrollOffsetY)
-		l.scrollOffsetY = 0
+		l.scrollOverlay.SetOffset(context, widgetBounds, cs, offsetX, l.scrollOffsetYPlus1-1)
+		l.scrollOffsetYPlus1 = 0
 	}
 	if l.scrollOffsetDeltaY != 0 {
 		l.scrollOverlay.SetOffsetByDelta(context, widgetBounds, cs, 0, l.scrollOffsetDeltaY)
