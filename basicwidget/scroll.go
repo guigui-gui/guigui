@@ -131,7 +131,8 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 		offsetX += wheelX * 4 * context.Scale()
 		offsetY += wheelY * 4 * context.Scale()
 		s.offsetGetSetter.setScrollOffset(offsetX, offsetY)
-		return guigui.HandleInputResult{}
+		// TODO: If the actual offset is not changed, this should not return HandleInputByWidget (#204).
+		return guigui.HandleInputByWidget(s)
 	}
 
 	return guigui.HandleInputResult{}
