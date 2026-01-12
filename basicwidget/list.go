@@ -680,7 +680,6 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	l.itemBoundsForLayoutFromIndex = adjustSliceSize(l.itemBoundsForLayoutFromIndex, l.abstractList.ItemCount())
 	clear(l.itemBoundsForLayoutFromIndex)
 
-	origP := p
 	for i := range l.visibleItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		itemW := cw - 2*RoundedCornerRadius(context)
@@ -767,10 +766,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	l.prevWidth = widgetBounds.Bounds().Dx()
 
 	if l.customBackground != nil {
-		layouter.LayoutWidget(l.customBackground, image.Rectangle{
-			Min: origP,
-			Max: origP.Add(cs).Sub(image.Pt(2*RoundedCornerRadius(context), 2*RoundedCornerRadius(context))),
-		})
+		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
 	}
 	layouter.LayoutWidget(&l.background2, widgetBounds.Bounds())
 	layouter.LayoutWidget(&l.scrollOverlay, widgetBounds.Bounds())
