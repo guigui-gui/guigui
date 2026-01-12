@@ -109,6 +109,10 @@ func (s *scrollOverlay) Reset() {
 	}
 	s.offsetX = 0
 	s.offsetY = 0
+	s.nextOffsetSet = false
+	s.nextOffsetX = 0
+	s.nextOffsetY = 0
+	s.isNextOffsetDelta = false
 	guigui.RequestRebuild(s)
 }
 
