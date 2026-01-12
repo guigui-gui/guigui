@@ -472,11 +472,11 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 		if tb := s.thumbBounds; !tb.Empty() {
 			x, y := ebiten.CursorPosition()
 			offsetX, offsetY := s.offsetGetSetter.Offset()
-			if s.horizontal && y >= tb.Min.Y {
+			if s.horizontal && y >= tb.Min.Y && x >= tb.Min.X && x < tb.Max.X {
 				s.dragging = true
 				s.draggingStartPosition = x
 				s.draggingStartOffset = offsetX
-			} else if !s.horizontal && x >= tb.Min.X {
+			} else if !s.horizontal && x >= tb.Min.X && y >= tb.Min.Y && y < tb.Max.Y {
 				s.dragging = true
 				s.draggingStartPosition = y
 				s.draggingStartOffset = offsetY
