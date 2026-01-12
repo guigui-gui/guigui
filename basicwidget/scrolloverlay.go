@@ -95,6 +95,7 @@ func (s *scrollOverlay) Reset() {
 	}
 	s.offsetX = 0
 	s.offsetY = 0
+	guigui.RequestRebuild(s)
 }
 
 // SetContentSize sets the size of the content inside the scrollOverlay.
