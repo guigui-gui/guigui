@@ -360,22 +360,15 @@ func (s *scrollOverlay) Tick(context *guigui.Context, widgetBounds *guigui.Widge
 		guigui.RequestRedraw(s)
 	}
 
-	if s.barCount == 0 {
-		s.hBar.setAlpha(0)
-		s.vBar.setAlpha(0)
-		return nil
-	}
-
-	if shouldShowBar && s.barCount == scrollBarMaxCount()-scrollBarFadingInTime() {
-		// Keep showing the bar.
-		return nil
-	}
-
-	oldOpacity = scrollBarOpacity(s.barCount)
-	s.barCount--
-	newOpacity = scrollBarOpacity(s.barCount)
-	if newOpacity != oldOpacity {
-		guigui.RequestRedraw(s)
+	if s.barCount > 0 {
+		if !shouldShowBar || s.barCount != scrollBarMaxCount()-scrollBarFadingInTime() {
+			oldOpacity = scrollBarOpacity(s.barCount)
+			s.barCount--
+			newOpacity = scrollBarOpacity(s.barCount)
+			if newOpacity != oldOpacity {
+				guigui.RequestRedraw(s)
+			}
+		}
 	}
 
 	alpha := scrollBarOpacity(s.barCount) * 3 / 4
