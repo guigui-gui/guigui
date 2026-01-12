@@ -190,9 +190,6 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	p.scrollVBar.setOffsetGetSetter(p)
 	p.scrollVBar.setHorizontal(false)
 
-	context.SetFloat(&p.scrollHBar, true)
-	context.SetFloat(&p.scrollVBar, true)
-
 	return nil
 }
 
