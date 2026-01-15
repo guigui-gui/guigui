@@ -40,16 +40,16 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	}, true
 }
 
-type widgetsAndVisibleBounds struct {
+type widgetsAndBounds struct {
 	bounds3Ds       map[*widgetState]bounds3D
 	currentBounds3D map[*widgetState]bounds3D
 }
 
-func (w *widgetsAndVisibleBounds) reset() {
+func (w *widgetsAndBounds) reset() {
 	clear(w.bounds3Ds)
 }
 
-func (w *widgetsAndVisibleBounds) append(context *Context, widget Widget) {
+func (w *widgetsAndBounds) append(context *Context, widget Widget) {
 	if w.bounds3Ds == nil {
 		w.bounds3Ds = map[*widgetState]bounds3D{}
 	}
@@ -60,7 +60,7 @@ func (w *widgetsAndVisibleBounds) append(context *Context, widget Widget) {
 	w.bounds3Ds[widget.widgetState()] = b
 }
 
-func (w *widgetsAndVisibleBounds) equals(context *Context, currentWidgets []Widget) bool {
+func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) bool {
 	if w.currentBounds3D == nil {
 		w.currentBounds3D = map[*widgetState]bounds3D{}
 	} else {
@@ -76,7 +76,7 @@ func (w *widgetsAndVisibleBounds) equals(context *Context, currentWidgets []Widg
 	return maps.Equal(w.bounds3Ds, w.currentBounds3D)
 }
 
-func (w *widgetsAndVisibleBounds) redrawIfNeeded(app *app) {
+func (w *widgetsAndBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
 		if bounds3D.zDelta != 0 || bounds3D.float {
 			vb := app.context.visibleBounds(widgetState)
@@ -96,7 +96,7 @@ type widgetState struct {
 
 	parent   Widget
 	children []Widget
-	prev     widgetsAndVisibleBounds
+	prev     widgetsAndBounds
 
 	hidden          bool
 	disabled        bool
