@@ -14,6 +14,8 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+const panelEventScroll = "scroll"
+
 type PanelStyle int
 
 const (
@@ -40,6 +42,10 @@ type Panel struct {
 	guigui.DefaultWidget
 
 	panel panel
+}
+
+func (p *Panel) SetOnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
+	p.panel.SetOnScroll(callback)
 }
 
 func (p *Panel) SetContent(widget guigui.Widget) {
@@ -112,6 +118,10 @@ type panel struct {
 	nextOffsetX       float64
 	nextOffsetY       float64
 	scrollBarCount    int
+}
+
+func (p *panel) SetOnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
+	guigui.SetEventHandler(p, panelEventScroll, callback)
 }
 
 func (p *panel) SetContent(widget guigui.Widget) {
@@ -331,6 +341,7 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		if p.offsetX != newOffsetX || p.offsetY != newOffsetY {
 			p.offsetX = newOffsetX
 			p.offsetY = newOffsetY
+			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
 			guigui.RequestRebuild(p)
 		}
 		p.nextOffsetSet = false
