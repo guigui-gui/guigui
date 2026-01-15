@@ -342,7 +342,7 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			p.offsetX = newOffsetX
 			p.offsetY = newOffsetY
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
-			// TODO: This doesn't have to be needed, but this caused a bug (#298). Investigate this.
+			// Rebuilding the widget tree is needed to invoke this panel's Tick (#298).
 			guigui.RequestRebuild(p)
 		}
 		p.nextOffsetSet = false
