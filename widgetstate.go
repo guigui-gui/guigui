@@ -18,11 +18,12 @@ import (
 type bounds3D struct {
 	// Use bounds here. Visual bounds don't work to detect tree changes.
 
-	bounds      image.Rectangle
-	float       bool
-	zDelta      int
-	visible     bool // For hit testing.
-	passThrough bool // For hit testing.
+	bounds        image.Rectangle
+	visibleBounds image.Rectangle
+	float         bool
+	zDelta        int
+	visible       bool // For hit testing.
+	passThrough   bool // For hit testing.
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
@@ -31,12 +32,17 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	if b.Empty() {
 		return bounds3D{}, false
 	}
+	vb := context.visibleBounds(ws)
+	if vb.Empty() {
+		return bounds3D{}, false
+	}
 	return bounds3D{
-		bounds:      b,
-		float:       ws.float,
-		zDelta:      ws.zDelta,
-		visible:     ws.isVisible(),
-		passThrough: ws.passThrough,
+		bounds:        b,
+		visibleBounds: vb,
+		float:         ws.float,
+		zDelta:        ws.zDelta,
+		visible:       ws.isVisible(),
+		passThrough:   ws.passThrough,
 	}, true
 }
 
@@ -79,8 +85,7 @@ func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) boo
 func (w *widgetsAndBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
 		if bounds3D.zDelta != 0 || bounds3D.float {
-			vb := app.context.visibleBounds(widgetState)
-			app.requestRedraw(vb, requestRedrawReasonLayout, nil)
+			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
 			requestRedraw(widgetState)
 		}
 	}
