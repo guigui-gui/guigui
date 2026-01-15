@@ -342,7 +342,6 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			p.offsetX = newOffsetX
 			p.offsetY = newOffsetY
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
-			guigui.RequestRebuild(p)
 		}
 		p.nextOffsetSet = false
 		p.nextOffsetX = 0
