@@ -117,6 +117,12 @@ func mixColors(clr0, clr1 iro.Color, rate float64) color.Color {
 }
 
 func ScaleAlpha(clr color.Color, alpha float64) color.Color {
+	if alpha == 1 {
+		return clr
+	}
+	if alpha == 0 {
+		return color.Transparent
+	}
 	r, g, b, a := clr.RGBA()
 	r = uint32(float64(r) * alpha)
 	g = uint32(float64(g) * alpha)

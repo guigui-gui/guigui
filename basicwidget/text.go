@@ -1412,7 +1412,7 @@ type textCursor struct {
 	text *Text
 
 	counter   int
-	prevShown bool
+	prevAlpha float64
 	prevPos   textutil.TextPosition
 	prevOK    bool
 }
@@ -1430,37 +1430,50 @@ func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	t.prevOK = ok
 
 	t.counter++
-	if r := t.shouldRenderCursor(context, widgetBounds, t.text); t.prevShown != r {
-		t.prevShown = r
+	if a := t.alpha(context, widgetBounds, t.text); t.prevAlpha != a {
+		t.prevAlpha = a
 		guigui.RequestRedraw(t)
 	}
 	return nil
 }
 
-func (t *textCursor) shouldRenderCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text *Text) bool {
-	offset := ebiten.TPS() / 2
-	if t.counter > offset && (t.counter-offset)%ebiten.TPS() >= ebiten.TPS()/2 {
-		return false
-	}
+func (t *textCursor) alpha(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text *Text) float64 {
 	if _, ok := text.cursorPosition(context, widgetBounds); !ok {
-		return false
+		return 0
 	}
 	s, e, ok := text.selectionToDraw(context)
 	if !ok {
-		return false
+		return 0
 	}
 	if s != e {
-		return false
+		return 0
 	}
-	return true
+	offset := ebiten.TPS() / 2
+	if t.counter <= offset {
+		return 1
+	}
+	interval := ebiten.TPS()
+	c := (t.counter - offset) % interval
+	if c < interval/5 {
+		return 1 - float64(c)/float64(interval/5)
+	}
+	if c < interval*2/5 {
+		return 0
+	}
+	if c < interval*3/5 {
+		return float64(c-interval*2/5) / float64(interval/5)
+	}
+	return 1
 }
 
 func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	if !t.shouldRenderCursor(context, widgetBounds, t.text) {
+	alpha := t.alpha(context, widgetBounds, t.text)
+	if alpha == 0 {
 		return
 	}
 	b := widgetBounds.Bounds()
-	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), false)
+	clr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), alpha)
+	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), clr, false)
 }
 
 func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
