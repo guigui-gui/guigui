@@ -16,7 +16,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/hajimehoshi/ebiten/v2/vector"
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/language"
 
@@ -1235,7 +1234,9 @@ func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.Widget
 		return image.Rectangle{}
 	}
 	w := textCursorWidth(context)
-	return image.Rect(int(pos.X)-w/2, int(pos.Top), int(pos.X)+w/2, int(pos.Bottom))
+	paddingTop := 2 * t.scale() * context.Scale()
+	paddingBottom := 1 * t.scale() * context.Scale()
+	return image.Rect(int(pos.X)-w/2, int(pos.Top+paddingTop), int(pos.X)+w/2, int(pos.Bottom-paddingBottom))
 }
 
 func (t *Text) setPaddingForScrollOffset(padding guigui.Padding) {
@@ -1472,8 +1473,8 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		return
 	}
 	b := widgetBounds.Bounds()
-	clr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4), alpha)
-	vector.FillRect(dst, float32(b.Min.X), float32(b.Min.Y), float32(b.Dx()), float32(b.Dy()), clr, false)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeAccent, 0.5, 0.6), alpha)
+	basicwidgetdraw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }
 
 func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
