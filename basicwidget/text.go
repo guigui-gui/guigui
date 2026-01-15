@@ -1432,8 +1432,7 @@ func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	t.counter++
 	if r := t.shouldRenderCursor(context, widgetBounds, t.text); t.prevShown != r {
 		t.prevShown = r
-		// TODO: This is not efficient. Improve this.
-		guigui.RequestRebuild(t)
+		guigui.RequestRedraw(t)
 	}
 	return nil
 }
