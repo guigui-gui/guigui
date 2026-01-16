@@ -159,7 +159,7 @@ func (e *expanderToggle) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 func (e *expanderToggle) layout(context *guigui.Context) guigui.LinearLayout {
 	return guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionHorizontal,
+		Direction: guigui.LayoutDirectionVertical,
 		Items: []guigui.LinearLayoutItem{
 			{
 				Size: guigui.FlexibleSize(1),
