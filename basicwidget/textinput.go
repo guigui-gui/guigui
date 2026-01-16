@@ -170,7 +170,7 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(&t.textInput.text))
+	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(t.textInput.text.Text()))
 	return nil
 }
 
