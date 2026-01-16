@@ -107,6 +107,7 @@ func (e *Expander) layout(context *guigui.Context) guigui.LinearLayout {
 
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
+		Gap:       u / 4,
 		Items:     e.layoutItems,
 	}
 }
