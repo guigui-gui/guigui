@@ -326,6 +326,7 @@ func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		if l.scrollOffsetYBottomMinus1 != 0 {
 			y := l.scrollOffsetYBottomMinus1 + 1
 			y += float64(widgetBounds.Bounds().Dy())
+			y -= float64(l.headerHeight + l.footerHeight)
 			y -= float64(RoundedCornerRadius(context))
 			if offsetX, offsetY := l.panel.scrollOffset(); y < offsetY {
 				l.panel.SetScrollOffset(offsetX, y)
