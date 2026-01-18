@@ -145,7 +145,6 @@ func (t *TextInput) Redo() bool {
 func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
-	context.SetContainer(&t.textInput, true)
 	context.SetPassThrough(&t.focus, true)
 	context.SetFloat(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)

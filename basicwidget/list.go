@@ -148,7 +148,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.panel)
 	adder.AddChild(&l.frame)
-	context.SetContainer(l, true)
 
 	l.background1.setListContent(&l.content)
 	l.panel.SetContent(&l.content)
