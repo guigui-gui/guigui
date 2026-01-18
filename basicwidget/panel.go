@@ -189,6 +189,9 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.scrollVBar)
 	adder.AddChild(&p.border)
 
+	context.SetFloat(&p.scrollHBar, true)
+	context.SetFloat(&p.scrollVBar, true)
+
 	p.border.panel = p
 	context.SetVisible(&p.scrollWheel, !p.scrollHidden)
 	context.SetVisible(&p.scrollHBar, !p.scrollHidden)

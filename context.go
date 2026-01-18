@@ -418,10 +418,7 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		b := state.bounds
 		for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
 			if parent.widgetState().container {
-				parentVB := c.visibleBounds(parent.widgetState())
-				if !parentVB.Empty() {
-					b = b.Intersect(parentVB)
-				}
+				b = b.Intersect(c.visibleBounds(parent.widgetState()))
 				break
 			}
 		}
