@@ -146,7 +146,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 	context.SetPassThrough(&t.focus, true)
-	context.SetFloat(&t.focus, true)
+	context.SetFloating(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
 	return nil
 }

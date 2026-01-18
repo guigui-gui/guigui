@@ -86,7 +86,7 @@ func (p *Panel) setScrolBarVisible(visible bool) {
 
 func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.panel)
-	context.SetContainer(&p.panel, true)
+	context.SetFloatingClip(&p.panel, true)
 	return nil
 }
 
@@ -189,8 +189,8 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.scrollVBar)
 	adder.AddChild(&p.border)
 
-	context.SetFloat(&p.scrollHBar, true)
-	context.SetFloat(&p.scrollVBar, true)
+	context.SetFloating(&p.scrollHBar, true)
+	context.SetFloating(&p.scrollVBar, true)
 
 	p.border.panel = p
 	context.SetVisible(&p.scrollWheel, !p.scrollHidden)

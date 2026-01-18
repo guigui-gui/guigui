@@ -709,7 +709,7 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 		// The float property is similar.
 		widgetState.prev.redrawIfNeeded(a)
 		for _, child := range widgetState.children {
-			if child.widgetState().zDelta != 0 || child.widgetState().float {
+			if child.widgetState().zDelta != 0 || child.widgetState().floating {
 				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
 			}
 		}
@@ -759,7 +759,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, floa
 
 	vb := a.context.visibleBounds(widgetState)
 	var origDst *ebiten.Image
-	renderCurrent := zToRender == widgetState.z() && !vb.Empty() && widgetState.float == float
+	renderCurrent := zToRender == widgetState.z() && !vb.Empty() && widgetState.floating == float
 	if renderCurrent {
 		if useOffscreen {
 			origDst = dst

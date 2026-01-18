@@ -39,7 +39,7 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	return bounds3D{
 		bounds:        b,
 		visibleBounds: vb,
-		float:         ws.float,
+		float:         ws.floating,
 		zDelta:        ws.zDelta,
 		visible:       ws.isVisible(),
 		passThrough:   ws.passThrough,
@@ -112,8 +112,8 @@ type widgetState struct {
 	eventHandlers   map[string]any
 	tmpArgs         []reflect.Value
 	eventDispatched bool
-	container       bool
-	float           bool
+	floatingClip    bool
+	floating        bool
 	focusDelegation Widget
 
 	zPlus1Cache           int

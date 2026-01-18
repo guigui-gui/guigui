@@ -414,10 +414,10 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
-	if state.float {
+	if state.floating {
 		b := state.bounds
 		for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
-			if parent.widgetState().container {
+			if parent.widgetState().floatingClip {
 				b = b.Intersect(c.visibleBounds(parent.widgetState()))
 				break
 			}
@@ -437,12 +437,12 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 	return b
 }
 
-func (c *Context) SetContainer(widget Widget, container bool) {
-	widget.widgetState().container = container
+func (c *Context) SetFloatingClip(widget Widget, floatingClip bool) {
+	widget.widgetState().floatingClip = floatingClip
 }
 
-func (c *Context) SetFloat(widget Widget, float bool) {
-	widget.widgetState().float = float
+func (c *Context) SetFloating(widget Widget, floating bool) {
+	widget.widgetState().floating = floating
 }
 
 func (c *Context) DelegateFocus(from Widget, to Widget) {

@@ -102,7 +102,7 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
 	context.SetPassThrough(&p.popup, !p.IsOpen())
 	context.SetZDelta(&p.popup, popupZ)
-	context.SetContainer(&p.popup, true)
+	context.SetFloatingClip(&p.popup, true)
 	return nil
 }
 
