@@ -27,7 +27,6 @@ type Root struct {
 
 type GameWidget struct {
 	guigui.DefaultWidget
-	background *ebiten.Image
 	gopher     *ebiten.Image
 	posX       int
 	posY       int
