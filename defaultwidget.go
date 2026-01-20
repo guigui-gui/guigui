@@ -15,7 +15,7 @@ type DefaultWidget struct {
 
 var _ Widget = (*DefaultWidget)(nil)
 
-func (*DefaultWidget) Model(key any) any {
+func (*DefaultWidget) Model(key ModelKey) any {
 	return nil
 }
 

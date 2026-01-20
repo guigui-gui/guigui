@@ -15,10 +15,8 @@ import (
 	_ "github.com/guigui-gui/guigui/basicwidget/cjkfont"
 )
 
-type modelKey int
-
-const (
-	modelKeyModel modelKey = iota
+var (
+	modelKeyModel = guigui.GenerateModelKey()
 )
 
 type Root struct {
@@ -40,7 +38,7 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Model(key any) any {
+func (r *Root) Model(key guigui.ModelKey) any {
 	switch key {
 	case modelKeyModel:
 		return &r.model

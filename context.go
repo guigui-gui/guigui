@@ -349,7 +349,7 @@ func (c *Context) SetCustomDraw(widget Widget, customDraw CustomDrawFunc) {
 	widget.widgetState().customDraw = customDraw
 }
 
-func (c *Context) Model(widget Widget, key any) any {
+func (c *Context) Model(widget Widget, key ModelKey) any {
 	for w := widget; w != nil; w = w.widgetState().parent {
 		if v := w.Model(key); v != nil {
 			return v
