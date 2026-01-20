@@ -3,13 +3,16 @@
 
 package guigui
 
-import "math/rand/v2"
+import (
+	"sync/atomic"
+)
 
 // ModelKey is a unique identifier for a model.
 type ModelKey int64
 
+var theModelKey atomic.Int64
+
 // GenerateModelKey generates a new ModelKey.
 func GenerateModelKey() ModelKey {
-	// A key doesn't have to be cryptographically random. It just needs to be unique.
-	return ModelKey(rand.Int64())
+	return ModelKey(theModelKey.Add(1))
 }
