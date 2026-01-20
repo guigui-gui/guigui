@@ -8,11 +8,13 @@ import (
 )
 
 // ModelKey is a unique identifier for a model.
-type ModelKey int64
+type ModelKey struct {
+	v int64
+}
 
 var theModelKey atomic.Int64
 
 // GenerateModelKey generates a new ModelKey.
 func GenerateModelKey() ModelKey {
-	return ModelKey(theModelKey.Add(1))
+	return ModelKey{theModelKey.Add(1)}
 }
