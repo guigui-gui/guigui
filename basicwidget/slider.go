@@ -8,19 +8,19 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
-	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
+	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	sliderEventValueChanged       = "valueChanged"
-	sliderEventValueChangedBigInt = "valueChangedBigInt"
-	sliderEventValueChangedInt64  = "valueChangedInt64"
-	sliderEventValueChangedUint64 = "valueChangedUint64"
+var (
+	sliderEventValueChanged       guigui.EventKey = guigui.GenerateEventKey()
+	sliderEventValueChangedBigInt guigui.EventKey = guigui.GenerateEventKey()
+	sliderEventValueChangedInt64  guigui.EventKey = guigui.GenerateEventKey()
+	sliderEventValueChangedUint64 guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type Slider struct {

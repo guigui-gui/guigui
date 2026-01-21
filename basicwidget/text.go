@@ -44,10 +44,10 @@ const (
 	VerticalAlignBottom VerticalAlign = VerticalAlign(textutil.VerticalAlignBottom)
 )
 
-const (
-	textEventKeyJustPressed = "keyJustPressed"
-	textEventValueChanged   = "valueChanged"
-	textEventScrollDelta    = "scrollDelta"
+var (
+	textEventKeyJustPressed guigui.EventKey = guigui.GenerateEventKey()
+	textEventValueChanged   guigui.EventKey = guigui.GenerateEventKey()
+	textEventScrollDelta    guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {

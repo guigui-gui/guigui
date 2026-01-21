@@ -121,8 +121,8 @@ type taskWidget struct {
 	text       basicwidget.Text
 }
 
-const (
-	taskWidgetEventDoneButtonPressed = "doneButtonPressed"
+var (
+	taskWidgetEventDoneButtonPressed guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func (t *taskWidget) SetOnDoneButtonPressed(f func(context *guigui.Context)) {
@@ -175,8 +175,8 @@ type tasksPanelContent struct {
 	taskWidgets []taskWidget
 }
 
-const (
-	tasksPanelContentEventDeleted = "deleted"
+var (
+	tasksPanelContentEventDeleted guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func (t *tasksPanelContent) SetOnDeleted(f func(context *guigui.Context, id int)) {

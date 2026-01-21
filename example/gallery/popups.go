@@ -175,7 +175,9 @@ func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
-const popupClickHereTextEventClicked = "clicked"
+var (
+	popupClickHereTextEventClicked guigui.EventKey = guigui.GenerateEventKey()
+)
 
 type popupClickHereText struct {
 	guigui.DefaultWidget

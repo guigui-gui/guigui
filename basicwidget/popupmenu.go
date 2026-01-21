@@ -11,8 +11,8 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
-const (
-	popupMenuEventItemSelected = "itemSelected"
+var (
+	popupMenuEventItemSelected guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type PopupMenuItem[T comparable] struct {

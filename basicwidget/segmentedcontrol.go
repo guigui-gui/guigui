@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"image"
 
-	"github.com/guigui-gui/guigui"
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/guigui-gui/guigui"
 )
 
-const (
-	segmentedControlEventItemSelected = "itemSelected"
+var (
+	segmentedControlEventItemSelected guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type SegmentedControlDirection int

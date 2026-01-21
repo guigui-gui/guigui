@@ -124,6 +124,10 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.drawer, drawerBounds)
 }
 
+var (
+	drawerContentEventClose guigui.EventKey = guigui.GenerateEventKey()
+)
+
 type drawerContent struct {
 	guigui.DefaultWidget
 
@@ -131,7 +135,7 @@ type drawerContent struct {
 }
 
 func (d *drawerContent) SetOnClose(f func(context *guigui.Context)) {
-	guigui.SetEventHandler(d, "close", f)
+	guigui.SetEventHandler(d, drawerContentEventClose, f)
 }
 
 func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -139,7 +143,7 @@ func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 	d.closeButton.SetText("Close")
 	d.closeButton.SetOnDown(func(context *guigui.Context) {
-		guigui.DispatchEvent(d, "close")
+		guigui.DispatchEvent(d, drawerContentEventClose)
 	})
 
 	return nil

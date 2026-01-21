@@ -12,9 +12,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
-const (
-	expanderEventExpansionChanged = "expansionChanged"
-	expanderHeaderEventDown       = "down"
+var (
+	expanderEventExpansionChanged guigui.EventKey = guigui.GenerateEventKey()
+	expanderHeaderEventDown       guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type Expander struct {

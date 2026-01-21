@@ -13,11 +13,11 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-const (
-	numberInputEventValueChanged       = "valueChanged"
-	numberInputEventValueChangedBigInt = "valueChangedBigInt"
-	numberInputEventValueChangedInt64  = "valueChangedInt64"
-	numberInputEventValueChangedUint64 = "valueChangedUint64"
+var (
+	numberInputEventValueChanged       guigui.EventKey = guigui.GenerateEventKey()
+	numberInputEventValueChangedBigInt guigui.EventKey = guigui.GenerateEventKey()
+	numberInputEventValueChangedInt64  guigui.EventKey = guigui.GenerateEventKey()
+	numberInputEventValueChangedUint64 guigui.EventKey = guigui.GenerateEventKey()
 )
 
 var (

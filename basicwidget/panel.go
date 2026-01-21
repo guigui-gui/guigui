@@ -14,7 +14,9 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const panelEventScroll = "scroll"
+var (
+	panelEventScroll guigui.EventKey = guigui.GenerateEventKey()
+)
 
 type PanelStyle int
 

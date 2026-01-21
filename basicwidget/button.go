@@ -16,10 +16,10 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	buttonEventDown   = "down"
-	buttonEventUp     = "up"
-	buttonEventRepeat = "repeat"
+var (
+	buttonEventDown   guigui.EventKey = guigui.GenerateEventKey()
+	buttonEventUp     guigui.EventKey = guigui.GenerateEventKey()
+	buttonEventRepeat guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type Corners struct {

@@ -11,8 +11,8 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-const (
-	selectEventItemSelected = "itemSelected"
+var (
+	selectEventItemSelected guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type SelectItem[T comparable] struct {

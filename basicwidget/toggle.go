@@ -15,8 +15,8 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const (
-	toggleEventValueChanged = "valueChanged"
+var (
+	toggleEventValueChanged guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type Toggle struct {

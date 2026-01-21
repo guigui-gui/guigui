@@ -109,7 +109,7 @@ type widgetState struct {
 	zDelta          int
 	transparency    float64
 	customDraw      CustomDrawFunc
-	eventHandlers   map[string]any
+	eventHandlers   map[EventKey]any
 	tmpArgs         []reflect.Value
 	eventDispatched bool
 	floatingClip    bool
@@ -314,17 +314,17 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
-func SetEventHandler(widget Widget, eventName string, handler any) {
+func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	widgetState := widget.widgetState()
 	if widgetState.eventHandlers == nil {
-		widgetState.eventHandlers = map[string]any{}
+		widgetState.eventHandlers = map[EventKey]any{}
 	}
-	widgetState.eventHandlers[eventName] = handler
+	widgetState.eventHandlers[eventKey] = handler
 }
 
-func DispatchEvent(widget Widget, eventName string, args ...any) {
+func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
 	widgetState := widget.widgetState()
-	hanlder, ok := widgetState.eventHandlers[eventName]
+	hanlder, ok := widgetState.eventHandlers[eventKey]
 	if !ok {
 		return
 	}

@@ -27,13 +27,13 @@ const (
 	ListStyleMenu
 )
 
-const (
-	listEventItemSelected         = "itemSelected"
-	listEventItemsMoved           = "itemsMoved"
-	listEventItemExpanderToggled  = "itemExpanderToggled"
-	listEventScrollY              = "scrollY"
-	listEventScrollYEnsureVisible = "scrollYEnsureVisible"
-	listEventScrollDeltaY         = "scrollDeltaY"
+var (
+	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsMoved           guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemExpanderToggled  guigui.EventKey = guigui.GenerateEventKey()
+	listEventScrollY              guigui.EventKey = guigui.GenerateEventKey()
+	listEventScrollYEnsureVisible guigui.EventKey = guigui.GenerateEventKey()
+	listEventScrollDeltaY         guigui.EventKey = guigui.GenerateEventKey()
 )
 
 // TODO: Clean up functions for colors.

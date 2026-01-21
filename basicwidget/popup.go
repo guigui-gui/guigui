@@ -17,8 +17,8 @@ import (
 
 const popupZ = 16
 
-const (
-	popupEventClose = "close"
+var (
+	popupEventClose guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func easeOutQuad(t float64) float64 {
