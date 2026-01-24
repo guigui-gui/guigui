@@ -4,6 +4,7 @@
 package guigui
 
 import (
+	"cmp"
 	"fmt"
 	"image"
 	"image/color"
@@ -59,9 +60,9 @@ func invalidatedRegionForDebugMaxTime() int {
 	return ebiten.TPS() / 5
 }
 
-type widgetAndZ struct {
+type widgetAndLayer struct {
 	widget Widget
-	z      int
+	layer  int64
 }
 
 type requiredPhases int
@@ -100,18 +101,18 @@ func (r requiredPhases) requiresLayout() bool {
 type app struct {
 	root           Widget
 	context        Context
-	visitedZs      map[int]struct{}
-	zs             []int
+	visitedLayers  map[int64]struct{}
+	layers         []int64
 	buildCount     int64
 	requiredPhases requiredPhases
 
-	// maybeHitWidgets are widgets and their z values at the cursor position.
-	// maybeHitWidgets are ordered by descending z values.
+	// maybeHitWidgets are widgets and their layer values at the cursor position.
+	// maybeHitWidgets are ordered by descending layer values.
 	//
-	// Z values are fixed values just after a tree construction, so they are not changed during buildWidgets.
+	// Layer values are fixed values just after a tree construction, so they are not changed during buildWidgets.
 	//
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
-	maybeHitWidgets []widgetAndZ
+	maybeHitWidgets []widgetAndLayer
 
 	redrawRequestedRegions           redrawRequests
 	redrawAndRebuildRequestedRegions redrawRequests
@@ -490,18 +491,18 @@ func (a *app) requestRedrawWidget(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
 	a.requestRedraw(a.context.visibleBounds(widgetState), reason, widget)
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentZ(child, reason)
+		a.requestRedrawIfDifferentParentLayer(child, reason)
 	}
 }
 
-func (a *app) requestRedrawIfDifferentParentZ(widget Widget, reason requestRedrawReason) {
+func (a *app) requestRedrawIfDifferentParentLayer(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
-	if widgetState.zDelta != 0 {
+	if widgetState.inDifferentLayerFromParent() {
 		a.requestRedrawWidget(widget, reason)
 		return
 	}
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentZ(child, reason)
+		a.requestRedrawIfDifferentParentLayer(child, reason)
 	}
 }
 
@@ -516,7 +517,8 @@ func (a *app) buildWidgets() error {
 		widgetState := widget.widgetState()
 		clear(widgetState.eventHandlers)
 		widgetState.focusDelegation = nil
-		widgetState.zPlus1Cache = 0
+
+		widgetState.layerPlus1Cache = 0
 		widgetState.visibleCache = false
 		widgetState.visibleCacheValid = false
 		widgetState.enabledCache = false
@@ -545,9 +547,9 @@ func (a *app) buildWidgets() error {
 }
 
 func (a *app) layoutWidgets() {
-	clear(a.visitedZs)
-	if a.visitedZs == nil {
-		a.visitedZs = map[int]struct{}{}
+	clear(a.visitedLayers)
+	if a.visitedLayers == nil {
+		a.visitedLayers = map[int64]struct{}{}
 	}
 
 	var layouter ChildLayouter
@@ -565,14 +567,14 @@ func (a *app) layoutWidgets() {
 		bounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Layout(&a.context, bounds, &layouter)
 
-		a.visitedZs[widgetState.z()] = struct{}{}
+		a.visitedLayers[widgetState.actualLayer()] = struct{}{}
 
 		return nil
 	})
 
-	a.zs = slices.Delete(a.zs, 0, len(a.zs))
-	a.zs = slices.AppendSeq(a.zs, maps.Keys(a.visitedZs))
-	slices.Sort(a.zs)
+	a.layers = slices.Delete(a.layers, 0, len(a.layers))
+	a.layers = slices.AppendSeq(a.layers, maps.Keys(a.visitedLayers))
+	slices.Sort(a.layers)
 }
 
 func (a *app) updateHitWidgets(layoutChanged bool) {
@@ -584,8 +586,8 @@ func (a *app) updateHitWidgets(layoutChanged bool) {
 
 	a.maybeHitWidgets = slices.Delete(a.maybeHitWidgets, 0, len(a.maybeHitWidgets))
 	a.maybeHitWidgets = a.appendWidgetsAt(a.maybeHitWidgets, pt, a.root, true)
-	slices.SortStableFunc(a.maybeHitWidgets, func(a, b widgetAndZ) int {
-		return b.z - a.z
+	slices.SortStableFunc(a.maybeHitWidgets, func(a, b widgetAndLayer) int {
+		return cmp.Compare(b.layer, a.layer)
 	})
 }
 
@@ -597,16 +599,16 @@ const (
 )
 
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
-	for i := len(a.zs) - 1; i >= 0; i-- {
-		z := a.zs[i]
-		if r := a.doHandleInputWidget(typ, a.root, z, a.context.IsFocused(a.root)); r.shouldRaise() {
+	for i := len(a.layers) - 1; i >= 0; i-- {
+		layer := a.layers[i]
+		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root)); r.shouldRaise() {
 			return r
 		}
 	}
 	return HandleInputResult{}
 }
 
-func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle int, ancestorFocused bool) HandleInputResult {
+func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, ancestorFocused bool) HandleInputResult {
 	widgetState := widget.widgetState()
 	if widgetState.isPassThrough() {
 		return HandleInputResult{}
@@ -631,12 +633,12 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 	focused := a.context.IsFocused(widget)
 	for i := len(widgetState.children) - 1; i >= 0; i-- {
 		child := widgetState.children[i]
-		if r := a.doHandleInputWidget(typ, child, zToHandle, ancestorFocused || focused); r.shouldRaise() {
+		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorFocused || focused); r.shouldRaise() {
 			return r
 		}
 	}
 
-	if zToHandle != widgetState.z() {
+	if layerToHandle != widgetState.actualLayer() {
 		return HandleInputResult{}
 	}
 
@@ -653,29 +655,29 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, zToHandle 
 }
 
 func (a *app) cursorShape() bool {
-	var z int
-	for _, wz := range a.maybeHitWidgets {
-		if z > wz.z {
+	var layer int64
+	for _, wl := range a.maybeHitWidgets {
+		if layer > wl.layer {
 			return false
 		}
 
-		widgetState := wz.widget.widgetState()
+		widgetState := wl.widget.widgetState()
 		if !widgetState.isVisible() {
 			continue
 		}
 		if widgetState.isPassThrough() {
 			continue
 		}
-		if isProxyWidget(&a.context, wz.widget) {
+		if isProxyWidget(&a.context, wl.widget) {
 			continue
 		}
 		if !widgetState.isEnabled() {
 			return false
 		}
-		bounds := widgetBoundsFromWidget(&a.context, wz.widget)
-		shape, ok := wz.widget.CursorShape(&a.context, bounds)
+		bounds := widgetBoundsFromWidget(&a.context, wl.widget)
+		shape, ok := wl.widget.CursorShape(&a.context, bounds)
 		if !ok {
-			z = wz.z
+			layer = wl.layer
 			continue
 		}
 		ebiten.SetCursorShape(shape)
@@ -705,11 +707,11 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
 		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
 
-		// Widgets with different Z from their parent's Z (e.g. popups) are outside of widget, so redraw the regions explicitly.
+		// Widgets with different layer from their parent's layer (e.g. popups) are outside of widget, so redraw the regions explicitly.
 		// The float property is similar.
 		widgetState.prev.redrawIfNeeded(a)
 		for _, child := range widgetState.children {
-			if child.widgetState().zDelta != 0 || child.widgetState().floating {
+			if child.widgetState().inDifferentLayerFromParent() || child.widgetState().floating {
 				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
 			}
 		}
@@ -736,15 +738,15 @@ func (a *app) drawWidget(screen *ebiten.Image) {
 		return
 	}
 	dst := screen.SubImage(a.regionsToDraw).(*ebiten.Image)
-	for _, z := range a.zs {
-		a.doDrawWidget(dst, a.root, z, false)
-		a.doDrawWidget(dst, a.root, z, true)
+	for _, layer := range a.layers {
+		a.doDrawWidget(dst, a.root, layer, false)
+		a.doDrawWidget(dst, a.root, layer, true)
 	}
 }
 
-func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, float bool) {
+func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64, float bool) {
 	// Do not skip this even when visible bounds are empty.
-	// A child widget might have a different Z value and different visible bounds.
+	// A child widget might have a different layer value and different visible bounds.
 
 	widgetState := widget.widgetState()
 	if widgetState.hidden {
@@ -759,7 +761,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, floa
 
 	vb := a.context.visibleBounds(widgetState)
 	var origDst *ebiten.Image
-	renderCurrent := zToRender == widgetState.z() && !vb.Empty() && widgetState.floating == float
+	renderCurrent := layerToRender == widgetState.actualLayer() && !vb.Empty() && widgetState.floating == float
 	if renderCurrent {
 		if useOffscreen {
 			origDst = dst
@@ -771,7 +773,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, zToRender int, floa
 	}
 
 	for _, child := range widgetState.children {
-		a.doDrawWidget(dst, child, zToRender, float)
+		a.doDrawWidget(dst, child, layerToRender, float)
 	}
 
 	if renderCurrent {
@@ -829,32 +831,32 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 		return false
 	}
 
-	z := widgetState.z()
+	layer := widgetState.actualLayer()
 
-	// hitWidgets are ordered by descending z values.
+	// hitWidgets are ordered by descending layer values.
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
-	for _, wz := range a.maybeHitWidgets {
-		if wz.widget.widgetState() == widgetState {
+	for _, wl := range a.maybeHitWidgets {
+		if wl.widget.widgetState() == widgetState {
 			return true
 		}
 
-		z1 := wz.z
-		if z1 < z {
-			// The same z value no longer exists.
+		l1 := wl.layer
+		if l1 < layer {
+			// The same layer value no longer exists.
 			return false
 		}
 
-		if z1 == z {
+		if l1 == layer {
 			continue
 		}
 
-		if !wz.widget.widgetState().isVisible() {
+		if !wl.widget.widgetState().isVisible() {
 			continue
 		}
-		if wz.widget.widgetState().isPassThrough() {
+		if wl.widget.widgetState().isPassThrough() {
 			continue
 		}
-		if isProxyWidget(&a.context, wz.widget) {
+		if isProxyWidget(&a.context, wl.widget) {
 			continue
 		}
 
@@ -864,10 +866,10 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	return false
 }
 
-func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Widget, parentHit bool) []widgetAndZ {
+func (a *app) appendWidgetsAt(widgets []widgetAndLayer, point image.Point, widget Widget, parentHit bool) []widgetAndLayer {
 	widgetState := widget.widgetState()
 	var hit bool
-	if parentHit || widgetState.zDelta != 0 {
+	if parentHit || widgetState.inDifferentLayerFromParent() {
 		hit = point.In(a.context.visibleBounds(widgetState))
 	}
 
@@ -881,9 +883,9 @@ func (a *app) appendWidgetsAt(widgets []widgetAndZ, point image.Point, widget Wi
 		return widgets
 	}
 
-	widgets = append(widgets, widgetAndZ{
+	widgets = append(widgets, widgetAndLayer{
 		widget: widget,
-		z:      widgetState.z(),
+		layer:  widgetState.actualLayer(),
 	})
 	return widgets
 }

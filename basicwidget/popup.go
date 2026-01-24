@@ -106,7 +106,6 @@ func (p *Popup) setDrawerEdge(edge DrawerEdge) {
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
-	context.SetZDelta(&p.popup, popupZ)
 	context.SetFloatingClip(&p.popup, true)
 	return nil
 }
@@ -367,6 +366,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.close(context, PopupCloseReasonReopen)
 				p.openAfterClose = true
 			} else {
+				context.BringToFront(p)
 				p.showing = true
 				p.hiding = false
 			}

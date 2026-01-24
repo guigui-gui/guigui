@@ -21,7 +21,7 @@ type bounds3D struct {
 	bounds        image.Rectangle
 	visibleBounds image.Rectangle
 	float         bool
-	zDelta        int
+	layer         int64
 	visible       bool // For hit testing.
 	passThrough   bool // For hit testing.
 }
@@ -40,7 +40,7 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 		bounds:        b,
 		visibleBounds: vb,
 		float:         ws.floating,
-		zDelta:        ws.zDelta,
+		layer:         ws.actualLayer(),
 		visible:       ws.isVisible(),
 		passThrough:   ws.passThrough,
 	}, true
@@ -84,7 +84,7 @@ func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) boo
 
 func (w *widgetsAndBounds) redrawIfNeeded(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
-		if bounds3D.zDelta != 0 || bounds3D.float {
+		if widgetState.inDifferentLayerFromParent() || bounds3D.float {
 			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
 			requestRedraw(widgetState)
 		}
@@ -106,7 +106,7 @@ type widgetState struct {
 	hidden          bool
 	disabled        bool
 	passThrough     bool
-	zDelta          int
+	layer           int64
 	transparency    float64
 	customDraw      CustomDrawFunc
 	eventHandlers   map[EventKey]any
@@ -116,7 +116,7 @@ type widgetState struct {
 	floating        bool
 	focusDelegation Widget
 
-	zPlus1Cache           int
+	layerPlus1Cache       int64
 	visibleCache          bool
 	visibleCacheValid     bool
 	enabledCache          bool
@@ -207,19 +207,27 @@ func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 	}
 	return w.offscreen.SubImage(bounds).(*ebiten.Image)
 }
-
-func (w *widgetState) z() int {
-	if w.zPlus1Cache != 0 {
-		return w.zPlus1Cache - 1
+func (w *widgetState) actualLayer() int64 {
+	if w.layerPlus1Cache != 0 {
+		return w.layerPlus1Cache - 1
 	}
-	var z int
-	if w.parent == nil {
-		z = w.zDelta
+	var layer int64
+	if w.layer != 0 {
+		layer = w.layer
+	} else if w.parent == nil {
+		layer = w.layer
 	} else {
-		z = w.parent.widgetState().z() + w.zDelta
+		layer = w.parent.widgetState().actualLayer()
 	}
-	w.zPlus1Cache = z + 1
-	return z
+	w.layerPlus1Cache = layer + 1
+	return layer
+}
+
+func (w *widgetState) inDifferentLayerFromParent() bool {
+	if w.parent == nil {
+		return false
+	}
+	return w.actualLayer() != w.parent.widgetState().actualLayer()
 }
 
 var (

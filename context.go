@@ -65,6 +65,7 @@ type Context struct {
 	defaultColorWarnOnce       sync.Once
 	locales                    []language.Tag
 	allLocales                 []language.Tag
+	frontLayer                 int64
 
 	defaultMethodCalled bool
 }
@@ -376,17 +377,12 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 	RequestRebuild(widget)
 }
 
-func (c *Context) SetZDelta(widget Widget, zDelta int) {
-	if zDelta < 0 {
-		panic("guigui: ZDelta must be non-negative")
-	}
+func (c *Context) BringToFront(widget Widget) {
 	widgetState := widget.widgetState()
-	if widgetState.zDelta == zDelta {
-		return
-	}
-	widgetState.zDelta = zDelta
+	c.frontLayer++
+	widgetState.layer = c.frontLayer
 	_ = traverseWidget(widget, func(w Widget) error {
-		w.widgetState().zPlus1Cache = 0
+		w.widgetState().layerPlus1Cache = 0
 		return nil
 	})
 	RequestRebuild(widget)
@@ -404,7 +400,7 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
-	if state.zDelta != 0 {
+	if state.inDifferentLayerFromParent() {
 		b := state.bounds
 		state.hasVisibleBoundsCache = true
 		state.visibleBoundsCache = b
