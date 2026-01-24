@@ -376,10 +376,6 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 	RequestRebuild(widget)
 }
 
-func (c *Context) ZDelta(widget Widget) int {
-	return widget.widgetState().zDelta
-}
-
 func (c *Context) SetZDelta(widget Widget, zDelta int) {
 	if zDelta < 0 {
 		panic("guigui: ZDelta must be non-negative")
