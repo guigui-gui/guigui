@@ -211,6 +211,7 @@ func (w *widgetState) actualLayer() int64 {
 	if w.layerPlus1Cache != 0 {
 		return w.layerPlus1Cache - 1
 	}
+	// TODO: What if a widget and its ancestor are in different layers?
 	var layer int64
 	if w.layer != 0 {
 		layer = w.layer
