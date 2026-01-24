@@ -211,7 +211,10 @@ func (w *widgetState) actualLayer() int64 {
 	if w.layerPlus1Cache != 0 {
 		return w.layerPlus1Cache - 1
 	}
-	// TODO: What if a widget and its ancestor are in different layers?
+	// The layer is determined by the closest ancestor with a non-zero layer.
+	// For example, if there are three popups A, B, and C, and B is a child of A.
+	// If A's layer is 1, B's layer is 3, and C's layer is 2, then the popups are
+	// rendered in the order of A, C, and B, even though B is a child of A.
 	var layer int64
 	if w.layer != 0 {
 		layer = w.layer
