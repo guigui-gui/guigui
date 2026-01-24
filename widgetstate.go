@@ -225,7 +225,7 @@ func (w *widgetState) actualLayer() int64 {
 
 func (w *widgetState) inDifferentLayerFromParent() bool {
 	if w.parent == nil {
-		return false
+		return w.layer != 0
 	}
 	return w.actualLayer() != w.parent.widgetState().actualLayer()
 }
