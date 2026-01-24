@@ -52,8 +52,6 @@ type Popup struct {
 	guigui.DefaultWidget
 
 	popup popup
-
-	backgroundBounds image.Rectangle
 }
 
 func (p *Popup) setStyle(style popupStyle) {
@@ -93,11 +91,7 @@ func (p *Popup) SetAnimated(animateOnFading bool) {
 }
 
 func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
-	if p.backgroundBounds == bounds {
-		return
-	}
-	p.backgroundBounds = bounds
-	guigui.RequestRebuild(p)
+	p.popup.SetBackgroundBounds(bounds)
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
@@ -113,13 +107,7 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	bounds := p.backgroundBounds
-	if bounds.Empty() {
-		bounds = context.AppBounds()
-	}
-	layouter.LayoutWidget(&p.popup, bounds)
-
-	p.popup.setContentBounds(widgetBounds.Bounds())
+	layouter.LayoutWidget(&p.popup, widgetBounds.Bounds())
 }
 
 func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -149,7 +137,7 @@ type popup struct {
 	nextContentPosition    image.Point
 	hasNextContentPosition bool
 	openAfterClose         bool
-	contentBounds          image.Rectangle
+	backgroundBounds       image.Rectangle
 	drawerEdge             DrawerEdge
 }
 
@@ -175,15 +163,7 @@ func (p *popup) openingRate() float64 {
 	return easeOutQuad(float64(p.openingCount) / float64(popupMaxOpeningCount()))
 }
 
-func (p *popup) setContentBounds(bounds image.Rectangle) {
-	if p.contentBounds == bounds {
-		return
-	}
-	p.contentBounds = bounds
-	guigui.RequestRebuild(p)
-}
-
-func (p *popup) actualContentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *popup) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	pt := p.contentPosition
 	if p.animateOnFading {
 		rate := p.openingRate()
@@ -191,13 +171,16 @@ func (p *popup) actualContentBounds(context *guigui.Context, widgetBounds *guigu
 			dy := int(-float64(UnitSize(context)) * (1 - rate))
 			pt = pt.Add(image.Pt(0, dy))
 		} else {
-			bgBounds := widgetBounds.Bounds()
-			srcPt := p.contentBounds.Min
+			bgBounds := p.backgroundBounds
+			if bgBounds.Empty() {
+				bgBounds = context.AppBounds()
+			}
+			srcPt := widgetBounds.Bounds().Min
 			switch p.drawerEdge {
 			case DrawerEdgeStart:
-				srcPt.X = bgBounds.Min.X - p.contentBounds.Dx()
+				srcPt.X = bgBounds.Min.X - widgetBounds.Bounds().Dx()
 			case DrawerEdgeTop:
-				srcPt.Y = bgBounds.Min.Y - p.contentBounds.Dy()
+				srcPt.Y = bgBounds.Min.Y - widgetBounds.Bounds().Dy()
 			case DrawerEdgeEnd:
 				srcPt.X = bgBounds.Max.X
 			case DrawerEdgeBottom:
@@ -213,7 +196,7 @@ func (p *popup) actualContentBounds(context *guigui.Context, widgetBounds *guigu
 	}
 	return image.Rectangle{
 		Min: pt,
-		Max: pt.Add(p.contentBounds.Size()),
+		Max: pt.Add(widgetBounds.Bounds().Size()),
 	}
 }
 
@@ -232,6 +215,10 @@ func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 func (p *popup) SetAnimated(animateOnFading bool) {
 	// TODO: Rename Popup to basePopup and create Popup with animateOnFading true.
 	p.animateOnFading = animateOnFading
+}
+
+func (p *popup) SetBackgroundBounds(bounds image.Rectangle) {
+	p.backgroundBounds = bounds
 }
 
 func (p *popup) SetDrawerEdge(edge DrawerEdge) {
@@ -254,6 +241,11 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		adder.AddChild(&p.shadow)
 		adder.AddChild(&p.contentAndFrame)
 	}
+
+	context.SetZDelta(&p.blurredBackground, 1)
+	context.SetZDelta(&p.darkBackground, 1)
+	context.SetZDelta(&p.shadow, 1)
+	context.SetZDelta(&p.contentAndFrame, 1)
 	return nil
 }
 
@@ -262,17 +254,20 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		// When the popup is fading out, keep the current position.
 		// This matters especially when the same popup menu is reopened at a different position.
 		// p.showing is ignored here because the position might be updated soon after opening.
-		p.nextContentPosition = p.contentBounds.Min
+		p.nextContentPosition = widgetBounds.Bounds().Min
 		p.hasNextContentPosition = true
 	} else {
-		p.contentPosition = p.contentBounds.Min
+		p.contentPosition = widgetBounds.Bounds().Min
 		p.nextContentPosition = image.Point{}
 		p.hasNextContentPosition = false
 	}
-	contentBounds := p.actualContentBounds(context, widgetBounds)
+	contentBounds := p.contentBounds(context, widgetBounds)
 	p.shadow.SetContentBounds(contentBounds)
 
-	bounds := widgetBounds.Bounds()
+	bounds := p.backgroundBounds
+	if bounds.Empty() {
+		bounds = context.AppBounds()
+	}
 	layouter.LayoutWidget(&p.blurredBackground, bounds)
 	layouter.LayoutWidget(&p.darkBackground, bounds)
 	layouter.LayoutWidget(&p.shadow, bounds)
@@ -284,7 +279,10 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 		return guigui.HandleInputResult{}
 	}
 
-	bounds := widgetBounds.Bounds()
+	bounds := p.backgroundBounds
+	if bounds.Empty() {
+		bounds = context.AppBounds()
+	}
 	if !image.Pt(ebiten.CursorPosition()).In(bounds) {
 		return guigui.HandleInputResult{}
 	}
