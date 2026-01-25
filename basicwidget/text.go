@@ -230,10 +230,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	vb := widgetBounds.VisibleBounds()
-	vb.Min.X -= textCursorWidth(context) / 2
-	vb.Max.X += textCursorWidth(context) / 2
-	layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds).Intersect(vb))
+	layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds))
 }
 
 func (t *Text) SetSelectable(selectable bool) {

@@ -781,7 +781,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 			op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
 			op.ColorScale.ScaleAlpha(float32(widgetState.opacity()))
 			if customDraw != nil {
-				customDraw(origDst.SubImage(vb).(*ebiten.Image), dst, op)
+				customDraw(origDst, dst, op)
 			} else {
 				origDst.DrawImage(dst, op)
 			}
