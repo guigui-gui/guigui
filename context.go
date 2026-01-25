@@ -285,7 +285,7 @@ func (c *Context) blur(widget Widget) {
 		return
 	}
 	_ = traverseWidget(widget, func(w Widget) error {
-		if c.app.focusedWidget.widgetState() != w.widgetState() {
+		if !areWidgetsSame(c.app.focusedWidget, w) {
 			return nil
 		}
 		for ; w != nil && w.widgetState() != nil; w = w.widgetState().parent {
