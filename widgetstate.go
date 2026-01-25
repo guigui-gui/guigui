@@ -353,6 +353,12 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
 	RequestRebuild(widget)
 }
 
+var widgetEventFocusChanged EventKey = GenerateEventKey()
+
+func SetOnFocusChanged(widget Widget, onfocus func(context *Context, focused bool)) {
+	SetEventHandler(widget, widgetEventFocusChanged, onfocus)
+}
+
 // noCopy is a struct to warn that the struct should not be copied.
 //
 // For details, see https://go.dev/issues/8005#issuecomment-190753527

@@ -22,10 +22,6 @@ type Widget interface {
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
 	Measure(context *Context, constraints Constraints) image.Point
 
-	// OnFocusChanged is called when the widget is focused or unfocused.
-	// OnFocusChanged can be called even when the widget is not in the tree.
-	OnFocusChanged(context *Context, focused bool)
-
 	widgetState() *widgetState
 }
 

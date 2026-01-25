@@ -221,12 +221,12 @@ func (a *app) focusWidget(widget Widget) {
 	}
 	if a.focusedWidget != nil {
 		RequestRebuild(a.focusedWidget)
-		a.focusedWidget.OnFocusChanged(&a.context, false)
+		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, false)
 	}
 	a.focusedWidget = widget
 	if a.focusedWidget != nil {
 		RequestRebuild(a.focusedWidget)
-		a.focusedWidget.OnFocusChanged(&a.context, true)
+		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, true)
 	}
 
 	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
