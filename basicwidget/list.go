@@ -543,8 +543,6 @@ type listContent[T comparable] struct {
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
 
-	prevWidth int
-
 	onItemSelected func(index int)
 }
 
@@ -674,17 +672,6 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 }
 
 func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	// Record the current position of the selected item.
-	var headToSelectedItem int
-	if idx := l.SelectedItemIndex(); idx >= 0 {
-		if y, ok := l.itemYFromIndex(context, idx); ok {
-			headToSelectedItem = y
-			if headToSelectedItem < 0 || headToSelectedItem >= widgetBounds.Bounds().Dy() {
-				headToSelectedItem = 0
-			}
-		}
-	}
-
 	cw := widgetBounds.Bounds().Dx()
 	if l.contentWidthPlus1 > 0 {
 		cw = l.contentWidthPlus1 - 1
@@ -772,15 +759,6 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 
 		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
 	}
-
-	// Adjust the scroll offset to show the selected item if needed.
-	if l.prevWidth != widgetBounds.Bounds().Dx() && headToSelectedItem != 0 {
-		if y0, ok := l.itemYFromIndex(context, l.SelectedItemIndex()); ok {
-			newOffsetY := -float64(y0 - headToSelectedItem)
-			guigui.DispatchEvent(l, listEventScrollY, newOffsetY)
-		}
-	}
-	l.prevWidth = widgetBounds.Bounds().Dx()
 
 	if l.customBackground != nil {
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
