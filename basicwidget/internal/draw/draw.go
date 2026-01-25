@@ -8,8 +8,6 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
-
-	"github.com/guigui-gui/guigui"
 )
 
 type RoundedRectBorderType int
@@ -168,12 +166,12 @@ func Fragment(dstPos vec4, srcPos vec2, color vec4) vec4 {
 	c3 := Bounds.xw + vec2(Radius, -Radius)
 	c4 := Bounds.zw + vec2(-Radius, -Radius)
 	dpos := dstPos.xy - imageDstOrigin() + DstOrigin
-	if (dpos.x < Bounds.x+Radius || dpos.x >= Bounds.z-Radius) &&
-		(dpos.y < Bounds.y+Radius || dpos.y >= Bounds.w-Radius) &&
-		distance(c1, dpos) > Radius &&
-		distance(c2, dpos) > Radius &&
-		distance(c3, dpos) > Radius &&
-		distance(c4, dpos) > Radius {
+	if (dpos.x >= Bounds.x+Radius && dpos.x < Bounds.z-Radius) ||
+		(dpos.y >= Bounds.y+Radius && dpos.y < Bounds.w-Radius) ||
+		distance(c1, dpos) <= Radius ||
+		distance(c2, dpos) <= Radius ||
+		distance(c3, dpos) <= Radius ||
+		distance(c4, dpos) <= Radius {
 		discard()
 	}
 	return imageSrc0At(srcPos) * color
@@ -194,13 +192,15 @@ func adjustRadius(radius int, bounds image.Rectangle) int {
 	return min(radius, bounds.Dx()/2, bounds.Dy()/2)
 }
 
-func DrawInRoundedCornerRect(context *guigui.Context, dst *ebiten.Image, bounds image.Rectangle, radius int, src *ebiten.Image, op *ebiten.DrawImageOptions) {
+func DrawRoundedCorners(dst *ebiten.Image, src *ebiten.Image, bounds image.Rectangle, radius int, op *ebiten.DrawImageOptions) {
 	radius = adjustRadius(radius, bounds)
 	sOp := &ebiten.DrawRectShaderOptions{}
-	sOp.GeoM = op.GeoM
-	sOp.ColorScale = op.ColorScale
-	sOp.CompositeMode = op.CompositeMode
-	sOp.Blend = op.Blend
+	if op != nil {
+		sOp.GeoM = op.GeoM
+		sOp.ColorScale = op.ColorScale
+		sOp.CompositeMode = op.CompositeMode
+		sOp.Blend = op.Blend
+	}
 	sOp.Images[0] = src
 	sOp.Uniforms = map[string]any{
 		"DstOrigin": []float32{

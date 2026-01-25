@@ -87,8 +87,6 @@ func (w *widgetsAndBounds) requestRedraw(app *app) {
 	}
 }
 
-type CustomDrawFunc func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions)
-
 type widgetState struct {
 	root    bool
 	builtAt int64
@@ -104,7 +102,6 @@ type widgetState struct {
 	passThrough     bool
 	layer           int64
 	transparency    float64
-	customDraw      CustomDrawFunc
 	eventHandlers   map[EventKey]any
 	tmpArgs         []reflect.Value
 	eventDispatched bool

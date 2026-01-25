@@ -147,7 +147,7 @@ type popup struct {
 	blurredBackground popupBlurredBackground
 	darkBackground    popupDarkBackground
 	shadow            popupShadow
-	contentAndFrame   popupContentAndFrame
+	contentAndFrame   roundedCornerWidget[*popupContentAndFrame]
 
 	style                  popupStyle
 	toOpen                 bool
@@ -173,7 +173,7 @@ func (p *popup) setStyle(style popupStyle) {
 		return
 	}
 	p.style = style
-	p.contentAndFrame.setStyle(style)
+	p.contentAndFrame.Widget().setStyle(style)
 	p.shadow.setStyle(style)
 	guigui.RequestRebuild(p)
 }
@@ -187,7 +187,7 @@ func (p *popup) setOnOpen(f func(context *guigui.Context)) {
 }
 
 func (p *popup) SetContent(widget guigui.Widget) {
-	p.contentAndFrame.setContent(widget)
+	p.contentAndFrame.Widget().setContent(widget)
 }
 
 func (p *popup) openingRate() float64 {
@@ -255,7 +255,7 @@ func (p *popup) SetAnimated(animateOnFading bool) {
 
 func (p *popup) SetDrawerEdge(edge DrawerEdge) {
 	p.drawerEdge = edge
-	p.contentAndFrame.setDrawerEdge(edge)
+	p.contentAndFrame.Widget().setDrawerEdge(edge)
 }
 
 func (p *popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
@@ -298,6 +298,7 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	layouter.LayoutWidget(&p.darkBackground, bounds)
 	layouter.LayoutWidget(&p.shadow, bounds)
 	layouter.LayoutWidget(&p.contentAndFrame, contentBounds)
+	p.contentAndFrame.SetRenderingBounds(contentBounds)
 }
 
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -509,12 +510,6 @@ func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.Chil
 }
 
 func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	if p.style != popupStyleDrawer {
-		// CustomDraw might be too generic and overkill for this case.
-		context.SetCustomDraw(p, func(dst, widgetImage *ebiten.Image, op *ebiten.DrawImageOptions) {
-			draw.DrawInRoundedCornerRect(context, dst, widgetBounds.Bounds(), RoundedCornerRadius(context), widgetImage, op)
-		})
-	}
 	layouter.LayoutWidget(&p.content, widgetBounds.Bounds())
 	layouter.LayoutWidget(&p.frame, widgetBounds.Bounds())
 }

@@ -751,21 +751,24 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 	if widgetState.hidden {
 		return
 	}
-	if widgetState.opacity() == 0 {
+	if dst.Bounds().Empty() {
 		return
 	}
-
-	customDraw := widgetState.customDraw
-	useOffscreen := (widgetState.opacity() < 1 || customDraw != nil) && !dst.Bounds().Empty()
-
+	opacity := widgetState.opacity()
+	if opacity == 0 {
+		return
+	}
 	vb := a.context.visibleBounds(widgetState)
-	var origDst *ebiten.Image
-	renderCurrent := layerToRender == widgetState.actualLayer() && !vb.Empty()
+	var copiedDst *ebiten.Image
+	renderCurrent := layerToRender == widgetState.actualLayer() && !dst.Bounds().Intersect(vb).Empty()
 	if renderCurrent {
-		if useOffscreen {
-			origDst = dst
-			dst = widgetState.ensureOffscreen(dst.Bounds())
-			dst.Clear()
+		if opacity < 1 {
+			// Keep the current destination image to draw it with the opacity later.
+			copiedDst = widgetState.ensureOffscreen(dst.Bounds())
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
+			op.Blend = ebiten.BlendCopy
+			copiedDst.DrawImage(dst, op)
 		}
 		widgetBounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Draw(&a.context, widgetBounds, dst.SubImage(vb).(*ebiten.Image))
@@ -776,15 +779,11 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 	}
 
 	if renderCurrent {
-		if useOffscreen {
+		if opacity < 1 {
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
-			op.ColorScale.ScaleAlpha(float32(widgetState.opacity()))
-			if customDraw != nil {
-				customDraw(origDst, dst, op)
-			} else {
-				origDst.DrawImage(dst, op)
-			}
+			op.ColorScale.ScaleAlpha(1 - float32(opacity))
+			dst.DrawImage(copiedDst, op)
 		}
 	}
 }
