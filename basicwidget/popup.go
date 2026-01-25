@@ -366,7 +366,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.close(context, PopupCloseReasonReopen)
 				p.openAfterClose = true
 			} else {
-				context.BringToFront(p)
+				context.BringToFrontLayer(p)
 				p.showing = true
 				p.hiding = false
 			}
