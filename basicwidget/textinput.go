@@ -292,22 +292,25 @@ func (t *textInput) SetIcon(icon *ebiten.Image) {
 }
 
 func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.Padding {
-	var x, y int
+	u := UnitSize(context)
+	var start, end, y int
 	switch t.style {
 	case TextInputStyleNormal:
-		x = UnitSize(context) / 2
-		y = int(float64(min(widgetBounds.Bounds().Dy(), UnitSize(context)))-LineHeight(context)*t.text.Text().scale()) / 2
+		start = u / 2
+		end = u / 2
+		if t.icon.HasImage() {
+			start = u / 4
+		}
+		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-LineHeight(context)*t.text.Text().scale()) / 2
 	case TextInputStyleInline:
-		x = UnitSize(context) / 4
+		start = u / 4
 	}
-	start := x + t.paddingStart
-	if t.icon.HasImage() {
-		start += defaultIconSize(context)
-	}
+	start += t.paddingStart
+	end += t.paddingEnd
 	return guigui.Padding{
 		Start:  start,
 		Top:    y,
-		End:    x + t.paddingEnd,
+		End:    end,
 		Bottom: y,
 	}
 }
@@ -350,8 +353,8 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds := widgetBounds.Bounds()
 	layouter.LayoutWidget(&t.background, bounds)
 	layouter.LayoutWidget(&t.frame, bounds)
-	layouter.LayoutWidget(&t.panel, bounds)
 
+	panelBounds := bounds
 	if t.icon.HasImage() {
 		iconSize := defaultIconSize(context)
 		iconBounds := image.Rectangle{
@@ -365,7 +368,10 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 		bgBounds.Max.X = iconBounds.Max.X + UnitSize(context)/4
 		layouter.LayoutWidget(&t.iconBackground, bgBounds)
 		layouter.LayoutWidget(&t.icon, iconBounds)
+
+		panelBounds.Min.X = iconBounds.Max.X
 	}
+	layouter.LayoutWidget(&t.panel, panelBounds)
 }
 
 func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
