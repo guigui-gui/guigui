@@ -380,6 +380,9 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 // BringToFrontLayer brings the widget to the front layer.
 // After this call, the widget will be in a different layer from its parent.
 //
+// BringToFrontLayer is mainly for popups and tooltips implementations.
+// Usually you don't have to call this directly.
+//
 // Lyaers affect the order of rendering and input handling.
 // Usually, a widget's visible bounds are constrained by its parent's visible bounds,
 // which means a widget cannot be rendered outside of its parent's visible bounds.
@@ -388,8 +391,6 @@ func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
 //
 // Input is handled in the order of layers from top to bottom.
 // Also, layers affect the result of [WidgetBounds.IsCursorHitAt].
-//
-// BringToFrontLayer is mainly for popups and tooltips.
 func (c *Context) BringToFrontLayer(widget Widget) {
 	widgetState := widget.widgetState()
 	// If the widget is already in the front layer, do nothing.

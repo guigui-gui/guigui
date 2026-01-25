@@ -54,6 +54,11 @@ type Popup struct {
 	backgroundBounds image.Rectangle
 }
 
+// BringToFrontLayer brings the popup to the front layer.
+func (p *Popup) BringToFrontLayer(context *guigui.Context) {
+	context.BringToFrontLayer(&p.popup)
+}
+
 func (p *Popup) setStyle(style popupStyle) {
 	p.popup.setStyle(style)
 }
