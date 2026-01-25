@@ -138,7 +138,7 @@ func (p *PopupMenu[T]) updateListItems() {
 }
 
 func (p *PopupMenu[T]) SetItems(items []PopupMenuItem[T]) {
-	if !p.popup.popup.canUpdateContent() {
+	if !p.popup.canUpdateContent() {
 		return
 	}
 	p.items = adjustSliceSize(p.items, len(items))

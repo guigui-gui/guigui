@@ -16,6 +16,7 @@ import (
 )
 
 var (
+	popupEventOpen  guigui.EventKey = guigui.GenerateEventKey()
 	popupEventClose guigui.EventKey = guigui.GenerateEventKey()
 )
 
@@ -49,50 +50,52 @@ const (
 type Popup struct {
 	guigui.DefaultWidget
 
-	popup popup
+	popup guigui.LayerWidget[*popup]
 
 	backgroundBounds image.Rectangle
+
+	onOpen func(context *guigui.Context)
 }
 
 // BringToFrontLayer brings the popup to the front layer.
 func (p *Popup) BringToFrontLayer(context *guigui.Context) {
-	context.BringToFrontLayer(&p.popup)
+	p.popup.BringToFrontLayer(context)
 }
 
 func (p *Popup) setStyle(style popupStyle) {
-	p.popup.setStyle(style)
+	p.popup.Widget().setStyle(style)
 }
 
 func (p *Popup) SetOpen(open bool) {
-	p.popup.SetOpen(open)
+	p.popup.Widget().SetOpen(open)
 }
 
 func (p *Popup) IsOpen() bool {
-	return p.popup.IsOpen()
+	return p.popup.Widget().IsOpen()
 }
 
 func (p *Popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
-	p.popup.SetOnClose(f)
+	p.popup.Widget().SetOnClose(f)
 }
 
 func (p *Popup) SetContent(widget guigui.Widget) {
-	p.popup.SetContent(widget)
+	p.popup.Widget().SetContent(widget)
 }
 
 func (p *Popup) SetBackgroundDark(dark bool) {
-	p.popup.SetBackgroundDark(dark)
+	p.popup.Widget().SetBackgroundDark(dark)
 }
 
 func (p *Popup) SetBackgroundBlurred(blurred bool) {
-	p.popup.SetBackgroundBlurred(blurred)
+	p.popup.Widget().SetBackgroundBlurred(blurred)
 }
 
 func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
-	p.popup.SetCloseByClickingOutside(closeByClickingOutside)
+	p.popup.Widget().SetCloseByClickingOutside(closeByClickingOutside)
 }
 
 func (p *Popup) SetAnimated(animateOnFading bool) {
-	p.popup.SetAnimated(animateOnFading)
+	p.popup.Widget().SetAnimated(animateOnFading)
 }
 
 func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
@@ -104,12 +107,23 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
-	p.popup.SetDrawerEdge(edge)
+	p.popup.Widget().SetDrawerEdge(edge)
+}
+
+func (p *Popup) canUpdateContent() bool {
+	return p.popup.Widget().canUpdateContent()
 }
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
 	context.SetFloatingClip(&p.popup, true)
+
+	if p.onOpen == nil {
+		p.onOpen = func(context *guigui.Context) {
+			p.popup.BringToFrontLayer(context)
+		}
+	}
+	p.popup.Widget().setOnOpen(p.onOpen)
 	return nil
 }
 
@@ -120,7 +134,7 @@ func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	}
 	layouter.LayoutWidget(&p.popup, bounds)
 
-	p.popup.setContentBounds(widgetBounds.Bounds())
+	p.popup.Widget().setContentBounds(widgetBounds.Bounds())
 }
 
 func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -166,6 +180,10 @@ func (p *popup) setStyle(style popupStyle) {
 
 func (p *popup) IsOpen() bool {
 	return p.showing || p.hiding || p.openingCount > 0 || p.toOpen
+}
+
+func (p *popup) setOnOpen(f func(context *guigui.Context)) {
+	guigui.SetEventHandler(p, popupEventOpen, f)
 }
 
 func (p *popup) SetContent(widget guigui.Widget) {
@@ -369,7 +387,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 				p.close(context, PopupCloseReasonReopen)
 				p.openAfterClose = true
 			} else {
-				context.BringToFrontLayer(p)
+				guigui.DispatchEvent(p, popupEventOpen)
 				p.showing = true
 				p.hiding = false
 			}
