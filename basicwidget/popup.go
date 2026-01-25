@@ -15,8 +15,6 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-const popupZ = 16
-
 var (
 	popupEventClose guigui.EventKey = guigui.GenerateEventKey()
 )
