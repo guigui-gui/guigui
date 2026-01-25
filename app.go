@@ -765,7 +765,12 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 		if useOffscreen {
 			origDst = dst
 			dst = widgetState.ensureOffscreen(dst.Bounds())
-			dst.Clear()
+			// Copy the destination image to the offscreen image to ensure that
+			// widget.Draw always accepts an already-drawn image.
+			op := &ebiten.DrawImageOptions{}
+			op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
+			op.Blend = ebiten.BlendCopy
+			dst.DrawImage(origDst, op)
 		}
 		widgetBounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Draw(&a.context, widgetBounds, dst.SubImage(vb).(*ebiten.Image))
