@@ -423,8 +423,11 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 	return b
 }
 
-// SetClipChildren controls whether the children are clipped by the widget's bounds.
+// SetClipChildren sets whether the children on the same layer are clipped by the widget's bounds.
 // The default value is false.
+//
+// If the child widget is on a different layer from the parent, it is not clipped.
+// Note that a widget layer can be controlled by [LayerWidget].
 func (c *Context) SetClipChildren(widget Widget, clip bool) {
 	widget.widgetState().clipChildren = clip
 }
