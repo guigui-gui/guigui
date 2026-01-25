@@ -146,7 +146,6 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 	context.SetPassThrough(&t.focus, true)
-	context.SetFloating(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
 	return nil
 }
@@ -315,11 +314,11 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.background)
-	adder.AddChild(&t.panel)
 	if t.icon.HasImage() {
 		adder.AddChild(&t.iconBackground)
 		adder.AddChild(&t.icon)
 	}
+	adder.AddChild(&t.panel)
 	adder.AddChild(&t.frame)
 
 	t.panel.SetContent(&t.text)

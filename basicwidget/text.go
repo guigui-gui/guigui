@@ -202,7 +202,6 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	context.SetPassThrough(&t.cursor, true)
-	context.SetFloating(&t.cursor, true)
 
 	if t.selectable || t.editable {
 		t.cursor.text = t

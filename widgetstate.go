@@ -20,7 +20,6 @@ type bounds3D struct {
 
 	bounds        image.Rectangle
 	visibleBounds image.Rectangle
-	float         bool
 	layer         int64
 	visible       bool // For hit testing.
 	passThrough   bool // For hit testing.
@@ -39,7 +38,6 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 	return bounds3D{
 		bounds:        b,
 		visibleBounds: vb,
-		float:         ws.floating,
 		layer:         ws.actualLayer(),
 		visible:       ws.isVisible(),
 		passThrough:   ws.passThrough,
@@ -82,12 +80,10 @@ func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) boo
 	return maps.Equal(w.bounds3Ds, w.currentBounds3D)
 }
 
-func (w *widgetsAndBounds) redrawIfNeeded(app *app) {
+func (w *widgetsAndBounds) requestRedraw(app *app) {
 	for widgetState, bounds3D := range w.bounds3Ds {
-		if widgetState.inDifferentLayerFromParent() || bounds3D.float {
-			app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
-			requestRedraw(widgetState)
-		}
+		app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
+		requestRedraw(widgetState)
 	}
 }
 
@@ -112,8 +108,7 @@ type widgetState struct {
 	eventHandlers   map[EventKey]any
 	tmpArgs         []reflect.Value
 	eventDispatched bool
-	floatingClip    bool
-	floating        bool
+	clipChildren    bool
 	focusDelegation Widget
 
 	layerPlus1Cache       int64

@@ -411,35 +411,22 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		state.visibleBoundsCache = b
 		return b
 	}
-	if state.floating {
-		b := state.bounds
-		for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
-			if parent.widgetState().floatingClip {
-				b = b.Intersect(c.visibleBounds(parent.widgetState()))
-				break
-			}
+	b := state.bounds
+	for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
+		if parent.widgetState().clipChildren {
+			b = b.Intersect(c.visibleBounds(parent.widgetState()))
+			break
 		}
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-
-	var b image.Rectangle
-	parentVB := c.visibleBounds(parent.widgetState())
-	if !parentVB.Empty() {
-		b = parentVB.Intersect(state.bounds)
 	}
 	state.hasVisibleBoundsCache = true
 	state.visibleBoundsCache = b
 	return b
 }
 
-func (c *Context) SetFloatingClip(widget Widget, floatingClip bool) {
-	widget.widgetState().floatingClip = floatingClip
-}
-
-func (c *Context) SetFloating(widget Widget, floating bool) {
-	widget.widgetState().floating = floating
+// SetClipChildren controls whether the children are clipped by the widget's bounds.
+// The default value is false.
+func (c *Context) SetClipChildren(widget Widget, clip bool) {
+	widget.widgetState().clipChildren = clip
 }
 
 func (c *Context) DelegateFocus(from Widget, to Widget) {

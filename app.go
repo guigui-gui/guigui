@@ -707,11 +707,11 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	if !widgetState.prev.equals(&a.context, widgetState.children) {
 		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
 
-		// Widgets with different layer from their parent's layer (e.g. popups) are outside of widget, so redraw the regions explicitly.
-		// The float property is similar.
-		widgetState.prev.redrawIfNeeded(a)
-		for _, child := range widgetState.children {
-			if child.widgetState().inDifferentLayerFromParent() || child.widgetState().floating {
+		widgetState.prev.requestRedraw(a)
+
+		// If the widget is a clipping widget, all the children are included in the visible bounds.
+		if !widgetState.clipChildren {
+			for _, child := range widgetState.children {
 				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
 			}
 		}
@@ -739,12 +739,11 @@ func (a *app) drawWidget(screen *ebiten.Image) {
 	}
 	dst := screen.SubImage(a.regionsToDraw).(*ebiten.Image)
 	for _, layer := range a.layers {
-		a.doDrawWidget(dst, a.root, layer, false)
-		a.doDrawWidget(dst, a.root, layer, true)
+		a.doDrawWidget(dst, a.root, layer)
 	}
 }
 
-func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64, float bool) {
+func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64) {
 	// Do not skip this even when visible bounds are empty.
 	// A child widget might have a different layer value and different visible bounds.
 
@@ -761,7 +760,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 
 	vb := a.context.visibleBounds(widgetState)
 	var origDst *ebiten.Image
-	renderCurrent := layerToRender == widgetState.actualLayer() && !vb.Empty() && widgetState.floating == float
+	renderCurrent := layerToRender == widgetState.actualLayer() && !vb.Empty()
 	if renderCurrent {
 		if useOffscreen {
 			origDst = dst
@@ -773,7 +772,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 	}
 
 	for _, child := range widgetState.children {
-		a.doDrawWidget(dst, child, layerToRender, float)
+		a.doDrawWidget(dst, child, layerToRender)
 	}
 
 	if renderCurrent {

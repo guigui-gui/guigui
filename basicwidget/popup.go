@@ -116,7 +116,7 @@ func (p *Popup) canUpdateContent() bool {
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&p.popup)
-	context.SetFloatingClip(&p.popup, true)
+	context.SetClipChildren(&p.popup, true)
 
 	if p.onOpen == nil {
 		p.onOpen = func(context *guigui.Context) {
