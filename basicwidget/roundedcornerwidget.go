@@ -21,6 +21,11 @@ type roundedCornerWidget[T guigui.Widget] struct {
 	corners roundedCornerWidgetCorners
 }
 
+func (r *roundedCornerWidget[T]) needsToRenderCorners(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	radius := RoundedCornerRadius(context)
+	return draw.OverlapsWithRoundedCorner(r.corners.renderingBounds, radius, widgetBounds.Bounds())
+}
+
 func (r *roundedCornerWidget[T]) Widget() T {
 	return r.widget.Widget()
 }
@@ -37,7 +42,9 @@ func (r *roundedCornerWidget[T]) Build(context *guigui.Context, adder *guigui.Ch
 
 func (r *roundedCornerWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(r.widget.Widget(), widgetBounds.Bounds())
-	layouter.LayoutWidget(&r.corners, widgetBounds.Bounds())
+	if r.needsToRenderCorners(context, widgetBounds) {
+		layouter.LayoutWidget(&r.corners, widgetBounds.Bounds())
+	}
 }
 
 func (r *roundedCornerWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -45,7 +52,10 @@ func (r *roundedCornerWidget[T]) Measure(context *guigui.Context, constraints gu
 }
 
 func (r *roundedCornerWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	// TODO: This rendering is not efficient. Improve the performance.
+	if !r.needsToRenderCorners(context, widgetBounds) {
+		return
+	}
+
 	if r.corners.image != nil {
 		if !dst.Bounds().In(r.corners.image.Bounds()) {
 			r.corners.image.Deallocate()
