@@ -304,6 +304,7 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-LineHeight(context)*t.text.Text().scale()) / 2
 	case TextInputStyleInline:
 		start = u / 4
+		end = u / 4
 	}
 	start += t.paddingStart
 	end += t.paddingEnd
