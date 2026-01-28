@@ -198,7 +198,7 @@ func (l *List[T]) hoveredItemIndex() int {
 	return l.content.hoveredItemIndexPlus1 - 1
 }
 
-func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
+func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 	index := -1
 	switch l.content.Style() {
 	case ListStyleNormal, ListStyleSidebar:
@@ -224,7 +224,7 @@ func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 }
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.HighlightedItemIndex(context) == index {
+	if l.highlightedItemIndex(context) == index {
 		return DefaultActiveListItemTextColor(context)
 	}
 	item := &l.listItemWidgets[index]
