@@ -538,6 +538,7 @@ type listContent[T comparable] struct {
 	pressStartPlus1           image.Point
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
+	prevFocused               bool
 
 	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex []image.Rectangle
@@ -909,10 +910,11 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 }
 
 func (l *listContent[T]) resetHoveredItemIndex() {
-	if l.hoveredItemIndexPlus1 == 0 {
+	if l.hoveredItemIndexPlus1 == 0 && l.lastHoveredItemIndexPlus1 == 0 {
 		return
 	}
 	l.hoveredItemIndexPlus1 = 0
+	l.lastHoveredItemIndexPlus1 = 0
 	guigui.RequestRebuild(l)
 }
 
@@ -925,9 +927,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			bounds := l.itemBounds(context, i)
 			bounds.Min.X = listBounds.Min.X
 			bounds.Max.X = listBounds.Max.X
-			hovered := cp.In(bounds)
-			if hovered {
+			if cp.In(bounds) {
 				l.hoveredItemIndexPlus1 = i + 1
+				break
 			}
 		}
 	}
