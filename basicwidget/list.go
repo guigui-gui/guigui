@@ -36,8 +36,7 @@ var (
 	listEventScrollDeltaY         guigui.EventKey = guigui.GenerateEventKey()
 )
 
-// TODO: Clean up functions for colors.
-func DefaultActiveListItemTextColor(context *guigui.Context) color.Color {
+func defaultActiveListItemTextColor(context *guigui.Context) color.Color {
 	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 1)
 }
 
@@ -225,7 +224,7 @@ func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
 	if l.highlightedItemIndex(context) == index {
-		return DefaultActiveListItemTextColor(context)
+		return defaultActiveListItemTextColor(context)
 	}
 	item := &l.listItemWidgets[index]
 	if clr := item.textColor(); clr != nil {
