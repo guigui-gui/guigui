@@ -19,9 +19,22 @@ type roundedCornerWidget[T guigui.Widget] struct {
 
 	widget  lazyWidget[T]
 	corners roundedCornerWidgetCorners
+
+	disabled bool
+}
+
+func (r *roundedCornerWidget[T]) SetCornderRouneded(rounded bool) {
+	if r.disabled == !rounded {
+		return
+	}
+	r.disabled = !rounded
+	guigui.RequestRebuild(r)
 }
 
 func (r *roundedCornerWidget[T]) needsToRenderCorners(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if r.disabled {
+		return false
+	}
 	radius := RoundedCornerRadius(context)
 	return draw.OverlapsWithRoundedCorner(r.corners.renderingBounds, radius, widgetBounds.Bounds())
 }

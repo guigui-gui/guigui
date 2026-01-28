@@ -275,6 +275,8 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	context.SetPassThrough(p, p.passThrough())
+	p.contentAndFrame.SetCornderRouneded(p.style != popupStyleDrawer)
+
 	return nil
 }
 
