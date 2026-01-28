@@ -8,7 +8,6 @@ import (
 	"image/color"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 var (
@@ -114,15 +113,6 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 }
 
 func (p *PopupMenu[T]) SetOpen(open bool) {
-	// Reset the hovered item index explicitly (#266).
-	// As the hovered item index is updated at HandlePointingInput,
-	// the previous selected item might be unexpectedly recognized as hovered.
-	// Detecting a hovered item should be done after layouting, but a list item color is
-	// updated at Build before layouting. Now the hovered item index in the previous frame is used.
-	// TODO: Fix this. This is tricky.
-	if !p.popup.IsOpen() && open {
-		p.list.Widget().resetHoveredItemIndex()
-	}
 	p.popup.SetOpen(open)
 }
 
@@ -188,15 +178,6 @@ func (p *PopupMenu[T]) SelectItemByIndex(index int) {
 
 func (p *PopupMenu[T]) SelectItemByValue(value T) {
 	p.list.Widget().SelectItemByValue(value)
-}
-
-func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	// If the popup menu is closed, the item content might be used in other places like a select list button.
-	// Use the default text color in that case.
-	if !p.IsOpen() {
-		return basicwidgetdraw.TextColor(context.ColorMode(), true)
-	}
-	return p.list.Widget().ItemTextColor(context, index)
 }
 
 func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {

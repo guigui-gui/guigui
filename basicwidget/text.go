@@ -50,6 +50,10 @@ var (
 	textEventScrollDelta    guigui.EventKey = guigui.GenerateEventKey()
 )
 
+var (
+	textModelDefaultTextColor guigui.ModelKey = guigui.GenerateModelKey()
+)
+
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
 	return repeat(inpututil.MouseButtonPressDuration(button))
 }
@@ -1057,6 +1061,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	var textColor color.Color
 	if t.color != nil {
 		textColor = t.color
+	} else if clr, ok := context.Model(t, textModelDefaultTextColor).(color.Color); ok && clr != nil {
+		textColor = clr
 	} else {
 		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}

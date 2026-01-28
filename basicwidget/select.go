@@ -177,10 +177,6 @@ func (s *Select[T]) Measure(context *guigui.Context, constraints guigui.Constrai
 	return s.button.Measure(context, constraints)
 }
 
-func (s *Select[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	return s.popupMenu.ItemTextColor(context, index)
-}
-
 func (s *Select[T]) IsPopupOpen() bool {
 	return s.popupMenu.IsOpen()
 }

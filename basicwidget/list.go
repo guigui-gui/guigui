@@ -139,10 +139,6 @@ func (l *List[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int
 	return l.content.itemYFromIndexForMenu(context, index)
 }
 
-func (l *List[T]) resetHoveredItemIndex() {
-	l.content.resetHoveredItemIndex()
-}
-
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.panel)
@@ -178,8 +174,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
-		item.text.SetColor(l.ItemTextColor(context, i))
-		item.keyText.SetColor(l.ItemTextColor(context, i))
 	}
 	return nil
 }
@@ -193,7 +187,7 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
 }
 
-func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
+func (l *List[T]) highlightedItemIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
 	index := -1
 	switch l.content.Style() {
 	case ListStyleNormal, ListStyleSidebar:
@@ -202,9 +196,9 @@ func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 		if !l.content.isHoveringVisible() {
 			return -1
 		}
-		// TODO: The hovered item index is not updated yet.
-		// This requires the list's widgetBounds.
-		index = l.content.hoveredItemIndexPlus1 - 1
+		// Usually, widgetBounds should be listContent's widgetBounds,
+		// but The List's widgetBounds also works.
+		index = l.content.hoveredItemIndex(context, widgetBounds)
 	}
 	if index < 0 || index >= l.listItemWidgets.Len() {
 		return -1
@@ -218,8 +212,8 @@ func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 	return index
 }
 
-func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.highlightedItemIndex(context) == index {
+func (l *List[T]) itemTextColor(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int) color.Color {
+	if l.highlightedItemIndex(context, widgetBounds) == index {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -316,6 +310,12 @@ func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraint
 	return l.content.Measure(context, constraints)
 }
 
+func (l *List[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	// Do nothing. This is necessary to enable hit tests at this widget.
+	// See also guigui.isProxyWidget.
+	return guigui.HandleInputResult{}
+}
+
 func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if l.scrollOffsetYTopMinus1 != 0 || l.scrollOffsetYBottomMinus1 != 0 {
 		// Adjust the bottom first.
@@ -340,14 +340,20 @@ func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		l.scrollOffsetYTopMinus1 = 0
 		l.scrollOffsetYBottomMinus1 = 0
 	}
+
+	for i := range l.listItemWidgets.Len() {
+		l.listItemWidgets.At(i).setDefaultTextColor(l.itemTextColor(context, widgetBounds, i))
+	}
+
 	return nil
 }
 
 type listItemWidget[T comparable] struct {
 	guigui.DefaultWidget
 
-	text    Text
-	keyText Text
+	text             Text
+	keyText          Text
+	defaultTextColor color.Color
 
 	item        ListItem[T]
 	heightPlus1 int
@@ -383,6 +389,14 @@ func (l *listItemWidget[T]) setText(text string) {
 	}
 	l.item.Text = text
 	guigui.RequestRebuild(l)
+}
+
+func (l *listItemWidget[T]) setDefaultTextColor(c color.Color) {
+	if draw.EqualColor(l.defaultTextColor, c) {
+		return
+	}
+	l.defaultTextColor = c
+	guigui.RequestRedraw(l)
 }
 
 func (l *listItemWidget[T]) textColor() color.Color {
@@ -486,6 +500,21 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 	}*/
 }
 
+func (l *listItemWidget[T]) Model(key guigui.ModelKey) any {
+	switch key {
+	case textModelDefaultTextColor:
+		if l.item.TextColor != nil {
+			return l.item.TextColor
+		}
+		if l.defaultTextColor != nil {
+			return l.defaultTextColor
+		}
+		return nil
+	default:
+		return nil
+	}
+}
+
 func ListItemTextPadding(context *guigui.Context) guigui.Padding {
 	u := UnitSize(context)
 	return guigui.Padding{
@@ -526,7 +555,6 @@ type listContent[T comparable] struct {
 	stripeVisible             bool
 	style                     ListStyle
 	checkmarkIndexPlus1       int
-	hoveredItemIndexPlus1     int
 	lastHoveredItemIndexPlus1 int
 
 	indexToJumpPlus1          int
@@ -919,15 +947,6 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	return l.abstractList.ItemCount()
 }
 
-func (l *listContent[T]) resetHoveredItemIndex() {
-	if l.hoveredItemIndexPlus1 == 0 && l.lastHoveredItemIndexPlus1 == 0 {
-		return
-	}
-	l.hoveredItemIndexPlus1 = 0
-	l.lastHoveredItemIndexPlus1 = 0
-	guigui.RequestRebuild(l)
-}
-
 func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
 	if !widgetBounds.IsHitAtCursor() {
 		return -1
@@ -946,24 +965,6 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 }
 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
-
-	colorMode := context.ColorMode()
-	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
-		colorMode = guigui.ColorModeDark
-	}
-	checkImg, err := theResourceImages.Get("check", colorMode)
-	if err != nil {
-		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
-	}
-	l.checkmark.SetImage(checkImg)
-
-	if l.isHoveringVisible() || l.hasMovableItems() {
-		if l.lastHoveredItemIndexPlus1 != l.hoveredItemIndexPlus1 {
-			l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
-			guigui.RequestRebuild(l)
-		}
-	}
 
 	// Process dragging.
 	if l.dragSrcIndexPlus1 > 0 {
@@ -998,7 +999,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		return guigui.HandleInputByWidget(l)
 	}
 
-	if index := l.hoveredItemIndexPlus1 - 1; index >= 0 && index < l.abstractList.ItemCount() {
+	if index := l.hoveredItemIndex(context, widgetBounds); index >= 0 && index < l.abstractList.ItemCount() {
 		c := image.Pt(ebiten.CursorPosition())
 
 		left := inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
@@ -1081,6 +1082,27 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 		}
 		l.jumpTick = 0
 	}
+
+	hoveredItemIndex := l.hoveredItemIndex(context, widgetBounds)
+
+	// Update the checkmark image at Tick to reflect the latest hovered item index.
+	colorMode := context.ColorMode()
+	if hoveredItemIndex+1 == l.checkmarkIndexPlus1 {
+		colorMode = guigui.ColorModeDark
+	}
+	checkImg, err := theResourceImages.Get("check", colorMode)
+	if err != nil {
+		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
+	}
+	l.checkmark.SetImage(checkImg)
+
+	if l.isHoveringVisible() || l.hasMovableItems() {
+		if l.lastHoveredItemIndexPlus1 != hoveredItemIndex+1 {
+			l.lastHoveredItemIndexPlus1 = hoveredItemIndex + 1
+			guigui.RequestRebuild(l)
+		}
+	}
+
 	return nil
 }
 
@@ -1247,7 +1269,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		}
 	}
 
-	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
+	hoveredItemIndex := l.content.hoveredItemIndex(context, widgetBounds)
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
 	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemVisible(hoveredItemIndex) {
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
