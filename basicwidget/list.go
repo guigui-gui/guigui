@@ -207,6 +207,8 @@ func (l *List[T]) HighlightedItemIndex(context *guigui.Context) int {
 		if !l.content.IsHoveringVisible() {
 			return -1
 		}
+		// TODO: The hovered item index is not updated yet.
+		// This requires the list's widgetBounds.
 		index = l.hoveredItemIndex()
 	}
 	if index < 0 || index >= len(l.listItemWidgets) {
