@@ -518,7 +518,7 @@ func (a *app) buildWidgets() error {
 		clear(widgetState.eventHandlers)
 		widgetState.focusDelegation = nil
 
-		widgetState.layerPlus1Cache = 0
+		widgetState.actualLayerPlus1Cache = 0
 		widgetState.visibleCache = false
 		widgetState.visibleCacheValid = false
 		widgetState.enabledCache = false

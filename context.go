@@ -383,7 +383,7 @@ func (c *Context) bringToFrontLayer(widget Widget) {
 	c.frontLayer++
 	widgetState.layer = c.frontLayer
 	_ = traverseWidget(widget, func(w Widget) error {
-		w.widgetState().layerPlus1Cache = 0
+		w.widgetState().actualLayerPlus1Cache = 0
 		return nil
 	})
 	RequestRebuild(widget)

@@ -108,7 +108,7 @@ type widgetState struct {
 	clipChildren    bool
 	focusDelegation Widget
 
-	layerPlus1Cache       int64
+	actualLayerPlus1Cache int64
 	visibleCache          bool
 	visibleCacheValid     bool
 	enabledCache          bool
@@ -199,9 +199,10 @@ func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 	}
 	return w.offscreen.SubImage(bounds).(*ebiten.Image)
 }
+
 func (w *widgetState) actualLayer() int64 {
-	if w.layerPlus1Cache != 0 {
-		return w.layerPlus1Cache - 1
+	if w.actualLayerPlus1Cache != 0 {
+		return w.actualLayerPlus1Cache - 1
 	}
 	// The layer is determined by the closest ancestor with a non-zero layer.
 	// For example, if there are three popups A, B, and C, and B is a child of A.
@@ -215,7 +216,7 @@ func (w *widgetState) actualLayer() int64 {
 	} else {
 		layer = w.parent.widgetState().actualLayer()
 	}
-	w.layerPlus1Cache = layer + 1
+	w.actualLayerPlus1Cache = layer + 1
 	return layer
 }
 
