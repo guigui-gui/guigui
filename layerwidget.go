@@ -14,8 +14,8 @@ type LayerWidget[T Widget] struct {
 }
 
 // Widget returns the content widget.
-func (p *LayerWidget[T]) Widget() T {
-	return p.widget.Widget()
+func (l *LayerWidget[T]) Widget() T {
+	return l.widget.Widget()
 }
 
 // BringToFrontLayer brings the widget to the front layer.
@@ -29,22 +29,22 @@ func (p *LayerWidget[T]) Widget() T {
 //
 // Input is handled in the order of layers from top to bottom.
 // Also, layers affect the result of [WidgetBounds.IsCursorHitAt].
-func (p *LayerWidget[T]) BringToFrontLayer(context *Context) {
-	context.bringToFrontLayer(p)
+func (l *LayerWidget[T]) BringToFrontLayer(context *Context) {
+	context.bringToFrontLayer(l)
 }
 
 // Build implements [Widget.Build].
-func (p *LayerWidget[T]) Build(context *Context, adder *ChildAdder) error {
-	adder.AddChild(p.widget.Widget())
+func (l *LayerWidget[T]) Build(context *Context, adder *ChildAdder) error {
+	adder.AddChild(l.widget.Widget())
 	return nil
 }
 
 // Layout implements [Widget.Layout].
-func (p *LayerWidget[T]) Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
-	layouter.LayoutWidget(p.widget.Widget(), widgetBounds.Bounds())
+func (l *LayerWidget[T]) Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter) {
+	layouter.LayoutWidget(l.widget.Widget(), widgetBounds.Bounds())
 }
 
 // Measure implements [Widget.Measure].
-func (p *LayerWidget[T]) Measure(context *Context, constraints Constraints) image.Point {
-	return p.widget.Widget().Measure(context, constraints)
+func (l *LayerWidget[T]) Measure(context *Context, constraints Constraints) image.Point {
+	return l.widget.Widget().Measure(context, constraints)
 }
