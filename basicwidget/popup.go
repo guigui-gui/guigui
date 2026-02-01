@@ -373,7 +373,7 @@ func (p *popup) close(context *guigui.Context, reason PopupCloseReason) {
 }
 
 func (p *popup) passThrough() bool {
-	return p.openingCount == 0 || p.showing || p.hiding
+	return p.openingCount == 0
 }
 
 func (p *popup) canUpdateContent() bool {
