@@ -424,10 +424,6 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 }
 
 func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout {
-	// Set the text value here to get the correct size at Measure.
-	l.text.SetValue(l.item.Text)
-	l.keyText.SetValue(l.item.KeyText)
-
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       int(LineHeight(context)),
