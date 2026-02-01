@@ -928,21 +928,25 @@ func (l *listContent[T]) resetHoveredItemIndex() {
 	guigui.RequestRebuild(l)
 }
 
-func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	l.hoveredItemIndexPlus1 = 0
-	if widgetBounds.IsHitAtCursor() {
-		cp := image.Pt(ebiten.CursorPosition())
-		listBounds := widgetBounds.Bounds()
-		for i := range l.visibleItems() {
-			bounds := l.itemBounds(context, i)
-			bounds.Min.X = listBounds.Min.X
-			bounds.Max.X = listBounds.Max.X
-			if cp.In(bounds) {
-				l.hoveredItemIndexPlus1 = i + 1
-				break
-			}
+func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
+	if !widgetBounds.IsHitAtCursor() {
+		return -1
+	}
+	cp := image.Pt(ebiten.CursorPosition())
+	listBounds := widgetBounds.Bounds()
+	for i := range l.visibleItems() {
+		bounds := l.itemBounds(context, i)
+		bounds.Min.X = listBounds.Min.X
+		bounds.Max.X = listBounds.Max.X
+		if cp.In(bounds) {
+			return i
 		}
 	}
+	return -1
+}
+
+func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
 
 	colorMode := context.ColorMode()
 	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
