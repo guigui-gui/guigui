@@ -193,22 +193,18 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
 }
 
-func (l *List[T]) hoveredItemIndex() int {
-	return l.content.hoveredItemIndexPlus1 - 1
-}
-
 func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 	index := -1
 	switch l.content.Style() {
 	case ListStyleNormal, ListStyleSidebar:
 		index = l.content.SelectedItemIndex()
 	case ListStyleMenu:
-		if !l.content.IsHoveringVisible() {
+		if !l.content.isHoveringVisible() {
 			return -1
 		}
 		// TODO: The hovered item index is not updated yet.
 		// This requires the list's widgetBounds.
-		index = l.hoveredItemIndex()
+		index = l.content.hoveredItemIndexPlus1 - 1
 	}
 	if index < 0 || index >= l.listItemWidgets.Len() {
 		return -1
@@ -897,7 +893,7 @@ func (l *listContent[T]) SetStripeVisible(visible bool) {
 	guigui.RequestRedraw(l)
 }
 
-func (l *listContent[T]) IsHoveringVisible() bool {
+func (l *listContent[T]) isHoveringVisible() bool {
 	return l.style == ListStyleMenu
 }
 
@@ -958,7 +954,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	}
 	l.checkmark.SetImage(checkImg)
 
-	if l.IsHoveringVisible() || l.hasMovableItems() {
+	if l.isHoveringVisible() || l.hasMovableItems() {
 		if l.lastHoveredItemIndexPlus1 != l.hoveredItemIndexPlus1 {
 			l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
 			guigui.RequestRebuild(l)
@@ -1249,7 +1245,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && l.content.IsHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemVisible(hoveredItemIndex) {
+	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemVisible(hoveredItemIndex) {
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
 		if l.content.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
