@@ -36,6 +36,7 @@ func (l *LayerWidget[T]) BringToFrontLayer(context *Context) {
 // Build implements [Widget.Build].
 func (l *LayerWidget[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(l.widget.Widget())
+	context.DelegateFocus(l, l.widget.Widget())
 	return nil
 }
 
