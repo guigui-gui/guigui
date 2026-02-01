@@ -148,6 +148,7 @@ type Text struct {
 	paddingForScrollOffset guigui.Padding
 
 	onFocusChanged func(context *guigui.Context, focused bool)
+	focused        bool
 }
 
 type cachedTextSizeEntry struct {
@@ -209,6 +210,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	if t.onFocusChanged == nil {
 		t.onFocusChanged = func(context *guigui.Context, focused bool) {
+			t.focused = focused
 			if !t.editable {
 				return
 			}
@@ -248,18 +250,29 @@ func (t *Text) SetSelectable(selectable bool) {
 }
 
 func (t *Text) stringValue() string {
+	if (!t.editable || !t.focused) && t.nextTextSet {
+		return t.nextText
+	}
 	t.valueBuilder.Reset()
 	_ = t.field.WriteText(&t.valueBuilder)
 	return t.valueBuilder.String()
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
+	if (!t.editable || !t.focused) && t.nextTextSet {
+		start = min(max(0, start), len(t.nextText))
+		end = min(max(start, end), len(t.nextText))
+		return t.nextText[start:end]
+	}
 	t.valueBuilder.ResetWithRange(start, end)
 	_ = t.field.WriteText(&t.valueBuilder)
 	return t.valueBuilder.String()
 }
 
 func (t *Text) stringValueForRendering() string {
+	if (!t.editable || !t.focused) && t.nextTextSet {
+		return t.nextText
+	}
 	t.valueBuilder.Reset()
 	_ = t.field.WriteTextForRendering(&t.valueBuilder)
 	return t.valueBuilder.String()
@@ -280,7 +293,7 @@ func (t *Text) SetValue(text string) {
 		return
 	}
 
-	// Do not call t.setValue here. Update the actual value later.
+	// Do not call t.setText here. Update the actual value later.
 	// For example, when a user is editing, the text should not be changed.
 	// Another case is that SetMultiline might be called later.
 	t.nextText = text
