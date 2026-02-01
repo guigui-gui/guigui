@@ -72,11 +72,21 @@ func (p *PopupMenu[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	layouter.LayoutWidget(&p.popup, b)
 }
 
-func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	pos := widgetBounds.Bounds().Min
-	// List size can dynamically change based on the items. Use the default size.
+func (p *PopupMenu[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	// Ignore the constraints.
+	return p.measure(context)
+}
+
+func (p *PopupMenu[T]) measure(context *guigui.Context) image.Point {
+	// List size can dynamically change based on the items. Measure the size without constraints.
 	s := p.list.Widget().Measure(context, guigui.Constraints{})
 	s.Y = min(s.Y, 24*UnitSize(context))
+	return s
+}
+
+func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+	pos := widgetBounds.Bounds().Min
+	s := p.measure(context)
 	r := image.Rectangle{
 		Min: pos,
 		Max: pos.Add(s),
