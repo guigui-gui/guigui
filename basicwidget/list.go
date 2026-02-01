@@ -44,7 +44,7 @@ type List[T comparable] struct {
 	guigui.DefaultWidget
 
 	abstractListItems []abstractListItem[T]
-	listItemWidgets   []listItemWidget[T]
+	listItemWidgets   guigui.WidgetSlice[*listItemWidget[T]]
 	background1       listBackground1[T]
 	content           listContent[T]
 	panel             Panel
@@ -175,8 +175,8 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	}
 	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
-	for i := range l.listItemWidgets {
-		item := &l.listItemWidgets[i]
+	for i := range l.listItemWidgets.Len() {
+		item := l.listItemWidgets.At(i)
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
@@ -210,13 +210,13 @@ func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
 		// This requires the list's widgetBounds.
 		index = l.hoveredItemIndex()
 	}
-	if index < 0 || index >= len(l.listItemWidgets) {
+	if index < 0 || index >= l.listItemWidgets.Len() {
 		return -1
 	}
 	if !l.abstractListItems[index].selectable() {
 		return -1
 	}
-	if !context.IsEnabled(&l.listItemWidgets[index]) {
+	if !context.IsEnabled(l.listItemWidgets.At(index)) {
 		return -1
 	}
 	return index
@@ -226,7 +226,7 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 	if l.highlightedItemIndex(context) == index {
 		return defaultActiveListItemTextColor(context)
 	}
-	item := &l.listItemWidgets[index]
+	item := l.listItemWidgets.At(index)
 	if clr := item.textColor(); clr != nil {
 		return clr
 	}
@@ -242,10 +242,10 @@ func (l *List[T]) SelectedItem() (ListItem[T], bool) {
 }
 
 func (l *List[T]) ItemByIndex(index int) (ListItem[T], bool) {
-	if index < 0 || index >= len(l.listItemWidgets) {
+	if index < 0 || index >= l.listItemWidgets.Len() {
 		return ListItem[T]{}, false
 	}
-	return l.listItemWidgets[index].item, true
+	return l.listItemWidgets.At(index).item, true
 }
 
 func (l *List[T]) SetItemsByStrings(strs []string) {
@@ -258,13 +258,13 @@ func (l *List[T]) SetItemsByStrings(strs []string) {
 
 func (l *List[T]) SetItems(items []ListItem[T]) {
 	l.abstractListItems = adjustSliceSize(l.abstractListItems, len(items))
-	l.listItemWidgets = adjustSliceSize(l.listItemWidgets, len(items))
+	l.listItemWidgets.SetLen(len(items))
 
 	for i, item := range items {
-		l.listItemWidgets[i].setListItem(item)
-		l.listItemWidgets[i].setHeight(l.listItemHeightPlus1 - 1)
-		l.listItemWidgets[i].setStyle(l.content.Style())
-		l.abstractListItems[i].Content = &l.listItemWidgets[i]
+		l.listItemWidgets.At(i).setListItem(item)
+		l.listItemWidgets.At(i).setHeight(l.listItemHeightPlus1 - 1)
+		l.listItemWidgets.At(i).setStyle(l.content.Style())
+		l.abstractListItems[i].Content = l.listItemWidgets.At(i)
 		l.abstractListItems[i].Unselectable = !item.selectable()
 		l.abstractListItems[i].Movable = item.Movable
 		l.abstractListItems[i].Value = item.Value
@@ -305,7 +305,7 @@ func (l *List[T]) SetStyle(style ListStyle) {
 }
 
 func (l *List[T]) SetItemString(str string, index int) {
-	l.listItemWidgets[index].setText(str)
+	l.listItemWidgets.At(index).setText(str)
 }
 
 func (l *List[T]) setContentWidth(width int) {
@@ -520,7 +520,7 @@ type listContent[T comparable] struct {
 	customBackground guigui.Widget
 	background2      listBackground2[T]
 	checkmark        Image
-	expanderImages   []Image
+	expanderImages   guigui.WidgetSlice[*Image]
 
 	abstractList              abstractList[T, abstractListItem[T]]
 	stripeVisible             bool
@@ -640,14 +640,25 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		adder.AddChild(l.customBackground)
 	}
 	adder.AddChild(&l.background2)
-	l.expanderImages = adjustSliceSize(l.expanderImages, l.abstractList.ItemCount())
+	l.expanderImages.SetLen(l.abstractList.ItemCount())
 	for i := range l.visibleItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		if l.checkmarkIndexPlus1 == i+1 {
 			adder.AddChild(&l.checkmark)
 		}
-		if item.IndentLevel > 0 {
-			adder.AddChild(&l.expanderImages[i])
+		var hasChild bool
+		if nextItem, ok := l.abstractList.ItemByIndex(i + 1); ok {
+			hasChild = nextItem.IndentLevel > item.IndentLevel
+		}
+
+		if hasChild {
+			img := l.expanderImages.At(i)
+			if !item.Collapsed {
+				img.SetImage(l.treeItemExpandedImage)
+			} else {
+				img.SetImage(l.treeItemCollapsedImage)
+			}
+			adder.AddChild(img)
 		}
 		adder.AddChild(item.Content)
 	}
@@ -728,7 +739,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 					img = l.treeItemExpandedImage
 				}
 			}
-			l.expanderImages[i].SetImage(img)
+			l.expanderImages.At(i).SetImage(img)
 			expanderP := p
 			expanderP.X += listItemIndentSize(context, item.IndentLevel) - int(LineHeight(context))
 			// Adjust the position a bit for better appearance.
@@ -738,7 +749,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 				int(LineHeight(context)),
 				contentH,
 			)
-			l.widgetBoundsForLayout[&l.expanderImages[i]] = image.Rectangle{
+			l.widgetBoundsForLayout[l.expanderImages.At(i)] = image.Rectangle{
 				Min: expanderP,
 				Max: expanderP.Add(s),
 			}

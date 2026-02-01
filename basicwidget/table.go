@@ -22,8 +22,8 @@ type Table[T comparable] struct {
 	list            List[T]
 	listItems       []ListItem[T]
 	tableRows       []TableRow[T]
-	tableRowWidgets []tableRowWidget[T]
-	columnTexts     []Text
+	tableRowWidgets guigui.WidgetSlice[*tableRowWidget[T]]
+	columnTexts     guigui.WidgetSlice[*Text]
 	tableHeader     tableHeader[T]
 
 	columns              []TableColumn
@@ -83,20 +83,20 @@ func (t *Table[T]) SetFooterHeight(height int) {
 }
 
 func (t *Table[T]) updateTableRows() {
-	t.tableRowWidgets = adjustSliceSize(t.tableRowWidgets, len(t.tableRows))
+	t.tableRowWidgets.SetLen(len(t.tableRows))
 	t.listItems = adjustSliceSize(t.listItems, len(t.tableRows))
 
 	for i, row := range t.tableRows {
-		t.tableRowWidgets[i].setTableRow(row)
-		t.listItems[i] = t.tableRowWidgets[i].listItem()
+		t.tableRowWidgets.At(i).setTableRow(row)
+		t.listItems[i] = t.tableRowWidgets.At(i).listItem()
 	}
 	t.list.SetItems(t.listItems)
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.list)
-	for i := range t.columnTexts {
-		adder.AddChild(&t.columnTexts[i])
+	for i := range t.columnTexts.Len() {
+		adder.AddChild(t.columnTexts.At(i))
 	}
 	adder.AddChild(&t.tableHeader)
 
@@ -106,8 +106,8 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 	t.updateTableRows()
 
-	for i := range t.tableRowWidgets {
-		row := &t.tableRowWidgets[i]
+	for i := range t.tableRowWidgets.Len() {
+		row := t.tableRowWidgets.At(i)
 		row.table = t
 	}
 	t.tableHeader.table = t
@@ -119,15 +119,19 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	bounds := widgetBounds.Bounds()
 
 	t.columnWidthsInPixels = adjustSliceSize(t.columnWidthsInPixels, len(t.columns))
+	// t.columnWidthsInPixels = slices.Delete(t.columnWidthsInPixels, len(t.columns), len(t.columnWidthsInPixels)) // Not needed as it is just int slice and grown? No, needs to be exact size.
+	// Actually adjustSliceSize does Delete too.
+
 	t.columnLayoutItems = adjustSliceSize(t.columnLayoutItems, len(t.columns))
-	t.columnTexts = adjustSliceSize(t.columnTexts, len(t.columns))
+
+	t.columnTexts.SetLen(len(t.columns))
 	for i, column := range t.columns {
 		t.columnLayoutItems[i] = guigui.LinearLayoutItem{
 			Size: column.Width,
 		}
-		t.columnTexts[i].SetValue(column.HeaderText)
-		t.columnTexts[i].SetHorizontalAlign(column.HeaderTextHorizontalAlign)
-		t.columnTexts[i].SetVerticalAlign(VerticalAlignMiddle)
+		t.columnTexts.At(i).SetValue(column.HeaderText)
+		t.columnTexts.At(i).SetHorizontalAlign(column.HeaderTextHorizontalAlign)
+		t.columnTexts.At(i).SetVerticalAlign(VerticalAlignMiddle)
 	}
 	// TODO: Use this at Layout. The issue is that the current LinearLayout cannot treat MinWidth well.
 	layout := guigui.LinearLayout{
@@ -157,14 +161,14 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	pt := bounds.Min
 	pt.X += int(offsetX)
 	pt.X += RoundedCornerRadius(context)
-	for i := range t.columnTexts {
+	for i := range t.columnTexts.Len() {
 		textMin := pt.Add(image.Pt(UnitSize(context)/4, 0))
 		width := t.columnWidthsInPixels[i] - UnitSize(context)/2
 		textBounds := image.Rectangle{
 			Min: textMin,
 			Max: textMin.Add(image.Pt(width, tableHeaderHeight(context))),
 		}
-		layouter.LayoutWidget(&t.columnTexts[i], textBounds)
+		layouter.LayoutWidget(t.columnTexts.At(i), textBounds)
 		pt.X += t.columnWidthsInPixels[i]
 	}
 }
@@ -175,7 +179,7 @@ func tableHeaderHeight(context *guigui.Context) int {
 }
 
 func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	item := &t.tableRowWidgets[index]
+	item := t.tableRowWidgets.At(index)
 	switch {
 	case t.list.SelectedItemIndex() == index && item.selectable():
 		return defaultActiveListItemTextColor(context)
@@ -189,17 +193,17 @@ func (t *Table[T]) SelectedItemIndex() int {
 }
 
 func (t *Table[T]) SelectedItem() (TableRow[T], bool) {
-	if t.list.SelectedItemIndex() < 0 || t.list.SelectedItemIndex() >= len(t.tableRowWidgets) {
+	if t.list.SelectedItemIndex() < 0 || t.list.SelectedItemIndex() >= t.tableRowWidgets.Len() {
 		return TableRow[T]{}, false
 	}
-	return t.tableRowWidgets[t.list.SelectedItemIndex()].row, true
+	return t.tableRowWidgets.At(t.list.SelectedItemIndex()).row, true
 }
 
 func (t *Table[T]) ItemByIndex(index int) (TableRow[T], bool) {
-	if index < 0 || index >= len(t.tableRowWidgets) {
+	if index < 0 || index >= t.tableRowWidgets.Len() {
 		return TableRow[T]{}, false
 	}
-	return t.tableRowWidgets[index].row, true
+	return t.tableRowWidgets.At(index).row, true
 }
 
 func (t *Table[T]) SetItems(items []TableRow[T]) {
@@ -209,11 +213,11 @@ func (t *Table[T]) SetItems(items []TableRow[T]) {
 }
 
 func (t *Table[T]) ItemCount() int {
-	return len(t.tableRowWidgets)
+	return t.tableRowWidgets.Len()
 }
 
 func (t *Table[T]) ID(index int) any {
-	return t.tableRowWidgets[index].row.Value
+	return t.tableRowWidgets.At(index).row.Value
 }
 
 func (t *Table[T]) SelectItemByIndex(index int) {
@@ -241,7 +245,7 @@ type tableRowWidget[T comparable] struct {
 
 	row   TableRow[T]
 	table *Table[T]
-	texts []Text
+	texts guigui.WidgetSlice[*Text]
 
 	//contentBounds map[guigui.Widget]image.Rectangle
 	layout guigui.Layout
@@ -252,18 +256,19 @@ func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
 }
 
 func (t *tableRowWidget[T]) ensureTexts() {
-	t.texts = adjustSliceSize(t.texts, len(t.row.Cells))
+	t.texts.SetLen(len(t.row.Cells))
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {
 			continue
 		}
-		t.texts[i].SetValue(cell.Text)
-		t.texts[i].SetColor(cell.TextColor)
-		t.texts[i].SetHorizontalAlign(cell.TextHorizontalAlign)
-		t.texts[i].SetVerticalAlign(cell.TextVerticalAlign)
-		t.texts[i].SetBold(cell.TextBold)
-		t.texts[i].SetTabular(cell.TextTabular)
-		t.texts[i].SetAutoWrap(true)
+		txt := t.texts.At(i)
+		txt.SetValue(cell.Text)
+		txt.SetColor(cell.TextColor)
+		txt.SetHorizontalAlign(cell.TextHorizontalAlign)
+		txt.SetVerticalAlign(cell.TextVerticalAlign)
+		txt.SetBold(cell.TextBold)
+		txt.SetTabular(cell.TextTabular)
+		txt.SetAutoWrap(true)
 	}
 }
 
@@ -273,7 +278,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 		if cell.Content != nil {
 			adder.AddChild(cell.Content)
 		} else {
-			adder.AddChild(&t.texts[i])
+			adder.AddChild(t.texts.At(i))
 		}
 	}
 	l := guigui.LinearLayout{
@@ -286,7 +291,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 				Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
 			})
 		} else {
-			if i >= len(t.texts) {
+			if i >= t.texts.Len() {
 				break
 			}
 			l.Items = append(l.Items,
@@ -295,7 +300,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 						Direction: guigui.LayoutDirectionHorizontal,
 						Items: []guigui.LinearLayoutItem{
 							{
-								Widget: &t.texts[i],
+								Widget: t.texts.At(i),
 								Size:   guigui.FlexibleSize(1),
 							},
 						},
@@ -326,7 +331,7 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 			// Assume that every item can use a bold font.
 			p := ListItemTextPadding(context)
 			w := t.table.columnWidthsInPixels[i] - p.Start - p.End
-			s = t.texts[i].Measure(context, guigui.FixedWidthConstraints(w))
+			s = t.texts.At(i).Measure(context, guigui.FixedWidthConstraints(w))
 			s = s.Add(image.Pt(p.Start+p.End, p.Top+p.Bottom))
 		}
 		w += t.table.columnWidthsInPixels[i]

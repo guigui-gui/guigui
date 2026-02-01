@@ -12,10 +12,19 @@ import (
 type DefaultWidget struct {
 	s widgetState
 
-	_ noCopy
+	_    noCopy
+	addr *DefaultWidget
 }
 
 var _ Widget = (*DefaultWidget)(nil)
+
+func (d *DefaultWidget) copyCheck() {
+	if d.addr == nil {
+		d.addr = d
+	} else if d.addr != d {
+		panic("guigui: illegal use of DefaultWidget copied by value")
+	}
+}
 
 func (*DefaultWidget) Model(key ModelKey) any {
 	return nil
@@ -67,5 +76,6 @@ func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image
 }
 
 func (d *DefaultWidget) widgetState() *widgetState {
+	d.copyCheck()
 	return &d.s
 }

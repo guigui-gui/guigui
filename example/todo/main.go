@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"image"
 	"os"
-	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -172,7 +171,7 @@ func (t *taskWidget) Measure(context *guigui.Context, constraints guigui.Constra
 type tasksPanelContent struct {
 	guigui.DefaultWidget
 
-	taskWidgets []taskWidget
+	taskWidgets guigui.WidgetSlice[*taskWidget]
 }
 
 var (
@@ -186,21 +185,17 @@ func (t *tasksPanelContent) SetOnDeleted(f func(context *guigui.Context, id int)
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	model := context.Model(t, modelKeyModel).(*Model)
 
-	if model.TaskCount() > len(t.taskWidgets) {
-		t.taskWidgets = slices.Grow(t.taskWidgets, model.TaskCount()-len(t.taskWidgets))[:model.TaskCount()]
-	} else {
-		t.taskWidgets = slices.Delete(t.taskWidgets, model.TaskCount(), len(t.taskWidgets))
-	}
-	for i := range t.taskWidgets {
-		adder.AddChild(&t.taskWidgets[i])
+	t.taskWidgets.SetLen(model.TaskCount())
+	for i := range t.taskWidgets.Len() {
+		adder.AddChild(t.taskWidgets.At(i))
 	}
 
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
-		t.taskWidgets[i].SetOnDoneButtonPressed(func(context *guigui.Context) {
+		t.taskWidgets.At(i).SetOnDoneButtonPressed(func(context *guigui.Context) {
 			guigui.DispatchEvent(t, tasksPanelContentEventDeleted, task.ID)
 		})
-		t.taskWidgets[i].SetText(task.Text)
+		t.taskWidgets.At(i).SetText(task.Text)
 	}
 	return nil
 }
@@ -211,12 +206,12 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui
 		Direction: guigui.LayoutDirectionVertical,
 		Gap:       u / 4,
 	}
-	layout.Items = make([]guigui.LinearLayoutItem, len(t.taskWidgets))
-	for i := range t.taskWidgets {
+	layout.Items = make([]guigui.LinearLayoutItem, t.taskWidgets.Len())
+	for i := range t.taskWidgets.Len() {
 		w := widgetBounds.Bounds().Dx()
-		h := t.taskWidgets[i].Measure(context, guigui.FixedWidthConstraints(w)).Y
+		h := t.taskWidgets.At(i).Measure(context, guigui.FixedWidthConstraints(w)).Y
 		layout.Items[i] = guigui.LinearLayoutItem{
-			Widget: &t.taskWidgets[i],
+			Widget: t.taskWidgets.At(i),
 			Size:   guigui.FixedSize(h),
 		}
 	}
@@ -226,8 +221,8 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui
 func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	u := basicwidget.UnitSize(context)
 	var h int
-	for i := range t.taskWidgets {
-		h += t.taskWidgets[i].Measure(context, constraints).Y
+	for i := range t.taskWidgets.Len() {
+		h += t.taskWidgets.At(i).Measure(context, constraints).Y
 		h += int(u / 4)
 	}
 	w := t.DefaultWidget.Measure(context, constraints).X

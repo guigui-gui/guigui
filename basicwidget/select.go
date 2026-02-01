@@ -35,7 +35,7 @@ type Select[T comparable] struct {
 
 	items                 []SelectItem[T]
 	popupMenuItems        []PopupMenuItem[T]
-	popupMenuItemContents []selectItemContent
+	popupMenuItemContents guigui.WidgetSlice[*selectItemContent]
 
 	indexAtOpen int
 
@@ -49,7 +49,7 @@ func (s *Select[T]) SetOnItemSelected(f func(context *guigui.Context, index int)
 
 func (s *Select[T]) updatePopupMenuItems() {
 	s.popupMenuItems = adjustSliceSize(s.popupMenuItems, len(s.items))
-	s.popupMenuItemContents = adjustSliceSize(s.popupMenuItemContents, len(s.items))
+	s.popupMenuItemContents.SetLen(len(s.items))
 	for i, item := range s.items {
 		pmItem := PopupMenuItem[T]{
 			Text:         item.Text,
@@ -62,10 +62,10 @@ func (s *Select[T]) updatePopupMenuItems() {
 			Value:        item.Value,
 		}
 		if s.popupMenu.IsOpen() && pmItem.Content != nil {
-			s.popupMenuItemContents[i].SetContent(pmItem.Content)
-			pmItem.Content = &s.popupMenuItemContents[i]
+			s.popupMenuItemContents.At(i).SetContent(pmItem.Content)
+			pmItem.Content = s.popupMenuItemContents.At(i)
 		} else {
-			s.popupMenuItemContents[i].SetContent(nil)
+			s.popupMenuItemContents.At(i).SetContent(nil)
 			pmItem.Content = nil
 		}
 		s.popupMenuItems[i] = pmItem
