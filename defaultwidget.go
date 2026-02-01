@@ -11,6 +11,8 @@ import (
 
 type DefaultWidget struct {
 	s widgetState
+
+	_ noCopy
 }
 
 var _ Widget = (*DefaultWidget)(nil)
