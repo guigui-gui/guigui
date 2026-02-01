@@ -284,7 +284,7 @@ func (t *Text) SetValue(text string) {
 		return
 	}
 
-	// Do not call t.setValue here. Update the actual value later.
+	// Do not call t.setText here. Update the actual value later.
 	// For example, when a user is editing, the text should not be changed.
 	// Another case is that SetMultiline might be called later.
 	t.nextText = text
