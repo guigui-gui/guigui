@@ -45,6 +45,10 @@ var (
 	thumbEnabledDarkColor              = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 1, 0.6)
 	thumbDisabledLightColor            = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.9, 0.55)
 	thumbDisabledDarkColor             = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.9, 0.55)
+	backgroundLightColor               = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.95)
+	backgroundDarkColor                = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.95)
+	backgroundSecondaryColorLightColor = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.9)
+	backgroundSecondaryColorDarkColor  = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.9)
 )
 
 func TextColor(colorMode guigui.ColorMode, enabled bool) color.Color {
@@ -110,6 +114,28 @@ func ThumbColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 			return thumbEnabledDarkColor
 		}
 		return thumbDisabledDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
+func BackgroundColor(colorMode guigui.ColorMode) color.Color {
+	switch colorMode {
+	case guigui.ColorModeLight:
+		return backgroundLightColor
+	case guigui.ColorModeDark:
+		return backgroundDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
+func BackgroundSecondaryColor(colorMode guigui.ColorMode) color.Color {
+	switch colorMode {
+	case guigui.ColorModeLight:
+		return backgroundSecondaryColorLightColor
+	case guigui.ColorModeDark:
+		return backgroundSecondaryColorDarkColor
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}

@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image/color"
 
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -29,7 +30,7 @@ func (b *Background) SetColor(clr color.Color) {
 func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	clr := b.clr
 	if clr == nil {
-		clr = draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.95)
+		clr = basicwidgetdraw.BackgroundColor(context.ColorMode())
 	}
 	dst.Fill(clr)
 }

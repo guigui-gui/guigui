@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -251,7 +252,7 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	switch p.style {
 	case PanelStyleSide:
-		dst.Fill(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.9))
+		dst.Fill(basicwidgetdraw.BackgroundSecondaryColor(context.ColorMode()))
 	}
 }
 
