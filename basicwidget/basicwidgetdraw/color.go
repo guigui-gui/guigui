@@ -37,10 +37,10 @@ var (
 	controlEnabledDarkColor            = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 1, 0.3)
 	controlDisabledLightColor          = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.9, 0.1)
 	controlDisabledDarkColor           = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.9, 0.1)
-	secondaryControlEnabledLightColor  = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.95, 0.25)
-	secondaryControlEnabledDarkColor   = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.95, 0.25)
-	secondaryControlDisabledLightColor = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.85, 0.05)
-	secondaryControlDisabledDarkColor  = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.85, 0.05)
+	controlSecondaryEnabledLightColor  = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.95, 0.25)
+	controlSecondaryEnabledDarkColor   = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.95, 0.25)
+	controlSecondaryDisabledLightColor = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.85, 0.05)
+	controlSecondaryDisabledDarkColor  = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.85, 0.05)
 	thumbEnabledLightColor             = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 1, 0.6)
 	thumbEnabledDarkColor              = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 1, 0.6)
 	thumbDisabledLightColor            = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.9, 0.55)
@@ -85,18 +85,18 @@ func ControlColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 	}
 }
 
-func SecondaryControlColor(colorMode guigui.ColorMode, enabled bool) color.Color {
+func ControlSecondaryColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 	switch colorMode {
 	case guigui.ColorModeLight:
 		if enabled {
-			return secondaryControlEnabledLightColor
+			return controlSecondaryEnabledLightColor
 		}
-		return secondaryControlDisabledLightColor
+		return controlSecondaryDisabledLightColor
 	case guigui.ColorModeDark:
 		if enabled {
-			return secondaryControlEnabledDarkColor
+			return controlSecondaryEnabledDarkColor
 		}
-		return secondaryControlDisabledDarkColor
+		return controlSecondaryDisabledDarkColor
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}

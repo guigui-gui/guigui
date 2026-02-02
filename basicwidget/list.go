@@ -1197,7 +1197,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	case ListStyleNormal:
 		clr = basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(l))
 	case ListStyleMenu:
-		clr = basicwidgetdraw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(l))
+		clr = basicwidgetdraw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
 	}
 	if clr != nil {
 		bounds := widgetBounds.Bounds()
@@ -1224,7 +1224,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if !bounds.Overlaps(vb) {
 				continue
 			}
-			clr := basicwidgetdraw.SecondaryControlColor(context.ColorMode(), context.IsEnabled(l))
+			clr := basicwidgetdraw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
 			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
