@@ -265,7 +265,7 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 
 	// Add paddings. Paddings are calculated as if the content is a text widget.
 	// Even if the content is not a text widget, this padding should look good enough.
-	padding := defaultButtonSize(context).Y - int(LineHeight(context))
+	padding := defaultButtonSize(context).Y - LineHeight(context)
 	paddingTop := padding / 2
 	paddingBottom := padding - paddingTop
 

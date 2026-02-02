@@ -3,7 +3,11 @@
 
 package basicwidget
 
-import "github.com/guigui-gui/guigui"
+import (
+	"math"
+
+	"github.com/guigui-gui/guigui"
+)
 
 const baseUnitSize = 24
 
@@ -11,8 +15,8 @@ func FontSize(context *guigui.Context) float64 {
 	return baseUnitSize * context.Scale() * 1 / 2
 }
 
-func LineHeight(context *guigui.Context) float64 {
-	return baseUnitSize * context.Scale() * 3 / 4
+func LineHeight(context *guigui.Context) int {
+	return int(math.Ceil(baseUnitSize * context.Scale() * 3 / 4))
 }
 
 func UnitSize(context *guigui.Context) int {

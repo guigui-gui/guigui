@@ -608,7 +608,7 @@ func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {
-	return LineHeight(context) * (t.scaleMinus1 + 1)
+	return float64(LineHeight(context)) * (t.scaleMinus1 + 1)
 }
 
 func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {

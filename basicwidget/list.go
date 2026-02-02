@@ -1421,5 +1421,5 @@ func listItemIndentSize(context *guigui.Context, level int) int {
 	if level == 0 {
 		return 0
 	}
-	return int(LineHeight(context) + LineHeight(context)/2*float64(level-1))
+	return LineHeight(context) + LineHeight(context)/2*(level-1)
 }

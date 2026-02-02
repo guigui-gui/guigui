@@ -112,7 +112,7 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 		}
 		itemBounds = append(itemBounds, b)
 
-		maxPaddingY := paddingS.Y + int((float64(u)-LineHeight(context))/2)
+		maxPaddingY := paddingS.Y + (u-LineHeight(context))/2
 		if item.PrimaryWidget != nil {
 			bounds := b
 			bounds.Min.X += paddingS.X
