@@ -4,6 +4,8 @@
 package basicwidget
 
 import (
+	"image/color"
+
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -12,8 +14,22 @@ import (
 
 type Background struct {
 	guigui.DefaultWidget
+
+	clr color.Color
+}
+
+func (b *Background) SetColor(clr color.Color) {
+	if draw.EqualColor(b.clr, clr) {
+		return
+	}
+	b.clr = clr
+	guigui.RequestRedraw(b)
 }
 
 func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	dst.Fill(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.95))
+	clr := b.clr
+	if clr == nil {
+		clr = draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.95)
+	}
+	dst.Fill(clr)
 }
