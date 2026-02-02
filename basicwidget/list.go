@@ -1043,9 +1043,16 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 
 		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
 			item, _ := l.abstractList.ItemByIndex(index)
-			if item.Movable && l.SelectedItemIndex() == index && l.startPressingIndexPlus1-1 == index && (l.pressStartPlus1 != c.Add(image.Pt(1, 1))) {
-				l.dragSrcIndexPlus1 = index + 1
-				return guigui.HandleInputByWidget(l)
+			if item.Movable && l.SelectedItemIndex() == index && l.startPressingIndexPlus1-1 == index {
+				if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
+					itemBounds := l.itemBounds(context, index)
+					minY := (itemBounds.Min.Y + start.Y) / 2
+					maxY := (itemBounds.Max.Y + start.Y) / 2
+					if c.Y < minY || c.Y >= maxY {
+						l.dragSrcIndexPlus1 = index + 1
+						return guigui.HandleInputByWidget(l)
+					}
+				}
 			}
 			return guigui.AbortHandlingInputByWidget(l)
 
