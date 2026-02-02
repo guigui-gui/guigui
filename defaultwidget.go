@@ -26,7 +26,7 @@ func (d *DefaultWidget) copyCheck() {
 	}
 }
 
-func (*DefaultWidget) Model(key ModelKey) any {
+func (*DefaultWidget) Model(context *Context, key ModelKey) any {
 	return nil
 }
 

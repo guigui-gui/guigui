@@ -12,7 +12,7 @@ import (
 )
 
 type Widget interface {
-	Model(key ModelKey) any
+	Model(context *Context, key ModelKey) any
 	Build(context *Context, adder *ChildAdder) error
 	Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult

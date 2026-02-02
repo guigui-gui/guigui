@@ -31,7 +31,7 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Model(key guigui.ModelKey) any {
+func (r *Root) Model(context *guigui.Context, key guigui.ModelKey) any {
 	switch key {
 	case modelKeyModel:
 		return &r.model

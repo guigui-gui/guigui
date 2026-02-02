@@ -348,7 +348,7 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 
 func (c *Context) Model(widget Widget, key ModelKey) any {
 	for w := widget; w != nil; w = w.widgetState().parent {
-		if v := w.Model(key); v != nil {
+		if v := w.Model(c, key); v != nil {
 			return v
 		}
 	}
