@@ -56,6 +56,7 @@ type Button struct {
 	prevPressed     bool
 	sharpCorners    Corners
 	pairedButton    *Button
+	prevCanPress    bool
 }
 
 func (b *Button) SetOnDown(f func(context *guigui.Context)) {
@@ -345,6 +346,10 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 
 func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	b.checkPressed(context, widgetBounds)
+	if pressed := b.canPress(context, widgetBounds); pressed != b.prevCanPress {
+		b.prevCanPress = pressed
+		guigui.RequestRedraw(b)
+	}
 	return nil
 }
 
