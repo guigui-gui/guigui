@@ -274,7 +274,7 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		adder.AddChild(&p.contentAndFrame)
 	}
 
-	context.SetPassThrough(p, p.passThrough())
+	context.SetPassthrough(p, p.passthrough())
 	p.contentAndFrame.SetCornderRouneded(p.style != popupStyleDrawer)
 
 	return nil
@@ -369,10 +369,10 @@ func (p *popup) close(context *guigui.Context, reason PopupCloseReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
-	context.SetPassThrough(p, p.passThrough())
+	context.SetPassthrough(p, p.passthrough())
 }
 
-func (p *popup) passThrough() bool {
+func (p *popup) passthrough() bool {
 	return p.openingCount == 0
 }
 
@@ -459,7 +459,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	}
 
 	// TODO: Is this needed?
-	context.SetPassThrough(p, p.passThrough())
+	context.SetPassthrough(p, p.passthrough())
 	p.blurredBackground.SetOpeningRate(p.openingRate())
 	p.darkBackground.SetOpeningRate(p.openingRate())
 	p.shadow.SetOpeningRate(p.openingRate())

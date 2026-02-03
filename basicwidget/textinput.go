@@ -145,7 +145,7 @@ func (t *TextInput) Redo() bool {
 func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
-	context.SetPassThrough(&t.focus, true)
+	context.SetPassthrough(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
 	return nil
 }
@@ -340,7 +340,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.text.Text().setOnScrollDelta(t.onTextScrollDelta)
 
 	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
-	context.SetPassThrough(&t.frame, true)
+	context.SetPassthrough(&t.frame, true)
 	context.DelegateFocus(t, t.text.Text())
 
 	return nil

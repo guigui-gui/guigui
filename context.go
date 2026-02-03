@@ -355,19 +355,19 @@ func (c *Context) Model(widget Widget, key ModelKey) any {
 	return nil
 }
 
-func (c *Context) PassThrough(widget Widget) bool {
-	return widget.widgetState().isPassThrough()
+func (c *Context) Passthrough(widget Widget) bool {
+	return widget.widgetState().isPassthrough()
 }
 
-func (c *Context) SetPassThrough(widget Widget, passThrough bool) {
+func (c *Context) SetPassthrough(widget Widget, passthrough bool) {
 	widgetState := widget.widgetState()
-	if widgetState.passThrough == passThrough {
+	if widgetState.passthrough == passthrough {
 		return
 	}
-	widgetState.passThrough = passThrough
+	widgetState.passthrough = passthrough
 	_ = traverseWidget(widget, func(w Widget) error {
-		w.widgetState().passThroughCacheValid = false
-		w.widgetState().passThroughCache = false
+		w.widgetState().passthroughCacheValid = false
+		w.widgetState().passthroughCache = false
 		return nil
 	})
 	RequestRebuild(widget)

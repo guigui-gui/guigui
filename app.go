@@ -111,7 +111,7 @@ type app struct {
 	//
 	// Layer values are fixed values just after a tree construction, so they are not changed during buildWidgets.
 	//
-	// maybeHitWidgets includes all the widgets regardless of their Visibility and PassThrough states.
+	// maybeHitWidgets includes all the widgets regardless of their Visibility and Passthrough states.
 	maybeHitWidgets []widgetAndLayer
 
 	redrawRequestedRegions           redrawRequests
@@ -523,8 +523,8 @@ func (a *app) buildWidgets() error {
 		widgetState.visibleCacheValid = false
 		widgetState.enabledCache = false
 		widgetState.enabledCacheValid = false
-		widgetState.passThroughCacheValid = false
-		widgetState.passThroughCache = false
+		widgetState.passthroughCacheValid = false
+		widgetState.passthroughCache = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 		return nil
 	})
@@ -610,7 +610,7 @@ func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 
 func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, ancestorFocused bool) HandleInputResult {
 	widgetState := widget.widgetState()
-	if widgetState.isPassThrough() {
+	if widgetState.isPassthrough() {
 		return HandleInputResult{}
 	}
 
@@ -665,7 +665,7 @@ func (a *app) cursorShape() bool {
 		if !widgetState.isVisible() {
 			continue
 		}
-		if widgetState.isPassThrough() {
+		if widgetState.isPassthrough() {
 			continue
 		}
 		if isProxyWidget(&a.context, wl.widget) {
@@ -822,7 +822,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	if !widgetState.isVisible() {
 		return false
 	}
-	if widgetState.isPassThrough() {
+	if widgetState.isPassthrough() {
 		return false
 	}
 	if isProxyWidget(&a.context, widget) {
@@ -851,7 +851,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 		if !wl.widget.widgetState().isVisible() {
 			continue
 		}
-		if wl.widget.widgetState().isPassThrough() {
+		if wl.widget.widgetState().isPassthrough() {
 			continue
 		}
 		if isProxyWidget(&a.context, wl.widget) {

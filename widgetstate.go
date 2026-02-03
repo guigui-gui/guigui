@@ -22,7 +22,7 @@ type bounds3D struct {
 	visibleBounds image.Rectangle
 	layer         int64
 	visible       bool // For hit testing.
-	passThrough   bool // For hit testing.
+	passthrough   bool // For hit testing.
 }
 
 func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
@@ -40,7 +40,7 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 		visibleBounds: vb,
 		layer:         ws.actualLayer(),
 		visible:       ws.isVisible(),
-		passThrough:   ws.passThrough,
+		passthrough:   ws.passthrough,
 	}, true
 }
 
@@ -99,7 +99,7 @@ type widgetState struct {
 
 	hidden          bool
 	disabled        bool
-	passThrough     bool
+	passthrough     bool
 	layer           int64
 	transparency    float64
 	eventHandlers   map[EventKey]any
@@ -113,8 +113,8 @@ type widgetState struct {
 	visibleCacheValid     bool
 	enabledCache          bool
 	enabledCacheValid     bool
-	passThroughCache      bool
-	passThroughCacheValid bool
+	passthroughCache      bool
+	passthroughCacheValid bool
 
 	offscreen *ebiten.Image
 
@@ -168,19 +168,19 @@ func (w *widgetState) isEnabled() bool {
 	return w.enabledCache
 }
 
-func (w *widgetState) isPassThrough() bool {
-	if w.passThroughCacheValid {
-		return w.passThroughCache
+func (w *widgetState) isPassthrough() bool {
+	if w.passthroughCacheValid {
+		return w.passthroughCache
 	}
-	w.passThroughCacheValid = true
-	if w.passThrough {
-		w.passThroughCache = true
+	w.passthroughCacheValid = true
+	if w.passthrough {
+		w.passthroughCache = true
 	} else if w.parent != nil {
-		w.passThroughCache = w.parent.widgetState().isPassThrough()
+		w.passthroughCache = w.parent.widgetState().isPassthrough()
 	} else {
-		w.passThroughCache = false
+		w.passthroughCache = false
 	}
-	return w.passThroughCache
+	return w.passthroughCache
 }
 
 func (w *widgetState) opacity() float64 {

@@ -201,7 +201,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		t.resetCachedTextSize()
 	}
 
-	context.SetPassThrough(&t.cursor, true)
+	context.SetPassthrough(&t.cursor, true)
 
 	if t.selectable || t.editable {
 		t.cursor.text = t
