@@ -582,7 +582,7 @@ func (p *popupFrame) setDrawerEdge(edge DrawerEdge) {
 
 func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset, false)
+	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 
 	width := float32(1 * context.Scale())
 	if p.style != popupStyleDrawer {

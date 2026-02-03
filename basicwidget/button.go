@@ -422,16 +422,20 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		if b.isPressed(context, widgetBounds) {
 			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
-		var accent bool
+		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 		if context.IsEnabled(b) {
 			switch b.typ {
 			case ButtonTypePrimary:
-				accent = true
+				clr1, clr2 = basicwidgetdraw.BorderAccentColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 			case buttonTypeActiveSegmentControlButton:
-				accent = b.isPressed(context, widgetBounds)
+				if b.isPressed(context, widgetBounds) {
+					clr1, clr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+				} else {
+					clr1, clr2 = basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+				}
 			}
 		}
-		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType), accent)
+
 		basicwidgetdraw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, basicwidgetdraw.Corners(b.sharpCorners))
 	}
 }
