@@ -54,6 +54,7 @@ type Button struct {
 
 	typ       ButtonType
 	textColor color.Color
+	textBold  bool
 
 	layoutItems []guigui.LinearLayoutItem
 	iconLayout  guigui.Layout
@@ -100,7 +101,11 @@ func (b *Button) SetText(text string) {
 }
 
 func (b *Button) SetTextBold(bold bool) {
-	b.text.SetBold(bold)
+	if b.textBold == bold {
+		return
+	}
+	b.textBold = bold
+	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetIcon(icon *ebiten.Image) {
@@ -165,6 +170,13 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		default:
 			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
 		}
+	}
+	if b.textBold {
+		b.text.SetBold(true)
+	} else if b.typ == ButtonTypePrimary {
+		b.text.SetBold(true)
+	} else {
+		b.text.SetBold(false)
 	}
 	b.text.SetHorizontalAlign(HorizontalAlignCenter)
 	b.text.SetVerticalAlign(VerticalAlignMiddle)
