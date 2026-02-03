@@ -1011,9 +1011,13 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 					expanded := !item.Collapsed
 					guigui.DispatchEvent(l, listEventItemExpanderToggled, index, !expanded)
 				}
+				l.pressStartPlus1 = image.Point{}
+				l.startPressingIndexPlus1 = 0
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 			if item.Unselectable {
+				l.pressStartPlus1 = image.Point{}
+				l.startPressingIndexPlus1 = 0
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 
