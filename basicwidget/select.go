@@ -104,6 +104,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 	s.button.SetOnDown(s.onDown)
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
+	context.SetEnabled(&s.button, context.IsEnabled(s) && len(s.items) > 0)
 
 	if s.onPopupMenuItemSelected == nil {
 		s.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
