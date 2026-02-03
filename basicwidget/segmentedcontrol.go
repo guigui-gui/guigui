@@ -114,7 +114,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		s.buttons.At(i).SetIcon(item.Icon)
 		s.buttons.At(i).SetIconAlign(item.IconAlign)
 		s.buttons.At(i).SetTextBold(s.abstractList.SelectedItemIndex() == i)
-		s.buttons.At(i).setUseAccentColor(true)
+		s.buttons.At(i).SetType(buttonTypeActiveSegmentControlButton)
 		if s.abstractList.ItemCount() > 1 {
 			switch i {
 			case 0:

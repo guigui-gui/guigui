@@ -36,6 +36,14 @@ const (
 	IconAlignEnd
 )
 
+type ButtonType int
+
+const (
+	ButtonTypeNormal ButtonType = iota
+	ButtonTypePrimary
+	buttonTypeActiveSegmentControlButton
+)
+
 type Button struct {
 	guigui.DefaultWidget
 
@@ -44,6 +52,7 @@ type Button struct {
 	icon      Image
 	iconAlign IconAlign
 
+	typ       ButtonType
 	textColor color.Color
 
 	layoutItems []guigui.LinearLayoutItem
@@ -51,7 +60,6 @@ type Button struct {
 
 	pressed         bool
 	keepPressed     bool
-	useAccentColor  bool
 	borderInvisible bool
 	prevPressed     bool
 	sharpCorners    Corners
@@ -107,6 +115,14 @@ func (b *Button) SetIconAlign(align IconAlign) {
 	guigui.RequestRebuild(b)
 }
 
+func (b *Button) SetType(typ ButtonType) {
+	if b.typ == typ {
+		return
+	}
+	b.typ = typ
+	guigui.RequestRebuild(b)
+}
+
 func (b *Button) SetTextColor(clr color.Color) {
 	if draw.EqualColor(b.textColor, clr) {
 		return
@@ -131,14 +147,6 @@ func (b *Button) SetSharpCorners(sharpCorners Corners) {
 	guigui.RequestRebuild(b)
 }
 
-func (b *Button) setUseAccentColor(use bool) {
-	if b.useAccentColor == use {
-		return
-	}
-	b.useAccentColor = use
-	guigui.RequestRebuild(b)
-}
-
 func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if b.content != nil {
 		adder.AddChild(b.content)
@@ -148,8 +156,15 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
+	} else if !context.IsEnabled(b) {
+		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
 	} else {
-		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(b)))
+		switch b.typ {
+		case ButtonTypePrimary:
+			b.text.SetColor(basicwidgetdraw.TextColor(guigui.ColorModeDark, true))
+		default:
+			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
+		}
 	}
 	b.text.SetHorizontalAlign(HorizontalAlignCenter)
 	b.text.SetVerticalAlign(VerticalAlignMiddle)
@@ -369,14 +384,26 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	cm := context.ColorMode()
 	backgroundColor := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
-		if b.isPressed(context, widgetBounds) {
-			if b.useAccentColor {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.875, 0.5)
-			} else {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.25)
+		switch b.typ {
+		case ButtonTypePrimary:
+			backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.5, 0.5)
+			if b.isPressed(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.475, 0.475)
+			} else if b.canPress(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.45, 0.45)
 			}
-		} else if b.canPress(context, widgetBounds) {
-			backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
+		case buttonTypeActiveSegmentControlButton:
+			if b.isPressed(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.875, 0.5)
+			} else if b.canPress(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
+			}
+		default:
+			if b.isPressed(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.25)
+			} else if b.canPress(context, widgetBounds) {
+				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
+			}
 		}
 	}
 
@@ -395,7 +422,16 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		if b.isPressed(context, widgetBounds) {
 			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType), b.useAccentColor && b.isPressed(context, widgetBounds) && context.IsEnabled(b))
+		var accent bool
+		if context.IsEnabled(b) {
+			switch b.typ {
+			case ButtonTypePrimary:
+				accent = true
+			case buttonTypeActiveSegmentControlButton:
+				accent = b.isPressed(context, widgetBounds)
+			}
+		}
+		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType), accent)
 		basicwidgetdraw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, basicwidgetdraw.Corners(b.sharpCorners))
 	}
 }

@@ -16,6 +16,8 @@ type Buttons struct {
 	buttonsForm           basicwidget.Form
 	buttonText            basicwidget.Text
 	button                basicwidget.Button
+	primaryButtonText     basicwidget.Text
+	primaryButton         basicwidget.Button
 	textIconButton1Text   basicwidget.Text
 	textIconButton1       guigui.WidgetWithSize[*basicwidget.Button]
 	textIconButton2Text   basicwidget.Text
@@ -45,6 +47,11 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	b.buttonText.SetValue("Button")
 	b.button.SetText("Button")
 	context.SetEnabled(&b.button, model.Buttons().Enabled())
+
+	b.primaryButtonText.SetValue("Primary button")
+	b.primaryButton.SetText("Primary Button")
+	b.primaryButton.SetType(basicwidget.ButtonTypePrimary)
+	context.SetEnabled(&b.primaryButton, model.Buttons().Enabled())
 
 	b.textIconButton1Text.SetValue("Button w/ text and icon (1)")
 	b.textIconButton1.Widget().SetText("Button")
@@ -109,6 +116,10 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		{
 			PrimaryWidget:   &b.buttonText,
 			SecondaryWidget: &b.button,
+		},
+		{
+			PrimaryWidget:   &b.primaryButtonText,
+			SecondaryWidget: &b.primaryButton,
 		},
 		{
 			PrimaryWidget:   &b.textIconButton1Text,

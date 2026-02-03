@@ -16,6 +16,7 @@ func BorderColors(colorMode guigui.ColorMode, borderType RoundedRectBorderType, 
 	typ2 := draw.ColorTypeBase
 	if accent {
 		typ1 = draw.ColorTypeAccent
+		typ2 = draw.ColorTypeAccent
 	}
 	switch borderType {
 	case RoundedRectBorderTypeRegular:
