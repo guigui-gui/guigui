@@ -552,6 +552,8 @@ type listContent[T comparable] struct {
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
 	prevFocused               bool
+	widthForCachedHeight      int
+	cachedHeight              int
 
 	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex []image.Rectangle
@@ -787,6 +789,9 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
 	}
 
+	l.widthForCachedHeight = cw
+	l.cachedHeight = p.Y - widgetBounds.Bounds().Min.Y
+
 	if l.customBackground != nil {
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
 	}
@@ -802,6 +807,13 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 		width = l.contentWidthPlus1 - 1
 	} else if fixedWidth, ok := constraints.FixedWidth(); ok {
 		width = fixedWidth
+	}
+
+	// Use the cached height if possible.
+	// This can return an inaccurate height if the content widgets change, but this is very unlikely.
+	// If a widget size is changed, widgets' Layout should be called soon anyway.
+	if width > 0 && width == l.widthForCachedHeight {
+		return image.Pt(width, l.cachedHeight)
 	}
 
 	hasCheckmark := l.checkmarkIndexPlus1 > 0
@@ -833,6 +845,8 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	}
 	if width > 0 {
 		w = width
+		l.widthForCachedHeight = width
+		l.cachedHeight = h
 	}
 	return image.Pt(w, h)
 }
