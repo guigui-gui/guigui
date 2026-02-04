@@ -803,10 +803,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	} else if fixedWidth, ok := constraints.FixedWidth(); ok {
 		width = fixedWidth
 	}
-	return l.measure(context, width)
-}
 
-func (l *listContent[T]) measure(context *guigui.Context, width int) image.Point {
 	hasCheckmark := l.checkmarkIndexPlus1 > 0
 	offsetForCheckmark := listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 
