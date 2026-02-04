@@ -413,11 +413,6 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	context.SetEnabled(l, !l.item.Disabled)
 
-	// As a list can include bunch of list items, the layout is updated only when necessary.
-	if len(l.layout.Items) == 0 {
-		l.updateLayout(context)
-	}
-
 	return nil
 }
 
@@ -426,7 +421,11 @@ func (l *listItemWidget[T]) resetLayout() {
 	l.layoutItems = slices.Delete(l.layoutItems, 0, len(l.layoutItems))
 }
 
-func (l *listItemWidget[T]) updateLayout(context *guigui.Context) {
+func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearLayout {
+	if len(l.layout.Items) > 0 {
+		return l.layout
+	}
+
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       int(LineHeight(context)),
@@ -470,20 +469,18 @@ func (l *listItemWidget[T]) updateLayout(context *guigui.Context) {
 				},
 			},
 		}
-		return
+	} else {
+		l.layout = layout
 	}
-	l.layout = layout
+	return l.layout
 }
 
 func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	l.layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	l.ensureLayout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	if len(l.layout.Items) == 0 {
-		l.updateLayout(context)
-	}
-	return l.layout.Measure(context, constraints)
+	return l.ensureLayout(context).Measure(context, constraints)
 }
 
 func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
