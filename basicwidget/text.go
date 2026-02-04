@@ -1518,21 +1518,21 @@ func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 }
 
 type stringBuilderWithRange struct {
-	builder  strings.Builder
+	buf      []byte
 	start    int
 	endPlus1 int
 	offset   int
 }
 
 func (s *stringBuilderWithRange) Reset() {
-	s.builder.Reset()
+	s.buf = s.buf[:0]
 	s.start = 0
 	s.endPlus1 = 0
 	s.offset = 0
 }
 
 func (s *stringBuilderWithRange) ResetWithRange(start, end int) {
-	s.builder.Reset()
+	s.buf = s.buf[:0]
 	s.start = start
 	s.endPlus1 = end + 1
 	s.offset = 0
@@ -1558,13 +1558,10 @@ func (s *stringBuilderWithRange) Write(b []byte) (int, error) {
 		return origN, nil
 	}
 
-	if n, err := s.builder.Write(b[idx0-s.offset : idx1-s.offset]); err != nil {
-		n += idx0 - s.offset
-		return n, err
-	}
+	s.buf = append(s.buf, b[idx0-s.offset:idx1-s.offset]...)
 	return origN, nil
 }
 
 func (s *stringBuilderWithRange) String() string {
-	return s.builder.String()
+	return string(s.buf)
 }
