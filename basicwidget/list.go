@@ -353,12 +353,17 @@ type listItemWidget[T comparable] struct {
 	heightPlus1 int
 	style       ListStyle
 
+	layout      guigui.LinearLayout
 	layoutItems []guigui.LinearLayoutItem
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
+	if l.item == listItem {
+		return
+	}
 	l.item = listItem
-	// TODO: Should this call guigui.RequestRedraw(l) when the item changes?
+	l.resetLayout()
+	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setHeight(height int) {
@@ -366,6 +371,7 @@ func (l *listItemWidget[T]) setHeight(height int) {
 		return
 	}
 	l.heightPlus1 = height + 1
+	l.resetLayout()
 	guigui.RequestRebuild(l)
 }
 
@@ -374,6 +380,7 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 		return
 	}
 	l.style = style
+	l.resetLayout()
 	guigui.RequestRebuild(l)
 }
 
@@ -406,10 +413,20 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	context.SetEnabled(l, !l.item.Disabled)
 
+	// As a list can include bunch of list items, the layout is updated only when necessary.
+	if len(l.layout.Items) == 0 {
+		l.updateLayout(context)
+	}
+
 	return nil
 }
 
-func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout {
+func (l *listItemWidget[T]) resetLayout() {
+	l.layout = guigui.LinearLayout{}
+	l.layoutItems = slices.Delete(l.layoutItems, 0, len(l.layoutItems))
+}
+
+func (l *listItemWidget[T]) updateLayout(context *guigui.Context) {
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       int(LineHeight(context)),
@@ -444,7 +461,7 @@ func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout 
 		h = UnitSize(context) * 3 / 2
 	}
 	if h > 0 {
-		return guigui.LinearLayout{
+		l.layout = guigui.LinearLayout{
 			Direction: guigui.LayoutDirectionVertical,
 			Items: []guigui.LinearLayoutItem{
 				{
@@ -453,16 +470,17 @@ func (l *listItemWidget[T]) layout(context *guigui.Context) guigui.LinearLayout 
 				},
 			},
 		}
+		return
 	}
-	return layout
+	l.layout = layout
 }
 
 func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	l.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	l.layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return l.layout(context).Measure(context, constraints)
+	return l.layout.Measure(context, constraints)
 }
 
 func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
