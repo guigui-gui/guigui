@@ -601,8 +601,8 @@ func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
 	return l.itemBoundsForLayoutFromIndex[index]
 }
 
-func (l *listContent[T]) visibleItems() iter.Seq2[int, abstractListItem[T]] {
-	return func(yield func(int, abstractListItem[T]) bool) {
+func (l *listContent[T]) visibleItems() iter.Seq[int] {
+	return func(yield func(int) bool) {
 		var lastCollapsedIndentLevel int
 		for i := range l.abstractList.ItemCount() {
 			item, _ := l.abstractList.ItemByIndex(i)
@@ -614,7 +614,7 @@ func (l *listContent[T]) visibleItems() iter.Seq2[int, abstractListItem[T]] {
 			} else {
 				lastCollapsedIndentLevel = 0
 			}
-			if !yield(i, item) {
+			if !yield(i) {
 				return
 			}
 		}
