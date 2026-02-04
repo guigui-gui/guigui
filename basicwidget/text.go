@@ -1594,12 +1594,16 @@ func (s *stringEqualChecker) Result() bool {
 }
 
 func (s *stringEqualChecker) Write(b []byte) (int, error) {
+	if s.pos+len(b) > len(s.str) {
+		s.result = false
+		return 0, io.EOF
+	}
+
+	ss := s.str[s.pos : s.pos+len(b)]
+	// Eliminates the boundary check.
+	_ = ss[:len(b)]
 	for i, v := range b {
-		if s.pos >= len(s.str) {
-			s.result = false
-			return i, io.EOF
-		}
-		if s.str[s.pos] != v {
+		if ss[i] != v {
 			s.result = false
 			return i, io.EOF
 		}
