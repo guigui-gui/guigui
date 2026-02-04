@@ -119,9 +119,12 @@ func (c *Context) IsAutoColorModeUsed() bool {
 	return !c.colorModeSet
 }
 
+var (
+	envColorMode = os.Getenv("GUIGUI_COLOR_MODE")
+)
+
 func (c *Context) autoColorMode() ColorMode {
-	// TODO: Consider the system color mode.
-	switch mode := os.Getenv("GUIGUI_COLOR_MODE"); mode {
+	switch mode := envColorMode; mode {
 	case "light":
 		return ColorModeLight
 	case "dark":
