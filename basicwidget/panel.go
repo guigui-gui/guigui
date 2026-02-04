@@ -114,13 +114,14 @@ type panel struct {
 	contentConstraints PanelContentConstraints
 	scrollHidden       bool
 
-	offsetX           float64
-	offsetY           float64
-	nextOffsetSet     bool
-	isNextOffsetDelta bool
-	nextOffsetX       float64
-	nextOffsetY       float64
-	scrollBarCount    int
+	offsetX             float64
+	offsetY             float64
+	nextOffsetSet       bool
+	isNextOffsetDelta   bool
+	nextOffsetX         float64
+	nextOffsetY         float64
+	scrollBarCount      int
+	contentSizeAtLayout image.Point
 }
 
 func (p *panel) SetOnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
@@ -224,18 +225,19 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
-		contentSize := p.contentSize(context, widgetBounds)
-		p.scrollWheel.setContentSize(contentSize)
-		p.scrollHBar.setContentSize(contentSize)
-		p.scrollVBar.setContentSize(contentSize)
+		p.contentSizeAtLayout = p.contentSize(context, widgetBounds)
+		p.scrollWheel.setContentSize(p.contentSizeAtLayout)
+		p.scrollHBar.setContentSize(p.contentSizeAtLayout)
+		p.scrollVBar.setContentSize(p.contentSizeAtLayout)
 		p.SetScrollOffset(p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY))
 
 		pt := bounds.Min.Add(image.Pt(int(p.offsetX), int(p.offsetY)))
 		layouter.LayoutWidget(p.content, image.Rectangle{
 			Min: pt,
-			Max: pt.Add(contentSize),
+			Max: pt.Add(p.contentSizeAtLayout),
 		})
 	} else {
+		p.contentSizeAtLayout = image.Point{}
 		p.SetScrollOffset(p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY))
 	}
 
@@ -282,7 +284,7 @@ func (p *panel) adjustOffset(context *guigui.Context, widgetBounds *guigui.Widge
 
 func (p *panel) scrollRange(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	cs := p.contentSize(context, widgetBounds)
+	cs := p.contentSizeAtLayout
 	return image.Rectangle{
 		Min: image.Pt(min(bounds.Dx()-cs.X, 0), min(bounds.Dy()-cs.Y, 0)),
 		Max: image.Pt(0, 0),
@@ -383,7 +385,7 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 func (p *panel) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
 	bounds := widgetBounds.Bounds()
 
-	cs := p.contentSize(context, widgetBounds)
+	cs := p.contentSizeAtLayout
 	offsetX, offsetY := p.offset()
 	barWidth, barHeight := scrollThumbSize(context, widgetBounds, cs)
 
