@@ -480,6 +480,9 @@ func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 }
 
 func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	if len(l.layout.Items) == 0 {
+		l.updateLayout(context)
+	}
 	return l.layout.Measure(context, constraints)
 }
 
