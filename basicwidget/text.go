@@ -190,8 +190,12 @@ func (t *Text) resetCachedTextSize() {
 	t.cachedDefaultTabWidth = 0
 }
 
+func (t *Text) canHaveCursor() bool {
+	return t.selectable || t.editable
+}
+
 func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	if t.selectable || t.editable {
+	if t.canHaveCursor() {
 		adder.AddChild(&t.cursor)
 	}
 
@@ -233,7 +237,9 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds))
+	if t.canHaveCursor() {
+		layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds))
+	}
 }
 
 func (t *Text) SetSelectable(selectable bool) {
