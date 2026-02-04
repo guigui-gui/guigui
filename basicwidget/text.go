@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image"
 	"image/color"
+	"io"
 	"log/slog"
 	"math"
 	"slices"
@@ -95,12 +96,13 @@ func findWordBoundaries(text string, idx int) (start, end int) {
 type Text struct {
 	guigui.DefaultWidget
 
-	field         textinput.Field
-	valueBuilder  stringBuilderWithRange
-	nextTextSet   bool
-	nextText      string
-	nextSelectAll bool
-	textInited    bool
+	field             textinput.Field
+	valueBuilder      stringBuilderWithRange
+	valueEqualChecker stringEqualChecker
+	nextTextSet       bool
+	nextText          string
+	nextSelectAll     bool
+	textInited        bool
 
 	hAlign      HorizontalAlign
 	vAlign      VerticalAlign
@@ -247,6 +249,12 @@ func (t *Text) SetSelectable(selectable bool) {
 	guigui.RequestRebuild(t)
 }
 
+func (t *Text) isEqualToStringValue(text string) bool {
+	t.valueEqualChecker.Reset(text)
+	_ = t.field.WriteText(&t.valueEqualChecker)
+	return t.valueEqualChecker.Result()
+}
+
 func (t *Text) stringValue() string {
 	t.valueBuilder.Reset()
 	_ = t.field.WriteText(&t.valueBuilder)
@@ -276,7 +284,7 @@ func (t *Text) SetValue(text string) {
 	if t.nextTextSet && t.nextText == text {
 		return
 	}
-	if !t.nextTextSet && t.stringValue() == text {
+	if !t.nextTextSet && t.isEqualToStringValue(text) {
 		return
 	}
 	if !t.editable {
@@ -375,7 +383,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 
 	t.selectionShiftIndexPlus1 = 0
 
-	textChanged := t.stringValue() != text
+	textChanged := !t.isEqualToStringValue(text)
 	if s, e := t.field.Selection(); !textChanged && (!selectAll || s == 0 && e == len(text)) {
 		return false
 	}
@@ -794,8 +802,8 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			guigui.RequestRebuild(t)
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.gi
 			t.resetCachedTextSize()
-			if v := t.stringValue(); v != origText {
-				guigui.DispatchEvent(t, textEventValueChanged, v, false)
+			if !t.isEqualToStringValue(origText) {
+				guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 			}
 			return guigui.HandleInputByWidget(t)
 		}
@@ -1564,4 +1572,38 @@ func (s *stringBuilderWithRange) Write(b []byte) (int, error) {
 
 func (s *stringBuilderWithRange) String() string {
 	return string(s.buf)
+}
+
+type stringEqualChecker struct {
+	str    string
+	pos    int
+	result bool
+}
+
+func (s *stringEqualChecker) Reset(str string) {
+	s.str = str
+	s.pos = 0
+	s.result = true
+}
+
+func (s *stringEqualChecker) Result() bool {
+	if s.pos != len(s.str) {
+		return false
+	}
+	return s.result
+}
+
+func (s *stringEqualChecker) Write(b []byte) (int, error) {
+	for i, v := range b {
+		if s.pos >= len(s.str) {
+			s.result = false
+			return i, io.EOF
+		}
+		if s.str[s.pos] != v {
+			s.result = false
+			return i, io.EOF
+		}
+		s.pos++
+	}
+	return len(b), nil
 }
