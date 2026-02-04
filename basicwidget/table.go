@@ -337,7 +337,7 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 		w += t.table.columnWidthsInPixels[i]
 		h = max(h, s.Y)
 	}
-	h = max(h, int(LineHeight(context)))
+	h = max(h, LineHeight(context))
 	return image.Pt(w, h)
 }
 

@@ -52,5 +52,5 @@ func doubleClickLimitInTicks() int {
 }
 
 func defaultIconSize(context *guigui.Context) int {
-	return int(LineHeight(context))
+	return LineHeight(context)
 }

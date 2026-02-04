@@ -428,7 +428,7 @@ func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearL
 
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Gap:       int(LineHeight(context)),
+		Gap:       LineHeight(context),
 	}
 	l.layoutItems = slices.Delete(l.layoutItems, 0, len(l.layoutItems))
 	if l.item.Content != nil {
@@ -755,12 +755,12 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 			}
 			l.expanderImages.At(i).SetImage(img)
 			expanderP := p
-			expanderP.X += listItemIndentSize(context, item.IndentLevel) - int(LineHeight(context))
+			expanderP.X += listItemIndentSize(context, item.IndentLevel) - LineHeight(context)
 			// Adjust the position a bit for better appearance.
 			expanderP.Y += UnitSize(context) / 16
 			expanderP.Y += item.Padding.Top
 			s := image.Pt(
-				int(LineHeight(context)),
+				LineHeight(context),
 				contentH,
 			)
 			l.widgetBoundsForLayout[l.expanderImages.At(i)] = image.Rectangle{
@@ -1424,7 +1424,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 }
 
 func listItemCheckmarkSize(context *guigui.Context) int {
-	return int(LineHeight(context) * 3 / 4)
+	return LineHeight(context) * 3 / 4
 }
 
 func listItemTextAndImagePadding(context *guigui.Context) int {

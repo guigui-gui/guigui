@@ -159,5 +159,5 @@ func (t *Toggle) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBo
 }
 
 func (t *Toggle) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return image.Pt(int(float64(LineHeight(context))*1.75), int(LineHeight(context)))
+	return image.Pt(int(float64(LineHeight(context))*1.75), LineHeight(context))
 }
