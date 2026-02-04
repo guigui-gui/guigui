@@ -4,6 +4,7 @@
 package basicwidget
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 	"io"
@@ -1598,16 +1599,10 @@ func (s *stringEqualChecker) Write(b []byte) (int, error) {
 		s.result = false
 		return 0, io.EOF
 	}
-
-	ss := s.str[s.pos : s.pos+len(b)]
-	// Eliminates the boundary check.
-	_ = ss[:len(b)]
-	for i, v := range b {
-		if ss[i] != v {
-			s.result = false
-			return i, io.EOF
-		}
-		s.pos++
+	if !bytes.Equal([]byte(s.str[s.pos:s.pos+len(b)]), b) {
+		s.result = false
+		return 0, io.EOF
 	}
+	s.pos += len(b)
 	return len(b), nil
 }
