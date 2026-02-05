@@ -515,7 +515,7 @@ func (a *app) buildWidgets() error {
 	// An event handler is often a closure capturing variables, and this might cause unexpected behaviors.
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
-		clear(widgetState.eventHandlers)
+		widgetState.eventHandlers = slices.Delete(widgetState.eventHandlers, 0, len(widgetState.eventHandlers))
 		widgetState.focusDelegation = nil
 
 		widgetState.actualLayerPlus1Cache = 0

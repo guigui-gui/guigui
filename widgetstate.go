@@ -97,12 +97,19 @@ type widgetState struct {
 	children []Widget
 	prev     widgetsAndBounds
 
-	hidden          bool
-	disabled        bool
-	passthrough     bool
-	layer           int64
-	transparency    float64
-	eventHandlers   map[EventKey]any
+	hidden       bool
+	disabled     bool
+	passthrough  bool
+	layer        int64
+	transparency float64
+
+	// eventHandlers is a collection of event handlers.
+	// eventHandlers is reset whenever the widget is rebuilt.
+	//
+	// Use a slice instead of a map for performance.
+	// Especially, clearing a map is costly.
+	eventHandlers []eventHandler
+
 	tmpArgs         []reflect.Value
 	eventDispatched bool
 	clipChildren    bool
@@ -132,6 +139,11 @@ type widgetState struct {
 	isProxyCache      bool
 
 	_ noCopy
+}
+
+type eventHandler struct {
+	key     EventKey
+	handler any
 }
 
 func (w *widgetState) isInTree(now int64) bool {
@@ -321,19 +333,21 @@ func requestRedraw(widgetState *widgetState) {
 
 func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	widgetState := widget.widgetState()
-	if widgetState.eventHandlers == nil {
-		widgetState.eventHandlers = map[EventKey]any{}
-	}
-	widgetState.eventHandlers[eventKey] = handler
+	widgetState.eventHandlers = append(widgetState.eventHandlers, eventHandler{
+		key:     eventKey,
+		handler: handler,
+	})
 }
 
 func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
 	widgetState := widget.widgetState()
-	hanlder, ok := widgetState.eventHandlers[eventKey]
-	if !ok {
+	idx := slices.IndexFunc(widgetState.eventHandlers, func(h eventHandler) bool {
+		return h.key == eventKey
+	})
+	if idx == -1 {
 		return
 	}
-	f := reflect.ValueOf(hanlder)
+	f := reflect.ValueOf(widgetState.eventHandlers[idx].handler)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
 	for _, arg := range args {
