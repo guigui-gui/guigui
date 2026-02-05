@@ -11,7 +11,6 @@ import (
 	"slices"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/text/language"
@@ -57,15 +56,15 @@ type Context struct {
 	app     *app
 	inBuild bool
 
-	appScaleMinus1             float64
-	colorMode                  ColorMode
-	colorModeSet               bool
-	cachedDefaultColorMode     colormode.ColorMode
-	cachedDefaultColorModeTime time.Time
-	defaultColorWarnOnce       sync.Once
-	locales                    []language.Tag
-	allLocales                 []language.Tag
-	frontLayer                 int64
+	appScaleMinus1                   float64
+	colorMode                        ColorMode
+	colorModeSet                     bool
+	cachedDefaultColorMode           colormode.ColorMode
+	cachedDefaultColorModeExpireTick int64
+	defaultColorWarnOnce             sync.Once
+	locales                          []language.Tag
+	allLocales                       []language.Tag
+	frontLayer                       int64
 
 	defaultMethodCalled bool
 }
@@ -130,13 +129,13 @@ func (c *Context) autoColorMode() ColorMode {
 	case "dark":
 		return ColorModeDark
 	case "":
-		if time.Since(c.cachedDefaultColorModeTime) >= time.Second {
+		if ebiten.Tick() > c.cachedDefaultColorModeExpireTick {
 			m := colormode.SystemColorMode()
 			if c.cachedDefaultColorMode != m {
 				c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode, nil)
 			}
 			c.cachedDefaultColorMode = m
-			c.cachedDefaultColorModeTime = time.Now()
+			c.cachedDefaultColorModeExpireTick = ebiten.Tick() + int64(ebiten.TPS())
 		}
 		switch c.cachedDefaultColorMode {
 		case colormode.Light:
