@@ -444,7 +444,7 @@ func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearL
 		})
 		layout.Padding = ListItemTextPadding(context)
 	}
-	if l.keyText.Value() != "" {
+	if l.item.KeyText != "" {
 		l.layoutItems = append(l.layoutItems, guigui.LinearLayoutItem{
 			Widget: &l.keyText,
 		})
