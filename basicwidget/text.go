@@ -139,7 +139,7 @@ type Text struct {
 
 	cachedTextSizes       [4][4]cachedTextSizeEntry
 	cachedDefaultTabWidth float64
-	lastFace              text.Face
+	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
 
 	tmpLocales []language.Tag
@@ -199,8 +199,8 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		adder.AddChild(&t.cursor)
 	}
 
-	if f := t.face(context, false); t.lastFace != f {
-		t.lastFace = f
+	if key := t.faceCacheKey(context, false); t.lastFaceCacheKey != key {
+		t.lastFaceCacheKey = key
 		t.resetCachedTextSize()
 	}
 	if t.lastScale != context.Scale() {
@@ -599,7 +599,7 @@ func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle
 	return b
 }
 
-func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
+func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKey {
 	size := FontSize(context) * (t.scaleMinus1 + 1)
 	weight := text.WeightMedium
 	if t.bold || forceBold {
@@ -619,7 +619,18 @@ func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
 			lang = t.tmpLocales[0]
 		}
 	}
-	return fontFace(context, size, weight, liga, tnum, lang)
+	return faceCacheKey{
+		size:   size,
+		weight: weight,
+		liga:   liga,
+		tnum:   tnum,
+		lang:   lang,
+	}
+}
+
+func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
+	key := t.faceCacheKey(context, forceBold)
+	return fontFace(context, key)
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {

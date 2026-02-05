@@ -77,7 +77,7 @@ var (
 	prevLocales []language.Tag
 )
 
-func fontFace(context *guigui.Context, size float64, weight text.Weight, liga bool, tnum bool, lang language.Tag) text.Face {
+func fontFace(context *guigui.Context, key faceCacheKey) text.Face {
 	// As font entires registered by [RegisterFonts] might be affected by locales,
 	// clear the cache when the locales change.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
@@ -87,13 +87,6 @@ func fontFace(context *guigui.Context, size float64, weight text.Weight, liga bo
 		copy(prevLocales, tmpLocales)
 	}
 
-	key := faceCacheKey{
-		size:   size,
-		weight: weight,
-		liga:   liga,
-		tnum:   tnum,
-		lang:   lang,
-	}
 	if f, ok := theFaceCache[key]; ok {
 		return f
 	}
@@ -105,16 +98,16 @@ func fontFace(context *guigui.Context, size float64, weight text.Weight, liga bo
 	for _, entry := range tmpFaceSourceEntries {
 		gtf := &text.GoTextFace{
 			Source:   entry.FaceSource,
-			Size:     size,
-			Language: lang,
+			Size:     key.size,
+			Language: key.lang,
 		}
-		gtf.SetVariation(tagWght, float32(weight))
-		if liga {
+		gtf.SetVariation(tagWght, float32(key.weight))
+		if key.liga {
 			gtf.SetFeature(tagLiga, 1)
 		} else {
 			gtf.SetFeature(tagLiga, 0)
 		}
-		if tnum {
+		if key.tnum {
 			gtf.SetFeature(tagTnum, 1)
 		} else {
 			gtf.SetFeature(tagTnum, 0)
