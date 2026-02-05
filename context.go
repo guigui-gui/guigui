@@ -396,21 +396,14 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 		return state.visibleBoundsCache
 	}
 
-	parent := state.parent
-	if parent == nil {
-		b := c.app.bounds()
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
-	if state.inDifferentLayerFromParent() {
-		b := state.bounds
-		state.hasVisibleBoundsCache = true
-		state.visibleBoundsCache = b
-		return b
-	}
 	b := state.bounds
+	l := state.actualLayer()
 	for parent := state.parent; parent != nil; parent = parent.widgetState().parent {
+		if parent.widgetState().actualLayer() != l {
+			state.hasVisibleBoundsCache = true
+			state.visibleBoundsCache = b
+			return b
+		}
 		if parent.widgetState().clipChildren {
 			b = b.Intersect(c.visibleBounds(parent.widgetState()))
 			break
