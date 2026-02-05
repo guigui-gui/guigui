@@ -274,6 +274,12 @@ func (t *Text) stringValueWithRange(start, end int) string {
 	return t.valueBuilder.String()
 }
 
+func (t *Text) bytesValueWithRange(start, end int) []byte {
+	t.valueBuilder.ResetWithRange(start, end)
+	_ = t.field.WriteText(&t.valueBuilder)
+	return t.valueBuilder.Bytes()
+}
+
 func (t *Text) stringValueForRendering() string {
 	t.valueBuilder.Reset()
 	_ = t.field.WriteTextForRendering(&t.valueBuilder)
@@ -1366,7 +1372,7 @@ func (t *Text) CanPaste() bool {
 		slog.Error(err.Error())
 		return false
 	}
-	return ct != ""
+	return len(ct) > 0
 }
 
 func (t *Text) CanUndo() bool {
@@ -1388,7 +1394,7 @@ func (t *Text) Cut() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.stringValueWithRange(start, end)); err != nil {
+	if err := clipboard.WriteAll(t.bytesValueWithRange(start, end)); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -1401,7 +1407,7 @@ func (t *Text) Copy() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.stringValueWithRange(start, end)); err != nil {
+	if err := clipboard.WriteAll(t.bytesValueWithRange(start, end)); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -1414,7 +1420,7 @@ func (t *Text) Paste() bool {
 		slog.Error(err.Error())
 		return false
 	}
-	t.replaceTextAtSelection(ct)
+	t.replaceTextAtSelection(string(ct))
 	return true
 }
 
@@ -1590,6 +1596,10 @@ func (s *stringBuilderWithRange) Write(b []byte) (int, error) {
 
 func (s *stringBuilderWithRange) String() string {
 	return string(s.buf)
+}
+
+func (s *stringBuilderWithRange) Bytes() []byte {
+	return s.buf
 }
 
 type stringEqualChecker struct {

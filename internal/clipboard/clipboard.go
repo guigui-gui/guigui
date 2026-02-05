@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	clipboardWriteCh    = make(chan string, 1)
+	clipboardWriteCh    = make(chan []byte, 1)
 	cachedClipboardData atomic.Value
 )
 
@@ -41,18 +41,18 @@ func readToCache() {
 	cachedClipboardData.Store(data)
 }
 
-// TODO: Use []byte?
-func ReadAll() (string, error) {
-	v, ok := cachedClipboardData.Load().(string)
+func ReadAll() ([]byte, error) {
+	v, ok := cachedClipboardData.Load().([]byte)
 	if !ok {
-		return "", nil
+		return nil, nil
 	}
 	return v, nil
 }
 
-// TODO: Use []byte?
-func WriteAll(text string) error {
-	clipboardWriteCh <- text
-	cachedClipboardData.Store(text)
+func WriteAll(bs []byte) error {
+	v := make([]byte, len(bs))
+	copy(v, bs)
+	clipboardWriteCh <- v
+	cachedClipboardData.Store(v)
 	return nil
 }

@@ -9,11 +9,11 @@ import (
 	"golang.design/x/clipboard"
 )
 
-func readAll() (string, error) {
-	return string(clipboard.Read(clipboard.FmtText)), nil
+func readAll() ([]byte, error) {
+	return clipboard.Read(clipboard.FmtText), nil
 }
 
-func writeAll(text string) error {
-	clipboard.Write(clipboard.FmtText, []byte(text))
+func writeAll(text []byte) error {
+	clipboard.Write(clipboard.FmtText, text)
 	return nil
 }
