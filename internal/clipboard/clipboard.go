@@ -4,40 +4,55 @@
 package clipboard
 
 import (
+	"log/slog"
 	"sync/atomic"
-
-	"github.com/hajimehoshi/ebiten/v2"
+	"time"
 )
 
 var (
-	cachedClipboardData           atomic.Value
-	cachedClipboardDataExpireTime atomic.Int64
+	clipboardWriteCh    = make(chan string, 1)
+	cachedClipboardData atomic.Value
 )
 
-func ReadAll() (string, error) {
-	if ebiten.Tick() <= cachedClipboardDataExpireTime.Load() {
-		v, ok := cachedClipboardData.Load().(string)
-		if !ok {
-			return "", nil
+func init() {
+	go func() {
+		t := time.NewTicker(time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-t.C:
+				readToCache()
+			case text := <-clipboardWriteCh:
+				if err := writeAll(text); err != nil {
+					slog.Error("failed to write clipboard", "error", err)
+					continue
+				}
+			}
 		}
-		return v, nil
-	}
-	// TODO: Read clipboard data asynchronously.
-	data, err := readAll()
-	if err != nil {
-		return "", err
-	}
-	cachedClipboardData.Store(data)
-	cachedClipboardDataExpireTime.Store(ebiten.Tick() + int64(ebiten.TPS()))
-	return data, nil
+	}()
 }
 
-func WriteAll(text string) error {
-	// TODO: Write clipboard data asynchronously.
-	if err := writeAll(text); err != nil {
-		return err
+func readToCache() {
+	data, err := readAll()
+	if err != nil {
+		slog.Error("failed to read clipboard", "error", err)
+		return
 	}
+	cachedClipboardData.Store(data)
+}
+
+// TODO: Use []byte?
+func ReadAll() (string, error) {
+	v, ok := cachedClipboardData.Load().(string)
+	if !ok {
+		return "", nil
+	}
+	return v, nil
+}
+
+// TODO: Use []byte?
+func WriteAll(text string) error {
+	clipboardWriteCh <- text
 	cachedClipboardData.Store(text)
-	cachedClipboardDataExpireTime.Store(ebiten.Tick() + int64(ebiten.TPS()))
 	return nil
 }
