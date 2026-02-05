@@ -476,6 +476,11 @@ func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearL
 }
 
 func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	// Skip if the widget is not visible and has no content widget.
+	// If the widget has a content widget, this cannot be skipped because the content widget might have visible child widgets like a popup.
+	if widgetBounds.VisibleBounds().Empty() && l.item.Content == nil {
+		return
+	}
 	l.ensureLayout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
