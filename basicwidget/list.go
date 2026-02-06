@@ -1438,7 +1438,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		border = basicwidgetdraw.RoundedRectBorderTypeOutset
 	}
 	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(border))
-	borderWidth := float32(1 * context.Scale())
+	borderWidth := listBorderWidth(context)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)
 }
 
@@ -1455,4 +1455,8 @@ func listItemIndentSize(context *guigui.Context, level int) int {
 		return 0
 	}
 	return LineHeight(context) + LineHeight(context)/2*(level-1)
+}
+
+func listBorderWidth(context *guigui.Context) float32 {
+	return float32(1 * context.Scale())
 }

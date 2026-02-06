@@ -23,7 +23,6 @@ type Table[T comparable] struct {
 	listItems       []ListItem[T]
 	tableRows       []TableRow[T]
 	tableRowWidgets guigui.WidgetSlice[*tableRowWidget[T]]
-	columnTexts     guigui.WidgetSlice[*Text]
 	tableHeader     tableHeader[T]
 
 	columns              []TableColumn
@@ -94,23 +93,14 @@ func (t *Table[T]) updateTableRows() {
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	t.columnTexts.SetLen(len(t.columns))
-
 	adder.AddChild(&t.list)
-	for i := range t.columnTexts.Len() {
-		adder.AddChild(t.columnTexts.At(i))
-	}
 	adder.AddChild(&t.tableHeader)
+
+	context.SetClipChildren(&t.tableHeader, true)
 
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
-
-	for i, column := range t.columns {
-		t.columnTexts.At(i).SetValue(column.HeaderText)
-		t.columnTexts.At(i).SetHorizontalAlign(column.HeaderTextHorizontalAlign)
-		t.columnTexts.At(i).SetVerticalAlign(VerticalAlignMiddle)
-	}
 
 	t.updateTableRows()
 
@@ -156,22 +146,11 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	t.list.setContentWidth(contentWidth)
 
 	layouter.LayoutWidget(&t.list, bounds)
-	layouter.LayoutWidget(&t.tableHeader, bounds)
 
-	offsetX, _ := t.list.scrollOffset()
-	pt := bounds.Min
-	pt.X += int(offsetX)
-	pt.X += RoundedCornerRadius(context)
-	for i := range t.columnTexts.Len() {
-		textMin := pt.Add(image.Pt(UnitSize(context)/4, 0))
-		width := t.columnWidthsInPixels[i] - UnitSize(context)/2
-		textBounds := image.Rectangle{
-			Min: textMin,
-			Max: textMin.Add(image.Pt(width, tableHeaderHeight(context))),
-		}
-		layouter.LayoutWidget(t.columnTexts.At(i), textBounds)
-		pt.X += t.columnWidthsInPixels[i]
-	}
+	// The header content should not be rendered on the borders.
+	bounds.Min.X += int(listBorderWidth(context))
+	bounds.Max.X -= int(listBorderWidth(context))
+	layouter.LayoutWidget(&t.tableHeader, bounds)
 }
 
 func tableHeaderHeight(context *guigui.Context) int {
@@ -358,7 +337,46 @@ func (t *tableRowWidget[T]) listItem() ListItem[T] {
 type tableHeader[T comparable] struct {
 	guigui.DefaultWidget
 
+	columnTexts guigui.WidgetSlice[*Text]
+
 	table *Table[T]
+}
+
+func (t *tableHeader[T]) SetTable(table *Table[T]) {
+	t.table = table
+}
+
+func (t *tableHeader[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	t.columnTexts.SetLen(len(t.table.columns))
+	for i := range t.columnTexts.Len() {
+		adder.AddChild(t.columnTexts.At(i))
+	}
+
+	for i, column := range t.table.columns {
+		t.columnTexts.At(i).SetValue(column.HeaderText)
+		t.columnTexts.At(i).SetHorizontalAlign(column.HeaderTextHorizontalAlign)
+		t.columnTexts.At(i).SetVerticalAlign(VerticalAlignMiddle)
+	}
+
+	return nil
+}
+
+func (t *tableHeader[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	offsetX, _ := t.table.list.scrollOffset()
+	pt := bounds.Min
+	pt.X += int(offsetX)
+	pt.X += RoundedCornerRadius(context)
+	for i := range t.columnTexts.Len() {
+		textMin := pt.Add(image.Pt(UnitSize(context)/4, 0))
+		width := t.table.columnWidthsInPixels[i] - UnitSize(context)/2
+		textBounds := image.Rectangle{
+			Min: textMin,
+			Max: textMin.Add(image.Pt(width, tableHeaderHeight(context))),
+		}
+		layouter.LayoutWidget(t.columnTexts.At(i), textBounds)
+		pt.X += t.table.columnWidthsInPixels[i]
+	}
 }
 
 func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
