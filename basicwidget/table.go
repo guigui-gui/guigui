@@ -227,8 +227,7 @@ type tableRowWidget[T comparable] struct {
 	table *Table[T]
 	texts guigui.WidgetSlice[*Text]
 
-	//contentBounds map[guigui.Widget]image.Rectangle
-	layout guigui.Layout
+	linearLayoutItems []guigui.LinearLayoutItem
 }
 
 func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
@@ -261,12 +260,14 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 			adder.AddChild(t.texts.At(i))
 		}
 	}
-	l := guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionHorizontal,
-	}
+	return nil
+}
+
+func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	t.linearLayoutItems = slices.Delete(t.linearLayoutItems, 0, len(t.linearLayoutItems))
 	for i := range t.table.columnWidthsInPixels {
 		if i < len(t.row.Cells) && t.row.Cells[i].Content != nil {
-			l.Items = append(l.Items, guigui.LinearLayoutItem{
+			t.linearLayoutItems = append(t.linearLayoutItems, guigui.LinearLayoutItem{
 				Widget: t.row.Cells[i].Content,
 				Size:   guigui.FixedSize(t.table.columnWidthsInPixels[i]),
 			})
@@ -274,7 +275,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 			if i >= t.texts.Len() {
 				break
 			}
-			l.Items = append(l.Items,
+			t.linearLayoutItems = append(t.linearLayoutItems,
 				guigui.LinearLayoutItem{
 					Layout: guigui.LinearLayout{
 						Direction: guigui.LayoutDirectionHorizontal,
@@ -291,12 +292,10 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 		}
 
 	}
-	t.layout = l
-	return nil
-}
-
-func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	t.layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	(guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     t.linearLayoutItems,
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -306,6 +305,7 @@ func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.
 	for i, cell := range t.row.Cells {
 		var s image.Point
 		if cell.Content != nil {
+			// TODO: t.columnWidthsInPixels should not be accessed here.
 			s = cell.Content.Measure(context, guigui.FixedWidthConstraints(t.table.columnWidthsInPixels[i]))
 		} else {
 			// Assume that every item can use a bold font.
