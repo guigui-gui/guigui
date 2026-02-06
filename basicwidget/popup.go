@@ -334,12 +334,16 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 }
 
 func (p *popup) SetOpen(open bool) {
+	changed := open != p.IsOpen()
 	if open {
 		p.toOpen = true
 		p.toClose = false
 	} else {
 		p.toOpen = false
 		p.toClose = true
+	}
+	if changed {
+		guigui.RequestRebuild(p)
 	}
 }
 

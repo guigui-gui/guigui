@@ -306,10 +306,16 @@ func traverseWidget(widget Widget, f func(widget Widget) error) error {
 }
 
 func RequestRebuild(widget Widget) {
-	requestRebuild(widget.widgetState())
+	theApp.requestRebuild(widget.widgetState())
 }
 
-func requestRebuild(widgetState *widgetState) {
+func (a *app) requestRebuild(widgetState *widgetState) {
+	if !widgetState.isInTree(a.buildCount) {
+		// requestRebuild can be called with a widget that is not in the tree.
+		// For example, a popup widget that is not added yet can invoke this when opening it.
+		// As the special case, rebuild the root widget.
+		widgetState = a.root.widgetState()
+	}
 	widgetState.rebuildRequested = true
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
