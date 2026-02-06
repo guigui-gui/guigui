@@ -795,7 +795,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	}
 
 	l.widthForCachedHeight = cw
-	l.cachedHeight = p.Y - widgetBounds.Bounds().Min.Y
+	l.cachedHeight = p.Y - widgetBounds.Bounds().Min.Y + RoundedCornerRadius(context)
 
 	if l.customBackground != nil {
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
