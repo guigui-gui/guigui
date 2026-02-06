@@ -94,6 +94,8 @@ func (t *Table[T]) updateTableRows() {
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	t.columnTexts.SetLen(len(t.columns))
+
 	adder.AddChild(&t.list)
 	for i := range t.columnTexts.Len() {
 		adder.AddChild(t.columnTexts.At(i))
@@ -103,6 +105,12 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
+
+	for i, column := range t.columns {
+		t.columnTexts.At(i).SetValue(column.HeaderText)
+		t.columnTexts.At(i).SetHorizontalAlign(column.HeaderTextHorizontalAlign)
+		t.columnTexts.At(i).SetVerticalAlign(VerticalAlignMiddle)
+	}
 
 	t.updateTableRows()
 
@@ -119,20 +127,13 @@ func (t *Table[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	bounds := widgetBounds.Bounds()
 
 	t.columnWidthsInPixels = adjustSliceSize(t.columnWidthsInPixels, len(t.columns))
-	// t.columnWidthsInPixels = slices.Delete(t.columnWidthsInPixels, len(t.columns), len(t.columnWidthsInPixels)) // Not needed as it is just int slice and grown? No, needs to be exact size.
-	// Actually adjustSliceSize does Delete too.
-
 	t.columnLayoutItems = adjustSliceSize(t.columnLayoutItems, len(t.columns))
-
-	t.columnTexts.SetLen(len(t.columns))
 	for i, column := range t.columns {
 		t.columnLayoutItems[i] = guigui.LinearLayoutItem{
 			Size: column.Width,
 		}
-		t.columnTexts.At(i).SetValue(column.HeaderText)
-		t.columnTexts.At(i).SetHorizontalAlign(column.HeaderTextHorizontalAlign)
-		t.columnTexts.At(i).SetVerticalAlign(VerticalAlignMiddle)
 	}
+
 	// TODO: Use this at Layout. The issue is that the current LinearLayout cannot treat MinWidth well.
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
