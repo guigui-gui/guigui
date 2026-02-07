@@ -1051,7 +1051,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 
-			wasFocused := context.IsFocusedOrHasFocusedChild(l)
 			// A popup menu should not take a focus.
 			// For example, a context menu for a text field should not take a focus from the text field.
 			// TODO: It might be better to distinguish a menu and a popup menu in the future.
@@ -1062,9 +1061,11 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 					context.SetFocused(l, true)
 				}
 			}
-			if l.SelectedItemIndex() != index || !wasFocused || l.style == ListStyleMenu {
-				l.selectItemByIndex(index, true)
-			}
+
+			// If the list is for a menu, the selection should be fired even if the list is focused,
+			// in order to let the user know the item is selected.
+			l.selectItemByIndex(index, l.style == ListStyleMenu)
+
 			l.pressStartPlus1 = c.Add(image.Pt(1, 1))
 			l.startPressingIndexPlus1 = index + 1
 			if left {
