@@ -57,7 +57,7 @@ type Button struct {
 	textBold  bool
 
 	layoutItems []guigui.LinearLayoutItem
-	iconLayout  guigui.Layout
+	iconLayout  guigui.LinearLayout
 
 	pressed         bool
 	keepPressed     bool
@@ -212,11 +212,11 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		}
 
 		var toCreateIconLayout bool
-		if b.iconLayout == nil {
+		if len(b.iconLayout.Items) == 0 {
 			toCreateIconLayout = true
 		} else {
 			// The address of b.icon can be changed anytime, so the cahched layout must be updated accordingly.
-			iconItem := b.iconLayout.(guigui.LinearLayout).Items[1]
+			iconItem := b.iconLayout.Items[1]
 			toCreateIconLayout = iconItem.Widget != &b.icon || iconItem.Size != guigui.FixedSize(height)
 		}
 		if toCreateIconLayout {
