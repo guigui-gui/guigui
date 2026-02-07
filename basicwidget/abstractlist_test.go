@@ -95,7 +95,6 @@ func TestAbstractList(t *testing.T) {
 		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
 	}
 	indices := l.AppendSelectedItemIndices(nil)
-	slices.Sort(indices)
 	if !slices.Equal(indices, []int{0, 3}) {
 		t.Errorf("AppendSelectedItemIndices = %v, want [0, 3]", indices)
 	}
@@ -104,7 +103,6 @@ func TestAbstractList(t *testing.T) {
 		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
 	}
 	indices = l.AppendSelectedItemIndices(nil)
-	slices.Sort(indices)
 	if !slices.Equal(indices, []int{0, 3}) {
 		t.Errorf("AppendSelectedItemIndices = %v, want [0, 3]", indices)
 	}
@@ -113,7 +111,6 @@ func TestAbstractList(t *testing.T) {
 		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
 	}
 	indices = l.AppendSelectedItemIndices(nil)
-	slices.Sort(indices)
 	if !slices.Equal(indices, []int{0, 1}) {
 		t.Errorf("AppendSelectedItemIndices = %v, want [0, 1]", indices)
 	}
