@@ -188,3 +188,55 @@ func TestAbstractList(t *testing.T) {
 		t.Errorf("OnItemsSelected not called: got %v, want [1, 3]", selectedIndices)
 	}
 }
+
+func TestAbstractListSelectionSliceCopy(t *testing.T) {
+	type Item = basicwidget.AbstractListTestItem[string]
+	var l basicwidget.AbstractList[string, Item]
+
+	items := []Item{
+		{Value: "foo", Selectable: true},
+		{Value: "bar", Selectable: true},
+		{Value: "baz", Selectable: false},
+		{Value: "qux", Selectable: true},
+	}
+	l.SetItems(items)
+	l.SetMultiSelection(true)
+
+	var receivedIndices []int
+	l.SetOnItemsSelected(func(indices []int) {
+		// Modify the received slice to verify it's a copy
+		if len(indices) > 0 {
+			indices[0] = 999
+		}
+		receivedIndices = indices
+	})
+
+	// Select items.
+	inputIndices := []int{1, 0}
+	l.SelectItemsByIndices(inputIndices, true)
+
+	if receivedIndices == nil {
+		t.Fatal("onItemsSelected was not called")
+	}
+	if !slices.Equal(receivedIndices, []int{999, 1}) {
+		t.Errorf("receivedIndices: got %v, want [999, 1]", receivedIndices)
+	}
+	if !slices.Equal(inputIndices, []int{1, 0}) {
+		t.Errorf("inputIndices: got %v, want [1, 0]", inputIndices)
+	}
+
+	// Select the same items again.
+	inputIndices2 := []int{1, 0}
+	receivedIndices = nil
+	l.SelectItemsByIndices(inputIndices2, true)
+
+	if receivedIndices == nil {
+		t.Fatal("onItemsSelected was not called (forceFireEvents)")
+	}
+	if !slices.Equal(receivedIndices, []int{999, 1}) {
+		t.Errorf("receivedIndices: got %v, want [999, 1]", receivedIndices)
+	}
+	if !slices.Equal(inputIndices2, []int{1, 0}) {
+		t.Errorf("inputIndices2: got %v, want [1, 0]", inputIndices2)
+	}
+}

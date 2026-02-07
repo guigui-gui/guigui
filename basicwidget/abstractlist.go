@@ -70,6 +70,7 @@ func (a *abstractList[Value, Item]) SelectItemByIndex(index int, forceFireEvents
 }
 
 func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) bool {
+	indices = slices.Clone(indices)
 	indices = slices.DeleteFunc(indices, func(index int) bool {
 		return index < 0 || index >= len(a.items) || !a.items[index].selectable()
 	})
