@@ -8,6 +8,7 @@ import (
 	"sync"
 )
 
+// WidgetLayouter is an interface for laying out an individual widget.
 type WidgetLayouter interface {
 	LayoutWidget(widget Widget, bounds image.Rectangle)
 }
@@ -30,6 +31,7 @@ const (
 	sizeTypeFlexible
 )
 
+// FixedSize represents a fixed size in pixels.
 func FixedSize(value int) Size {
 	return Size{
 		typ:   sizeTypeFixed,
@@ -37,6 +39,8 @@ func FixedSize(value int) Size {
 	}
 }
 
+// FlexibleSize represents a flexible size.
+// The size is distributed proportionally to the values of the flexible items.
 func FlexibleSize(value int) Size {
 	return Size{
 		typ:   sizeTypeFlexible,
@@ -44,25 +48,48 @@ func FlexibleSize(value int) Size {
 	}
 }
 
+// LayoutDirection is the direction of the layout.
 type LayoutDirection int
 
 const (
+	// LayoutDirectionHorizontal arranges widgets horizontally.
 	LayoutDirectionHorizontal LayoutDirection = iota
+	// LayoutDirectionVertical arranges widgets vertically.
 	LayoutDirectionVertical
 )
 
+// Padding represents the padding around a layout.
 type Padding struct {
-	Start  int
-	Top    int
-	End    int
+	// Start is the padding in pixels at the start (left for LTR, right for RTL) of the layout.
+	//
+	// TODO: Support LTR/RTL.
+	Start int
+
+	// Top is the padding in pixels at the top of the layout.
+	Top int
+
+	// End is the padding in pixels at the end (right for LTR, left for RTL) of the layout.
+	//
+	// TODO: Support LTR/RTL.
+	End int
+
+	// Bottom is the padding in pixels at the bottom of the layout.
 	Bottom int
 }
 
+// LinearLayout arranges widgets in a linear fashion.
 type LinearLayout struct {
+	// Direction is the direction of the layout.
 	Direction LayoutDirection
-	Items     []LinearLayoutItem
-	Gap       int
-	Padding   Padding
+
+	// Items is the list of items to layout.
+	Items []LinearLayoutItem
+
+	// Gap is the gap in pixels between items.
+	Gap int
+
+	// Padding is the padding around the layout.
+	Padding Padding
 }
 
 var (

@@ -290,7 +290,6 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 					Size: guigui.FixedSize(t.table.columnWidthsInPixels[i]),
 				})
 		}
-
 	}
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
