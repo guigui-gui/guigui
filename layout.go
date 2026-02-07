@@ -8,16 +8,22 @@ import (
 	"sync"
 )
 
-// WidgetLayouter is an interface for laying out an individual widget.
+// WidgetLayouter is an interface for laying out a single widget.
 type WidgetLayouter interface {
+	// LayoutWidget lays out the given widget in the given bounds.
 	LayoutWidget(widget Widget, bounds image.Rectangle)
 }
 
-type Layout interface {
+// WidgetsLayouter is an interface for laying out multiple widgets.
+type WidgetsLayouter interface {
+	// LayoutWidgets lays out the given widgets in the given bounds.
 	LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter)
+
+	// Measure measures the size of the layout.
 	Measure(context *Context, constraints Constraints) image.Point
 }
 
+// Size represents the size of a layout item.
 type Size struct {
 	typ   sizeType
 	value int
@@ -108,7 +114,7 @@ var (
 type LinearLayoutItem struct {
 	Widget Widget
 	Size   Size
-	Layout Layout
+	Layout WidgetsLayouter
 }
 
 func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, layouter WidgetLayouter) {
