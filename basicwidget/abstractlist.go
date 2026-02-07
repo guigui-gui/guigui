@@ -15,6 +15,8 @@ type valuer[Value comparable] interface {
 type abstractList[Value comparable, Item valuer[Value]] struct {
 	items           []Item
 	selectedIndices []int
+	multiSelection  bool
+
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
 
@@ -27,6 +29,16 @@ func (a *abstractList[Value, Item]) SetOnItemSelected(f func(index int)) {
 
 func (a *abstractList[Value, Item]) SetOnItemsSelected(f func(indices []int)) {
 	a.onItemsSelected = f
+}
+
+func (a *abstractList[Value, Item]) SetMultiSelection(multi bool) {
+	if a.multiSelection == multi {
+		return
+	}
+	a.multiSelection = multi
+	if !multi && len(a.selectedIndices) > 1 {
+		a.SelectItemsByIndices(a.selectedIndices[:1], false)
+	}
 }
 
 func (a *abstractList[Value, Item]) SetItems(items []Item) {
@@ -62,6 +74,10 @@ func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFir
 		return index < 0 || index >= len(a.items) || !a.items[index].selectable()
 	})
 	slices.Sort(indices)
+
+	if !a.multiSelection && len(indices) > 1 {
+		indices = indices[:1]
+	}
 
 	if slices.Equal(a.selectedIndices, indices) {
 		if forceFireEvents {

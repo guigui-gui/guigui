@@ -89,12 +89,59 @@ func TestAbstractList(t *testing.T) {
 		t.Errorf("SelectedItemIndex() after SelectItemByValue(baz) = %d, want %d", got, want)
 	}
 
-	// Test SelectItemsByValues
+	// Test SelectItemsByValues with single selection (default)
+	l.SelectItemsByValues([]string{"foo", "qux"}, false)
+	if got, want := l.SelectedItemIndex(), 0; got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+
+	// Test SetMultiSelection
+	l.SetMultiSelection(true)
 	l.SelectItemsByValues([]string{"foo", "qux"}, false)
 	if got, want := l.SelectedItemCount(), 2; got != want {
 		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
 	}
 	indices := l.AppendSelectedItemIndices(nil)
+	if got, want := indices, []int{0, 3}; !slices.Equal(got, want) {
+		t.Errorf("AppendSelectedItemIndices = %v, want %v", got, want)
+	}
+
+	// Test disabling SetMultiSelection
+	l.SetMultiSelection(false)
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemIndex(), 0; got != want {
+		t.Errorf("SelectedItemIndex() = %d, want %d", got, want)
+	}
+
+	// Test SelectItemsByIndices with multi-selection disabled
+	l.SelectItemsByIndices([]int{0, 2, 3}, false) // Index 2 is not selectable.
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemIndex(), 0; got != want {
+		t.Errorf("SelectedItemIndex() = %d, want %d", got, want)
+	}
+
+	// Test SelectItemsByValues
+	l.SetMultiSelection(true)
+	l.SelectItemsByIndices([]int{0, 2, 3}, false) // Index 2 is not selectable.
+	if got, want := l.SelectedItemCount(), 2; got != want {
+		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
+	}
+	indices = l.AppendSelectedItemIndices(nil)
+	if !slices.Equal(indices, []int{0, 3}) {
+		t.Errorf("AppendSelectedItemIndices = %v, want [0, 3]", indices)
+	}
+	l.SelectItemsByValues([]string{"foo", "qux"}, false)
+	if got, want := l.SelectedItemCount(), 2; got != want {
+		t.Errorf("SelectedItemCount() = %d, want %d", got, want)
+	}
+	indices = l.AppendSelectedItemIndices(nil)
 	if !slices.Equal(indices, []int{0, 3}) {
 		t.Errorf("AppendSelectedItemIndices = %v, want [0, 3]", indices)
 	}
