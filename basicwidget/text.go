@@ -1262,7 +1262,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 }
 
 func textCursorWidth(context *guigui.Context) int {
-	return int(2 * context.Scale())
+	return int(math.Ceil(2 * context.Scale()))
 }
 
 func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
