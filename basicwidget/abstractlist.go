@@ -4,8 +4,19 @@
 package basicwidget
 
 import (
+	"maps"
 	"slices"
 )
+
+func fastFirstIndex(indices map[int]struct{}) int {
+	minIdx := -1
+	for idx := range indices {
+		if minIdx == -1 || idx < minIdx {
+			minIdx = idx
+		}
+	}
+	return minIdx
+}
 
 type valuer[Value comparable] interface {
 	value() Value
@@ -14,13 +25,20 @@ type valuer[Value comparable] interface {
 
 type abstractList[Value comparable, Item valuer[Value]] struct {
 	items           []Item
-	selectedIndices []int
+	selectedIndices map[int]struct{}
 	multiSelection  bool
 
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
 
 	tmpIndices []int
+}
+
+func (a *abstractList[Value, Item]) isItemIndexSelectable(index int) bool {
+	if index < 0 || index >= len(a.items) {
+		return false
+	}
+	return a.items[index].selectable()
 }
 
 func (a *abstractList[Value, Item]) SetOnItemSelected(f func(index int)) {
@@ -41,15 +59,19 @@ func (a *abstractList[Value, Item]) SetMultiSelection(multi bool) {
 	}
 	a.multiSelection = multi
 	if !multi && len(a.selectedIndices) > 1 {
-		a.SelectItemsByIndices(a.selectedIndices[:1], false)
+		// Keep the smallest index.
+		a.selectItemsByIndices(map[int]struct{}{
+			fastFirstIndex(a.selectedIndices): {},
+		}, false)
 	}
 }
 
 func (a *abstractList[Value, Item]) SetItems(items []Item) {
 	a.items = adjustSliceSize(items, len(items))
 	copy(a.items, items)
-	a.selectedIndices = slices.DeleteFunc(a.selectedIndices, func(index int) bool {
-		return index < 0 || index >= len(a.items) || !a.items[index].selectable()
+
+	maps.DeleteFunc(a.selectedIndices, func(idx int, _ struct{}) bool {
+		return !a.isItemIndexSelectable(idx)
 	})
 }
 
@@ -79,8 +101,8 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 	}
 
 	// If the item is already selected, deselect it.
-	if slices.Contains(a.selectedIndices, index) {
-		a.tmpIndices = append(a.tmpIndices[:0], a.selectedIndices...)
+	if _, ok := a.selectedIndices[index]; ok {
+		a.tmpIndices = a.AppendSelectedItemIndices(a.tmpIndices[:0])
 		a.tmpIndices = slices.DeleteFunc(a.tmpIndices, func(i int) bool {
 			return i == index
 		})
@@ -89,7 +111,7 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 
 	// If the item is not selected, select it.
 	if a.multiSelection {
-		a.tmpIndices = append(a.tmpIndices[:0], a.selectedIndices...)
+		a.tmpIndices = a.AppendSelectedItemIndices(a.tmpIndices[:0])
 		a.tmpIndices = append(a.tmpIndices, index)
 		return a.SelectItemsByIndices(a.tmpIndices, forceFireEvents)
 	}
@@ -100,43 +122,54 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 }
 
 func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) bool {
-	indices = slices.Clone(indices)
-	indices = slices.DeleteFunc(indices, func(index int) bool {
-		return index < 0 || index >= len(a.items) || !a.items[index].selectable()
-	})
-	slices.Sort(indices)
+	var m map[int]struct{}
+	if len(indices) > 0 {
+		m = make(map[int]struct{}, len(indices))
+		for _, idx := range indices {
+			m[idx] = struct{}{}
+		}
+	}
+	return a.selectItemsByIndices(m, forceFireEvents)
+}
 
+func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{}, forceFireEvents bool) bool {
+	maps.DeleteFunc(indices, func(idx int, _ struct{}) bool {
+		return !a.isItemIndexSelectable(idx)
+	})
 	if !a.multiSelection && len(indices) > 1 {
-		indices = indices[:1]
+		indices = map[int]struct{}{
+			fastFirstIndex(indices): {},
+		}
 	}
 
-	if slices.Equal(a.selectedIndices, indices) {
+	if maps.Equal(a.selectedIndices, indices) {
 		if forceFireEvents {
 			if a.onItemsSelected != nil {
-				a.onItemsSelected(indices)
+				s := slices.Collect(maps.Keys(indices))
+				slices.Sort(s)
+				a.onItemsSelected(s)
 			}
 			if a.onItemSelected != nil && len(indices) > 0 {
-				a.onItemSelected(indices[0])
+				a.onItemSelected(fastFirstIndex(indices))
 			}
 		}
 		return false
 	}
 
-	oldFirstIndex := -1
-	if len(a.selectedIndices) > 0 {
-		oldFirstIndex = a.selectedIndices[0]
-	}
+	oldFirstIndex := a.SelectedItemIndex()
 
-	a.selectedIndices = adjustSliceSize(a.selectedIndices, len(indices))
-	copy(a.selectedIndices, indices)
-
-	newFirstIndex := -1
-	if len(a.selectedIndices) > 0 {
-		newFirstIndex = a.selectedIndices[0]
+	clear(a.selectedIndices)
+	if a.selectedIndices == nil {
+		a.selectedIndices = map[int]struct{}{}
 	}
+	maps.Copy(a.selectedIndices, indices)
+
+	newFirstIndex := fastFirstIndex(indices)
 
 	if a.onItemsSelected != nil {
-		a.onItemsSelected(indices)
+		s := slices.Collect(maps.Keys(indices))
+		slices.Sort(s)
+		a.onItemsSelected(s)
 	}
 	if newFirstIndex >= 0 && (oldFirstIndex != newFirstIndex || forceFireEvents) {
 		if a.onItemSelected != nil {
@@ -168,45 +201,51 @@ func (a *abstractList[Value, Item]) SelectedItemCount() int {
 }
 
 func (a *abstractList[Value, Item]) SelectedItem() (Item, bool) {
-	if len(a.selectedIndices) > 0 {
-		idx := a.selectedIndices[0]
-		if idx < 0 || idx >= len(a.items) {
-			var item Item
-			return item, false
-		}
-		return a.items[idx], true
+	idx := a.SelectedItemIndex()
+	if idx == -1 {
+		var item Item
+		return item, false
 	}
-	var item Item
-	return item, false
+	return a.items[idx], true
 }
 
 func (a *abstractList[Value, Item]) AppendSelectedItems(items []Item) []Item {
-	for _, idx := range a.selectedIndices {
-		if idx < 0 || idx >= len(a.items) {
-			continue
-		}
+	a.tmpIndices = a.AppendSelectedItemIndices(a.tmpIndices[:0])
+	for _, idx := range a.tmpIndices {
 		items = append(items, a.items[idx])
 	}
 	return items
 }
 
 func (a *abstractList[Value, Item]) SelectedItemIndex() int {
-	if len(a.selectedIndices) > 0 {
-		return a.selectedIndices[0]
+	minIdx := -1
+	for idx := range a.selectedIndices {
+		if !a.isItemIndexSelectable(idx) {
+			continue
+		}
+		if minIdx == -1 || idx < minIdx {
+			minIdx = idx
+		}
 	}
-	return -1
+	return minIdx
 }
 
 func (a *abstractList[Value, Item]) IsSelectedItemIndex(index int) bool {
-	return slices.Contains(a.selectedIndices, index)
+	if !a.isItemIndexSelectable(index) {
+		return false
+	}
+	_, ok := a.selectedIndices[index]
+	return ok
 }
 
 func (a *abstractList[Value, Item]) AppendSelectedItemIndices(indices []int) []int {
-	for _, idx := range a.selectedIndices {
-		if idx < 0 || idx >= len(a.items) {
+	origLen := len(indices)
+	for idx := range a.selectedIndices {
+		if !a.isItemIndexSelectable(idx) {
 			continue
 		}
 		indices = append(indices, idx)
 	}
+	slices.Sort(indices[origLen:])
 	return indices
 }
