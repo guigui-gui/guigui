@@ -89,6 +89,10 @@ func (l *List[T]) SetStripeVisible(visible bool) {
 	l.content.SetStripeVisible(visible)
 }
 
+func (l *List[T]) SetMultiSelection(multi bool) {
+	l.content.abstractList.SetMultiSelection(multi)
+}
+
 func (l *List[T]) SetItemHeight(height int) {
 	if l.listItemHeightPlus1 == height+1 {
 		return
@@ -193,33 +197,33 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
 }
 
-func (l *List[T]) highlightedItemIndex(context *guigui.Context) int {
-	index := -1
-	switch l.content.Style() {
-	case ListStyleNormal, ListStyleSidebar:
-		index = l.content.SelectedItemIndex()
-	case ListStyleMenu:
-		if !l.content.isHoveringVisible() {
-			return -1
-		}
-		// TODO: The hovered item index is not updated yet.
-		// This requires the list's widgetBounds.
-		index = l.content.hoveredItemIndexPlus1 - 1
+func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) bool {
+	if l.content.Style() != ListStyleMenu {
+		return l.content.IsSelectedItemIndex(index)
+	}
+
+	if !l.content.isHoveringVisible() {
+		return false
+	}
+	// TODO: The hovered item index is not updated yet.
+	// This requires the list's widgetBounds.
+	if l.content.hoveredItemIndexPlus1-1 != index {
+		return false
 	}
 	if index < 0 || index >= l.listItemWidgets.Len() {
-		return -1
+		return false
 	}
 	if !l.abstractListItems[index].selectable() {
-		return -1
+		return false
 	}
 	if !context.IsEnabled(l.listItemWidgets.At(index)) {
-		return -1
+		return false
 	}
-	return index
+	return true
 }
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.highlightedItemIndex(context) == index {
+	if l.isHighlightedItemIndex(context, index) {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -231,6 +235,10 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 
 func (l *List[T]) SelectedItemIndex() int {
 	return l.content.SelectedItemIndex()
+}
+
+func (l *List[T]) AppendSelectedItemIndices(indices []int) []int {
+	return l.content.AppendSelectedItemIndices(indices)
 }
 
 func (l *List[T]) SelectedItem() (ListItem[T], bool) {
@@ -283,8 +291,16 @@ func (l *List[T]) SelectItemByIndex(index int) {
 	l.content.SelectItemByIndex(index)
 }
 
+func (l *List[T]) SelectItemsByIndices(indices []int) {
+	l.content.SelectItemsByIndices(indices)
+}
+
 func (l *List[T]) SelectItemByValue(value T) {
 	l.content.SelectItemByValue(value)
+}
+
+func (l *List[T]) SelectItemsByValues(values []T) {
+	l.content.SelectItemsByValues(values)
 }
 
 func (l *List[T]) JumpToItemByIndex(index int) {
@@ -873,8 +889,16 @@ func (l *listContent[T]) ItemByIndex(index int) (abstractListItem[T], bool) {
 	return l.abstractList.ItemByIndex(index)
 }
 
+func (l *listContent[T]) IsSelectedItemIndex(index int) bool {
+	return l.abstractList.IsSelectedItemIndex(index)
+}
+
 func (l *listContent[T]) SelectedItemIndex() int {
 	return l.abstractList.SelectedItemIndex()
+}
+
+func (l *listContent[T]) AppendSelectedItemIndices(indices []int) []int {
+	return l.abstractList.AppendSelectedItemIndices(indices)
 }
 
 func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
@@ -885,14 +909,32 @@ func (l *listContent[T]) SelectItemByIndex(index int) {
 	l.selectItemByIndex(index, false)
 }
 
+func (l *listContent[T]) SelectItemsByIndices(indices []int) {
+	if l.abstractList.SelectItemsByIndices(indices, false) {
+		guigui.RequestRebuild(l)
+	}
+}
+
 func (l *listContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
 	if l.abstractList.SelectItemByIndex(index, forceFireEvents) {
 		guigui.RequestRebuild(l)
 	}
 }
 
+func (l *listContent[T]) toggleItemSelectionByIndex(index int, forceFireEvents bool) {
+	if l.abstractList.ToggleItemSelectionByIndex(index, forceFireEvents) {
+		guigui.RequestRebuild(l)
+	}
+}
+
 func (l *listContent[T]) SelectItemByValue(value T) {
 	if l.abstractList.SelectItemByValue(value, false) {
+		guigui.RequestRebuild(l)
+	}
+}
+
+func (l *listContent[T]) SelectItemsByValues(values []T) {
+	if l.abstractList.SelectItemsByValues(values, false) {
 		guigui.RequestRebuild(l)
 	}
 }
@@ -1062,9 +1104,18 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				}
 			}
 
-			// If the list is for a menu, the selection should be fired even if the list is focused,
-			// in order to let the user know the item is selected.
-			l.selectItemByIndex(index, l.style == ListStyleMenu)
+			if l.style == ListStyleNormal && l.abstractList.MultiSelection() {
+				if (!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) ||
+					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+					l.toggleItemSelectionByIndex(index, false)
+				} else {
+					l.selectItemByIndex(index, false)
+				}
+			} else {
+				// If the list is for a menu, the selection should be fired even if the list is focused,
+				// in order to let the user know the item is selected.
+				l.selectItemByIndex(index, l.style == ListStyleMenu)
+			}
 
 			l.pressStartPlus1 = c.Add(image.Pt(1, 1))
 			l.startPressingIndexPlus1 = index + 1
@@ -1076,14 +1127,17 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.HandleInputResult{}
 
 		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
-			if item, _ := l.abstractList.ItemByIndex(index); item.Movable {
-				if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
-					itemBounds := l.itemBounds(context, index)
-					minY := (itemBounds.Min.Y + start.Y) / 2
-					maxY := (itemBounds.Max.Y + start.Y) / 2
-					if c.Y < minY || c.Y >= maxY {
-						l.dragSrcIndexPlus1 = index + 1
-						return guigui.HandleInputByWidget(l)
+			// TODO: Enable to move multiple items, if the selection is successive.
+			if l.abstractList.SelectedItemCount() == 1 {
+				if item, _ := l.abstractList.ItemByIndex(index); item.Movable {
+					if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
+						itemBounds := l.itemBounds(context, index)
+						minY := (itemBounds.Min.Y + start.Y) / 2
+						maxY := (itemBounds.Max.Y + start.Y) / 2
+						if c.Y < minY || c.Y >= maxY {
+							l.dragSrcIndexPlus1 = index + 1
+							return guigui.HandleInputByWidget(l)
+						}
 					}
 				}
 			}
@@ -1278,13 +1332,18 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	vb := widgetBounds.VisibleBounds()
 
 	// Draw the selected item background.
-	if clr := l.content.selectedItemColor(context); clr != nil && l.content.SelectedItemIndex() >= 0 && l.content.SelectedItemIndex() < l.content.abstractList.ItemCount() && l.content.isItemVisible(l.content.SelectedItemIndex()) {
-		bounds := l.content.itemBounds(context, l.content.SelectedItemIndex())
-		if l.content.style == ListStyleMenu {
-			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
-		}
-		if bounds.Overlaps(vb) {
-			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	if clr := l.content.selectedItemColor(context); clr != nil {
+		for _, index := range l.content.abstractList.AppendSelectedItemIndices(nil) {
+			if !l.content.isItemVisible(index) {
+				continue
+			}
+			bounds := l.content.itemBounds(context, index)
+			if l.content.style == ListStyleMenu {
+				bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
+			}
+			if bounds.Overlaps(vb) {
+				basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+			}
 		}
 	}
 

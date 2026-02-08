@@ -31,6 +31,10 @@ func (a *abstractList[Value, Item]) SetOnItemsSelected(f func(indices []int)) {
 	a.onItemsSelected = f
 }
 
+func (a *abstractList[Value, Item]) MultiSelection() bool {
+	return a.multiSelection
+}
+
 func (a *abstractList[Value, Item]) SetMultiSelection(multi bool) {
 	if a.multiSelection == multi {
 		return
@@ -191,6 +195,10 @@ func (a *abstractList[Value, Item]) SelectedItemIndex() int {
 		return a.selectedIndices[0]
 	}
 	return -1
+}
+
+func (a *abstractList[Value, Item]) IsSelectedItemIndex(index int) bool {
+	return slices.Contains(a.selectedIndices, index)
 }
 
 func (a *abstractList[Value, Item]) AppendSelectedItemIndices(indices []int) []int {

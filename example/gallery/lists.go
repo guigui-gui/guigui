@@ -25,17 +25,19 @@ type Lists struct {
 	indexNumberInput basicwidget.NumberInput
 	jumpButton       basicwidget.Button
 
-	configForm       basicwidget.Form
-	showStripeText   basicwidget.Text
-	showStripeToggle basicwidget.Toggle
-	showHeaderText   basicwidget.Text
-	showHeaderToggle basicwidget.Toggle
-	showFooterText   basicwidget.Text
-	showFooterToggle basicwidget.Toggle
-	movableText      basicwidget.Text
-	movableToggle    basicwidget.Toggle
-	enabledText      basicwidget.Text
-	enabledToggle    basicwidget.Toggle
+	configForm           basicwidget.Form
+	showStripeText       basicwidget.Text
+	showStripeToggle     basicwidget.Toggle
+	showHeaderText       basicwidget.Text
+	showHeaderToggle     basicwidget.Toggle
+	showFooterText       basicwidget.Text
+	showFooterToggle     basicwidget.Toggle
+	multiSelectionText   basicwidget.Text
+	multiSelectionToggle basicwidget.Toggle
+	movableText          basicwidget.Text
+	movableToggle        basicwidget.Toggle
+	enabledText          basicwidget.Text
+	enabledToggle        basicwidget.Toggle
 
 	listItems []basicwidget.ListItem[int]
 	treeItems []basicwidget.ListItem[int]
@@ -73,6 +75,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.listItems = slices.Delete(l.listItems, 0, len(l.listItems))
 	l.listItems = model.Lists().AppendListItems(l.listItems)
 	list.SetItems(l.listItems)
+	list.SetMultiSelection(model.Lists().MultiSelection())
 	context.SetEnabled(&l.list, model.Lists().Enabled())
 	l.list.SetFixedHeight(6 * u)
 
@@ -97,6 +100,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.treeItems = slices.Delete(l.treeItems, 0, len(l.treeItems))
 	l.treeItems = model.Lists().AppendTreeItems(l.treeItems)
 	tree.SetItems(l.treeItems)
+	tree.SetMultiSelection(model.Lists().MultiSelection())
 	context.SetEnabled(&l.tree, model.Lists().Enabled())
 	l.tree.SetFixedHeight(6 * u)
 
@@ -148,6 +152,13 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		model.Lists().SetFooterVisible(value)
 	})
 	l.showFooterToggle.SetValue(model.Lists().IsFooterVisible())
+	l.multiSelectionText.SetValue("Multi selection")
+	l.multiSelectionToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+		model.Lists().SetMultiSelection(value)
+		list.SetMultiSelection(value)
+		// Tree does not support multi-selection for now (or at least unrelated for this task)
+	})
+	l.multiSelectionToggle.SetValue(model.Lists().MultiSelection())
 	l.movableText.SetValue("Enable to move items")
 	l.movableToggle.SetValue(model.Lists().Movable())
 	l.movableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
@@ -171,6 +182,10 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		{
 			PrimaryWidget:   &l.showFooterText,
 			SecondaryWidget: &l.showFooterToggle,
+		},
+		{
+			PrimaryWidget:   &l.multiSelectionText,
+			SecondaryWidget: &l.multiSelectionToggle,
 		},
 		{
 			PrimaryWidget:   &l.movableText,

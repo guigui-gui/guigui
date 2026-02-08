@@ -300,11 +300,12 @@ type ListsModel struct {
 	listItems []basicwidget.ListItem[int]
 	treeItems []basicwidget.ListItem[int]
 
-	stripeVisible bool
-	headerVisible bool
-	footerVisible bool
-	unmovable     bool
-	disabled      bool
+	stripeVisible  bool
+	headerVisible  bool
+	footerVisible  bool
+	multiSelection bool
+	unmovable      bool
+	disabled       bool
 }
 
 func (l *ListsModel) ensureListItems() {
@@ -391,6 +392,14 @@ func (l *ListsModel) IsFooterVisible() bool {
 
 func (l *ListsModel) SetFooterVisible(hasFooter bool) {
 	l.footerVisible = hasFooter
+}
+
+func (l *ListsModel) MultiSelection() bool {
+	return l.multiSelection
+}
+
+func (l *ListsModel) SetMultiSelection(multi bool) {
+	l.multiSelection = multi
 }
 
 func (l *ListsModel) Movable() bool {
