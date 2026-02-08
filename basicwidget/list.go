@@ -1333,7 +1333,18 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	// Draw the selected item background.
 	if clr := l.content.selectedItemColor(context); clr != nil {
-		for _, index := range l.content.abstractList.AppendSelectedItemIndices(nil) {
+		// TODO: Improve the performance.
+		indexToVisibleItemIndex := map[int]int{}
+		var visibleItemIndexToIndex []int
+		var count int
+		for index := range l.content.visibleItems() {
+			if l.content.IsSelectedItemIndex(index) {
+				indexToVisibleItemIndex[index] = count
+			}
+			visibleItemIndexToIndex = append(visibleItemIndexToIndex, index)
+			count++
+		}
+		for _, index := range l.content.AppendSelectedItemIndices(nil) {
 			if !l.content.isItemVisible(index) {
 				continue
 			}
@@ -1342,7 +1353,30 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 				bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 			}
 			if bounds.Overlaps(vb) {
-				basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+				item, _ := l.content.ItemByIndex(index)
+				corners := basicwidgetdraw.Corners{}
+				// If prev visible item is adjacent to this item, don't draw the top corner.
+				vi := indexToVisibleItemIndex[index]
+				if vi-1 >= 0 && vi-1 < len(visibleItemIndexToIndex) {
+					if idx, ok := indexToVisibleItemIndex[visibleItemIndexToIndex[vi-1]]; ok {
+						prevItem, _ := l.content.ItemByIndex(idx)
+						if prevItem.IndentLevel <= item.IndentLevel {
+							corners.TopStart = true
+						}
+						corners.TopEnd = true
+					}
+				}
+				// If next visible item is adjacent to this item, don't draw the bottom corner.
+				if vi+1 >= 0 && vi+1 < len(visibleItemIndexToIndex) {
+					if idx, ok := indexToVisibleItemIndex[visibleItemIndexToIndex[vi+1]]; ok {
+						nextItem, _ := l.content.ItemByIndex(idx)
+						if nextItem.IndentLevel <= item.IndentLevel {
+							corners.BottomStart = true
+						}
+						corners.BottomEnd = true
+					}
+				}
+				basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, clr, RoundedCornerRadius(context), corners)
 			}
 		}
 	}
