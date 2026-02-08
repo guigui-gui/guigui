@@ -1338,9 +1338,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		var visibleItemIndexToIndex []int
 		var count int
 		for index := range l.content.visibleItems() {
-			if l.content.IsSelectedItemIndex(index) {
-				indexToVisibleItemIndex[index] = count
-			}
+			indexToVisibleItemIndex[index] = count
 			visibleItemIndexToIndex = append(visibleItemIndexToIndex, index)
 			count++
 		}
@@ -1354,12 +1352,13 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			}
 			if bounds.Overlaps(vb) {
 				item, _ := l.content.ItemByIndex(index)
-				corners := basicwidgetdraw.Corners{}
-				// If prev visible item is adjacent to this item, don't draw the top corner.
+				var corners basicwidgetdraw.Corners
 				vi := indexToVisibleItemIndex[index]
+				// If prev visible item is adjacent to this item, don't draw the top corner.
 				if vi-1 >= 0 && vi-1 < len(visibleItemIndexToIndex) {
-					if idx, ok := indexToVisibleItemIndex[visibleItemIndexToIndex[vi-1]]; ok {
-						prevItem, _ := l.content.ItemByIndex(idx)
+					prevIndex := visibleItemIndexToIndex[vi-1]
+					if l.content.IsSelectedItemIndex(prevIndex) {
+						prevItem, _ := l.content.ItemByIndex(prevIndex)
 						if prevItem.IndentLevel <= item.IndentLevel {
 							corners.TopStart = true
 						}
@@ -1368,8 +1367,9 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 				}
 				// If next visible item is adjacent to this item, don't draw the bottom corner.
 				if vi+1 >= 0 && vi+1 < len(visibleItemIndexToIndex) {
-					if idx, ok := indexToVisibleItemIndex[visibleItemIndexToIndex[vi+1]]; ok {
-						nextItem, _ := l.content.ItemByIndex(idx)
+					nextIndex := visibleItemIndexToIndex[vi+1]
+					if l.content.IsSelectedItemIndex(nextIndex) {
+						nextItem, _ := l.content.ItemByIndex(nextIndex)
 						if nextItem.IndentLevel <= item.IndentLevel {
 							corners.BottomStart = true
 						}
