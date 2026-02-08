@@ -240,3 +240,88 @@ func TestAbstractListSelectionSliceCopy(t *testing.T) {
 		t.Errorf("inputIndices2: got %v, want [1, 0]", inputIndices2)
 	}
 }
+
+func TestAbstractListToggleItemSelectionByIndex(t *testing.T) {
+	type Item = basicwidget.AbstractListTestItem[string]
+	var l basicwidget.AbstractList[string, Item]
+
+	items := []Item{
+		{Value: "foo", Selectable: true},
+		{Value: "bar", Selectable: true},
+		{Value: "baz", Selectable: false},
+		{Value: "qux", Selectable: true},
+	}
+	l.SetItems(items)
+
+	// Test Single Selection Mode (default)
+	l.ToggleItemSelectionByIndex(0, false)
+	if got, want := l.SelectedItemIndex(), 0; got != want {
+		t.Errorf("Single: Toggle(0) index = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Single: Toggle(0) count = %d, want %d", got, want)
+	}
+	l.ToggleItemSelectionByIndex(0, false)
+	if got, want := l.SelectedItemIndex(), -1; got != want {
+		t.Errorf("Single: Toggle(0) again index = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemCount(), 0; got != want {
+		t.Errorf("Single: Toggle(0) count = %d, want %d", got, want)
+	}
+
+	l.ToggleItemSelectionByIndex(0, false)
+	l.ToggleItemSelectionByIndex(1, false)
+	if got, want := l.SelectedItemIndex(), 1; got != want {
+		t.Errorf("Single: Toggle(1) after (0) index = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Single: Toggle(1) after (0) count = %d, want %d", got, want)
+	}
+
+	// Test Multi Selection Mode
+	l.SetMultiSelection(true)
+	l.SelectItemsByIndices(nil, false)
+
+	l.ToggleItemSelectionByIndex(0, false)
+	if got, want := l.SelectedItemIndex(), 0; got != want {
+		t.Errorf("Multi: Toggle(0) index = %d, want %d", got, want)
+	}
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Multi: Toggle(0) count = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0}) {
+		t.Errorf("Multi: Indices = %v, want [0]", indices)
+	}
+
+	l.ToggleItemSelectionByIndex(3, false)
+	if got, want := l.SelectedItemCount(), 2; got != want {
+		t.Errorf("Multi: Toggle(3) count = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 3}) {
+		t.Errorf("Multi: Indices = %v, want [0, 3]", indices)
+	}
+
+	l.ToggleItemSelectionByIndex(0, false)
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Multi: Toggle(0) again count = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
+		t.Errorf("Multi: Indices = %v, want [3]", indices)
+	}
+
+	l.ToggleItemSelectionByIndex(2, false) // Non-selectable item
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Multi: Toggle(2) count = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
+		t.Errorf("Multi: Indices = %v, want [3]", indices)
+	}
+
+	l.ToggleItemSelectionByIndex(99, false) // Out of bounds
+	if got, want := l.SelectedItemCount(), 1; got != want {
+		t.Errorf("Multi: Toggle(99) count = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
+		t.Errorf("Multi: Indices = %v, want [3]", indices)
+	}
+}
