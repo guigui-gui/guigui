@@ -257,6 +257,15 @@ func (l *List[T]) ItemByIndex(index int) (ListItem[T], bool) {
 	return l.listItemWidgets.At(index).item, true
 }
 
+func (l *List[T]) IndexByValue(value T) int {
+	for i := range l.listItemWidgets.Len() {
+		if l.listItemWidgets.At(i).item.Value == value {
+			return i
+		}
+	}
+	return -1
+}
+
 func (l *List[T]) SetItemsByStrings(strs []string) {
 	items := make([]ListItem[T], len(strs))
 	for i, str := range strs {
