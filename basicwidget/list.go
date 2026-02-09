@@ -921,6 +921,12 @@ func (l *listContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
 	}
 }
 
+func (l *listContent[T]) extendItemSelectionByIndex(index int, forceFireEvents bool) {
+	if l.abstractList.ExtendItemSelectionByIndex(index, forceFireEvents) {
+		guigui.RequestRebuild(l)
+	}
+}
+
 func (l *listContent[T]) toggleItemSelectionByIndex(index int, forceFireEvents bool) {
 	if l.abstractList.ToggleItemSelectionByIndex(index, forceFireEvents) {
 		guigui.RequestRebuild(l)
@@ -1105,7 +1111,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			}
 
 			if l.style == ListStyleNormal && l.abstractList.MultiSelection() {
-				if (!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) ||
+				if ebiten.IsKeyPressed(ebiten.KeyShift) {
+					l.extendItemSelectionByIndex(index, false)
+				} else if (!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) ||
 					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
 					l.toggleItemSelectionByIndex(index, false)
 				} else {

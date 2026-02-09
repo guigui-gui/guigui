@@ -325,3 +325,128 @@ func TestAbstractListToggleItemSelectionByIndex(t *testing.T) {
 		t.Errorf("Multi: Indices = %v, want [3]", indices)
 	}
 }
+
+func TestAbstractListExtendItemSelectionByIndex(t *testing.T) {
+	type Item = basicwidget.AbstractListTestItem[string]
+	var l basicwidget.AbstractList[string, Item]
+
+	items := []Item{
+		{Value: "0", Selectable: true},
+		{Value: "1", Selectable: true},
+		{Value: "2", Selectable: true},
+		{Value: "3", Selectable: true},
+		{Value: "4", Selectable: true},
+		{Value: "5", Selectable: false}, // Not selectable
+		{Value: "6", Selectable: true},
+	}
+	l.SetItems(items)
+	l.SetMultiSelection(true)
+
+	// Extend selection from the anchor (0) to 2.
+	// As the anchor is 0, the items 0, 1, and 2 should be selected.
+	l.ExtendItemSelectionByIndex(2, false)
+	if got, want := l.SelectedItemCount(), 3; got != want {
+		t.Errorf("SelectedItemCount = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 1, 2}) {
+		t.Errorf("Indices = %v, want [0, 1, 2]", indices)
+	}
+
+	// Extend selection from the anchor (0) to 4.
+	// As the anchor is 0, the items 0, 1, 2, 3, and 4 should be selected.
+	// The previous extension (0, 1, 2) should be cleared.
+	l.ExtendItemSelectionByIndex(4, false)
+	if got, want := l.SelectedItemCount(), 5; got != want {
+		t.Errorf("SelectedItemCount = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 1, 2, 3, 4}) {
+		t.Errorf("Indices = %v, want [0, 1, 2, 3, 4]", indices)
+	}
+
+	// Extend selection from the anchor (0) to 1.
+	// As the anchor is 0, the items 0 and 1 should be selected.
+	// The previous extension (0, 1, 2, 3, 4) should be cleared.
+	l.ExtendItemSelectionByIndex(1, false)
+	if got, want := l.SelectedItemCount(), 2; got != want {
+		t.Errorf("SelectedItemCount = %d, want %d", got, want)
+	}
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 1}) {
+		t.Errorf("Indices = %v, want [0, 1]", indices)
+	}
+
+	// Select 3. The anchor should be updated to 3.
+	// The existing selection should be cleared.
+	l.SelectItemByIndex(3, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
+		t.Errorf("Indices = %v, want [3]", indices)
+	}
+
+	// Extend selection from the anchor (3) to 1.
+	// As the anchor is 3, the items 1, 2, and 3 should be selected.
+	l.ExtendItemSelectionByIndex(1, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{1, 2, 3}) {
+		t.Errorf("Indices = %v, want [1, 2, 3]", indices)
+	}
+
+	// Extend selection from the anchor (3) to 6.
+	// As the anchor is 3, the items 3, 4, and 6 should be selected.
+	// Item 5 is not selectable.
+	// The previous extension (1, 2, 3) should be cleared.
+	l.ExtendItemSelectionByIndex(6, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3, 4, 6}) {
+		t.Errorf("Indices = %v, want [3, 4, 6]", indices)
+	}
+
+	// Toggle 0. The anchor should be updated to 0.
+	// Item 0 should be added to the selection.
+	l.ToggleItemSelectionByIndex(0, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 3, 4, 6}) {
+		t.Errorf("Indices = %v, want [0, 3, 4, 6]", indices)
+	}
+
+	// Extend selection from the anchor (0) to 2.
+	// As the anchor is 0, the items 0, 1, and 2 should be selected.
+	// This extension should be added to the existing selection (3, 4, 6).
+	// There is no previous extension to clear as ToggleItemSelectionByIndex resets the last extension.
+	l.ExtendItemSelectionByIndex(2, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 1, 2, 3, 4, 6}) {
+		t.Errorf("Indices = %v, want [0, 1, 2, 3, 4, 6]", indices)
+	}
+
+	// Toggle 0. The anchor should be updated to 1 (the minimum index of the remaining selection).
+	// Item 0 should be removed from the selection.
+	l.ToggleItemSelectionByIndex(0, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{1, 2, 3, 4, 6}) {
+		t.Errorf("Indices = %v, want [1, 2, 3, 4, 6]", indices)
+	}
+
+	// Extend selection from the anchor (1) to 3.
+	// As the anchor is 1, the items 1, 2, and 3 should be selected.
+	// This extension should be added to the existing selection (4, 6).
+	// There is no previous extension to clear as ToggleItemSelectionByIndex resets the last extension.
+	l.ExtendItemSelectionByIndex(3, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{1, 2, 3, 4, 6}) {
+		t.Errorf("Indices = %v, want [1, 2, 3, 4, 6]", indices)
+	}
+
+	// Extend selection from the anchor (1) to 4.
+	// As the anchor is 1, the items 1, 2, 3, and 4 should be selected.
+	// The previous extension (1, 2, 3) should be cleared.
+	// The item 6 should be kept selected.
+	l.ExtendItemSelectionByIndex(4, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{1, 2, 3, 4, 6}) {
+		t.Errorf("Indices = %v, want [1, 2, 3, 4, 6]", indices)
+	}
+
+	// Switch to single selection mode.
+	// The selection should be updated to the anchor (1).
+	l.SetMultiSelection(false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{1}) {
+		t.Errorf("Single selection: Indices = %v, want [1]", indices)
+	}
+
+	l.ExtendItemSelectionByIndex(3, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
+		t.Errorf("Single selection: Indices = %v, want [3]", indices)
+	}
+}
