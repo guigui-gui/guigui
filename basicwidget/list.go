@@ -152,6 +152,10 @@ func (l *List[T]) resetHoveredItemIndex() {
 	l.content.resetHoveredItemIndex()
 }
 
+func (l *List[T]) IsItemVisible(index int) bool {
+	return l.content.isItemVisible(index)
+}
+
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&l.background1)
 	adder.AddChild(&l.panel)
