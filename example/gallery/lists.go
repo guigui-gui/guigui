@@ -69,7 +69,14 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 	list.SetOnItemsMoved(func(context *guigui.Context, from, count, to int) {
 		idx := model.Lists().MoveListItems(from, count, to)
-		list.SelectItemByIndex(idx)
+		if idx < 0 || idx >= len(l.listItems) {
+			return
+		}
+		var indices []int
+		for i := range count {
+			indices = append(indices, idx+i)
+		}
+		list.SelectItemsByIndices(indices)
 	})
 
 	l.listItems = slices.Delete(l.listItems, 0, len(l.listItems))

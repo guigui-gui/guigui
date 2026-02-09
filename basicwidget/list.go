@@ -1093,8 +1093,10 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.AbortHandlingInputByWidget(l)
 		}
 		if l.dragDstIndexPlus1 > 0 {
-			// TODO: Implement multiple items drop.
-			guigui.DispatchEvent(l, listEventItemsMoved, l.dragSrcIndexPlus1-1, 1, l.dragDstIndexPlus1-1)
+			indices := l.abstractList.AppendSelectedItemIndices(nil)
+			if len(indices) > 0 {
+				guigui.DispatchEvent(l, listEventItemsMoved, indices[0], len(indices), l.dragDstIndexPlus1-1)
+			}
 			l.dragDstIndexPlus1 = 0
 		}
 		l.dragSrcIndexPlus1 = 0
@@ -1164,29 +1166,59 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.HandleInputResult{}
 
 		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
-			// TODO: Enable to move multiple items, if the selection is successive.
-			if l.abstractList.SelectedItemCount() == 1 {
-				if item, _ := l.abstractList.ItemByIndex(index); item.Movable {
-					if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
-						itemBounds := l.itemBounds(context, index)
-						minY := (itemBounds.Min.Y + start.Y) / 2
-						maxY := (itemBounds.Max.Y + start.Y) / 2
-						if c.Y < minY || c.Y >= maxY {
-							l.dragSrcIndexPlus1 = index + 1
-							return guigui.HandleInputByWidget(l)
-						}
-					}
+			if ebiten.IsKeyPressed(ebiten.KeyShift) {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
+				isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			if l.startPressingIndexPlus1 == 0 {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			index := l.startPressingIndexPlus1 - 1
+			if !l.abstractList.IsSelectedItemIndex(index) {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			if l.abstractList.SelectGroupAt(index, false) {
+				guigui.RequestRebuild(l)
+			}
+			if !l.abstractList.IsSelectedItemIndex(index) {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			indices := l.abstractList.AppendSelectedItemIndices(nil)
+			if len(indices) == 0 {
+				return guigui.AbortHandlingInputByWidget(l)
+			}
+			for _, index := range indices {
+				item, _ := l.abstractList.ItemByIndex(index)
+				if !item.Movable {
+					return guigui.AbortHandlingInputByWidget(l)
+				}
+			}
+			if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
+				itemBoundsMin := l.itemBounds(context, indices[0])
+				itemBoundsMax := l.itemBounds(context, indices[len(indices)-1])
+				minY := min((itemBoundsMin.Min.Y+start.Y)/2, (itemBoundsMin.Min.Y+itemBoundsMin.Max.Y)/2)
+				maxY := max((itemBoundsMax.Max.Y+start.Y)/2, (itemBoundsMax.Min.Y+itemBoundsMax.Max.Y)/2)
+				if c.Y < minY || c.Y >= maxY {
+					l.dragSrcIndexPlus1 = indices[0] + 1
+					return guigui.HandleInputByWidget(l)
 				}
 			}
 			return guigui.AbortHandlingInputByWidget(l)
 
 		case inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft):
 			// For the multi selection, the index is updated when the user releases the mouse button.
-			if l.style == ListStyleNormal && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 && !ebiten.IsKeyPressed(ebiten.KeyShift) && !ebiten.IsKeyPressed(ebiten.KeyControl) && !ebiten.IsKeyPressed(ebiten.KeyMeta) {
-				l.selectItemByIndex(l.startPressingIndexPlus1-1, false)
-				l.pressStartPlus1 = image.Point{}
-				l.startPressingIndexPlus1 = 0
-				return guigui.HandleInputByWidget(l)
+			if l.style == ListStyleNormal && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 {
+				if !ebiten.IsKeyPressed(ebiten.KeyShift) &&
+					!(!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) &&
+					!(isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta)) {
+					l.selectItemByIndex(l.startPressingIndexPlus1-1, false)
+					l.pressStartPlus1 = image.Point{}
+					l.startPressingIndexPlus1 = 0
+					return guigui.HandleInputByWidget(l)
+				}
 			}
 			l.pressStartPlus1 = image.Point{}
 			l.startPressingIndexPlus1 = 0
