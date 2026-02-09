@@ -1133,9 +1133,12 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				} else if (!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) ||
 					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
 					l.toggleItemSelectionByIndex(index, false)
-				} else {
+				} else if !l.abstractList.IsSelectedItemIndex(index) {
 					l.selectItemByIndex(index, false)
 				}
+				// If the index is already selected, don't change the selection by clicking,
+				// or the user couldn't drag multiple items.
+				// This is updated when the user releases the mouse button.
 			} else {
 				// If the list is for a menu, the selection should be fired even if the list is focused,
 				// in order to let the user know the item is selected.
@@ -1169,6 +1172,13 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.AbortHandlingInputByWidget(l)
 
 		case inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft):
+			// For the multi selection, the index is updated when the user releases the mouse button.
+			if l.style == ListStyleNormal && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 && !ebiten.IsKeyPressed(ebiten.KeyShift) && !ebiten.IsKeyPressed(ebiten.KeyControl) && !ebiten.IsKeyPressed(ebiten.KeyMeta) {
+				l.selectItemByIndex(l.startPressingIndexPlus1-1, false)
+				l.pressStartPlus1 = image.Point{}
+				l.startPressingIndexPlus1 = 0
+				return guigui.HandleInputByWidget(l)
+			}
 			l.pressStartPlus1 = image.Point{}
 			l.startPressingIndexPlus1 = 0
 			return guigui.AbortHandlingInputByWidget(l)
