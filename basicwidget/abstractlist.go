@@ -102,23 +102,23 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 
 	// If the item is already selected, deselect it.
 	if _, ok := a.selectedIndices[index]; ok {
-		a.tmpIndices = a.AppendSelectedItemIndices(a.tmpIndices[:0])
-		a.tmpIndices = slices.DeleteFunc(a.tmpIndices, func(i int) bool {
-			return i == index
-		})
-		return a.SelectItemsByIndices(a.tmpIndices, forceFireEvents)
+		m := maps.Clone(a.selectedIndices)
+		delete(m, index)
+		return a.selectItemsByIndices(m, forceFireEvents)
 	}
 
 	// If the item is not selected, select it.
 	if a.multiSelection {
-		a.tmpIndices = a.AppendSelectedItemIndices(a.tmpIndices[:0])
-		a.tmpIndices = append(a.tmpIndices, index)
-		return a.SelectItemsByIndices(a.tmpIndices, forceFireEvents)
+		m := maps.Clone(a.selectedIndices)
+		if m == nil {
+			m = map[int]struct{}{}
+		}
+		m[index] = struct{}{}
+		return a.selectItemsByIndices(m, forceFireEvents)
 	}
 
 	// In single selection mode, replace the selection.
-	a.tmpIndices = append(a.tmpIndices[:0], index)
-	return a.SelectItemsByIndices(a.tmpIndices, forceFireEvents)
+	return a.selectItemsByIndices(map[int]struct{}{index: {}}, forceFireEvents)
 }
 
 func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) bool {
