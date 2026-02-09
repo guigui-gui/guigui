@@ -18,6 +18,7 @@ type AbstractList[Value comparable, Item AbstractListValuer[Value]] struct {
 type AbstractListTestItem[T comparable] struct {
 	Value      T
 	Selectable bool
+	Visible    bool
 }
 
 func (a AbstractListTestItem[T]) value() T {
@@ -26,4 +27,8 @@ func (a AbstractListTestItem[T]) value() T {
 
 func (a AbstractListTestItem[T]) selectable() bool {
 	return a.Selectable
+}
+
+func (a AbstractListTestItem[T]) visible() bool {
+	return a.Visible
 }

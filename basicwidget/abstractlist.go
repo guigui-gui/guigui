@@ -22,6 +22,7 @@ func fastFirstIndex(indices map[int]struct{}) int {
 type valuer[Value comparable] interface {
 	value() Value
 	selectable() bool
+	visible() bool
 }
 
 type abstractList[Value comparable, Item valuer[Value]] struct {
@@ -324,4 +325,53 @@ func (a *abstractList[Value, Item]) AppendSelectedItemIndices(indices []int) []i
 	}
 	slices.Sort(indices[origLen:])
 	return indices
+}
+
+// SelectGroupAt selects the group that contains the given index.
+// If index is not selected, select it and deselect all other items.
+// If index is selected, keep it. And if the index is in a group, select all items in the group and deselect all other items.
+// A group is a contiguous range of selected visible items.
+func (a *abstractList[Value, Item]) SelectGroupAt(index int, forceFireEvents bool) bool {
+	if !a.multiSelection {
+		return a.SelectItemByIndex(index, forceFireEvents)
+	}
+
+	if index < 0 || index >= len(a.items) {
+		return a.SelectItemsByIndices(nil, forceFireEvents)
+	}
+
+	if _, ok := a.selectedIndices[index]; !ok {
+		return a.SelectItemByIndex(index, forceFireEvents)
+	}
+
+	// Use tmpIndexMap to collect group indices.
+	clear(a.tmpIndexMap)
+	if a.tmpIndexMap == nil {
+		a.tmpIndexMap = map[int]struct{}{}
+	}
+	a.tmpIndexMap[index] = struct{}{}
+
+	// Search backwards
+	for i := index - 1; i >= 0; i-- {
+		if !a.items[i].visible() {
+			continue
+		}
+		if _, ok := a.selectedIndices[i]; !ok {
+			break
+		}
+		a.tmpIndexMap[i] = struct{}{}
+	}
+
+	// Search forwards
+	for i := index + 1; i < len(a.items); i++ {
+		if !a.items[i].visible() {
+			continue
+		}
+		if _, ok := a.selectedIndices[i]; !ok {
+			break
+		}
+		a.tmpIndexMap[i] = struct{}{}
+	}
+
+	return a.selectItemsByIndices(a.tmpIndexMap, index, true, forceFireEvents)
 }

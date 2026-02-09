@@ -280,6 +280,8 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 		l.abstractListItems[i].IndentLevel = item.IndentLevel
 		l.abstractListItems[i].Padding = item.Padding
 		l.abstractListItems[i].Collapsed = item.Collapsed
+		l.abstractListItems[i].index = i
+		l.abstractListItems[i].listContent = &l.content
 	}
 	l.content.SetItems(l.abstractListItems)
 }
@@ -544,6 +546,9 @@ type abstractListItem[T comparable] struct {
 	IndentLevel  int
 	Padding      guigui.Padding
 	Collapsed    bool
+
+	index       int
+	listContent *listContent[T]
 }
 
 func (a abstractListItem[T]) value() T {
@@ -552,6 +557,10 @@ func (a abstractListItem[T]) value() T {
 
 func (a abstractListItem[T]) selectable() bool {
 	return !a.Unselectable
+}
+
+func (a abstractListItem[T]) visible() bool {
+	return a.listContent.isItemVisible(a.index)
 }
 
 type listContent[T comparable] struct {

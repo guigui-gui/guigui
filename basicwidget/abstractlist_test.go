@@ -15,10 +15,10 @@ func TestAbstractList(t *testing.T) {
 	var l basicwidget.AbstractList[string, Item]
 
 	items := []Item{
-		{Value: "foo", Selectable: true},
-		{Value: "bar", Selectable: true},
-		{Value: "baz", Selectable: false},
-		{Value: "qux", Selectable: true},
+		{Value: "foo", Selectable: true, Visible: true},
+		{Value: "bar", Selectable: true, Visible: true},
+		{Value: "baz", Selectable: false, Visible: true},
+		{Value: "qux", Selectable: true, Visible: true},
 	}
 	l.SetItems(items)
 
@@ -194,10 +194,10 @@ func TestAbstractListSelectionSliceCopy(t *testing.T) {
 	var l basicwidget.AbstractList[string, Item]
 
 	items := []Item{
-		{Value: "foo", Selectable: true},
-		{Value: "bar", Selectable: true},
-		{Value: "baz", Selectable: false},
-		{Value: "qux", Selectable: true},
+		{Value: "foo", Selectable: true, Visible: true},
+		{Value: "bar", Selectable: true, Visible: true},
+		{Value: "baz", Selectable: false, Visible: true},
+		{Value: "qux", Selectable: true, Visible: true},
 	}
 	l.SetItems(items)
 	l.SetMultiSelection(true)
@@ -246,10 +246,10 @@ func TestAbstractListToggleItemSelectionByIndex(t *testing.T) {
 	var l basicwidget.AbstractList[string, Item]
 
 	items := []Item{
-		{Value: "foo", Selectable: true},
-		{Value: "bar", Selectable: true},
-		{Value: "baz", Selectable: false},
-		{Value: "qux", Selectable: true},
+		{Value: "foo", Selectable: true, Visible: true},
+		{Value: "bar", Selectable: true, Visible: true},
+		{Value: "baz", Selectable: false, Visible: true},
+		{Value: "qux", Selectable: true, Visible: true},
 	}
 	l.SetItems(items)
 
@@ -331,13 +331,13 @@ func TestAbstractListExtendItemSelectionByIndex(t *testing.T) {
 	var l basicwidget.AbstractList[string, Item]
 
 	items := []Item{
-		{Value: "0", Selectable: true},
-		{Value: "1", Selectable: true},
-		{Value: "2", Selectable: true},
-		{Value: "3", Selectable: true},
-		{Value: "4", Selectable: true},
-		{Value: "5", Selectable: false}, // Not selectable
-		{Value: "6", Selectable: true},
+		{Value: "0", Selectable: true, Visible: true},
+		{Value: "1", Selectable: true, Visible: true},
+		{Value: "2", Selectable: true, Visible: true},
+		{Value: "3", Selectable: true, Visible: true},
+		{Value: "4", Selectable: true, Visible: true},
+		{Value: "5", Selectable: false, Visible: true},
+		{Value: "6", Selectable: true, Visible: true},
 	}
 	l.SetItems(items)
 	l.SetMultiSelection(true)
@@ -448,5 +448,59 @@ func TestAbstractListExtendItemSelectionByIndex(t *testing.T) {
 	l.ExtendItemSelectionByIndex(3, false)
 	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3}) {
 		t.Errorf("Single selection: Indices = %v, want [3]", indices)
+	}
+}
+
+func TestAbstractListSelectGroupAt(t *testing.T) {
+	type Item = basicwidget.AbstractListTestItem[string]
+	var l basicwidget.AbstractList[string, Item]
+
+	items := []Item{
+		{Value: "0", Selectable: true, Visible: true},
+		{Value: "1", Selectable: true, Visible: true},
+		{Value: "2", Selectable: true, Visible: true},
+		{Value: "3", Selectable: true, Visible: true},
+		{Value: "4", Selectable: true, Visible: true},
+		{Value: "5", Selectable: true, Visible: false},
+		{Value: "6", Selectable: true, Visible: true},
+		{Value: "7", Selectable: true, Visible: true},
+	}
+	l.SetItems(items)
+	l.SetMultiSelection(true)
+
+	// Click on unselected item (2).
+	l.SelectGroupAt(2, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{2}) {
+		t.Errorf("Indices = %v, want [2]", indices)
+	}
+
+	// Click on selected item (2) which is part of a group (0, 1, 2, 3).
+	l.SelectItemsByIndices([]int{0, 1, 2, 3, 7}, false)
+	l.SelectGroupAt(2, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{0, 1, 2, 3}) {
+		t.Errorf("Indices = %v, want [0, 1, 2, 3]", indices)
+	}
+
+	// Verify hidden items are skipped.
+	l.SelectItemsByIndices([]int{3, 4, 5, 6}, false)
+	l.SelectGroupAt(4, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{3, 4, 6}) {
+		t.Errorf("Indices = %v, want [3, 4, 6]", indices)
+	}
+
+	// Single selection mode fallback.
+	l.SetMultiSelection(false)
+	l.SelectItemsByIndices([]int{0, 2}, false)
+	l.SelectGroupAt(2, false)
+	if indices := l.AppendSelectedItemIndices(nil); !slices.Equal(indices, []int{2}) {
+		t.Errorf("Indices = %v, want [2]", indices)
+	}
+
+	// Out of bounds index should deselect everything.
+	l.SetMultiSelection(true)
+	l.SelectItemsByIndices([]int{0, 1}, false)
+	l.SelectGroupAt(-1, false)
+	if got := l.SelectedItemCount(); got != 0 {
+		t.Errorf("SelectedItemCount = %d, want 0", got)
 	}
 }
