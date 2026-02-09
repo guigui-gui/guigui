@@ -29,6 +29,7 @@ const (
 
 var (
 	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsSelected        guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemsMoved           guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemExpanderToggled  guigui.EventKey = guigui.GenerateEventKey()
 	listEventScrollY              guigui.EventKey = guigui.GenerateEventKey()
@@ -103,6 +104,10 @@ func (l *List[T]) SetItemHeight(height int) {
 
 func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
 	l.content.SetOnItemSelected(f)
+}
+
+func (l *List[T]) SetOnItemsSelected(f func(context *guigui.Context, indices []int)) {
+	l.content.SetOnItemsSelected(f)
 }
 
 func (l *List[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
@@ -582,7 +587,8 @@ type listContent[T comparable] struct {
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
 
-	onItemSelected func(index int)
+	onItemSelected  func(index int)
+	onItemsSelected func(indices []int)
 }
 
 func (l *listContent[T]) SetBackground(widget guigui.Widget) {
@@ -591,6 +597,10 @@ func (l *listContent[T]) SetBackground(widget guigui.Widget) {
 
 func (l *listContent[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
 	guigui.SetEventHandler(l, listEventItemSelected, f)
+}
+
+func (l *listContent[T]) SetOnItemsSelected(f func(context *guigui.Context, indices []int)) {
+	guigui.SetEventHandler(l, listEventItemsSelected, f)
 }
 
 func (l *listContent[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
@@ -706,6 +716,13 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 	}
 	l.abstractList.SetOnItemSelected(l.onItemSelected)
+
+	if l.onItemsSelected == nil {
+		l.onItemsSelected = func(indices []int) {
+			guigui.DispatchEvent(l, listEventItemsSelected, indices)
+		}
+	}
+	l.abstractList.SetOnItemsSelected(l.onItemsSelected)
 
 	l.background2.setListContent(l)
 
