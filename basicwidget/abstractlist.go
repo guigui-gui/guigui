@@ -33,6 +33,7 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 	onItemsSelected func(indices []int)
 
 	tmpIndexSlice []int
+	tmpIndexMap   map[int]struct{}
 
 	anchorIndex          int
 	lastExtendIndexPlus1 int
@@ -172,13 +173,14 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 }
 
 func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) bool {
-	// TODO: Creating a map every time is inefficient. Improve this.
-	var m map[int]struct{}
+	clear(a.tmpIndexMap)
 	newAnchor := math.MaxInt
 	if len(indices) > 0 {
-		m = make(map[int]struct{}, len(indices))
+		if a.tmpIndexMap == nil {
+			a.tmpIndexMap = make(map[int]struct{}, len(indices))
+		}
 		for _, idx := range indices {
-			m[idx] = struct{}{}
+			a.tmpIndexMap[idx] = struct{}{}
 			if !a.isItemIndexSelectable(idx) {
 				continue
 			}
@@ -188,10 +190,12 @@ func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFir
 	if newAnchor == math.MaxInt {
 		newAnchor = 0
 	}
-	return a.selectItemsByIndices(m, newAnchor, true, forceFireEvents)
+	return a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
 }
 
 func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{}, newAnchorCandidate int, updateAnchor bool, forceFireEvents bool) bool {
+	// maps.DeleteFunc changes the indices directly.
+	// It is caller's responsibility to make a copy if needed.
 	maps.DeleteFunc(indices, func(idx int, _ struct{}) bool {
 		return !a.isItemIndexSelectable(idx)
 	})
