@@ -1444,25 +1444,25 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 				var corners basicwidgetdraw.Corners
 				vi := indexToVisibleItemIndex[index]
 				// If prev visible item is adjacent to this item, don't draw the top corner.
-				if vi-1 >= 0 && vi-1 < len(visibleItemIndexToIndex) {
+				if item.Padding.Top == 0 && vi-1 >= 0 && vi-1 < len(visibleItemIndexToIndex) {
 					prevIndex := visibleItemIndexToIndex[vi-1]
-					if l.content.IsSelectedItemIndex(prevIndex) {
-						prevItem, _ := l.content.ItemByIndex(prevIndex)
-						if prevItem.IndentLevel <= item.IndentLevel {
-							corners.TopStart = true
+					if prevItem, ok := l.content.ItemByIndex(prevIndex); ok && prevItem.Padding.Bottom == 0 {
+						if l.content.IsSelectedItemIndex(prevIndex) {
+							corners.TopStart = prevItem.IndentLevel <= item.IndentLevel &&
+								prevItem.Padding.Start == item.Padding.Start
+							corners.TopEnd = prevItem.Padding.End == item.Padding.End
 						}
-						corners.TopEnd = true
 					}
 				}
 				// If next visible item is adjacent to this item, don't draw the bottom corner.
-				if vi+1 >= 0 && vi+1 < len(visibleItemIndexToIndex) {
+				if item.Padding.Bottom == 0 && vi+1 >= 0 && vi+1 < len(visibleItemIndexToIndex) {
 					nextIndex := visibleItemIndexToIndex[vi+1]
-					if l.content.IsSelectedItemIndex(nextIndex) {
-						nextItem, _ := l.content.ItemByIndex(nextIndex)
-						if nextItem.IndentLevel <= item.IndentLevel {
-							corners.BottomStart = true
+					if nextItem, ok := l.content.ItemByIndex(nextIndex); ok && nextItem.Padding.Top == 0 {
+						if l.content.IsSelectedItemIndex(nextIndex) {
+							corners.BottomStart = nextItem.IndentLevel <= item.IndentLevel &&
+								nextItem.Padding.Start == item.Padding.Start
+							corners.BottomEnd = nextItem.Padding.End == item.Padding.End
 						}
-						corners.BottomEnd = true
 					}
 				}
 				basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, clr, RoundedCornerRadius(context), corners)
