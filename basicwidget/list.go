@@ -242,6 +242,10 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 	return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
 }
 
+func (l *List[T]) SelectedItemCount() int {
+	return l.content.SelectedItemCount()
+}
+
 func (l *List[T]) SelectedItemIndex() int {
 	return l.content.SelectedItemIndex()
 }
@@ -930,6 +934,10 @@ func (l *listContent[T]) ItemByIndex(index int) (abstractListItem[T], bool) {
 
 func (l *listContent[T]) IsSelectedItemIndex(index int) bool {
 	return l.abstractList.IsSelectedItemIndex(index)
+}
+
+func (l *listContent[T]) SelectedItemCount() int {
+	return l.abstractList.SelectedItemCount()
 }
 
 func (l *listContent[T]) SelectedItemIndex() int {
