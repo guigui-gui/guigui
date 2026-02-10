@@ -27,7 +27,7 @@ func easeOutQuad(t float64) float64 {
 }
 
 func popupMaxOpeningCount() int {
-	return ebiten.TPS() / 5
+	return ebiten.TPS() * 2 / 5
 }
 
 type popupStyle int
@@ -416,9 +416,9 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if p.openingCount < popupMaxOpeningCount() {
 			if p.style == popupStyleMenu {
-				p.openingCount += 4
+				p.openingCount += 8
 			} else {
-				p.openingCount += 2
+				p.openingCount += 4
 			}
 			p.openingCount = min(p.openingCount, popupMaxOpeningCount())
 			guigui.RequestRedraw(p)
@@ -438,9 +438,9 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 		if 0 < p.openingCount {
 			if p.closeReason == PopupCloseReasonReopen || p.style == popupStyleMenu {
-				p.openingCount -= 4
+				p.openingCount -= 8
 			} else {
-				p.openingCount -= 2
+				p.openingCount -= 3
 			}
 			p.openingCount = max(p.openingCount, 0)
 			guigui.RequestRedraw(p)
