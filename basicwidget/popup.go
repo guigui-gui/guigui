@@ -440,7 +440,7 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			if p.closeReason == PopupCloseReasonReopen || p.style == popupStyleMenu {
 				p.openingCount -= 4
 			} else {
-				p.openingCount--
+				p.openingCount -= 2
 			}
 			p.openingCount = max(p.openingCount, 0)
 			guigui.RequestRedraw(p)
@@ -464,13 +464,14 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 
 	// TODO: Is this needed?
 	context.SetPassthrough(p, p.passthrough())
-	p.blurredBackground.SetOpeningRate(p.openingRate())
-	p.darkBackground.SetOpeningRate(p.openingRate())
-	p.shadow.SetOpeningRate(p.openingRate())
+	rate := p.openingRate()
+	p.blurredBackground.SetOpeningRate(rate)
+	p.darkBackground.SetOpeningRate(rate)
+	p.shadow.SetOpeningRate(rate)
 
 	var opacity float64
 	if p.style != popupStyleDrawer {
-		opacity = p.openingRate()
+		opacity = rate
 	} else {
 		opacity = 1
 	}
