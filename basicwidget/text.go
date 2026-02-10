@@ -382,13 +382,13 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		return
 	}
 	t.field.ReplaceText(text, start, end)
+	guigui.RequestRebuild(t)
+
 	t.resetCachedTextSize()
 	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 
 	t.nextText = ""
 	t.nextTextSet = false
-
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) setText(text string, selectAll bool) bool {
