@@ -1162,7 +1162,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if l.style == ListStyleNormal && l.abstractList.MultiSelection() {
 				if ebiten.IsKeyPressed(ebiten.KeyShift) {
 					l.extendItemSelectionByIndex(index, false)
-				} else if (!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) ||
+				} else if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
 					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
 					l.toggleItemSelectionByIndex(index, false)
 				} else if !l.abstractList.IsSelectedItemIndex(index) {
@@ -1177,9 +1177,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				l.selectItemByIndex(index, l.style == ListStyleMenu)
 			}
 
-			l.pressStartPlus1 = c.Add(image.Pt(1, 1))
-			l.startPressingIndexPlus1 = index + 1
 			if left {
+				l.pressStartPlus1 = c.Add(image.Pt(1, 1))
+				l.startPressingIndexPlus1 = index + 1
 				return guigui.HandleInputByWidget(l)
 			}
 			// For the right click, give a chance to a parent widget to handle the right click e.g. to open a context menu.
