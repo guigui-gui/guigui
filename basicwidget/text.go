@@ -387,6 +387,8 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 
 	t.nextText = ""
 	t.nextTextSet = false
+
+	guigui.RequestRebuild(t)
 }
 
 func (t *Text) setText(text string, selectAll bool) bool {
