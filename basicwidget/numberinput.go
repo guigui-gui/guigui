@@ -64,24 +64,24 @@ func (n *NumberInput) SetEditable(editable bool) {
 	n.textInput.SetEditable(editable)
 }
 
-func (n *NumberInput) SetOnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
-	guigui.SetEventHandler(n, numberInputEventValueChanged, f)
+func (n *NumberInput) OnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
+	guigui.AddEventHandler(n, numberInputEventValueChanged, f)
 }
 
-func (n *NumberInput) SetOnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
-	guigui.SetEventHandler(n, numberInputEventValueChangedBigInt, f)
+func (n *NumberInput) OnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
+	guigui.AddEventHandler(n, numberInputEventValueChangedBigInt, f)
 }
 
-func (n *NumberInput) SetOnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
-	guigui.SetEventHandler(n, numberInputEventValueChangedInt64, f)
+func (n *NumberInput) OnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
+	guigui.AddEventHandler(n, numberInputEventValueChangedInt64, f)
 }
 
-func (n *NumberInput) SetOnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
-	guigui.SetEventHandler(n, numberInputEventValueChangedUint64, f)
+func (n *NumberInput) OnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
+	guigui.AddEventHandler(n, numberInputEventValueChangedUint64, f)
 }
 
-func (n *NumberInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	n.textInput.SetOnKeyJustPressed(f)
+func (n *NumberInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
+	n.textInput.OnKeyJustPressed(f)
 }
 
 func (n *NumberInput) Value() int {
@@ -252,7 +252,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 			n.abstractNumberInput.SetString(text, false, committed)
 		}
 	}
-	n.textInput.SetOnValueChanged(n.onTextInputValueChanged)
+	n.textInput.OnValueChanged(n.onTextInputValueChanged)
 
 	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
 	if err != nil {

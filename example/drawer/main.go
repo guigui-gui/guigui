@@ -53,7 +53,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		},
 	})
 	r.edgeSelect.SelectItemByValue(r.edge)
-	r.edgeSelect.SetOnItemSelected(func(context *guigui.Context, index int) {
+	r.edgeSelect.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := r.edgeSelect.ItemByIndex(index)
 		if !ok {
 			return
@@ -62,7 +62,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	r.showButton.SetText("Show")
-	r.showButton.SetOnDown(func(context *guigui.Context) {
+	r.showButton.OnDown(func(context *guigui.Context) {
 		r.drawer.SetOpen(true)
 	})
 
@@ -81,7 +81,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.drawer.SetCloseByClickingOutside(true)
 	r.drawer.SetBackgroundDark(true)
 	r.drawer.SetContent(&r.drawerContent)
-	r.drawerContent.SetOnClose(func(context *guigui.Context) {
+	r.drawerContent.OnClose(func(context *guigui.Context) {
 		r.drawer.SetOpen(false)
 	})
 
@@ -134,15 +134,15 @@ type drawerContent struct {
 	closeButton basicwidget.Button
 }
 
-func (d *drawerContent) SetOnClose(f func(context *guigui.Context)) {
-	guigui.SetEventHandler(d, drawerContentEventClose, f)
+func (d *drawerContent) OnClose(f func(context *guigui.Context)) {
+	guigui.AddEventHandler(d, drawerContentEventClose, f)
 }
 
 func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&d.closeButton)
 
 	d.closeButton.SetText("Close")
-	d.closeButton.SetOnDown(func(context *guigui.Context) {
+	d.closeButton.OnDown(func(context *guigui.Context) {
 		guigui.DispatchEvent(d, drawerContentEventClose)
 	})
 

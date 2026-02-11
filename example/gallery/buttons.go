@@ -148,7 +148,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	})
 
 	b.enabledText.SetValue("Enabled")
-	b.enabledToggle.SetOnValueChanged(func(context *guigui.Context, enabled bool) {
+	b.enabledToggle.OnValueChanged(func(context *guigui.Context, enabled bool) {
 		model.Buttons().SetEnabled(enabled)
 	})
 	b.enabledToggle.SetValue(model.Buttons().Enabled())

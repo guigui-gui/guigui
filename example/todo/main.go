@@ -46,19 +46,19 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&r.createButton)
 	adder.AddChild(&r.tasksPanel)
 
-	r.textInput.SetOnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
+	r.textInput.OnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if key == ebiten.KeyEnter {
 			r.tryCreateTask(r.textInput.Value())
 		}
 	})
 
 	r.createButton.SetText("Create")
-	r.createButton.SetOnUp(func(context *guigui.Context) {
+	r.createButton.OnUp(func(context *guigui.Context) {
 		r.tryCreateTask(r.textInput.Value())
 	})
 	context.SetEnabled(&r.createButton, r.model.CanAddTask(r.textInput.Value()))
 
-	r.tasksPanelContent.SetOnDeleted(func(context *guigui.Context, id int) {
+	r.tasksPanelContent.OnDeleted(func(context *guigui.Context, id int) {
 		r.model.DeleteTaskByID(id)
 	})
 	r.tasksPanel.SetContent(&r.tasksPanelContent)
@@ -124,8 +124,8 @@ var (
 	taskWidgetEventDoneButtonPressed guigui.EventKey = guigui.GenerateEventKey()
 )
 
-func (t *taskWidget) SetOnDoneButtonPressed(f func(context *guigui.Context)) {
-	guigui.SetEventHandler(t, taskWidgetEventDoneButtonPressed, f)
+func (t *taskWidget) OnDoneButtonPressed(f func(context *guigui.Context)) {
+	guigui.AddEventHandler(t, taskWidgetEventDoneButtonPressed, f)
 }
 
 func (t *taskWidget) SetText(text string) {
@@ -137,7 +137,7 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	adder.AddChild(&t.text)
 
 	t.doneButton.SetText("Done")
-	t.doneButton.SetOnUp(func(context *guigui.Context) {
+	t.doneButton.OnUp(func(context *guigui.Context) {
 		guigui.DispatchEvent(t, taskWidgetEventDoneButtonPressed)
 	})
 
@@ -178,8 +178,8 @@ var (
 	tasksPanelContentEventDeleted guigui.EventKey = guigui.GenerateEventKey()
 )
 
-func (t *tasksPanelContent) SetOnDeleted(f func(context *guigui.Context, id int)) {
-	guigui.SetEventHandler(t, tasksPanelContentEventDeleted, f)
+func (t *tasksPanelContent) OnDeleted(f func(context *guigui.Context, id int)) {
+	guigui.AddEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -192,7 +192,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	for i := range model.TaskCount() {
 		task := model.TaskByIndex(i)
-		t.taskWidgets.At(i).SetOnDoneButtonPressed(func(context *guigui.Context) {
+		t.taskWidgets.At(i).OnDoneButtonPressed(func(context *guigui.Context) {
 			guigui.DispatchEvent(t, tasksPanelContentEventDeleted, task.ID)
 		})
 		t.taskWidgets.At(i).SetText(task.Text)

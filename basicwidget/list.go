@@ -102,20 +102,20 @@ func (l *List[T]) SetItemHeight(height int) {
 	guigui.RequestRebuild(l)
 }
 
-func (l *List[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	l.content.SetOnItemSelected(f)
+func (l *List[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
+	l.content.OnItemSelected(f)
 }
 
-func (l *List[T]) SetOnItemsSelected(f func(context *guigui.Context, indices []int)) {
-	l.content.SetOnItemsSelected(f)
+func (l *List[T]) OnItemsSelected(f func(context *guigui.Context, indices []int)) {
+	l.content.OnItemsSelected(f)
 }
 
-func (l *List[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	l.content.SetOnItemsMoved(f)
+func (l *List[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
+	l.content.OnItemsMoved(f)
 }
 
-func (l *List[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	l.content.SetOnItemExpanderToggled(f)
+func (l *List[T]) OnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
+	l.content.OnItemExpanderToggled(f)
 }
 
 func (l *List[T]) SetCheckmarkIndex(index int) {
@@ -171,7 +171,7 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 			l.panel.SetScrollOffset(offsetX, offsetY)
 		}
 	}
-	guigui.SetEventHandler(&l.content, listEventScrollY, l.onScrollY)
+	guigui.AddEventHandler(&l.content, listEventScrollY, l.onScrollY)
 
 	if l.onScrollYEnsureVisible == nil {
 		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
@@ -179,14 +179,14 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
 		}
 	}
-	guigui.SetEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
+	guigui.AddEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
 
 	if l.onScrollDeltaY == nil {
 		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
 			l.panel.SetScrollOffsetByDelta(0, deltaY)
 		}
 	}
-	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
+	guigui.AddEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
@@ -621,20 +621,20 @@ func (l *listContent[T]) SetBackground(widget guigui.Widget) {
 	l.customBackground = widget
 }
 
-func (l *listContent[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.SetEventHandler(l, listEventItemSelected, f)
+func (l *listContent[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
+	guigui.AddEventHandler(l, listEventItemSelected, f)
 }
 
-func (l *listContent[T]) SetOnItemsSelected(f func(context *guigui.Context, indices []int)) {
-	guigui.SetEventHandler(l, listEventItemsSelected, f)
+func (l *listContent[T]) OnItemsSelected(f func(context *guigui.Context, indices []int)) {
+	guigui.AddEventHandler(l, listEventItemsSelected, f)
 }
 
-func (l *listContent[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	guigui.SetEventHandler(l, listEventItemsMoved, f)
+func (l *listContent[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
+	guigui.AddEventHandler(l, listEventItemsMoved, f)
 }
 
-func (l *listContent[T]) SetOnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
+func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
+	guigui.AddEventHandler(l, listEventItemExpanderToggled, f)
 }
 
 func (l *listContent[T]) SetCheckmarkIndex(index int) {

@@ -65,8 +65,8 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 	guigui.RequestRebuild(s)
 }
 
-func (s *SegmentedControl[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.SetEventHandler(s, segmentedControlEventItemSelected, f)
+func (s *SegmentedControl[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
+	guigui.AddEventHandler(s, segmentedControlEventItemSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
@@ -163,7 +163,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 				s.SelectItemByIndex(i)
 			}
 		}
-		s.buttons.At(i).SetOnDown(s.onButtonDowns[i])
+		s.buttons.At(i).OnDown(s.onButtonDowns[i])
 	}
 	return nil
 }

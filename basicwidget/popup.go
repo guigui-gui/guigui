@@ -74,8 +74,8 @@ func (p *Popup) IsOpen() bool {
 	return p.popup.Widget().IsOpen()
 }
 
-func (p *Popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
-	p.popup.Widget().SetOnClose(f)
+func (p *Popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
+	p.popup.Widget().OnClose(f)
 }
 
 func (p *Popup) SetContent(widget guigui.Widget) {
@@ -183,7 +183,7 @@ func (p *popup) IsOpen() bool {
 }
 
 func (p *popup) setOnOpen(f func(context *guigui.Context)) {
-	guigui.SetEventHandler(p, popupEventOpen, f)
+	guigui.AddEventHandler(p, popupEventOpen, f)
 }
 
 func (p *popup) SetContent(widget guigui.Widget) {
@@ -258,8 +258,8 @@ func (p *popup) SetDrawerEdge(edge DrawerEdge) {
 	p.contentAndFrame.Widget().setDrawerEdge(edge)
 }
 
-func (p *popup) SetOnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
-	guigui.SetEventHandler(p, popupEventClose, f)
+func (p *popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
+	guigui.AddEventHandler(p, popupEventClose, f)
 }
 
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

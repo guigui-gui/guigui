@@ -46,7 +46,7 @@ func (l *LayerWidget[T]) Build(context *Context, adder *ChildAdder) error {
 			}
 		}
 	}
-	SetOnFocusChanged(l, l.onFocusChanged)
+	OnFocusChanged(l, l.onFocusChanged)
 
 	return nil
 }

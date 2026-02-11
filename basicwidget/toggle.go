@@ -30,8 +30,8 @@ type Toggle struct {
 	count int
 }
 
-func (t *Toggle) SetOnValueChanged(f func(context *guigui.Context, value bool)) {
-	guigui.SetEventHandler(t, toggleEventValueChanged, f)
+func (t *Toggle) OnValueChanged(f func(context *guigui.Context, value bool)) {
+	guigui.AddEventHandler(t, toggleEventValueChanged, f)
 }
 
 func (t *Toggle) Value() bool {

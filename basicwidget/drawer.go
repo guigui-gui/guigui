@@ -32,8 +32,8 @@ func (d *Drawer) IsOpen() bool {
 	return d.popup.IsOpen()
 }
 
-func (d *Drawer) SetOnClose(onClose func(context *guigui.Context, reason PopupCloseReason)) {
-	d.popup.SetOnClose(onClose)
+func (d *Drawer) OnClose(onClose func(context *guigui.Context, reason PopupCloseReason)) {
+	d.popup.OnClose(onClose)
 }
 
 func (d *Drawer) SetContent(widget guigui.Widget) {

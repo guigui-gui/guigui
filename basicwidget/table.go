@@ -65,12 +65,12 @@ func (t *Table[T]) SetColumns(columns []TableColumn) {
 	t.columns = append(t.columns, columns...)
 }
 
-func (t *Table[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	t.list.SetOnItemSelected(f)
+func (t *Table[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
+	t.list.OnItemSelected(f)
 }
 
-func (t *Table[T]) SetOnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	t.list.SetOnItemsMoved(f)
+func (t *Table[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
+	t.list.OnItemsMoved(f)
 }
 
 func (t *Table[T]) SetCheckmarkIndex(index int) {

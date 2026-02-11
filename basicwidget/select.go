@@ -43,8 +43,8 @@ type Select[T comparable] struct {
 	onPopupMenuItemSelected func(context *guigui.Context, index int)
 }
 
-func (s *Select[T]) SetOnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.SetEventHandler(s, selectEventItemSelected, f)
+func (s *Select[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
+	guigui.AddEventHandler(s, selectEventItemSelected, f)
 }
 
 func (s *Select[T]) updatePopupMenuItems() {
@@ -102,7 +102,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			s.indexAtOpen = s.popupMenu.SelectedItemIndex()
 		}
 	}
-	s.button.SetOnDown(s.onDown)
+	s.button.OnDown(s.onDown)
 	s.button.setKeepPressed(s.popupMenu.IsOpen())
 	context.SetEnabled(&s.button, context.IsEnabled(s) && len(s.items) > 0)
 
@@ -111,7 +111,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			guigui.DispatchEvent(s, selectEventItemSelected, index)
 		}
 	}
-	s.popupMenu.SetOnItemSelected(s.onPopupMenuItemSelected)
+	s.popupMenu.OnItemSelected(s.onPopupMenuItemSelected)
 	s.popupMenu.SetCheckmarkIndex(s.indexAtOpen)
 
 	return nil

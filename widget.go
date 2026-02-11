@@ -106,7 +106,7 @@ func (w *WidgetWithSize[T]) Build(context *Context, adder *ChildAdder) error {
 			}
 		}
 	}
-	SetOnFocusChanged(w, w.onFocusChanged)
+	OnFocusChanged(w, w.onFocusChanged)
 	return nil
 }
 
@@ -160,7 +160,7 @@ func (w *WidgetWithPadding[T]) Build(context *Context, adder *ChildAdder) error 
 			}
 		}
 	}
-	SetOnFocusChanged(w, w.onFocusChanged)
+	OnFocusChanged(w, w.onFocusChanged)
 	return nil
 }
 

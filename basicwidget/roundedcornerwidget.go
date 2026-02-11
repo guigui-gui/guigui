@@ -59,7 +59,7 @@ func (r *roundedCornerWidget[T]) Build(context *guigui.Context, adder *guigui.Ch
 			}
 		}
 	}
-	guigui.SetOnFocusChanged(r, r.onFocusChanged)
+	guigui.OnFocusChanged(r, r.onFocusChanged)
 	return nil
 }
 

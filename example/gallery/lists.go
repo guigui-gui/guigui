@@ -67,7 +67,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		list.SetFooterHeight(0)
 	}
-	list.SetOnItemsMoved(func(context *guigui.Context, from, count, to int) {
+	list.OnItemsMoved(func(context *guigui.Context, from, count, to int) {
 		idx := model.Lists().MoveListItems(from, count, to)
 		if idx < 0 || idx >= len(l.listItems) {
 			return
@@ -100,7 +100,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	} else {
 		tree.SetFooterHeight(0)
 	}
-	tree.SetOnItemExpanderToggled(func(context *guigui.Context, index int, expanded bool) {
+	tree.OnItemExpanderToggled(func(context *guigui.Context, index int, expanded bool) {
 		model.Lists().SetTreeItemExpanded(index, expanded)
 	})
 
@@ -127,7 +127,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.indexNumberInput.SetMinimumValue(1)
 	l.indexNumberInput.SetMaximumValue(model.Lists().ListItemCount())
 	l.jumpButton.SetText("Ensure the item is visible")
-	l.jumpButton.SetOnDown(func(context *guigui.Context) {
+	l.jumpButton.OnDown(func(context *guigui.Context) {
 		index := l.indexNumberInput.Value() - 1
 		l.list.Widget().EnsureItemVisibleByIndex(index)
 		l.list.Widget().SelectItemByIndex(index)
@@ -145,22 +145,22 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	// Configurations
 	l.showStripeText.SetValue("Show stripe")
-	l.showStripeToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.showStripeToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetStripeVisible(value)
 	})
 	l.showStripeToggle.SetValue(model.Lists().IsStripeVisible())
 	l.showHeaderText.SetValue("Show header")
-	l.showHeaderToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.showHeaderToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetHeaderVisible(value)
 	})
 	l.showHeaderToggle.SetValue(model.Lists().IsHeaderVisible())
 	l.showFooterText.SetValue("Show footer")
-	l.showFooterToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.showFooterToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetFooterVisible(value)
 	})
 	l.showFooterToggle.SetValue(model.Lists().IsFooterVisible())
 	l.multiSelectionText.SetValue("Multi selection")
-	l.multiSelectionToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.multiSelectionToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetMultiSelection(value)
 		list.SetMultiSelection(value)
 		// Tree does not support multi-selection for now (or at least unrelated for this task)
@@ -168,11 +168,11 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.multiSelectionToggle.SetValue(model.Lists().MultiSelection())
 	l.movableText.SetValue("Enable to move items")
 	l.movableToggle.SetValue(model.Lists().Movable())
-	l.movableToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.movableToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetMovable(value)
 	})
 	l.enabledText.SetValue("Enabled")
-	l.enabledToggle.SetOnValueChanged(func(context *guigui.Context, value bool) {
+	l.enabledToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetEnabled(value)
 	})
 	l.enabledToggle.SetValue(model.Lists().Enabled())

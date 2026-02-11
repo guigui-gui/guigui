@@ -53,7 +53,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: "dark",
 		},
 	})
-	s.colorModeSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
+	s.colorModeSegmentedControl.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := s.colorModeSegmentedControl.ItemByIndex(index)
 		if !ok {
 			context.SetColorMode(guigui.ColorModeLight)
@@ -114,7 +114,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: hongKongChinese,
 		},
 	})
-	s.localeSelect.SetOnItemSelected(func(context *guigui.Context, index int) {
+	s.localeSelect.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := s.localeSelect.ItemByIndex(index)
 		if !ok {
 			context.SetAppLocales(nil)
@@ -149,7 +149,7 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			Value: 1.2,
 		},
 	})
-	s.scaleSegmentedControl.SetOnItemSelected(func(context *guigui.Context, index int) {
+	s.scaleSegmentedControl.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := s.scaleSegmentedControl.ItemByIndex(index)
 		if !ok {
 			context.SetAppScale(1)

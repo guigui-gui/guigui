@@ -31,12 +31,12 @@ type TextInput struct {
 	onFocusChanged func(context *guigui.Context, focused bool)
 }
 
-func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	t.textInput.SetOnValueChanged(f)
+func (t *TextInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
+	t.textInput.OnValueChanged(f)
 }
 
-func (t *TextInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.textInput.SetOnKeyJustPressed(f)
+func (t *TextInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
+	t.textInput.OnKeyJustPressed(f)
 }
 
 func (t *TextInput) Value() string {
@@ -155,7 +155,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			}
 		}
 	}
-	guigui.SetOnFocusChanged(t, t.onFocusChanged)
+	guigui.OnFocusChanged(t, t.onFocusChanged)
 	return nil
 }
 
@@ -208,12 +208,12 @@ type textInput struct {
 	onFocusChanged    func(context *guigui.Context, focused bool)
 }
 
-func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	t.text.Text().SetOnValueChanged(f)
+func (t *textInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
+	t.text.Text().OnValueChanged(f)
 }
 
-func (t *textInput) SetOnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.text.Text().SetOnKeyJustPressed(f)
+func (t *textInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
+	t.text.Text().OnKeyJustPressed(f)
 }
 
 func (t *textInput) Value() string {
@@ -359,7 +359,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			}
 		}
 	}
-	guigui.SetOnFocusChanged(t, t.onFocusChanged)
+	guigui.OnFocusChanged(t, t.onFocusChanged)
 
 	return nil
 }
@@ -553,7 +553,7 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 			}
 		}
 	}
-	guigui.SetOnFocusChanged(t, t.onFocusChanged)
+	guigui.OnFocusChanged(t, t.onFocusChanged)
 
 	return nil
 }

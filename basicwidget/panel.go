@@ -47,8 +47,8 @@ type Panel struct {
 	panel panel
 }
 
-func (p *Panel) SetOnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
-	p.panel.SetOnScroll(callback)
+func (p *Panel) OnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
+	p.panel.OnScroll(callback)
 }
 
 func (p *Panel) SetContent(widget guigui.Widget) {
@@ -124,8 +124,8 @@ type panel struct {
 	contentSizeAtLayout image.Point
 }
 
-func (p *panel) SetOnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
-	guigui.SetEventHandler(p, panelEventScroll, callback)
+func (p *panel) OnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
+	guigui.AddEventHandler(p, panelEventScroll, callback)
 }
 
 func (p *panel) SetContent(widget guigui.Widget) {

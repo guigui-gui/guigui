@@ -336,7 +336,7 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
-func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
+func AddEventHandler(widget Widget, eventKey EventKey, handler any) {
 	widgetState := widget.widgetState()
 	widgetState.eventHandlers = append(widgetState.eventHandlers, eventHandler{
 		key:     eventKey,
@@ -345,30 +345,33 @@ func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 }
 
 func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
+	var handled bool
 	widgetState := widget.widgetState()
-	idx := slices.IndexFunc(widgetState.eventHandlers, func(h eventHandler) bool {
-		return h.key == eventKey
-	})
-	if idx == -1 {
-		return
+	for _, h := range widgetState.eventHandlers {
+		if h.key != eventKey {
+			continue
+		}
+		f := reflect.ValueOf(h.handler)
+		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
+		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
+		for _, arg := range args {
+			widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
+		}
+		f.Call(widgetState.tmpArgs)
+		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
+		widgetState.eventDispatched = true
+		handled = true
 	}
-	f := reflect.ValueOf(widgetState.eventHandlers[idx].handler)
-	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
-	for _, arg := range args {
-		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
-	}
-	f.Call(widgetState.tmpArgs)
-	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-	widgetState.eventDispatched = true
 
-	RequestRebuild(widget)
+	if handled {
+		RequestRebuild(widget)
+	}
 }
 
 var widgetEventFocusChanged EventKey = GenerateEventKey()
 
-func SetOnFocusChanged(widget Widget, onfocus func(context *Context, focused bool)) {
-	SetEventHandler(widget, widgetEventFocusChanged, onfocus)
+func OnFocusChanged(widget Widget, onfocus func(context *Context, focused bool)) {
+	AddEventHandler(widget, widgetEventFocusChanged, onfocus)
 }
 
 // noCopy is a struct to warn that the struct should not be copied.
