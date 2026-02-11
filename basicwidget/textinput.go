@@ -27,6 +27,8 @@ type TextInput struct {
 	focus     textInputFocus
 
 	style TextInputStyle
+
+	onFocusChanged func(context *guigui.Context, focused bool)
 }
 
 func (t *TextInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -146,7 +148,14 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddChild(&t.textInput)
 	adder.AddChild(&t.focus)
 	context.SetPassthrough(&t.focus, true)
-	context.DelegateFocus(t, &t.textInput.text)
+	if t.onFocusChanged == nil {
+		t.onFocusChanged = func(context *guigui.Context, focused bool) {
+			if focused {
+				context.SetFocused(&t.textInput.text, true)
+			}
+		}
+	}
+	guigui.SetOnFocusChanged(t, t.onFocusChanged)
 	return nil
 }
 
@@ -196,6 +205,7 @@ type textInput struct {
 	paddingEnd   int
 
 	onTextScrollDelta func(context *guigui.Context, deltaX, deltaY float64)
+	onFocusChanged    func(context *guigui.Context, focused bool)
 }
 
 func (t *textInput) SetOnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -340,8 +350,16 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.text.Text().setOnScrollDelta(t.onTextScrollDelta)
 
 	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
+
 	context.SetPassthrough(&t.frame, true)
-	context.DelegateFocus(t, t.text.Text())
+	if t.onFocusChanged == nil {
+		t.onFocusChanged = func(context *guigui.Context, focused bool) {
+			if focused {
+				context.SetFocused(t.text.Text(), true)
+			}
+		}
+	}
+	guigui.SetOnFocusChanged(t, t.onFocusChanged)
 
 	return nil
 }
@@ -492,6 +510,8 @@ type textInputText struct {
 	editable        bool
 	containerBounds image.Rectangle
 	padding         guigui.Padding
+
+	onFocusChanged func(context *guigui.Context, focused bool)
 }
 
 func (t *textInputText) setEditable(editable bool) {
@@ -526,7 +546,14 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	t.text.Widget().SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.Widget().setKeepTailingSpace(!t.text.Widget().autoWrap)
 
-	context.DelegateFocus(t, &t.text)
+	if t.onFocusChanged == nil {
+		t.onFocusChanged = func(context *guigui.Context, focused bool) {
+			if focused {
+				context.SetFocused(t.text.Widget(), true)
+			}
+		}
+	}
+	guigui.SetOnFocusChanged(t, t.onFocusChanged)
 
 	return nil
 }

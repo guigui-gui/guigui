@@ -113,7 +113,6 @@ type widgetState struct {
 	tmpArgs         []reflect.Value
 	eventDispatched bool
 	clipChildren    bool
-	focusDelegation Widget
 
 	actualLayerPlus1Cache int64
 	visibleCache          bool

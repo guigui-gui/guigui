@@ -257,15 +257,10 @@ func (c *Context) SetFocused(widget Widget, focused bool) {
 }
 
 func (c *Context) resolveFocusedWidget(widget Widget) Widget {
-	for {
-		if !c.canHaveFocus(widget.widgetState()) {
-			return nil
-		}
-		if widget.widgetState().focusDelegation == nil {
-			return widget
-		}
-		widget = widget.widgetState().focusDelegation
+	if !c.canHaveFocus(widget.widgetState()) {
+		return nil
 	}
+	return widget
 }
 
 func (c *Context) focus(widget Widget) {
@@ -421,13 +416,6 @@ func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
 // Note that a widget layer can be controlled by [LayerWidget].
 func (c *Context) SetClipChildren(widget Widget, clip bool) {
 	widget.widgetState().clipChildren = clip
-}
-
-func (c *Context) DelegateFocus(from Widget, to Widget) {
-	if areWidgetsSame(from.widgetState().focusDelegation, to) {
-		return
-	}
-	from.widgetState().focusDelegation = to
 }
 
 func (c *Context) SetWindowTitle(title string) {

@@ -64,6 +64,8 @@ type WidgetWithSize[T Widget] struct {
 
 	measure        func(context *Context, constraints Constraints) image.Point
 	fixedSizePlus1 image.Point
+
+	onFocusChanged func(context *Context, focused bool)
 }
 
 func (w *WidgetWithSize[T]) SetMeasureFunc(f func(context *Context, constraints Constraints) image.Point) {
@@ -97,7 +99,14 @@ func (w *WidgetWithSize[T]) Widget() T {
 
 func (w *WidgetWithSize[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(w.Widget())
-	context.DelegateFocus(w, w.widget.Widget())
+	if w.onFocusChanged == nil {
+		w.onFocusChanged = func(context *Context, focused bool) {
+			if focused {
+				context.SetFocused(w.widget.Widget(), true)
+			}
+		}
+	}
+	SetOnFocusChanged(w, w.onFocusChanged)
 	return nil
 }
 
@@ -130,6 +139,8 @@ type WidgetWithPadding[T Widget] struct {
 
 	widget  lazyWidget[T]
 	padding Padding
+
+	onFocusChanged func(context *Context, focused bool)
 }
 
 func (w *WidgetWithPadding[T]) SetPadding(padding Padding) {
@@ -142,7 +153,14 @@ func (w *WidgetWithPadding[T]) Widget() T {
 
 func (w *WidgetWithPadding[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(w.Widget())
-	context.DelegateFocus(w, w.widget.Widget())
+	if w.onFocusChanged == nil {
+		w.onFocusChanged = func(context *Context, focused bool) {
+			if focused {
+				context.SetFocused(w.widget.Widget(), true)
+			}
+		}
+	}
+	SetOnFocusChanged(w, w.onFocusChanged)
 	return nil
 }
 

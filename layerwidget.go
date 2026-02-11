@@ -11,6 +11,8 @@ type LayerWidget[T Widget] struct {
 	DefaultWidget
 
 	widget lazyWidget[T]
+
+	onFocusChanged func(context *Context, focused bool)
 }
 
 // Widget returns the content widget.
@@ -36,7 +38,16 @@ func (l *LayerWidget[T]) BringToFrontLayer(context *Context) {
 // Build implements [Widget.Build].
 func (l *LayerWidget[T]) Build(context *Context, adder *ChildAdder) error {
 	adder.AddChild(l.widget.Widget())
-	context.DelegateFocus(l, l.widget.Widget())
+
+	if l.onFocusChanged == nil {
+		l.onFocusChanged = func(context *Context, focused bool) {
+			if focused {
+				context.SetFocused(l.widget.Widget(), true)
+			}
+		}
+	}
+	SetOnFocusChanged(l, l.onFocusChanged)
+
 	return nil
 }
 
