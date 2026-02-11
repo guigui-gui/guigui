@@ -35,7 +35,7 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	adder.AddChild(&s.listForm)
 	adder.AddChild(&s.configForm)
 
-	model := context.Model(s, modelKeyModel).(*Model)
+	model := context.Data(s, modelKeyModel).(*Model)
 
 	// Select (Text)
 	s.select1Text.SetValue("Selects")

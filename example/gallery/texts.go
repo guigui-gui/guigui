@@ -33,7 +33,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&t.sampleText)
 	adder.AddChild(&t.form)
 
-	model := context.Model(t, modelKeyModel).(*Model)
+	model := context.Data(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
 	if err != nil {

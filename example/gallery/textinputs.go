@@ -40,7 +40,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	adder.AddChild(&t.textInputForm)
 	adder.AddChild(&t.configForm)
 
-	model := context.Model(t, modelKeyModel).(*Model)
+	model := context.Data(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
 	if err != nil {

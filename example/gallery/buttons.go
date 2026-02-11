@@ -40,7 +40,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	adder.AddChild(&b.buttonsForm)
 	adder.AddChild(&b.configForm)
 
-	model := context.Model(b, modelKeyModel).(*Model)
+	model := context.Data(b, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
 

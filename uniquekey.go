@@ -17,12 +17,12 @@ func generateUniqueKey() uniqueKey {
 	return uniqueKey{theUniqueKey.Add(1)}
 }
 
-// ModelKey is a unique identifier for a model.
-type ModelKey uniqueKey
+// DataKey is a unique identifier for a model.
+type DataKey uniqueKey
 
-// GenerateModelKey generates a new ModelKey.
-func GenerateModelKey() ModelKey {
-	return ModelKey(generateUniqueKey())
+// GenerateDataKey generates a new DataKey.
+func GenerateDataKey() DataKey {
+	return DataKey(generateUniqueKey())
 }
 
 // EventKey is a unique identifier for an event.

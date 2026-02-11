@@ -47,7 +47,7 @@ func (s *sidebarContent) setSize(size image.Point) {
 func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(&s.list)
 
-	model := context.Model(s, modelKeyModel).(*Model)
+	model := context.Data(s, modelKeyModel).(*Model)
 
 	s.list.SetStyle(basicwidget.ListStyleSidebar)
 
