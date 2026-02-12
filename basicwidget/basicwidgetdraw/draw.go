@@ -74,7 +74,7 @@ type imageKey struct {
 	radius      int
 	borderWidth float32
 	borderType  RoundedRectBorderType
-	colorMode   guigui.ColorMode
+	colorMode   ebiten.ColorMode
 }
 
 var (
@@ -107,7 +107,7 @@ func ensureWhiteRoundedRect(radius int) *ebiten.Image {
 	return img
 }
 
-func ensureWhiteRectBorder(partSize int, borderWidth float32, borderType RoundedRectBorderType, colorMode guigui.ColorMode) *ebiten.Image {
+func ensureWhiteRectBorder(partSize int, borderWidth float32, borderType RoundedRectBorderType, colorMode ebiten.ColorMode) *ebiten.Image {
 	key := imageKey{
 		radius:      partSize,
 		borderWidth: borderWidth,
@@ -123,7 +123,7 @@ func ensureWhiteRectBorder(partSize int, borderWidth float32, borderType Rounded
 	return img
 }
 
-func ensureWhiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedRectBorderType, colorMode guigui.ColorMode) *ebiten.Image {
+func ensureWhiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedRectBorderType, colorMode ebiten.ColorMode) *ebiten.Image {
 	key := imageKey{
 		radius:      radius,
 		borderWidth: borderWidth,
@@ -139,7 +139,7 @@ func ensureWhiteRoundedRectBorder(radius int, borderWidth float32, borderType Ro
 	return img
 }
 
-func whiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedRectBorderType, colorMode guigui.ColorMode, appendPathFunc func(path *vector.Path, rx0, ry0, rx1, ry1 float32, radius float32)) *ebiten.Image {
+func whiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedRectBorderType, colorMode ebiten.ColorMode, appendPathFunc func(path *vector.Path, rx0, ry0, rx1, ry1 float32, radius float32)) *ebiten.Image {
 	s := radius * 3
 	inset := borderWidth
 
@@ -150,14 +150,14 @@ func whiteRoundedRectBorder(radius int, borderWidth float32, borderType RoundedR
 		appendPathFunc(&path, inset, inset, float32(s)-inset, float32(s)-inset, float32(radius)-inset)
 	case RoundedRectBorderTypeInset:
 		// Use a thicker border for the dark mode, as colors tend to be contracting colors.
-		if colorMode == guigui.ColorModeDark {
+		if colorMode == ebiten.ColorModeDark {
 			appendPathFunc(&path, inset, inset*2, float32(s)-inset, float32(s)-inset/2, float32(radius)-inset/2)
 		} else {
 			appendPathFunc(&path, inset, inset*3/2, float32(s)-inset, float32(s)-inset/2, float32(radius)-inset/2)
 		}
 	case RoundedRectBorderTypeOutset:
 		// Use a thicker border for the dark mode, as colors tend to be contracting colors.
-		if colorMode == guigui.ColorModeDark {
+		if colorMode == ebiten.ColorModeDark {
 			appendPathFunc(&path, inset, inset/2, float32(s)-inset, float32(s)-inset*2, float32(radius)-inset/2)
 		} else {
 			appendPathFunc(&path, inset, inset/2, float32(s)-inset, float32(s)-inset*3/2, float32(radius)-inset/2)

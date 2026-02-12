@@ -15,7 +15,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/text/language"
 
-	"github.com/guigui-gui/guigui/internal/colormode"
 	"github.com/guigui-gui/guigui/internal/locale"
 )
 
@@ -47,24 +46,17 @@ func init() {
 	systemLocales = ls
 }
 
-const (
-	ColorModeLight ColorMode = iota
-	ColorModeDark
-)
-
 type Context struct {
 	app     *app
 	inBuild bool
 
-	appScaleMinus1                   float64
-	colorMode                        ColorMode
-	colorModeSet                     bool
-	cachedDefaultColorMode           colormode.ColorMode
-	cachedDefaultColorModeExpireTick int64
-	defaultColorWarnOnce             sync.Once
-	locales                          []language.Tag
-	allLocales                       []language.Tag
-	frontLayer                       int64
+	appScaleMinus1       float64
+	colorMode            ebiten.ColorMode
+	colorModeSet         bool
+	defaultColorWarnOnce sync.Once
+	locales              []language.Tag
+	allLocales           []language.Tag
+	frontLayer           int64
 
 	defaultMethodCalled bool
 }
@@ -89,14 +81,14 @@ func (c *Context) SetAppScale(scale float64) {
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonAppScale, nil)
 }
 
-func (c *Context) ColorMode() ColorMode {
+func (c *Context) ColorMode() ebiten.ColorMode {
 	if c.colorModeSet {
 		return c.colorMode
 	}
 	return c.autoColorMode()
 }
 
-func (c *Context) SetColorMode(mode ColorMode) {
+func (c *Context) SetColorMode(mode ebiten.ColorMode) {
 	if c.colorModeSet && mode == c.colorMode {
 		return
 	}
@@ -122,34 +114,21 @@ var (
 	envColorMode = os.Getenv("GUIGUI_COLOR_MODE")
 )
 
-func (c *Context) autoColorMode() ColorMode {
+func (c *Context) autoColorMode() ebiten.ColorMode {
 	switch mode := envColorMode; mode {
 	case "light":
-		return ColorModeLight
+		return ebiten.ColorModeLight
 	case "dark":
-		return ColorModeDark
+		return ebiten.ColorModeDark
 	case "":
-		if ebiten.Tick() > c.cachedDefaultColorModeExpireTick {
-			m := colormode.SystemColorMode()
-			if c.cachedDefaultColorMode != m {
-				c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode, nil)
-			}
-			c.cachedDefaultColorMode = m
-			c.cachedDefaultColorModeExpireTick = ebiten.Tick() + int64(ebiten.TPS())
-		}
-		switch c.cachedDefaultColorMode {
-		case colormode.Light:
-			return ColorModeLight
-		case colormode.Dark:
-			return ColorModeDark
-		}
+		return ebiten.SystemColorMode()
 	default:
 		c.defaultColorWarnOnce.Do(func() {
 			slog.Warn(fmt.Sprintf("invalid GUIGUI_COLOR_MODE: %s", mode))
 		})
 	}
 
-	return ColorModeLight
+	return ebiten.ColorModeLight
 }
 
 func (c *Context) AppendLocales(locales []language.Tag) []language.Tag {

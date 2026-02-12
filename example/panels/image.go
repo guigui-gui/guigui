@@ -9,7 +9,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
@@ -18,7 +17,7 @@ var pngImages embed.FS
 
 type imageCacheKey struct {
 	name       string
-	colorMode  guigui.ColorMode
+	colorMode  ebiten.ColorMode
 	monochrome bool
 }
 
@@ -28,7 +27,7 @@ type imageCache struct {
 
 var theImageCache = &imageCache{}
 
-func (i *imageCache) GetMonochrome(name string, colorMode guigui.ColorMode) (*ebiten.Image, error) {
+func (i *imageCache) GetMonochrome(name string, colorMode ebiten.ColorMode) (*ebiten.Image, error) {
 	return i.get(imageCacheKey{
 		name:       name,
 		colorMode:  colorMode,

@@ -1075,7 +1075,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 
 	colorMode := context.ColorMode()
 	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
-		colorMode = guigui.ColorModeDark
+		colorMode = ebiten.ColorModeDark
 	}
 	checkImg, err := theResourceImages.Get("check", colorMode)
 	if err != nil {

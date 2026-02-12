@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"image/color"
 
-	"github.com/guigui-gui/guigui"
+	"github.com/hajimehoshi/ebiten/v2"
+
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-func BorderColors(colorMode guigui.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
+func BorderColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
 	typ1 := draw.ColorTypeBase
 	typ2 := draw.ColorTypeBase
 	switch borderType {
@@ -25,7 +26,7 @@ func BorderColors(colorMode guigui.ColorMode, borderType RoundedRectBorderType) 
 	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
 }
 
-func BorderAccentColors(colorMode guigui.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
+func BorderAccentColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
 	typ1 := draw.ColorTypeAccent
 	typ2 := draw.ColorTypeAccent
 	switch borderType {
@@ -39,7 +40,7 @@ func BorderAccentColors(colorMode guigui.ColorMode, borderType RoundedRectBorder
 	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
 }
 
-func BorderAccentSecondaryColors(colorMode guigui.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
+func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
 	typ1 := draw.ColorTypeAccent
 	typ2 := draw.ColorTypeAccent
 	switch borderType {
@@ -54,36 +55,36 @@ func BorderAccentSecondaryColors(colorMode guigui.ColorMode, borderType RoundedR
 }
 
 var (
-	textEnabledLightColor              = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.1)
-	textEnabledDarkColor               = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.1)
-	textDisabledLightColor             = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.5)
-	textDisabledDarkColor              = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.5)
-	controlEnabledLightColor           = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 1, 0.3)
-	controlEnabledDarkColor            = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 1, 0.3)
-	controlDisabledLightColor          = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.9, 0.1)
-	controlDisabledDarkColor           = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.9, 0.1)
-	controlSecondaryEnabledLightColor  = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.95, 0.25)
-	controlSecondaryEnabledDarkColor   = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.95, 0.25)
-	controlSecondaryDisabledLightColor = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.85, 0.05)
-	controlSecondaryDisabledDarkColor  = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.85, 0.05)
-	thumbEnabledLightColor             = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 1, 0.6)
-	thumbEnabledDarkColor              = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 1, 0.6)
-	thumbDisabledLightColor            = draw.Color2(guigui.ColorModeLight, draw.ColorTypeBase, 0.9, 0.55)
-	thumbDisabledDarkColor             = draw.Color2(guigui.ColorModeDark, draw.ColorTypeBase, 0.9, 0.55)
-	backgroundLightColor               = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.95)
-	backgroundDarkColor                = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.95)
-	backgroundSecondaryColorLightColor = draw.Color(guigui.ColorModeLight, draw.ColorTypeBase, 0.9)
-	backgroundSecondaryColorDarkColor  = draw.Color(guigui.ColorModeDark, draw.ColorTypeBase, 0.9)
+	textEnabledLightColor              = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.1)
+	textEnabledDarkColor               = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.1)
+	textDisabledLightColor             = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.5)
+	textDisabledDarkColor              = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.5)
+	controlEnabledLightColor           = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.3)
+	controlEnabledDarkColor            = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.3)
+	controlDisabledLightColor          = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9, 0.1)
+	controlDisabledDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9, 0.1)
+	controlSecondaryEnabledLightColor  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.95, 0.25)
+	controlSecondaryEnabledDarkColor   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.95, 0.25)
+	controlSecondaryDisabledLightColor = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.05)
+	controlSecondaryDisabledDarkColor  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.05)
+	thumbEnabledLightColor             = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.6)
+	thumbEnabledDarkColor              = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.6)
+	thumbDisabledLightColor            = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9, 0.55)
+	thumbDisabledDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9, 0.55)
+	backgroundLightColor               = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.95)
+	backgroundDarkColor                = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.95)
+	backgroundSecondaryColorLightColor = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9)
+	backgroundSecondaryColorDarkColor  = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9)
 )
 
-func TextColor(colorMode guigui.ColorMode, enabled bool) color.Color {
+func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		if enabled {
 			return textEnabledLightColor
 		}
 		return textDisabledLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		if enabled {
 			return textEnabledDarkColor
 		}
@@ -93,14 +94,14 @@ func TextColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 	}
 }
 
-func ControlColor(colorMode guigui.ColorMode, enabled bool) color.Color {
+func ControlColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		if enabled {
 			return controlEnabledLightColor
 		}
 		return controlDisabledLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		if enabled {
 			return controlEnabledDarkColor
 		}
@@ -110,14 +111,14 @@ func ControlColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 	}
 }
 
-func ControlSecondaryColor(colorMode guigui.ColorMode, enabled bool) color.Color {
+func ControlSecondaryColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		if enabled {
 			return controlSecondaryEnabledLightColor
 		}
 		return controlSecondaryDisabledLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		if enabled {
 			return controlSecondaryEnabledDarkColor
 		}
@@ -127,14 +128,14 @@ func ControlSecondaryColor(colorMode guigui.ColorMode, enabled bool) color.Color
 	}
 }
 
-func ThumbColor(colorMode guigui.ColorMode, enabled bool) color.Color {
+func ThumbColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		if enabled {
 			return thumbEnabledLightColor
 		}
 		return thumbDisabledLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		if enabled {
 			return thumbEnabledDarkColor
 		}
@@ -144,22 +145,22 @@ func ThumbColor(colorMode guigui.ColorMode, enabled bool) color.Color {
 	}
 }
 
-func BackgroundColor(colorMode guigui.ColorMode) color.Color {
+func BackgroundColor(colorMode ebiten.ColorMode) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		return backgroundLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		return backgroundDarkColor
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}
 }
 
-func BackgroundSecondaryColor(colorMode guigui.ColorMode) color.Color {
+func BackgroundSecondaryColor(colorMode ebiten.ColorMode) color.Color {
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		return backgroundSecondaryColorLightColor
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		return backgroundSecondaryColorDarkColor
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))

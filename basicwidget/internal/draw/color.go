@@ -7,9 +7,8 @@ import (
 	"fmt"
 	"image/color"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/iro"
-
-	"github.com/guigui-gui/guigui"
 )
 
 func EqualColor(c0, c1 color.Color) bool {
@@ -48,11 +47,11 @@ const (
 	ColorTypeDanger
 )
 
-func Color(colorMode guigui.ColorMode, typ ColorType, lightnessInLightMode float64) color.Color {
+func Color(colorMode ebiten.ColorMode, typ ColorType, lightnessInLightMode float64) color.Color {
 	return Color2(colorMode, typ, lightnessInLightMode, 1-lightnessInLightMode)
 }
 
-func Color2(colorMode guigui.ColorMode, typ ColorType, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
+func Color2(colorMode ebiten.ColorMode, typ ColorType, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
 	var base iro.Color
 	switch typ {
 	case ColorTypeBase:
@@ -71,9 +70,9 @@ func Color2(colorMode guigui.ColorMode, typ ColorType, lightnessInLightMode, lig
 		panic(fmt.Sprintf("draw: invalid color type: %d", typ))
 	}
 	switch colorMode {
-	case guigui.ColorModeLight:
+	case ebiten.ColorModeLight:
 		return getColor(base, lightnessInLightMode, black, white)
-	case guigui.ColorModeDark:
+	case ebiten.ColorModeDark:
 		return getColor(base, lightnessInDarkMode, black, white)
 	default:
 		panic(fmt.Sprintf("draw: invalid color mode: %d", colorMode))

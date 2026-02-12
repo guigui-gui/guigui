@@ -6,6 +6,7 @@ package main
 import (
 	"image"
 
+	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
@@ -56,14 +57,14 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	s.colorModeSegmentedControl.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := s.colorModeSegmentedControl.ItemByIndex(index)
 		if !ok {
-			context.SetColorMode(guigui.ColorModeLight)
+			context.SetColorMode(ebiten.ColorModeLight)
 			return
 		}
 		switch item.Value {
 		case "light":
-			context.SetColorMode(guigui.ColorModeLight)
+			context.SetColorMode(ebiten.ColorModeLight)
 		case "dark":
-			context.SetColorMode(guigui.ColorModeDark)
+			context.SetColorMode(ebiten.ColorModeDark)
 		default:
 			context.UseAutoColorMode()
 		}
@@ -72,9 +73,9 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 		s.colorModeSegmentedControl.SelectItemByValue("")
 	} else {
 		switch context.ColorMode() {
-		case guigui.ColorModeLight:
+		case ebiten.ColorModeLight:
 			s.colorModeSegmentedControl.SelectItemByValue("light")
-		case guigui.ColorModeDark:
+		case ebiten.ColorModeDark:
 			s.colorModeSegmentedControl.SelectItemByValue("dark")
 		default:
 			s.colorModeSegmentedControl.SelectItemByValue("")

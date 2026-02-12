@@ -166,7 +166,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
-			b.text.SetColor(basicwidgetdraw.TextColor(guigui.ColorModeDark, true))
+			b.text.SetColor(basicwidgetdraw.TextColor(ebiten.ColorModeDark, true))
 		default:
 			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
 		}

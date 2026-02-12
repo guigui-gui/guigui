@@ -11,7 +11,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 
-	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -20,7 +19,7 @@ var imageResource embed.FS
 
 type imageCacheKey struct {
 	name      string
-	colorMode guigui.ColorMode
+	colorMode ebiten.ColorMode
 }
 
 type resourceImages struct {
@@ -29,7 +28,7 @@ type resourceImages struct {
 
 var theResourceImages = &resourceImages{}
 
-func (i *resourceImages) Get(name string, colorMode guigui.ColorMode) (*ebiten.Image, error) {
+func (i *resourceImages) Get(name string, colorMode ebiten.ColorMode) (*ebiten.Image, error) {
 	key := imageCacheKey{
 		name:      name,
 		colorMode: colorMode,
@@ -58,7 +57,7 @@ func (i *resourceImages) Get(name string, colorMode guigui.ColorMode) (*ebiten.I
 	return img, nil
 }
 
-func CreateMonochromeImage(colorMode guigui.ColorMode, img image.Image) image.Image {
+func CreateMonochromeImage(colorMode ebiten.ColorMode, img image.Image) image.Image {
 	base := draw.Color(colorMode, draw.ColorTypeBase, 0)
 	r, g, b, _ := base.RGBA()
 
