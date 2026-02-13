@@ -124,10 +124,12 @@ type widgetState struct {
 
 	offscreen *ebiten.Image
 
-	rebuildRequested   bool
-	rebuildRequestedAt string
-	redrawRequested    bool
-	redrawRequestedAt  string
+	rebuildRequested      bool
+	rebuildRequestedAt    string
+	redrawReasonOnRebuild requestRedrawReason
+
+	redrawRequested   bool
+	redrawRequestedAt string
 
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
@@ -305,10 +307,10 @@ func traverseWidget(widget Widget, f func(widget Widget) error) error {
 }
 
 func RequestRebuild(widget Widget) {
-	theApp.requestRebuild(widget.widgetState())
+	theApp.requestRebuild(widget.widgetState(), requestRedrawReasonRebuildWidget)
 }
 
-func (a *app) requestRebuild(widgetState *widgetState) {
+func (a *app) requestRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
 	if !widgetState.isInTree(a.buildCount) {
 		// requestRebuild can be called with a widget that is not in the tree.
 		// For example, a popup widget that is not added yet can invoke this when opening it.
@@ -316,6 +318,7 @@ func (a *app) requestRebuild(widgetState *widgetState) {
 		widgetState = a.root.widgetState()
 	}
 	widgetState.rebuildRequested = true
+	widgetState.redrawReasonOnRebuild = redrawReason
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.rebuildRequestedAt = fmt.Sprintf("%s:%d", file, line)

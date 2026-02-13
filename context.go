@@ -95,7 +95,7 @@ func (c *Context) SetColorMode(mode ebiten.ColorMode) {
 
 	c.colorMode = mode
 	c.colorModeSet = true
-	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode, nil)
+	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
 }
 
 func (c *Context) UseAutoColorMode() {
@@ -103,7 +103,7 @@ func (c *Context) UseAutoColorMode() {
 		return
 	}
 	c.colorModeSet = false
-	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonColorMode, nil)
+	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
 }
 
 func (c *Context) IsAutoColorModeUsed() bool {

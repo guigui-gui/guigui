@@ -127,6 +127,7 @@ type app struct {
 	lastScreenWidth    float64
 	lastScreenHeight   float64
 	lastCursorPosition image.Point
+	lastColorMode      ebiten.ColorMode
 
 	focusedWidget Widget
 
@@ -256,7 +257,7 @@ func (a *app) updateRedrawRequestedRegionsByWidgets() {
 			if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
 				var reason requestRedrawReason
 				if widgetState.rebuildRequested {
-					reason = requestRedrawReasonRebuildWidget
+					reason = widgetState.redrawReasonOnRebuild
 				} else {
 					reason = requestRedrawReasonRedrawWidget
 				}
@@ -265,6 +266,7 @@ func (a *app) updateRedrawRequestedRegionsByWidgets() {
 		}
 		widgetState.rebuildRequested = false
 		widgetState.rebuildRequestedAt = ""
+		widgetState.redrawReasonOnRebuild = 0
 		widgetState.redrawRequested = false
 		widgetState.redrawRequestedAt = ""
 		return nil
@@ -280,7 +282,12 @@ func (a *app) Update() error {
 
 	if s := deviceScaleFactor(); a.deviceScale != s {
 		a.deviceScale = s
-		a.requestRedraw(a.bounds(), requestRedrawReasonScreenDeviceScale, nil)
+		a.requestRebuild(a.root.widgetState(), requestRedrawReasonScreenDeviceScale)
+	}
+
+	if a.context.ColorMode() != a.lastColorMode {
+		a.lastColorMode = a.context.ColorMode()
+		a.requestRebuild(a.root.widgetState(), requestRedrawReasonColorMode)
 	}
 
 	rootState := a.root.widgetState()
