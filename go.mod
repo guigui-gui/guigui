@@ -3,7 +3,7 @@ module github.com/guigui-gui/guigui
 go 1.24.0
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260213173344-163973849f0e
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260214141048-59b985ac0ac2
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.9.0
