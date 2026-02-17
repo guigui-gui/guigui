@@ -98,6 +98,10 @@ func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 }
 
 func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	// WidgetSlice.SetLen should be called before AddChild.
+	s.buttons.SetLen(s.abstractList.ItemCount())
+	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
+
 	for i := range s.buttons.Len() {
 		adder.AddChild(s.buttons.At(i))
 	}
@@ -108,9 +112,6 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		}
 	}
 	s.abstractList.SetOnItemSelected(s.onItemSelected)
-
-	s.buttons.SetLen(s.abstractList.ItemCount())
-	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
 
 	for i := range s.abstractList.ItemCount() {
 		item, _ := s.abstractList.ItemByIndex(i)

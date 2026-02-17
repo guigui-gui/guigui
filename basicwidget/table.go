@@ -93,6 +93,9 @@ func (t *Table[T]) updateTableRows() {
 }
 
 func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	// WidgetSlice.SetLen should be called before AddChild.
+	t.updateTableRows()
+
 	adder.AddChild(&t.list)
 	adder.AddChild(&t.tableHeader)
 
@@ -101,8 +104,6 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	t.list.SetHeaderHeight(tableHeaderHeight(context))
 	t.list.SetStyle(ListStyleNormal)
 	t.list.SetStripeVisible(true)
-
-	t.updateTableRows()
 
 	for i := range t.tableRowWidgets.Len() {
 		row := t.tableRowWidgets.At(i)
