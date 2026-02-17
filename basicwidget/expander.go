@@ -31,7 +31,7 @@ type Expander struct {
 }
 
 func (e *Expander) OnExpansionChanged(callback func(context *guigui.Context, expanded bool)) {
-	guigui.AddEventHandler(e, expanderEventExpansionChanged, callback)
+	guigui.SetEventHandler(e, expanderEventExpansionChanged, callback)
 }
 
 func (e *Expander) SetHeaderWidget(w guigui.Widget) {
@@ -116,7 +116,7 @@ type expanderHeader struct {
 }
 
 func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
-	guigui.AddEventHandler(e, expanderHeaderEventDown, callback)
+	guigui.SetEventHandler(e, expanderHeaderEventDown, callback)
 }
 
 func (e *expanderHeader) setExpanded(expanded bool) {

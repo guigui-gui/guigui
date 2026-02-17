@@ -171,7 +171,7 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 			l.panel.SetScrollOffset(offsetX, offsetY)
 		}
 	}
-	guigui.AddEventHandler(&l.content, listEventScrollY, l.onScrollY)
+	guigui.SetEventHandler(&l.content, listEventScrollY, l.onScrollY)
 
 	if l.onScrollYEnsureVisible == nil {
 		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
@@ -179,14 +179,14 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
 		}
 	}
-	guigui.AddEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
+	guigui.SetEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
 
 	if l.onScrollDeltaY == nil {
 		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
 			l.panel.SetScrollOffsetByDelta(0, deltaY)
 		}
 	}
-	guigui.AddEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
+	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
@@ -622,19 +622,19 @@ func (l *listContent[T]) SetBackground(widget guigui.Widget) {
 }
 
 func (l *listContent[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.AddEventHandler(l, listEventItemSelected, f)
+	guigui.SetEventHandler(l, listEventItemSelected, f)
 }
 
 func (l *listContent[T]) OnItemsSelected(f func(context *guigui.Context, indices []int)) {
-	guigui.AddEventHandler(l, listEventItemsSelected, f)
+	guigui.SetEventHandler(l, listEventItemsSelected, f)
 }
 
 func (l *listContent[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
-	guigui.AddEventHandler(l, listEventItemsMoved, f)
+	guigui.SetEventHandler(l, listEventItemsMoved, f)
 }
 
 func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
-	guigui.AddEventHandler(l, listEventItemExpanderToggled, f)
+	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
 }
 
 func (l *listContent[T]) SetCheckmarkIndex(index int) {

@@ -66,7 +66,7 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 }
 
 func (s *SegmentedControl[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.AddEventHandler(s, segmentedControlEventItemSelected, f)
+	guigui.SetEventHandler(s, segmentedControlEventItemSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {

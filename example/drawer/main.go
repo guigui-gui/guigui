@@ -135,7 +135,7 @@ type drawerContent struct {
 }
 
 func (d *drawerContent) OnClose(f func(context *guigui.Context)) {
-	guigui.AddEventHandler(d, drawerContentEventClose, f)
+	guigui.SetEventHandler(d, drawerContentEventClose, f)
 }
 
 func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

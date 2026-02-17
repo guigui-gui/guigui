@@ -190,7 +190,7 @@ func (p *popupClickHereText) Text() *basicwidget.Text {
 }
 
 func (b *popupClickHereText) OnClicked(f func(context *guigui.Context, pt image.Point)) {
-	guigui.AddEventHandler(b, popupClickHereTextEventClicked, f)
+	guigui.SetEventHandler(b, popupClickHereTextEventClicked, f)
 }
 
 func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

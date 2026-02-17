@@ -339,8 +339,11 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
-func AddEventHandler(widget Widget, eventKey EventKey, handler any) {
+func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	widgetState := widget.widgetState()
+	widgetState.eventHandlers = slices.DeleteFunc(widgetState.eventHandlers, func(h eventHandler) bool {
+		return h.key == eventKey
+	})
 	widgetState.eventHandlers = append(widgetState.eventHandlers, eventHandler{
 		key:     eventKey,
 		handler: handler,
@@ -373,8 +376,9 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
 
 var widgetEventFocusChanged EventKey = GenerateEventKey()
 
+// TODO: For focus delegation, create a new function (#340).
 func OnFocusChanged(widget Widget, onfocus func(context *Context, focused bool)) {
-	AddEventHandler(widget, widgetEventFocusChanged, onfocus)
+	SetEventHandler(widget, widgetEventFocusChanged, onfocus)
 }
 
 // noCopy is a struct to warn that the struct should not be copied.

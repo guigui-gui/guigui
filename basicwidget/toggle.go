@@ -31,7 +31,7 @@ type Toggle struct {
 }
 
 func (t *Toggle) OnValueChanged(f func(context *guigui.Context, value bool)) {
-	guigui.AddEventHandler(t, toggleEventValueChanged, f)
+	guigui.SetEventHandler(t, toggleEventValueChanged, f)
 }
 
 func (t *Toggle) Value() bool {

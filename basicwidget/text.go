@@ -174,15 +174,15 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 }
 
 func (t *Text) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
-	guigui.AddEventHandler(t, textEventValueChanged, f)
+	guigui.SetEventHandler(t, textEventValueChanged, f)
 }
 
 func (t *Text) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	guigui.AddEventHandler(t, textEventKeyJustPressed, f)
+	guigui.SetEventHandler(t, textEventKeyJustPressed, f)
 }
 
 func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY float64)) {
-	guigui.AddEventHandler(t, textEventScrollDelta, f)
+	guigui.SetEventHandler(t, textEventScrollDelta, f)
 }
 
 func (t *Text) resetCachedTextSize() {

@@ -44,7 +44,7 @@ type Select[T comparable] struct {
 }
 
 func (s *Select[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.AddEventHandler(s, selectEventItemSelected, f)
+	guigui.SetEventHandler(s, selectEventItemSelected, f)
 }
 
 func (s *Select[T]) updatePopupMenuItems() {

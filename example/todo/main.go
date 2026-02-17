@@ -125,7 +125,7 @@ var (
 )
 
 func (t *taskWidget) OnDoneButtonPressed(f func(context *guigui.Context)) {
-	guigui.AddEventHandler(t, taskWidgetEventDoneButtonPressed, f)
+	guigui.SetEventHandler(t, taskWidgetEventDoneButtonPressed, f)
 }
 
 func (t *taskWidget) SetText(text string) {
@@ -179,7 +179,7 @@ var (
 )
 
 func (t *tasksPanelContent) OnDeleted(f func(context *guigui.Context, id int)) {
-	guigui.AddEventHandler(t, tasksPanelContentEventDeleted, f)
+	guigui.SetEventHandler(t, tasksPanelContentEventDeleted, f)
 }
 
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

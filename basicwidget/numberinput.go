@@ -65,19 +65,19 @@ func (n *NumberInput) SetEditable(editable bool) {
 }
 
 func (n *NumberInput) OnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
-	guigui.AddEventHandler(n, numberInputEventValueChanged, f)
+	guigui.SetEventHandler(n, numberInputEventValueChanged, f)
 }
 
 func (n *NumberInput) OnValueChangedBigInt(f func(context *guigui.Context, value *big.Int, committed bool)) {
-	guigui.AddEventHandler(n, numberInputEventValueChangedBigInt, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedBigInt, f)
 }
 
 func (n *NumberInput) OnValueChangedInt64(f func(context *guigui.Context, value int64, committed bool)) {
-	guigui.AddEventHandler(n, numberInputEventValueChangedInt64, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedInt64, f)
 }
 
 func (n *NumberInput) OnValueChangedUint64(f func(context *guigui.Context, value uint64, committed bool)) {
-	guigui.AddEventHandler(n, numberInputEventValueChangedUint64, f)
+	guigui.SetEventHandler(n, numberInputEventValueChangedUint64, f)
 }
 
 func (n *NumberInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {

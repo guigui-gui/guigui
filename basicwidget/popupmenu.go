@@ -39,7 +39,7 @@ type PopupMenu[T comparable] struct {
 }
 
 func (p *PopupMenu[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
-	guigui.AddEventHandler(p, popupMenuEventItemSelected, f)
+	guigui.SetEventHandler(p, popupMenuEventItemSelected, f)
 }
 
 func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {

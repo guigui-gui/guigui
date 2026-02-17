@@ -41,25 +41,25 @@ type Slider struct {
 }
 
 func (s *Slider) OnValueChanged(f func(context *guigui.Context, value int)) {
-	guigui.AddEventHandler(s, sliderEventValueChanged, func(context *guigui.Context, value int, committed bool) {
+	guigui.SetEventHandler(s, sliderEventValueChanged, func(context *guigui.Context, value int, committed bool) {
 		f(context, value)
 	})
 }
 
 func (s *Slider) OnValueChangedBigInt(f func(context *guigui.Context, value *big.Int)) {
-	guigui.AddEventHandler(s, sliderEventValueChangedBigInt, func(context *guigui.Context, value *big.Int, committed bool) {
+	guigui.SetEventHandler(s, sliderEventValueChangedBigInt, func(context *guigui.Context, value *big.Int, committed bool) {
 		f(context, value)
 	})
 }
 
 func (s *Slider) OnValueChangedInt64(f func(context *guigui.Context, value int64)) {
-	guigui.AddEventHandler(s, sliderEventValueChangedInt64, func(context *guigui.Context, value int64, committed bool) {
+	guigui.SetEventHandler(s, sliderEventValueChangedInt64, func(context *guigui.Context, value int64, committed bool) {
 		f(context, value)
 	})
 }
 
 func (s *Slider) OnValueChangedUint64(f func(context *guigui.Context, value uint64)) {
-	guigui.AddEventHandler(s, sliderEventValueChangedUint64, func(context *guigui.Context, value uint64, committed bool) {
+	guigui.SetEventHandler(s, sliderEventValueChangedUint64, func(context *guigui.Context, value uint64, committed bool) {
 		f(context, value)
 	})
 }

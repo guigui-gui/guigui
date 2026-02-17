@@ -69,15 +69,15 @@ type Button struct {
 }
 
 func (b *Button) OnDown(f func(context *guigui.Context)) {
-	guigui.AddEventHandler(b, buttonEventDown, f)
+	guigui.SetEventHandler(b, buttonEventDown, f)
 }
 
 func (b *Button) OnUp(f func(context *guigui.Context)) {
-	guigui.AddEventHandler(b, buttonEventUp, f)
+	guigui.SetEventHandler(b, buttonEventUp, f)
 }
 
 func (b *Button) setOnRepeat(f func(context *guigui.Context)) {
-	guigui.AddEventHandler(b, buttonEventRepeat, f)
+	guigui.SetEventHandler(b, buttonEventRepeat, f)
 }
 
 func (b *Button) setPairedButton(pair *Button) {
