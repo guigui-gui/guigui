@@ -181,7 +181,7 @@ func (t *Text) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key))
 	guigui.AddEventHandler(t, textEventKeyJustPressed, f)
 }
 
-func (t *Text) setOnScrollDelta(f func(context *guigui.Context, deltaX, deltaY float64)) {
+func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY float64)) {
 	guigui.AddEventHandler(t, textEventScrollDelta, f)
 }
 

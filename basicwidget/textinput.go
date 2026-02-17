@@ -347,7 +347,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			t.panel.SetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
-	t.text.Text().setOnScrollDelta(t.onTextScrollDelta)
+	t.text.Text().onScrollDelta(t.onTextScrollDelta)
 
 	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
 
