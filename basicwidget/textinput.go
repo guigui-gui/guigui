@@ -143,8 +143,8 @@ func (t *TextInput) Redo() bool {
 }
 
 func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.textInput)
-	adder.AddChild(&t.focus)
+	adder.AddWidget(&t.textInput)
+	adder.AddWidget(&t.focus)
 	context.SetPassthrough(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
 	return nil
@@ -317,13 +317,13 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 }
 
 func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.background)
+	adder.AddWidget(&t.background)
 	if t.icon.HasImage() {
-		adder.AddChild(&t.iconBackground)
-		adder.AddChild(&t.icon)
+		adder.AddWidget(&t.iconBackground)
+		adder.AddWidget(&t.icon)
 	}
-	adder.AddChild(&t.panel)
-	adder.AddChild(&t.frame)
+	adder.AddWidget(&t.panel)
+	adder.AddWidget(&t.frame)
 
 	t.panel.SetContent(&t.text)
 	t.panel.SetContentConstraints(PanelContentConstraintsFixedWidth)
@@ -521,7 +521,7 @@ func (t *textInputText) Text() *Text {
 }
 
 func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.text)
+	adder.AddWidget(&t.text)
 
 	t.text.Widget().SetSelectable(true)
 	t.text.Widget().SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))

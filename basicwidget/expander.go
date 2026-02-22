@@ -61,9 +61,9 @@ func (e *Expander) SetExpanded(expanded bool) {
 }
 
 func (e *Expander) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&e.header)
+	adder.AddWidget(&e.header)
 	if e.expanded && e.contentWidget != nil {
-		adder.AddChild(e.contentWidget)
+		adder.AddWidget(e.contentWidget)
 	}
 
 	e.header.setWidget(e.headerWidget)
@@ -136,9 +136,9 @@ func (e *expanderHeader) setWidget(w guigui.Widget) {
 }
 
 func (e *expanderHeader) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&e.image)
+	adder.AddWidget(&e.image)
 	if e.widget != nil {
-		adder.AddChild(e.widget)
+		adder.AddWidget(e.widget)
 	}
 
 	var iconName string

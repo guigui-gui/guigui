@@ -154,10 +154,10 @@ func (b *Button) SetSharpCorners(sharpCorners Corners) {
 
 func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if b.content != nil {
-		adder.AddChild(b.content)
+		adder.AddWidget(b.content)
 	}
-	adder.AddChild(&b.text)
-	adder.AddChild(&b.icon)
+	adder.AddWidget(&b.text)
+	adder.AddWidget(&b.icon)
 
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)

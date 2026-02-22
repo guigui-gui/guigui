@@ -157,9 +157,9 @@ func (l *List[T]) IsItemVisible(index int) bool {
 }
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&l.background1)
-	adder.AddChild(&l.panel)
-	adder.AddChild(&l.frame)
+	adder.AddWidget(&l.background1)
+	adder.AddWidget(&l.panel)
+	adder.AddWidget(&l.frame)
 
 	l.background1.setListContent(&l.content)
 	l.panel.SetContent(&l.content)
@@ -438,11 +438,11 @@ func (l *listItemWidget[T]) textColor() color.Color {
 
 func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if l.item.Content != nil {
-		adder.AddChild(l.item.Content)
+		adder.AddWidget(l.item.Content)
 	} else {
-		adder.AddChild(&l.text)
+		adder.AddWidget(&l.text)
 	}
-	adder.AddChild(&l.keyText)
+	adder.AddWidget(&l.keyText)
 
 	l.text.SetValue(l.item.Text)
 	l.text.SetVerticalAlign(VerticalAlignMiddle)
@@ -710,14 +710,14 @@ func (l *listContent[T]) isItemVisible(index int) bool {
 
 func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if l.customBackground != nil {
-		adder.AddChild(l.customBackground)
+		adder.AddWidget(l.customBackground)
 	}
-	adder.AddChild(&l.background2)
+	adder.AddWidget(&l.background2)
 	l.expanderImages.SetLen(l.abstractList.ItemCount())
 	for i := range l.visibleItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		if l.checkmarkIndexPlus1 == i+1 {
-			adder.AddChild(&l.checkmark)
+			adder.AddWidget(&l.checkmark)
 		}
 		var hasChild bool
 		if nextItem, ok := l.abstractList.ItemByIndex(i + 1); ok {
@@ -731,9 +731,9 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 			} else {
 				img.SetImage(l.treeItemCollapsedImage)
 			}
-			adder.AddChild(img)
+			adder.AddWidget(img)
 		}
-		adder.AddChild(item.Content)
+		adder.AddWidget(item.Content)
 	}
 
 	if l.onItemSelected == nil {

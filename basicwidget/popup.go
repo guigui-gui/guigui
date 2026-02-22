@@ -115,7 +115,7 @@ func (p *Popup) canUpdateContent() bool {
 }
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&p.popup)
+	adder.AddWidget(&p.popup)
 	context.SetClipChildren(&p.popup, true)
 
 	if p.onOpen == nil {
@@ -265,13 +265,13 @@ func (p *popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if p.openingRate() > 0 {
 		if p.backgroundBlurred {
-			adder.AddChild(&p.blurredBackground)
+			adder.AddWidget(&p.blurredBackground)
 		}
 		if p.backgroundDark {
-			adder.AddChild(&p.darkBackground)
+			adder.AddWidget(&p.darkBackground)
 		}
-		adder.AddChild(&p.shadow)
-		adder.AddChild(&p.contentAndFrame)
+		adder.AddWidget(&p.shadow)
+		adder.AddWidget(&p.contentAndFrame)
 	}
 
 	context.SetPassthrough(p, p.passthrough())
@@ -511,8 +511,8 @@ func (p *popupContentAndFrame) hasContent() bool {
 }
 
 func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&p.content)
-	adder.AddChild(&p.frame)
+	adder.AddWidget(&p.content)
+	adder.AddWidget(&p.frame)
 	return nil
 }
 
@@ -542,7 +542,7 @@ func (p *popupContent) hasContent() bool {
 
 func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if p.content != nil {
-		adder.AddChild(p.content)
+		adder.AddWidget(p.content)
 	}
 	return nil
 }

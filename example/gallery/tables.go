@@ -29,8 +29,8 @@ type Tables struct {
 }
 
 func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.table)
-	adder.AddChild(&t.configForm)
+	adder.AddWidget(&t.table)
+	adder.AddWidget(&t.configForm)
 
 	model := context.Data(t, modelKeyModel).(*Model)
 

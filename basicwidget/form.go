@@ -44,10 +44,10 @@ func (f *Form) SetItems(items []FormItem) {
 func (f *Form) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	for _, item := range f.items {
 		if item.PrimaryWidget != nil {
-			adder.AddChild(item.PrimaryWidget)
+			adder.AddWidget(item.PrimaryWidget)
 		}
 		if item.SecondaryWidget != nil {
-			adder.AddChild(item.SecondaryWidget)
+			adder.AddWidget(item.SecondaryWidget)
 		}
 	}
 	return nil

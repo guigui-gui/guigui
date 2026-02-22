@@ -32,8 +32,8 @@ type Selects struct {
 }
 
 func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&s.listForm)
-	adder.AddChild(&s.configForm)
+	adder.AddWidget(&s.listForm)
+	adder.AddWidget(&s.configForm)
 
 	model := context.Data(s, modelKeyModel).(*Model)
 
@@ -163,8 +163,8 @@ func (s *selectItem) SetTextColor(clr color.Color) {
 }
 
 func (s *selectItem) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&s.image)
-	adder.AddChild(&s.text)
+	adder.AddWidget(&s.image)
+	adder.AddWidget(&s.text)
 	s.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	return nil
 }

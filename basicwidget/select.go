@@ -74,8 +74,8 @@ func (s *Select[T]) updatePopupMenuItems() {
 }
 
 func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&s.button)
-	adder.AddChild(&s.popupMenu)
+	adder.AddWidget(&s.button)
+	adder.AddWidget(&s.popupMenu)
 
 	s.updatePopupMenuItems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {
@@ -215,11 +215,11 @@ func (s *selectButtonContent) SetText(text string) {
 
 func (s *selectButtonContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if s.content != nil {
-		adder.AddChild(s.content)
+		adder.AddWidget(s.content)
 	}
-	adder.AddChild(&s.dummyContent)
-	adder.AddChild(&s.text)
-	adder.AddChild(&s.icon)
+	adder.AddWidget(&s.dummyContent)
+	adder.AddWidget(&s.text)
+	adder.AddWidget(&s.icon)
 	s.text.SetVerticalAlign(VerticalAlignMiddle)
 
 	img, err := theResourceImages.Get("unfold_more", context.ColorMode())
@@ -301,7 +301,7 @@ func (s *selectItemContent) SetContent(content guigui.Widget) {
 }
 
 func (s *selectItemContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(s.content)
+	adder.AddWidget(s.content)
 	return nil
 }
 

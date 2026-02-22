@@ -18,7 +18,7 @@ type Toolbar struct {
 }
 
 func (t *Toolbar) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.panel)
+	adder.AddWidget(&t.panel)
 	t.panel.SetStyle(basicwidget.PanelStyleSide)
 	t.panel.SetBorders(basicwidget.PanelBorders{
 		Bottom: true,
@@ -45,8 +45,8 @@ type toolbarContent struct {
 }
 
 func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.leftPanelButton)
-	adder.AddChild(&t.rightPanelButton)
+	adder.AddWidget(&t.leftPanelButton)
+	adder.AddWidget(&t.rightPanelButton)
 
 	model := context.Data(t, modelKeyModel).(*Model)
 

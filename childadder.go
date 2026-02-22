@@ -9,7 +9,7 @@ type ChildAdder struct {
 }
 
 // TODO: Rename this to AddWidget.
-func (c *ChildAdder) AddChild(widget Widget) {
+func (c *ChildAdder) AddWidget(widget Widget) {
 	widgetState := widget.widgetState()
 	widgetState.parent = c.widget
 	widgetState.builtAt = c.app.buildCount

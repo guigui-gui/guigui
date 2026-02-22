@@ -27,11 +27,11 @@ type Root struct {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.counterText)
-	adder.AddChild(&r.resetButton)
-	adder.AddChild(&r.decButton)
-	adder.AddChild(&r.incButton)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.counterText)
+	adder.AddWidget(&r.resetButton)
+	adder.AddWidget(&r.decButton)
+	adder.AddWidget(&r.incButton)
 
 	r.counterText.SetSelectable(true)
 	r.counterText.SetBold(true)

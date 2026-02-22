@@ -48,8 +48,8 @@ func (r *roundedCornerWidget[T]) SetRenderingBounds(bounds image.Rectangle) {
 }
 
 func (r *roundedCornerWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(r.widget.Widget())
-	adder.AddChild(&r.corners)
+	adder.AddWidget(r.widget.Widget())
+	adder.AddWidget(&r.corners)
 	context.DelegateFocus(r, r.widget.Widget())
 	return nil
 }

@@ -103,7 +103,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 	s.onButtonDowns = adjustSliceSize(s.onButtonDowns, s.abstractList.ItemCount())
 
 	for i := range s.buttons.Len() {
-		adder.AddChild(s.buttons.At(i))
+		adder.AddWidget(s.buttons.At(i))
 	}
 
 	if s.onItemSelected == nil {

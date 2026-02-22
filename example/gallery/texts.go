@@ -30,8 +30,8 @@ type Texts struct {
 }
 
 func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.sampleText)
-	adder.AddChild(&t.form)
+	adder.AddWidget(&t.sampleText)
+	adder.AddWidget(&t.form)
 
 	model := context.Data(t, modelKeyModel).(*Model)
 

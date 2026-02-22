@@ -37,8 +37,8 @@ type TextInputs struct {
 }
 
 func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.textInputForm)
-	adder.AddChild(&t.configForm)
+	adder.AddWidget(&t.textInputForm)
+	adder.AddWidget(&t.configForm)
 
 	model := context.Data(t, modelKeyModel).(*Model)
 
@@ -271,7 +271,7 @@ func (c *inlineTextInputContainer) SetHorizontalAlign(align basicwidget.Horizont
 }
 
 func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&c.textInput)
+	adder.AddWidget(&c.textInput)
 	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
 	return nil
 }

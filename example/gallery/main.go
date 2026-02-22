@@ -74,10 +74,10 @@ func (r *Root) contentWidgeet() guigui.Widget {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.sidebar)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.sidebar)
 	if content := r.contentWidgeet(); content != nil {
-		adder.AddChild(content)
+		adder.AddWidget(content)
 	}
 	return nil
 }

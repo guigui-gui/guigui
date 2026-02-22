@@ -96,8 +96,8 @@ func (t *Table[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	// WidgetSlice.SetLen should be called before AddChild.
 	t.updateTableRows()
 
-	adder.AddChild(&t.list)
-	adder.AddChild(&t.tableHeader)
+	adder.AddWidget(&t.list)
+	adder.AddWidget(&t.tableHeader)
 
 	context.SetClipChildren(&t.tableHeader, true)
 
@@ -256,9 +256,9 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	t.ensureTexts()
 	for i, cell := range t.row.Cells {
 		if cell.Content != nil {
-			adder.AddChild(cell.Content)
+			adder.AddWidget(cell.Content)
 		} else {
-			adder.AddChild(t.texts.At(i))
+			adder.AddWidget(t.texts.At(i))
 		}
 	}
 	return nil
@@ -349,7 +349,7 @@ func (t *tableHeader[T]) SetTable(table *Table[T]) {
 func (t *tableHeader[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.columnTexts.SetLen(len(t.table.columns))
 	for i := range t.columnTexts.Len() {
-		adder.AddChild(t.columnTexts.At(i))
+		adder.AddWidget(t.columnTexts.At(i))
 	}
 
 	for i, column := range t.table.columns {

@@ -200,9 +200,9 @@ func (n *NumberInput) CommitWithCurrentInputValue() {
 }
 
 func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&n.textInput)
-	adder.AddChild(&n.upButton)
-	adder.AddChild(&n.downButton)
+	adder.AddWidget(&n.textInput)
+	adder.AddWidget(&n.upButton)
+	adder.AddWidget(&n.downButton)
 
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {

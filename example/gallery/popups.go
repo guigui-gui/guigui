@@ -40,10 +40,10 @@ type Popups struct {
 
 func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	for i := range p.forms {
-		adder.AddChild(&p.forms[i])
+		adder.AddWidget(&p.forms[i])
 	}
-	adder.AddChild(&p.simplePopup)
-	adder.AddChild(&p.contextMenuPopup)
+	adder.AddWidget(&p.simplePopup)
+	adder.AddWidget(&p.contextMenuPopup)
 
 	p.darkenBackgroundText.SetValue("Darken the background")
 	p.blurBackgroundText.SetValue("Blur the background")
@@ -194,7 +194,7 @@ func (b *popupClickHereText) OnClicked(f func(context *guigui.Context, pt image.
 }
 
 func (p *popupClickHereText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&p.text)
+	adder.AddWidget(&p.text)
 	return nil
 }
 
@@ -230,8 +230,8 @@ func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
 }
 
 func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&s.titleText)
-	adder.AddChild(&s.closeButton)
+	adder.AddWidget(&s.titleText)
+	adder.AddWidget(&s.closeButton)
 	s.titleText.SetValue("Hello!")
 	s.titleText.SetBold(true)
 

@@ -21,8 +21,8 @@ type Root struct {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.expander)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.expander)
 
 	r.headerText.SetValue("Expander")
 	r.headerText.SetBold(true)

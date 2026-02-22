@@ -65,7 +65,7 @@ func (d *Drawer) SetDrawerEdge(edge DrawerEdge) {
 }
 
 func (d *Drawer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&d.popup)
+	adder.AddWidget(&d.popup)
 
 	d.popup.setStyle(popupStyleDrawer)
 

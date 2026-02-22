@@ -196,7 +196,7 @@ func (t *Text) canHaveCursor() bool {
 
 func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if t.canHaveCursor() {
-		adder.AddChild(&t.cursor)
+		adder.AddWidget(&t.cursor)
 	}
 
 	if key := t.faceCacheKey(context, false); t.lastFaceCacheKey != key {

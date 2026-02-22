@@ -41,10 +41,10 @@ func (r *Root) Data(context *guigui.Context, key guigui.DataKey) any {
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&r.background)
-	adder.AddChild(&r.textInput)
-	adder.AddChild(&r.createButton)
-	adder.AddChild(&r.tasksPanel)
+	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.textInput)
+	adder.AddWidget(&r.createButton)
+	adder.AddWidget(&r.tasksPanel)
 
 	r.textInput.OnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
 		if key == ebiten.KeyEnter {
@@ -133,8 +133,8 @@ func (t *taskWidget) SetText(text string) {
 }
 
 func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddChild(&t.doneButton)
-	adder.AddChild(&t.text)
+	adder.AddWidget(&t.doneButton)
+	adder.AddWidget(&t.text)
 
 	t.doneButton.SetText("Done")
 	t.doneButton.OnUp(func(context *guigui.Context) {
@@ -187,7 +187,7 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 	t.taskWidgets.SetLen(model.TaskCount())
 	for i := range t.taskWidgets.Len() {
-		adder.AddChild(t.taskWidgets.At(i))
+		adder.AddWidget(t.taskWidgets.At(i))
 	}
 
 	for i := range model.TaskCount() {
