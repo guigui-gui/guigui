@@ -523,6 +523,7 @@ func (a *app) buildWidgets() error {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		widgetState.eventHandlers = slices.Delete(widgetState.eventHandlers, 0, len(widgetState.eventHandlers))
+		widgetState.focusDelegate = nil
 
 		widgetState.actualLayerPlus1Cache = 0
 		widgetState.visibleCache = false

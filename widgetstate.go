@@ -93,9 +93,10 @@ type widgetState struct {
 
 	bounds image.Rectangle
 
-	parent   Widget
-	children []Widget
-	prev     widgetsAndBounds
+	parent        Widget
+	children      []Widget
+	prev          widgetsAndBounds
+	focusDelegate Widget
 
 	hidden       bool
 	disabled     bool

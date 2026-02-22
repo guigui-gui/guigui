@@ -21,8 +21,6 @@ type roundedCornerWidget[T guigui.Widget] struct {
 	corners roundedCornerWidgetCorners
 
 	disabled bool
-
-	onFocusChanged func(context *guigui.Context, focused bool)
 }
 
 func (r *roundedCornerWidget[T]) SetCornderRouneded(rounded bool) {
@@ -52,14 +50,7 @@ func (r *roundedCornerWidget[T]) SetRenderingBounds(bounds image.Rectangle) {
 func (r *roundedCornerWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddChild(r.widget.Widget())
 	adder.AddChild(&r.corners)
-	if r.onFocusChanged == nil {
-		r.onFocusChanged = func(context *guigui.Context, focused bool) {
-			if focused {
-				context.SetFocused(r.widget.Widget(), true)
-			}
-		}
-	}
-	guigui.OnFocusChanged(r, r.onFocusChanged)
+	context.DelegateFocus(r, r.widget.Widget())
 	return nil
 }
 

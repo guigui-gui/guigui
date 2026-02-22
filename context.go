@@ -236,18 +236,25 @@ func (c *Context) SetFocused(widget Widget, focused bool) {
 }
 
 func (c *Context) resolveFocusedWidget(widget Widget) Widget {
-	if !c.canHaveFocus(widget.widgetState()) {
-		return nil
+	origWidget := widget
+	visited := map[Widget]struct{}{}
+	for {
+		if !c.canHaveFocus(widget.widgetState()) {
+			return nil
+		}
+		if widget.widgetState().focusDelegate == nil {
+			return widget
+		}
+		if _, ok := visited[widget]; ok {
+			panic(fmt.Sprintf("guigui: infinite focus delegation loop: %T", origWidget))
+		}
+		visited[widget] = struct{}{}
+		widget = widget.widgetState().focusDelegate
 	}
-	return widget
 }
 
 func (c *Context) focus(widget Widget) {
 	ws := c.resolveFocusedWidget(widget)
-	if areWidgetsSame(c.app.focusedWidget, ws) {
-		return
-	}
-
 	c.app.focusWidget(ws)
 }
 
@@ -411,4 +418,9 @@ func (c *Context) resetDefaultMethodCalled() {
 
 func (c *Context) setDefaultMethodCalledFlag() {
 	c.defaultMethodCalled = true
+}
+
+// DelegateFocus delegates the focus to another widget.
+func (c *Context) DelegateFocus(widget Widget, delegate Widget) {
+	widget.widgetState().focusDelegate = delegate
 }
