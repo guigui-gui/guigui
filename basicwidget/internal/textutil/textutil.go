@@ -24,8 +24,12 @@ func nextIndentPosition(position float64, indentWidth float64) float64 {
 }
 
 func advance(str string, face text.Face, tabWidth float64, keepTailingSpace bool) float64 {
+	var hasLineBreak bool
 	if !keepTailingSpace {
 		str = strings.TrimRightFunc(str, unicode.IsSpace)
+	} else if l := tailingLineBreakLen(str); l > 0 {
+		str = str[:len(str)-l]
+		hasLineBreak = true
 	}
 	if tabWidth == 0 {
 		return text.Advance(str, face)
@@ -39,6 +43,10 @@ func advance(str string, face text.Face, tabWidth float64, keepTailingSpace bool
 		}
 		width = nextIndentPosition(width, tabWidth)
 		str = tail
+	}
+	if hasLineBreak {
+		// Always add the advance of a space for the line break for a consistent behavior.
+		width += text.Advance(" ", face)
 	}
 	return width
 }
@@ -245,9 +253,9 @@ func textPositionFromIndex(width int, str string, lines iter.Seq[line], index in
 	var line0, line1 string
 	var found0, found1 bool
 	for l := range lines {
-		// When auto wrap is on, there can be two positions:
+		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
-		if tailingLineBreakLen(l.str) == 0 && index == l.pos+len(l.str) {
+		if index == l.pos+len(l.str) {
 			found0 = true
 			line0 = l.str
 			indexInLine0 = index - l.pos

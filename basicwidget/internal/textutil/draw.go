@@ -69,7 +69,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		}
 
 		start := line.pos
-		end := line.pos + len(line.str) - tailingLineBreakLen(line.str)
+		end := line.pos + len(line.str)
 
 		if options.DrawSelection {
 			if start <= options.SelectionEnd && end >= options.SelectionStart {
