@@ -93,6 +93,7 @@ func (c *Context) SetColorMode(mode ebiten.ColorMode) {
 
 	c.colorMode = mode
 	c.colorModeSet = true
+	ebiten.SetWindowColorMode(mode)
 	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
 }
 
