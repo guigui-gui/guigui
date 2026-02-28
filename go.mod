@@ -3,7 +3,7 @@ module github.com/guigui-gui/guigui
 go 1.24.0
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260215075934-8e7f3815310f
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260228124522-1629157ad6a9
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.9.0
@@ -17,7 +17,7 @@ require (
 require (
 	github.com/ebitengine/gomobile v0.0.0-20260211053922-3d992dae95d1 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
-	github.com/ebitengine/purego v0.10.0-alpha.4 // indirect
+	github.com/ebitengine/purego v0.11.0-alpha // indirect
 	github.com/go-text/typesetting v0.3.3 // indirect
 	github.com/jezek/xgb v1.3.0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
