@@ -49,7 +49,6 @@ type Context struct {
 	inBuild bool
 
 	appScaleMinus1       float64
-	colorMode            ebiten.ColorMode
 	colorModeSet         bool
 	defaultColorWarnOnce sync.Once
 	locales              []language.Tag
@@ -79,19 +78,28 @@ func (c *Context) SetAppScale(scale float64) {
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonAppScale, nil)
 }
 
+// ColorMode returns the color mode.
+//
+// ColorMode never returns ebiten.ColorModeUnknown.
 func (c *Context) ColorMode() ebiten.ColorMode {
 	if c.colorModeSet {
-		return c.colorMode
+		if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
+			return mode
+		}
 	}
-	return c.autoColorMode()
+	if envColorMode != ebiten.ColorModeUnknown {
+		return envColorMode
+	}
+	if mode := ebiten.SystemColorMode(); mode != ebiten.ColorModeUnknown {
+		return mode
+	}
+	return ebiten.ColorModeLight
 }
 
 func (c *Context) SetColorMode(mode ebiten.ColorMode) {
-	if c.colorModeSet && mode == c.colorMode {
+	if c.colorModeSet && mode == ebiten.WindowColorMode() {
 		return
 	}
-
-	c.colorMode = mode
 	c.colorModeSet = true
 	ebiten.SetWindowColorMode(mode)
 	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
@@ -102,6 +110,11 @@ func (c *Context) UseAutoColorMode() {
 		return
 	}
 	c.colorModeSet = false
+	if envColorMode != ebiten.ColorModeUnknown {
+		ebiten.SetWindowColorMode(envColorMode)
+	} else {
+		ebiten.SetWindowColorMode(ebiten.ColorModeUnknown)
+	}
 	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
 }
 
@@ -110,24 +123,22 @@ func (c *Context) IsAutoColorModeUsed() bool {
 }
 
 var (
-	envColorMode = os.Getenv("GUIGUI_COLOR_MODE")
+	envColorModeStr = os.Getenv("GUIGUI_COLOR_MODE")
+	envColorMode    ebiten.ColorMode
 )
 
-func (c *Context) autoColorMode() ebiten.ColorMode {
-	switch mode := envColorMode; mode {
+func init() {
+	switch envColorModeStr {
 	case "light":
-		return ebiten.ColorModeLight
+		envColorMode = ebiten.ColorModeLight
 	case "dark":
-		return ebiten.ColorModeDark
-	case "":
-		return ebiten.SystemColorMode()
+		envColorMode = ebiten.ColorModeDark
 	default:
-		c.defaultColorWarnOnce.Do(func() {
-			slog.Warn(fmt.Sprintf("invalid GUIGUI_COLOR_MODE: %s", mode))
-		})
+		slog.Warn(fmt.Sprintf("invalid GUIGUI_COLOR_MODE: %s", envColorModeStr))
 	}
-
-	return ebiten.ColorModeLight
+	if envColorMode != ebiten.ColorModeUnknown {
+		ebiten.SetWindowColorMode(envColorMode)
+	}
 }
 
 func (c *Context) AppendLocales(locales []language.Tag) []language.Tag {
