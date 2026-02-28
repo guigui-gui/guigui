@@ -18,8 +18,6 @@ import (
 	"github.com/guigui-gui/guigui/internal/locale"
 )
 
-type ColorMode int
-
 var envLocales []language.Tag
 
 func init() {
