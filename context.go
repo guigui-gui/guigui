@@ -49,7 +49,6 @@ type Context struct {
 	inBuild bool
 
 	appScaleMinus1       float64
-	colorModeSet         bool
 	defaultColorWarnOnce sync.Once
 	locales              []language.Tag
 	allLocales           []language.Tag
@@ -78,17 +77,12 @@ func (c *Context) SetAppScale(scale float64) {
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonAppScale, nil)
 }
 
-// ColorMode returns the color mode.
+// ResolvedColorMode returns the color mode.
 //
-// ColorMode never returns ebiten.ColorModeUnknown.
-func (c *Context) ColorMode() ebiten.ColorMode {
-	if c.colorModeSet {
-		if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
-			return mode
-		}
-	}
-	if envColorMode != ebiten.ColorModeUnknown {
-		return envColorMode
+// ResolvedColorMode never returns ebiten.ColorModeUnknown.
+func (c *Context) ResolvedColorMode() ebiten.ColorMode {
+	if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
+		return mode
 	}
 	if mode := ebiten.SystemColorMode(); mode != ebiten.ColorModeUnknown {
 		return mode
@@ -96,48 +90,37 @@ func (c *Context) ColorMode() ebiten.ColorMode {
 	return ebiten.ColorModeLight
 }
 
+// ColorMode returns the color mode set by SetColorMode.
+//
+// ColorMode might return ebiten.ColorModeUnknown if the color mode is not set.
+func (c *Context) ColorMode() ebiten.ColorMode {
+	return ebiten.WindowColorMode()
+}
+
+// SetColorMode sets the color mode.
+//
+// If mode is ebiten.ColorModeUnknown, SetColorMode specifies the default system color mode.
 func (c *Context) SetColorMode(mode ebiten.ColorMode) {
-	if c.colorModeSet && mode == ebiten.WindowColorMode() {
+	if mode == ebiten.WindowColorMode() {
 		return
 	}
-	c.colorModeSet = true
 	ebiten.SetWindowColorMode(mode)
 	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
 }
 
-func (c *Context) UseAutoColorMode() {
-	if !c.colorModeSet {
-		return
-	}
-	c.colorModeSet = false
-	if envColorMode != ebiten.ColorModeUnknown {
-		ebiten.SetWindowColorMode(envColorMode)
-	} else {
-		ebiten.SetWindowColorMode(ebiten.ColorModeUnknown)
-	}
-	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
-}
-
-func (c *Context) IsAutoColorModeUsed() bool {
-	return !c.colorModeSet
-}
-
 var (
 	envColorModeStr = os.Getenv("GUIGUI_COLOR_MODE")
-	envColorMode    ebiten.ColorMode
 )
 
 func init() {
 	switch envColorModeStr {
 	case "light":
-		envColorMode = ebiten.ColorModeLight
+		ebiten.SetWindowColorMode(ebiten.ColorModeLight)
 	case "dark":
-		envColorMode = ebiten.ColorModeDark
+		ebiten.SetWindowColorMode(ebiten.ColorModeDark)
+	case "":
 	default:
 		slog.Warn(fmt.Sprintf("invalid GUIGUI_COLOR_MODE: %s", envColorModeStr))
-	}
-	if envColorMode != ebiten.ColorModeUnknown {
-		ebiten.SetWindowColorMode(envColorMode)
 	}
 }
 

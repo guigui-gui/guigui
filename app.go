@@ -285,8 +285,8 @@ func (a *app) Update() error {
 		a.requestRebuild(a.root.widgetState(), requestRedrawReasonScreenDeviceScale)
 	}
 
-	if a.context.ColorMode() != a.lastColorMode {
-		a.lastColorMode = a.context.ColorMode()
+	if a.context.ResolvedColorMode() != a.lastColorMode {
+		a.lastColorMode = a.context.ResolvedColorMode()
 		a.requestRebuild(a.root.widgetState(), requestRedrawReasonColorMode)
 	}
 

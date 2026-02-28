@@ -30,7 +30,7 @@ func (b *Background) SetColor(clr color.Color) {
 func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	clr := b.clr
 	if clr == nil {
-		clr = basicwidgetdraw.BackgroundColor(context.ColorMode())
+		clr = basicwidgetdraw.BackgroundColor(context.ResolvedColorMode())
 	}
 	dst.Fill(clr)
 }

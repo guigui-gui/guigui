@@ -194,7 +194,7 @@ func (p *PopupMenu[T]) ItemTextColor(context *guigui.Context, index int) color.C
 	// If the popup menu is closed, the item content might be used in other places like a select list button.
 	// Use the default text color in that case.
 	if !p.IsOpen() {
-		return basicwidgetdraw.TextColor(context.ColorMode(), true)
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), true)
 	}
 	return p.list.Widget().ItemTextColor(context, index)
 }

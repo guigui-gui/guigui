@@ -55,7 +55,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 
 	b.textIconButton1Text.SetValue("Button w/ text and icon (1)")
 	b.textIconButton1.Widget().SetText("Button")
-	img, err := theImageCache.GetMonochrome("check", context.ColorMode())
+	img, err := theImageCache.GetMonochrome("check", context.ResolvedColorMode())
 	if err != nil {
 		return err
 	}

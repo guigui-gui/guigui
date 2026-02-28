@@ -165,7 +165,7 @@ func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color
 	case t.list.SelectedItemIndex() == index && item.selectable():
 		return defaultActiveListItemTextColor(context)
 	default:
-		return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), context.IsEnabled(item))
 	}
 }
 
@@ -394,9 +394,9 @@ func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		x1 := x0
 		y0 := float32(b.Min.Y + u/4)
 		y1 := float32(b.Min.Y + tableHeaderHeight(context) - u/4)
-		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+		clr := draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9, 0.4)
 		if !context.IsEnabled(t) {
-			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+			clr = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}

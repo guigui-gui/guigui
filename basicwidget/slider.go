@@ -309,8 +309,8 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	y0 := (b.Min.Y+b.Max.Y)/2 - r
 	y1 := (b.Min.Y+b.Max.Y)/2 + r
 
-	bgColorOn := draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
-	bgColorOff := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
+	bgColorOn := draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+	bgColorOff := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8)
 	if !context.IsEnabled(s) {
 		bgColorOn = bgColorOff
 	}
@@ -320,7 +320,7 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOn, r)
 
 		if !context.IsEnabled(s) {
-			borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+			borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 			basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
 		}
 	}
@@ -329,19 +329,19 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		b := image.Rect(x1, y0, x2, y1)
 		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOff, r)
 
-		borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 		basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
 	}
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
-		cm := context.ColorMode()
-		thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(s))
+		cm := context.ResolvedColorMode()
+		thumbColor := basicwidgetdraw.ThumbColor(context.ResolvedColorMode(), context.IsEnabled(s))
 		if s.isActive(context, widgetBounds) {
 			thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
 		} else if s.canPress(context, widgetBounds) {
 			thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.575)
 		}
-		thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+		thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 		r := thumbBounds.Dy() / 2
 		basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
 		basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeOutset)

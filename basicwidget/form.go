@@ -150,8 +150,8 @@ func (f *Form) appendItemBounds(context *guigui.Context, itemBounds []image.Rect
 }
 
 func (f *Form) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	bgClr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0), 1/32.0)
-	borderClr := draw.ScaleAlpha(draw.Color(context.ColorMode(), draw.ColorTypeBase, 0), 2/32.0)
+	bgClr := draw.ScaleAlpha(draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0), 1/32.0)
+	borderClr := draw.ScaleAlpha(draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0), 2/32.0)
 
 	bounds := widgetBounds.Bounds()
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, bgClr, RoundedCornerRadius(context))

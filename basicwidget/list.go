@@ -38,7 +38,7 @@ var (
 )
 
 func defaultActiveListItemTextColor(context *guigui.Context) color.Color {
-	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 1)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 1)
 }
 
 type List[T comparable] struct {
@@ -239,7 +239,7 @@ func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color 
 	if clr := item.textColor(); clr != nil {
 		return clr
 	}
-	return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
+	return basicwidgetdraw.TextColor(context.ResolvedColorMode(), context.IsEnabled(item))
 }
 
 func (l *List[T]) SelectedItemCount() int {
@@ -536,7 +536,7 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 		x1 := float32(b.Max.X - u/4)
 		y := float32(b.Min.Y) + float32(b.Dy())/2
 		width := float32(1 * context.Scale())
-		vector.StrokeLine(dst, x0, y, x1, y, width, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), false)
+		vector.StrokeLine(dst, x0, y, x1, y, width, draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8), false)
 		return
 	}
 	/*if l.item.Header {
@@ -753,11 +753,11 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	l.background2.setListContent(l)
 
 	var err error
-	l.treeItemCollapsedImage, err = theResourceImages.Get("keyboard_arrow_right", context.ColorMode())
+	l.treeItemCollapsedImage, err = theResourceImages.Get("keyboard_arrow_right", context.ResolvedColorMode())
 	if err != nil {
 		return err
 	}
-	l.treeItemExpandedImage, err = theResourceImages.Get("keyboard_arrow_down", context.ColorMode())
+	l.treeItemExpandedImage, err = theResourceImages.Get("keyboard_arrow_down", context.ResolvedColorMode())
 	if err != nil {
 		return err
 	}
@@ -1073,7 +1073,7 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
 
-	colorMode := context.ColorMode()
+	colorMode := context.ResolvedColorMode()
 	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
 		colorMode = ebiten.ColorModeDark
 	}
@@ -1357,12 +1357,12 @@ func (l *listContent[T]) selectedItemColor(context *guigui.Context) color.Color 
 		return nil
 	}
 	if context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleSidebar {
-		return draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
+		return draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
 	}
 	if !context.IsEnabled(l) {
-		return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.2)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.2)
 	}
-	return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.7, 0.5)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.5)
 }
 
 type listBackground1[T comparable] struct {
@@ -1380,9 +1380,9 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	switch l.content.style {
 	case ListStyleSidebar:
 	case ListStyleNormal:
-		clr = basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(l))
+		clr = basicwidgetdraw.ControlColor(context.ResolvedColorMode(), context.IsEnabled(l))
 	case ListStyleMenu:
-		clr = basicwidgetdraw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
+		clr = basicwidgetdraw.ControlSecondaryColor(context.ResolvedColorMode(), context.IsEnabled(l))
 	}
 	if clr != nil {
 		bounds := widgetBounds.Bounds()
@@ -1409,7 +1409,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if !bounds.Overlaps(vb) {
 				continue
 			}
-			clr := basicwidgetdraw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
+			clr := basicwidgetdraw.ControlSecondaryColor(context.ResolvedColorMode(), context.IsEnabled(l))
 			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
@@ -1486,9 +1486,9 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
 		if bounds.Overlaps(vb) {
-			clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.9)
+			clr := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9)
 			if l.content.style == ListStyleMenu {
-				clr = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
+				clr = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
 			}
 			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
@@ -1497,7 +1497,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	// Draw a drag indicator.
 	if context.IsEnabled(l) && l.content.dragSrcIndexPlus1 == 0 {
 		if item, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex); ok && item.Movable {
-			img, err := theResourceImages.Get("drag_indicator", context.ColorMode())
+			img, err := theResourceImages.Get("drag_indicator", context.ResolvedColorMode())
 			if err != nil {
 				panic(fmt.Sprintf("basicwidget: failed to get drag indicator image: %v", err))
 			}
@@ -1527,7 +1527,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		y := float32(p.Y)
 		if itemY, ok := l.content.itemYFromIndex(context, l.content.dragDstIndexPlus1-1); ok {
 			y += float32(itemY)
-			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
+			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5), false)
 		}
 	}
 }
@@ -1584,7 +1584,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	// Draw a header.
 	if l.headerHeight > 0 {
 		bounds := l.headerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ResolvedColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			TopStart:    false,
 			TopEnd:      false,
 			BottomStart: true,
@@ -1595,9 +1595,9 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		x1 := float32(bounds.Max.X)
 		y0 := float32(bounds.Max.Y)
 		y1 := float32(bounds.Max.Y)
-		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+		clr := draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9, 0.4)
 		if !context.IsEnabled(l) {
-			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+			clr = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}
@@ -1605,7 +1605,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	// Draw a footer.
 	if l.footerHeight > 0 {
 		bounds := l.footerBounds(context, widgetBounds)
-		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
+		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, basicwidgetdraw.ControlColor(context.ResolvedColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), basicwidgetdraw.Corners{
 			TopStart:    true,
 			TopEnd:      true,
 			BottomStart: false,
@@ -1616,9 +1616,9 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		x1 := float32(bounds.Max.X)
 		y0 := float32(bounds.Min.Y)
 		y1 := float32(bounds.Min.Y)
-		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+		clr := draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9, 0.4)
 		if !context.IsEnabled(l) {
-			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+			clr = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}
@@ -1628,7 +1628,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if l.style != ListStyleNormal {
 		border = basicwidgetdraw.RoundedRectBorderTypeOutset
 	}
-	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(border))
+	clr1, clr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderType(border))
 	borderWidth := listBorderWidth(context)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)
 }

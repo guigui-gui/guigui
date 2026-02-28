@@ -280,7 +280,7 @@ func (s *scrollBar) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		return
 	}
 	s.onceDraw = true
-	barColor := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.2)
+	barColor := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.2)
 	barColor = draw.ScaleAlpha(barColor, s.alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
 }

@@ -51,26 +51,26 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	model := context.Data(t, modelKeyModel).(*Model)
 
 	if model.IsLeftPanelOpen() {
-		img, err := theImageCache.GetMonochrome("left_panel_close", context.ColorMode())
+		img, err := theImageCache.GetMonochrome("left_panel_close", context.ResolvedColorMode())
 		if err != nil {
 			return err
 		}
 		t.leftPanelButton.SetIcon(img)
 	} else {
-		img, err := theImageCache.GetMonochrome("left_panel_open", context.ColorMode())
+		img, err := theImageCache.GetMonochrome("left_panel_open", context.ResolvedColorMode())
 		if err != nil {
 			return err
 		}
 		t.leftPanelButton.SetIcon(img)
 	}
 	if model.IsRightPanelOpen() {
-		img, err := theImageCache.GetMonochrome("right_panel_close", context.ColorMode())
+		img, err := theImageCache.GetMonochrome("right_panel_close", context.ResolvedColorMode())
 		if err != nil {
 			return err
 		}
 		t.rightPanelButton.SetIcon(img)
 	} else {
-		img, err := theImageCache.GetMonochrome("right_panel_open", context.ColorMode())
+		img, err := theImageCache.GetMonochrome("right_panel_open", context.ResolvedColorMode())
 		if err != nil {
 			return err
 		}

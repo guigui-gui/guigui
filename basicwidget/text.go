@@ -1083,7 +1083,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	if t.color != nil {
 		textColor = t.color
 	} else {
-		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
+		textColor = basicwidgetdraw.TextColor(context.ResolvedColorMode(), context.IsEnabled(t))
 	}
 	if t.transparent > 0 {
 		textColor = draw.ScaleAlpha(textColor, 1-t.transparent)
@@ -1103,7 +1103,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end
-			op.SelectionColor = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
+			op.SelectionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8)
 		} else {
 			op.DrawSelection = false
 		}
@@ -1114,8 +1114,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.CompositionEnd = uEnd
 		op.CompositionActiveStart = cStart
 		op.CompositionActiveEnd = cEnd
-		op.InactiveCompositionColor = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.8)
-		op.ActiveCompositionColor = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.4)
+		op.InactiveCompositionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8)
+		op.ActiveCompositionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.4)
 		op.CompositionBorderWidth = float32(textCursorWidth(context))
 	} else {
 		op.DrawComposition = false
@@ -1512,7 +1512,7 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		return
 	}
 	b := widgetBounds.Bounds()
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeAccent, 0.5, 0.6), alpha)
+	clr := draw.ScaleAlpha(draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5, 0.6), alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }
 

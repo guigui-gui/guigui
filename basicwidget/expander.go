@@ -147,7 +147,7 @@ func (e *expanderHeader) Build(context *guigui.Context, adder *guigui.ChildAdder
 	} else {
 		iconName = "keyboard_arrow_right"
 	}
-	icon, err := theResourceImages.Get(iconName, context.ColorMode())
+	icon, err := theResourceImages.Get(iconName, context.ResolvedColorMode())
 	if err != nil {
 		return err
 	}

@@ -254,7 +254,7 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	switch p.style {
 	case PanelStyleSide:
-		dst.Fill(basicwidgetdraw.BackgroundSecondaryColor(context.ColorMode()))
+		dst.Fill(basicwidgetdraw.BackgroundSecondaryColor(context.ResolvedColorMode()))
 	}
 }
 
@@ -465,7 +465,7 @@ func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 		offsetX, offsetY = p.panel.offset()
 		r = p.panel.scrollRange(context, widgetBounds)
 	}
-	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
+	clr := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8)
 	if (p.panel != nil && p.autoBorder && offsetX < float64(r.Max.X)) || p.borders.Start {
 		vector.StrokeLine(dst, x0+strokeWidth/2, y0, x0+strokeWidth/2, y1, strokeWidth, clr, false)
 	}

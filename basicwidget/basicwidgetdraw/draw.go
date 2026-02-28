@@ -245,10 +245,10 @@ func DrawRoundedRectBorderWithSharpCorners(context *guigui.Context, dst *ebiten.
 	}
 
 	if sharpCorners == (Corners{}) {
-		draw.DrawNinePatch(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2)
+		draw.DrawNinePatch(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ResolvedColorMode()), clr1, clr2)
 		return
 	}
 
-	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpCorners.bools())
-	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRectBorder(radius, borderWidth, borderType, context.ColorMode()), clr1, clr2, sharpCorners.invertedBools())
+	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRoundedRectBorder(radius, borderWidth, borderType, context.ResolvedColorMode()), clr1, clr2, sharpCorners.bools())
+	draw.DrawNinePatchParts(dst, bounds, ensureWhiteRectBorder(radius, borderWidth, borderType, context.ResolvedColorMode()), clr1, clr2, sharpCorners.invertedBools())
 }
