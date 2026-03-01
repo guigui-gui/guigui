@@ -4,7 +4,6 @@
 package basicwidget
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 
@@ -22,6 +21,8 @@ var (
 
 type Checkbox struct {
 	guigui.DefaultWidget
+
+	image Image
 
 	pressed     bool
 	value       bool
@@ -97,6 +98,43 @@ func (c *Checkbox) isActive(context *guigui.Context, widgetBounds *guigui.Widget
 	return context.IsEnabled(c) && widgetBounds.IsHitAtCursor() && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && c.pressed
 }
 
+func (c *Checkbox) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	if c.value {
+		adder.AddWidget(&c.image)
+	}
+
+	imageCM := ebiten.ColorModeDark
+	if context.ResolvedColorMode() == ebiten.ColorModeLight && !context.IsEnabled(c) {
+		imageCM = ebiten.ColorModeLight
+	}
+	checkImg, err := theResourceImages.Get("check", imageCM)
+	if err != nil {
+		return err
+	}
+	c.image.SetImage(checkImg)
+
+	return nil
+}
+
+func (c *Checkbox) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	w := float64(bounds.Dx())
+	h := float64(bounds.Dy())
+	scale := min(w, h) * 0.8
+
+	imgBounds := image.Rectangle{
+		Min: image.Pt(
+			bounds.Min.X+int((w-scale)/2),
+			bounds.Min.Y+int((h-scale)/2),
+		),
+		Max: image.Pt(
+			bounds.Min.X+int((w+scale)/2),
+			bounds.Min.Y+int((h+scale)/2),
+		),
+	}
+	layouter.LayoutWidget(&c.image, imgBounds)
+}
+
 func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	cm := context.ResolvedColorMode()
@@ -131,37 +169,6 @@ func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(cm, basicwidgetdraw.RoundedRectBorderTypeInset)
 	}
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
-
-	if c.value {
-		imageCM := ebiten.ColorModeDark
-		if cm == ebiten.ColorModeLight && !context.IsEnabled(c) {
-			imageCM = ebiten.ColorModeLight
-		}
-		checkImg, err := theResourceImages.Get("check", imageCM)
-		if err != nil {
-			panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
-		}
-
-		imgBounds := checkImg.Bounds()
-		imgW := float64(imgBounds.Dx())
-		imgH := float64(imgBounds.Dy())
-		scaleX := float64(bounds.Dx()) / imgW
-		scaleY := float64(bounds.Dy()) / imgH
-		scale := min(scaleX, scaleY) * 0.8
-		if scale > 1 {
-			scale = 1
-		}
-
-		op := &ebiten.DrawImageOptions{}
-		if !context.IsEnabled(c) {
-			op.ColorScale.ScaleAlpha(0.5)
-		}
-		op.GeoM.Scale(scale, scale)
-		op.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
-		op.GeoM.Translate((float64(bounds.Dx())-imgW*scale)/2, (float64(bounds.Dy())-imgH*scale)/2)
-
-		dst.DrawImage(checkImg, op)
-	}
 }
 
 func (c *Checkbox) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
