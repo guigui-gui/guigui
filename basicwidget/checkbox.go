@@ -118,19 +118,16 @@ func (c *Checkbox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 func (c *Checkbox) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	bounds := widgetBounds.Bounds()
-	w := float64(bounds.Dx())
-	h := float64(bounds.Dy())
-	scale := min(w, h) * 0.8
+	checkboxSize := LineHeight(context)
+	markSize := float64(checkboxSize) * 0.8
 
+	pt := bounds.Min
+	pt.X += int((float64(checkboxSize) - markSize) / 2)
+	// Adjust the position a bit for better appearance.
+	pt.Y += int((float64(checkboxSize)-markSize)/2 + 0.5*context.Scale() + float64(UnitSize(context))/16)
 	imgBounds := image.Rectangle{
-		Min: image.Pt(
-			bounds.Min.X+int((w-scale)/2),
-			bounds.Min.Y+int((h-scale)/2),
-		),
-		Max: image.Pt(
-			bounds.Min.X+int((w+scale)/2),
-			bounds.Min.Y+int((h+scale)/2),
-		),
+		Min: pt,
+		Max: pt.Add(image.Pt(int(markSize), int(markSize))),
 	}
 	layouter.LayoutWidget(&c.image, imgBounds)
 }

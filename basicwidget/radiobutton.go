@@ -207,7 +207,7 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		innerBounds := bounds
 		innerRadius := int(float64(min(bounds.Dx(), bounds.Dy())) * 0.175)
 		innerBounds.Min.X += bounds.Dx()/2 - innerRadius
-		innerBounds.Min.Y += bounds.Dy()/2 - innerRadius
+		innerBounds.Min.Y += bounds.Dy()/2 - innerRadius + int(0.5*context.Scale())
 		innerBounds.Max.X = innerBounds.Min.X + innerRadius*2
 		innerBounds.Max.Y = innerBounds.Min.Y + innerRadius*2
 
