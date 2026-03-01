@@ -13,8 +13,12 @@ type Checkboxes struct {
 
 	checkboxesForm basicwidget.Form
 
-	checkboxText basicwidget.Text
-	checkbox     basicwidget.Checkbox
+	checkbox1Text basicwidget.Text
+	checkbox1     basicwidget.Checkbox
+	checkbox2Text basicwidget.Text
+	checkbox2     basicwidget.Checkbox
+	checkbox3Text basicwidget.Text
+	checkbox3     basicwidget.Checkbox
 
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
@@ -27,17 +31,39 @@ func (c *Checkboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 
 	model := context.Data(c, modelKeyModel).(*Model)
 
-	c.checkboxText.SetValue("Checkbox")
-	c.checkbox.OnValueChanged(func(ctx *guigui.Context, value bool) {
-		model.Checkboxes().SetValue(value)
+	c.checkbox1Text.SetValue("Checkbox 1")
+	c.checkbox1.OnValueChanged(func(ctx *guigui.Context, value bool) {
+		model.Checkboxes().SetValue(0, value)
 	})
-	c.checkbox.SetValue(model.Checkboxes().Value())
-	context.SetEnabled(&c.checkbox, model.Checkboxes().Enabled())
+	c.checkbox1.SetValue(model.Checkboxes().Value(0))
+	context.SetEnabled(&c.checkbox1, model.Checkboxes().Enabled())
+
+	c.checkbox2Text.SetValue("Checkbox 2")
+	c.checkbox2.OnValueChanged(func(ctx *guigui.Context, value bool) {
+		model.Checkboxes().SetValue(1, value)
+	})
+	c.checkbox2.SetValue(model.Checkboxes().Value(1))
+	context.SetEnabled(&c.checkbox2, model.Checkboxes().Enabled())
+
+	c.checkbox3Text.SetValue("Checkbox 3")
+	c.checkbox3.OnValueChanged(func(ctx *guigui.Context, value bool) {
+		model.Checkboxes().SetValue(2, value)
+	})
+	c.checkbox3.SetValue(model.Checkboxes().Value(2))
+	context.SetEnabled(&c.checkbox3, model.Checkboxes().Enabled())
 
 	c.checkboxesForm.SetItems([]basicwidget.FormItem{
 		{
-			PrimaryWidget:   &c.checkboxText,
-			SecondaryWidget: &c.checkbox,
+			PrimaryWidget:   &c.checkbox1Text,
+			SecondaryWidget: &c.checkbox1,
+		},
+		{
+			PrimaryWidget:   &c.checkbox2Text,
+			SecondaryWidget: &c.checkbox2,
+		},
+		{
+			PrimaryWidget:   &c.checkbox3Text,
+			SecondaryWidget: &c.checkbox3,
 		},
 	})
 

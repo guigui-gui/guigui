@@ -87,7 +87,7 @@ func (b *ButtonsModel) SetEnabled(enabled bool) {
 
 type CheckboxesModel struct {
 	disabled bool
-	value    bool
+	values   [3]bool
 }
 
 func (c *CheckboxesModel) Enabled() bool {
@@ -98,12 +98,17 @@ func (c *CheckboxesModel) SetEnabled(enabled bool) {
 	c.disabled = !enabled
 }
 
-func (c *CheckboxesModel) Value() bool {
-	return c.value
+func (c *CheckboxesModel) Value(index int) bool {
+	if index < 0 || index >= len(c.values) {
+		return false
+	}
+	return c.values[index]
 }
 
-func (c *CheckboxesModel) SetValue(value bool) {
-	c.value = value
+func (c *CheckboxesModel) SetValue(index int, value bool) {
+	if index >= 0 && index < len(c.values) {
+		c.values[index] = value
+	}
 }
 
 type RadioButtonsModel struct {
