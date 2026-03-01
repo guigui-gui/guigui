@@ -16,6 +16,8 @@ type Basic struct {
 	button          basicwidget.Button
 	toggleText      basicwidget.Text
 	toggle          basicwidget.Toggle
+	checkboxText    basicwidget.Text
+	checkbox        basicwidget.Checkbox
 	textInputText   basicwidget.Text
 	textInput       basicwidget.TextInput
 	numberInputText basicwidget.Text
@@ -32,6 +34,7 @@ func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	b.buttonText.SetValue("Button")
 	b.button.SetText("Click me!")
 	b.toggleText.SetValue("Toggle")
+	b.checkboxText.SetValue("Checkbox")
 	b.textInputText.SetValue("Text input")
 	b.textInput.SetHorizontalAlign(basicwidget.HorizontalAlignEnd)
 	b.numberInputText.SetValue("Number input")
@@ -49,6 +52,10 @@ func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		{
 			PrimaryWidget:   &b.toggleText,
 			SecondaryWidget: &b.toggle,
+		},
+		{
+			PrimaryWidget:   &b.checkboxText,
+			SecondaryWidget: &b.checkbox,
 		},
 		{
 			PrimaryWidget:   &b.textInputText,

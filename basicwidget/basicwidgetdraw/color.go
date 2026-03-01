@@ -47,9 +47,9 @@ func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedR
 	case RoundedRectBorderTypeRegular:
 		return draw.Color2(colorMode, typ1, 0.8, 0.1), draw.Color2(colorMode, typ2, 0.8, 0.1)
 	case RoundedRectBorderTypeInset:
-		return draw.Color2(colorMode, typ1, 0.7, 0), draw.Color2(colorMode, typ2, 0.85, 0.15)
+		return draw.Color2(colorMode, typ1, 0.7, 0.2), draw.Color2(colorMode, typ2, 0.85, 0.05)
 	case RoundedRectBorderTypeOutset:
-		return draw.Color2(colorMode, typ1, 0.85, 0.5), draw.Color2(colorMode, typ2, 0.7, 0.2)
+		return draw.Color2(colorMode, typ1, 0.85, 0.05), draw.Color2(colorMode, typ2, 0.7, 0.2)
 	}
 	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
 }

@@ -16,6 +16,7 @@ type Model struct {
 	mode string
 
 	buttons      ButtonsModel
+	checkboxes   CheckboxesModel
 	texts        TextsModel
 	textInputs   TextInputsModel
 	numberInputs NumberInputsModel
@@ -37,6 +38,10 @@ func (m *Model) SetMode(mode string) {
 
 func (m *Model) Buttons() *ButtonsModel {
 	return &m.buttons
+}
+
+func (m *Model) Checkboxes() *CheckboxesModel {
+	return &m.checkboxes
 }
 
 func (m *Model) Texts() *TextsModel {
@@ -73,6 +78,27 @@ func (b *ButtonsModel) Enabled() bool {
 
 func (b *ButtonsModel) SetEnabled(enabled bool) {
 	b.disabled = !enabled
+}
+
+type CheckboxesModel struct {
+	disabled bool
+	value    bool
+}
+
+func (c *CheckboxesModel) Enabled() bool {
+	return !c.disabled
+}
+
+func (c *CheckboxesModel) SetEnabled(enabled bool) {
+	c.disabled = !enabled
+}
+
+func (c *CheckboxesModel) Value() bool {
+	return c.value
+}
+
+func (c *CheckboxesModel) SetValue(value bool) {
+	c.value = value
 }
 
 type TextsModel struct {

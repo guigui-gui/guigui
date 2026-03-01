@@ -65,6 +65,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Value: "buttons",
 		},
 		{
+			Text:  "Checkboxes",
+			Value: "checkboxes",
+		},
+		{
 			Text:  "Texts",
 			Value: "texts",
 		},

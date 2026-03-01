@@ -94,7 +94,6 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	bounds := widgetBounds.Bounds()
 
 	cm := context.ResolvedColorMode()
-	backgroundColor := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8)
 	thumbColor := basicwidgetdraw.ThumbColor(context.ResolvedColorMode(), context.IsEnabled(t))
 	if t.isActive(context, widgetBounds) {
 		thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
@@ -103,8 +102,14 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}
 
 	// Background
-	bgColorOff := backgroundColor
-	bgColorOn := draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+	var bgColorOff, bgColorOn color.Color
+	if t.isActive(context, widgetBounds) {
+		bgColorOff = draw.Color2(cm, draw.ColorTypeBase, 0.775, 0.175)
+		bgColorOn = draw.Color2(cm, draw.ColorTypeAccent, 0.475, 0.475)
+	} else {
+		bgColorOff = draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8)
+		bgColorOn = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+	}
 	var bgColor color.Color
 	if t.value && context.IsEnabled(t) {
 		bgColor = draw.MixColors(bgColorOff, bgColorOn, rate)
