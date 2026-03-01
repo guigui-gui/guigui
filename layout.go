@@ -160,34 +160,40 @@ func (l *LinearLayout) acrossSize(bounds image.Rectangle) int {
 }
 
 func linearLayoutItemDefaultAlongSize(context *Context, direction LayoutDirection, item *LinearLayoutItem, acrossSize int) int {
+	var s1, s2 int
+	if item.Layout != nil {
+		switch direction {
+		case LayoutDirectionHorizontal:
+			if acrossSize <= 0 {
+				s1 = item.Layout.Measure(context, Constraints{}).X
+			} else {
+				s1 = item.Layout.Measure(context, FixedHeightConstraints(acrossSize)).X
+			}
+		case LayoutDirectionVertical:
+			if acrossSize <= 0 {
+				s1 = item.Layout.Measure(context, Constraints{}).Y
+			} else {
+				s1 = item.Layout.Measure(context, FixedWidthConstraints(acrossSize)).Y
+			}
+		}
+	}
 	if item.Widget != nil {
 		switch direction {
 		case LayoutDirectionHorizontal:
 			if acrossSize <= 0 {
-				return item.Widget.Measure(context, Constraints{}).X
+				s2 = item.Widget.Measure(context, Constraints{}).X
+			} else {
+				s2 = item.Widget.Measure(context, FixedHeightConstraints(acrossSize)).X
 			}
-			return item.Widget.Measure(context, FixedHeightConstraints(acrossSize)).X
 		case LayoutDirectionVertical:
 			if acrossSize <= 0 {
-				return item.Widget.Measure(context, Constraints{}).Y
+				s2 = item.Widget.Measure(context, Constraints{}).Y
+			} else {
+				s2 = item.Widget.Measure(context, FixedWidthConstraints(acrossSize)).Y
 			}
-			return item.Widget.Measure(context, FixedWidthConstraints(acrossSize)).Y
-		}
-	} else if item.Layout != nil {
-		switch direction {
-		case LayoutDirectionHorizontal:
-			if acrossSize <= 0 {
-				return item.Layout.Measure(context, Constraints{}).X
-			}
-			return item.Layout.Measure(context, FixedHeightConstraints(acrossSize)).X
-		case LayoutDirectionVertical:
-			if acrossSize <= 0 {
-				return item.Layout.Measure(context, Constraints{}).Y
-			}
-			return item.Layout.Measure(context, FixedWidthConstraints(acrossSize)).Y
 		}
 	}
-	return 0
+	return max(s1, s2)
 }
 
 func (l *LinearLayout) appendSizesInPixels(sizesInPixels []int, context *Context, alongSize, acrossSize int, measure bool) []int {

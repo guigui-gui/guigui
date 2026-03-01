@@ -164,9 +164,13 @@ func (r *RadioButton[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 }
 
 func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	bounds := widgetBounds.Bounds()
+	pt := widgetBounds.Bounds().Min
+	bounds := image.Rectangle{
+		Min: pt,
+		Max: pt.Add(image.Pt(LineHeight(context), LineHeight(context))),
+	}
 	cm := context.ResolvedColorMode()
-	radius := bounds.Dx() / 2
+	radius := LineHeight(context) / 2
 
 	var backgroundColor color.Color
 	isSelected := r.group.SelectedIndex() == r.index
