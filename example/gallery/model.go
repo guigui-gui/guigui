@@ -17,6 +17,7 @@ type Model struct {
 
 	buttons      ButtonsModel
 	checkboxes   CheckboxesModel
+	radioButtons RadioButtonsModel
 	texts        TextsModel
 	textInputs   TextInputsModel
 	numberInputs NumberInputsModel
@@ -42,6 +43,10 @@ func (m *Model) Buttons() *ButtonsModel {
 
 func (m *Model) Checkboxes() *CheckboxesModel {
 	return &m.checkboxes
+}
+
+func (m *Model) RadioButtons() *RadioButtonsModel {
+	return &m.radioButtons
 }
 
 func (m *Model) Texts() *TextsModel {
@@ -99,6 +104,36 @@ func (c *CheckboxesModel) Value() bool {
 
 func (c *CheckboxesModel) SetValue(value bool) {
 	c.value = value
+}
+
+type RadioButtonsModel struct {
+	disabled bool
+	value1   int
+	value2   string
+}
+
+func (r *RadioButtonsModel) Enabled() bool {
+	return !r.disabled
+}
+
+func (r *RadioButtonsModel) SetEnabled(enabled bool) {
+	r.disabled = !enabled
+}
+
+func (r *RadioButtonsModel) Value1() int {
+	return r.value1
+}
+
+func (r *RadioButtonsModel) SetValue1(value int) {
+	r.value1 = value
+}
+
+func (r *RadioButtonsModel) Value2() string {
+	return r.value2
+}
+
+func (r *RadioButtonsModel) SetValue2(value string) {
+	r.value2 = value
 }
 
 type TextsModel struct {

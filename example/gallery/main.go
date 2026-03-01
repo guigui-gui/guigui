@@ -28,6 +28,7 @@ type Root struct {
 	basic        Basic
 	buttons      Buttons
 	checkboxes   Checkboxes
+	radioButtons RadioButtons
 	texts        Texts
 	textInputs   TextInputs
 	numberInputs NumberInputs
@@ -58,6 +59,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.buttons
 	case "checkboxes":
 		return &r.checkboxes
+	case "radiobuttons":
+		return &r.radioButtons
 	case "texts":
 		return &r.texts
 	case "textinputs":
