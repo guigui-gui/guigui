@@ -107,7 +107,7 @@ func (c *Checkbox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	if context.ResolvedColorMode() == ebiten.ColorModeLight && !context.IsEnabled(c) {
 		imageCM = ebiten.ColorModeLight
 	}
-	checkImg, err := theResourceImages.Get("check", imageCM)
+	checkImg, err := theResourceImages.Get("check2", imageCM)
 	if err != nil {
 		return err
 	}
