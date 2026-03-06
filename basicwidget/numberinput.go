@@ -209,28 +209,28 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 			guigui.DispatchEvent(n, numberInputEventValueChanged, value, committed)
 		}
 	}
-	n.abstractNumberInput.SetOnValueChanged(n.onValueChanged)
+	n.abstractNumberInput.OnValueChanged(n.onValueChanged)
 
 	if n.onValueChangedBigInt == nil {
 		n.onValueChangedBigInt = func(value *big.Int, committed bool) {
 			guigui.DispatchEvent(n, numberInputEventValueChangedBigInt, value, committed)
 		}
 	}
-	n.abstractNumberInput.SetOnValueChangedBigInt(n.onValueChangedBigInt)
+	n.abstractNumberInput.OnValueChangedBigInt(n.onValueChangedBigInt)
 
 	if n.onValueChangedInt64 == nil {
 		n.onValueChangedInt64 = func(value int64, committed bool) {
 			guigui.DispatchEvent(n, numberInputEventValueChangedInt64, value, committed)
 		}
 	}
-	n.abstractNumberInput.SetOnValueChangedInt64(n.onValueChangedInt64)
+	n.abstractNumberInput.OnValueChangedInt64(n.onValueChangedInt64)
 
 	if n.onValueChangedUint64 == nil {
 		n.onValueChangedUint64 = func(value uint64, committed bool) {
 			guigui.DispatchEvent(n, numberInputEventValueChangedUint64, value, committed)
 		}
 	}
-	n.abstractNumberInput.SetOnValueChangedUint64(n.onValueChangedUint64)
+	n.abstractNumberInput.OnValueChangedUint64(n.onValueChangedUint64)
 
 	if n.onValueChangedString == nil {
 		n.onValueChangedString = func(value string, force bool) {
@@ -241,7 +241,7 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 			}
 		}
 	}
-	n.abstractNumberInput.SetOnValueChangedString(n.onValueChangedString)
+	n.abstractNumberInput.OnValueChangedString(n.onValueChangedString)
 
 	n.textInput.SetValue(n.abstractNumberInput.ValueString())
 	n.textInput.SetHorizontalAlign(HorizontalAlignRight)

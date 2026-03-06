@@ -111,7 +111,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			guigui.DispatchEvent(s, segmentedControlEventItemSelected, index)
 		}
 	}
-	s.abstractList.SetOnItemSelected(s.onItemSelected)
+	s.abstractList.OnItemSelected(s.onItemSelected)
 
 	for i := range s.abstractList.ItemCount() {
 		item, _ := s.abstractList.ItemByIndex(i)

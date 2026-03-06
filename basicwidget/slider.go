@@ -158,28 +158,28 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 			guigui.DispatchEvent(s, sliderEventValueChanged, value, committed)
 		}
 	}
-	s.abstractNumberInput.SetOnValueChanged(s.onValueChanged)
+	s.abstractNumberInput.OnValueChanged(s.onValueChanged)
 
 	if s.onValueChangedBigInt == nil {
 		s.onValueChangedBigInt = func(value *big.Int, committed bool) {
 			guigui.DispatchEvent(s, sliderEventValueChangedBigInt, value, committed)
 		}
 	}
-	s.abstractNumberInput.SetOnValueChangedBigInt(s.onValueChangedBigInt)
+	s.abstractNumberInput.OnValueChangedBigInt(s.onValueChangedBigInt)
 
 	if s.onValueChangedInt64 == nil {
 		s.onValueChangedInt64 = func(value int64, committed bool) {
 			guigui.DispatchEvent(s, sliderEventValueChangedInt64, value, committed)
 		}
 	}
-	s.abstractNumberInput.SetOnValueChangedInt64(s.onValueChangedInt64)
+	s.abstractNumberInput.OnValueChangedInt64(s.onValueChangedInt64)
 
 	if s.onValueChangedUint64 == nil {
 		s.onValueChangedUint64 = func(value uint64, committed bool) {
 			guigui.DispatchEvent(s, sliderEventValueChangedUint64, value, committed)
 		}
 	}
-	s.abstractNumberInput.SetOnValueChangedUint64(s.onValueChangedUint64)
+	s.abstractNumberInput.OnValueChangedUint64(s.onValueChangedUint64)
 
 	return nil
 }

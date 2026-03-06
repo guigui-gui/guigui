@@ -25,23 +25,23 @@ type abstractNumberInput struct {
 	onValueChangedUint64 func(value uint64, committed bool)
 }
 
-func (a *abstractNumberInput) SetOnValueChanged(f func(value int, committed bool)) {
+func (a *abstractNumberInput) OnValueChanged(f func(value int, committed bool)) {
 	a.onValueChanged = f
 }
 
-func (a *abstractNumberInput) SetOnValueChangedString(f func(value string, force bool)) {
+func (a *abstractNumberInput) OnValueChangedString(f func(value string, force bool)) {
 	a.onValueChangedString = f
 }
 
-func (a *abstractNumberInput) SetOnValueChangedBigInt(f func(value *big.Int, committed bool)) {
+func (a *abstractNumberInput) OnValueChangedBigInt(f func(value *big.Int, committed bool)) {
 	a.onValueChangedBigInt = f
 }
 
-func (a *abstractNumberInput) SetOnValueChangedInt64(f func(value int64, committed bool)) {
+func (a *abstractNumberInput) OnValueChangedInt64(f func(value int64, committed bool)) {
 	a.onValueChangedInt64 = f
 }
 
-func (a *abstractNumberInput) SetOnValueChangedUint64(f func(value uint64, committed bool)) {
+func (a *abstractNumberInput) OnValueChangedUint64(f func(value uint64, committed bool)) {
 	a.onValueChangedUint64 = f
 }
 

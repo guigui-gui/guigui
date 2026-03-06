@@ -741,14 +741,14 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 			guigui.DispatchEvent(l, listEventItemSelected, index)
 		}
 	}
-	l.abstractList.SetOnItemSelected(l.onItemSelected)
+	l.abstractList.OnItemSelected(l.onItemSelected)
 
 	if l.onItemsSelected == nil {
 		l.onItemsSelected = func(indices []int) {
 			guigui.DispatchEvent(l, listEventItemsSelected, indices)
 		}
 	}
-	l.abstractList.SetOnItemsSelected(l.onItemsSelected)
+	l.abstractList.OnItemsSelected(l.onItemsSelected)
 
 	l.background2.setListContent(l)
 

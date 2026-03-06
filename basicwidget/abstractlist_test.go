@@ -165,10 +165,10 @@ func TestAbstractList(t *testing.T) {
 	// Test Callbacks
 	var selectedIndex int = -1
 	var selectedIndices []int
-	l.SetOnItemSelected(func(index int) {
+	l.OnItemSelected(func(index int) {
 		selectedIndex = index
 	})
-	l.SetOnItemsSelected(func(indices []int) {
+	l.OnItemsSelected(func(indices []int) {
 		selectedIndices = slices.Clone(indices)
 	})
 
@@ -203,7 +203,7 @@ func TestAbstractListSelectionSliceCopy(t *testing.T) {
 	l.SetMultiSelection(true)
 
 	var receivedIndices []int
-	l.SetOnItemsSelected(func(indices []int) {
+	l.OnItemsSelected(func(indices []int) {
 		// Modify the received slice to verify it's a copy
 		if len(indices) > 0 {
 			indices[0] = 999

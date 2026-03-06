@@ -47,11 +47,11 @@ func (a *abstractList[Value, Item]) isItemIndexSelectable(index int) bool {
 	return a.items[index].selectable()
 }
 
-func (a *abstractList[Value, Item]) SetOnItemSelected(f func(index int)) {
+func (a *abstractList[Value, Item]) OnItemSelected(f func(index int)) {
 	a.onItemSelected = f
 }
 
-func (a *abstractList[Value, Item]) SetOnItemsSelected(f func(indices []int)) {
+func (a *abstractList[Value, Item]) OnItemsSelected(f func(indices []int)) {
 	a.onItemsSelected = f
 }
 
