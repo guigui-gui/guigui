@@ -11,15 +11,50 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 )
 
+// Widget is the interface that all UI components must implement.
+// Implementations must embed DefaultWidget, as it is the only way to satisfy
+// the unexported widgetState method in this interface.
 type Widget interface {
+	// Data returns arbitrary data associated with the widget for the given key.
+	// [Context.Data] calls this method on the given widget first. If this returns nil,
+	// it tries the parent widget, repeating recursively up to the root widget.
 	Data(context *Context, key DataKey) any
+
+	// Build constructs the widget's child widget tree.
+	// Use adder to add child widgets that this widget contains.
+	// Build is called whenever the widget tree needs to be reconstructed.
 	Build(context *Context, adder *ChildAdder) error
+
+	// Layout positions and sizes the widget's children within the widget's bounds.
+	// Use layouter to set the bounds of each child widget added in Build.
 	Layout(context *Context, widgetBounds *WidgetBounds, layouter *ChildLayouter)
+
+	// HandlePointingInput handles mouse or touch input events for the widget.
+	// widgetBounds provides the widget's position and hit-testing information.
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
+
+	// HandleButtonInput handles keyboard and gamepad button input events for the widget.
+	// widgetBounds provides the widget's position and hit-testing information.
+	// It is invoked when the widget or its ancestor is focused,
+	// or when the widget contains a focused child widget.
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
+
+	// Tick is called every tick to update the widget's state.
+	// Use this for animations, timers, or other per-tick updates.
 	Tick(context *Context, widgetBounds *WidgetBounds) error
+
+	// CursorShape returns the cursor shape to display when the cursor is over this widget.
+	// The bool return value indicates whether the widget specifies a cursor shape.
+	// If false is returned, the parent widget's cursor shape is used.
 	CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool)
+
+	// Draw renders the widget onto dst.
+	// dst is a SubImage clipped to the widget's bounds.
 	Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image)
+
+	// Measure returns the preferred size of the widget given the constraints.
+	// The returned value is advisory; the parent performing layout is not obligated to use it.
+	// The constraints may specify fixed width and/or height that the widget should respect.
 	Measure(context *Context, constraints Constraints) image.Point
 
 	widgetState() *widgetState
