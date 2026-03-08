@@ -23,6 +23,8 @@ type Settings struct {
 	localeSelect              basicwidget.Select[language.Tag]
 	scaleText                 basicwidget.Text
 	scaleSegmentedControl     basicwidget.SegmentedControl[float64]
+	cursorBlinkText           textWithSubText
+	cursorBlinkToggle         basicwidget.Toggle
 }
 
 var hongKongChinese = language.MustParse("zh-HK")
@@ -156,6 +158,13 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	})
 	s.scaleSegmentedControl.SelectItemByValue(context.AppScale())
 
+	s.cursorBlinkText.text.SetValue("Cursor blink")
+	s.cursorBlinkText.subText.SetValue("Enable or disable cursor blinking for accessibility")
+	s.cursorBlinkToggle.OnValueChanged(func(context *guigui.Context, value bool) {
+		context.SetCursorBlinking(value)
+	})
+	s.cursorBlinkToggle.SetValue(context.CursorBlinking())
+
 	s.form.SetItems([]basicwidget.FormItem{
 		{
 			PrimaryWidget:   &s.colorModeText,
@@ -168,6 +177,10 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 		{
 			PrimaryWidget:   &s.scaleText,
 			SecondaryWidget: &s.scaleSegmentedControl,
+		},
+		{
+			PrimaryWidget:   &s.cursorBlinkText,
+			SecondaryWidget: &s.cursorBlinkToggle,
 		},
 	})
 
