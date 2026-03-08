@@ -55,6 +55,7 @@ type Context struct {
 	frontLayer           int64
 
 	defaultMethodCalled bool
+	cursorBlinking      bool
 }
 
 func (c *Context) Scale() float64 {
@@ -172,6 +173,18 @@ func (c *Context) SetAppLocales(locales []language.Tag) {
 	c.allLocales = slices.Delete(c.allLocales, 0, len(c.allLocales))
 
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonLocale, nil)
+}
+
+func (c *Context) CursorBlinking() bool {
+	return c.cursorBlinking
+}
+
+func (c *Context) SetCursorBlinking(blinking bool) {
+	if c.cursorBlinking == blinking {
+		return
+	}
+	c.cursorBlinking = blinking
+	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonCursorBlinking, nil)
 }
 
 func (c *Context) AppBounds() image.Rectangle {

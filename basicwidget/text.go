@@ -1478,6 +1478,10 @@ func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 }
 
 func (t *textCursor) alpha(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text *Text) float64 {
+	// If global cursor blinking is disabled, cursor is always fully visible.
+	if !context.CursorBlinking() {
+		return 1
+	}
 	if _, ok := text.cursorPosition(context, widgetBounds); !ok {
 		return 0
 	}

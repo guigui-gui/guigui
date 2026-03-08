@@ -38,6 +38,7 @@ const (
 	requestRedrawReasonAppScale
 	requestRedrawReasonColorMode
 	requestRedrawReasonLocale
+	requestRedrawReasonCursorBlinking
 )
 
 func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason, widget Widget) {
@@ -62,6 +63,8 @@ func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason,
 			slog.Info("request redrawing", "reason", "color mode", "region", region)
 		case requestRedrawReasonLocale:
 			slog.Info("request redrawing", "reason", "locale", "region", region)
+		case requestRedrawReasonCursorBlinking:
+			slog.Info("request redrawing", "reason", "cursor blinking", "region", region)
 		default:
 			slog.Info("request redrawing", "reason", "unknown", "region", region)
 		}

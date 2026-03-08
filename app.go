@@ -143,6 +143,7 @@ type RunOptions struct {
 	WindowMinSize  image.Point
 	WindowMaxSize  image.Point
 	WindowFloating bool
+	CursorBlinking *bool
 	AppScale       float64
 
 	RunGameOptions *ebiten.RunGameOptions
@@ -189,6 +190,13 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 	a.context.app = a
 	if options.AppScale > 0 {
 		a.context.appScaleMinus1 = options.AppScale - 1
+	}
+	// Cursor blinking is enabled by default for accessibility.
+	// Users can override this via RunOptions.CursorBlinking or context.SetCursorBlinking.
+	if options.CursorBlinking != nil {
+		a.context.cursorBlinking = *options.CursorBlinking
+	} else {
+		a.context.cursorBlinking = true
 	}
 
 	var eop ebiten.RunGameOptions
