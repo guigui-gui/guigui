@@ -120,6 +120,7 @@ type Text struct {
 	multiline        bool
 	autoWrap         bool
 	keepTailingSpace bool
+	ellipsisString   string
 
 	selectionDragStartPlus1 int
 	selectionDragEndPlus1   int
@@ -577,6 +578,16 @@ func (t *Text) SetAutoWrap(autoWrap bool) {
 	}
 
 	t.autoWrap = autoWrap
+	guigui.RequestRebuild(t)
+}
+
+func (t *Text) SetEllipsisString(str string) {
+	if t.ellipsisString == str {
+		return
+	}
+
+	t.ellipsisString = str
+	t.resetCachedTextSize()
 	guigui.RequestRebuild(t)
 }
 
@@ -1097,6 +1108,11 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	op.Options.VerticalAlign = textutil.VerticalAlign(t.vAlign)
 	op.Options.TabWidth = t.actualTabWidth(context)
 	op.Options.KeepTailingSpace = t.keepTailingSpace
+	if !t.editable {
+		op.Options.EllipsisString = t.ellipsisString
+	} else {
+		op.Options.EllipsisString = ""
+	}
 	op.TextColor = textColor
 	if start, end, ok := t.selectionToDraw(context); ok {
 		if context.IsFocused(t) {
@@ -1163,7 +1179,11 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	}
 
 	txt := t.textToDraw(context, true)
-	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
+	ellipsisString := t.ellipsisString
+	if t.editable {
+		ellipsisString = ""
+	}
+	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its cursor is rendered.
 	// Force to set a positive number as the width.
 	w = max(w, 1)

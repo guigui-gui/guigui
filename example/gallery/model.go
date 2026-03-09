@@ -151,6 +151,7 @@ type TextsModel struct {
 	bold            bool
 	selectable      bool
 	editable        bool
+	ellipsis        bool
 }
 
 func (t *TextsModel) Text() string {
@@ -218,6 +219,14 @@ func (t *TextsModel) SetEditable(editable bool) {
 	if editable {
 		t.selectable = true
 	}
+}
+
+func (t *TextsModel) Ellipsis() bool {
+	return t.ellipsis
+}
+
+func (t *TextsModel) SetEllipsis(ellipsis bool) {
+	t.ellipsis = ellipsis
 }
 
 type TextInputsModel struct {

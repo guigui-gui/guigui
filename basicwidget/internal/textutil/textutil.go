@@ -51,6 +51,40 @@ func advance(str string, face text.Face, tabWidth float64, keepTailingSpace bool
 	return width
 }
 
+// truncateWithEllipsis truncates str so that str + ellipsis fits within maxWidth.
+// The truncation is done at grapheme cluster boundaries.
+// If ellipsis itself is wider than maxWidth, the ellipsis string is returned as-is.
+func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face text.Face, tabWidth float64) string {
+	if advance(str, face, tabWidth, false) <= maxWidth {
+		return str
+	}
+
+	// Find the longest prefix of str that fits within maxWidth - ellipsisWidth.
+	ellipsisWidth := advance(ellipsis, face, tabWidth, false)
+	targetWidth := maxWidth - ellipsisWidth
+	if targetWidth <= 0 {
+		return ellipsis
+	}
+
+	var lastFittingEnd int
+	remaining := str
+	pos := 0
+	state := -1
+	for len(remaining) > 0 {
+		cluster, rest, _, newState := uniseg.StepString(remaining, state)
+		candidateEnd := pos + len(cluster)
+		if advance(str[:candidateEnd], face, tabWidth, false) > targetWidth {
+			break
+		}
+		lastFittingEnd = candidateEnd
+		pos = candidateEnd
+		remaining = rest
+		state = newState
+	}
+
+	return str[:lastFittingEnd] + ellipsis
+}
+
 type Options struct {
 	AutoWrap         bool
 	Face             text.Face
@@ -59,6 +93,7 @@ type Options struct {
 	VerticalAlign    VerticalAlign
 	TabWidth         float64
 	KeepTailingSpace bool
+	EllipsisString   string
 }
 
 type HorizontalAlign int
@@ -366,7 +401,7 @@ func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth fl
 	return count
 }
 
-func Measure(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) (float64, float64) {
+func Measure(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range lines(width, str, autoWrap, func(str string) float64 {
 		return advance(str, face, tabWidth, keepTailingSpace)
@@ -375,7 +410,12 @@ func Measure(width int, str string, autoWrap bool, face text.Face, lineHeight fl
 		if !keepTailingSpace {
 			line = trimTailingLineBreak(line)
 		}
-		maxWidth = max(maxWidth, advance(line, face, tabWidth, keepTailingSpace))
+		lineWidth := advance(line, face, tabWidth, keepTailingSpace)
+		if ellipsisString != "" && lineWidth > float64(width) {
+			line = truncateWithEllipsis(line, ellipsisString, float64(width), face, tabWidth)
+			lineWidth = advance(line, face, tabWidth, false)
+		}
+		maxWidth = max(maxWidth, lineWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
 		// Thus, just counting the line number is enough.
 		height += lineHeight

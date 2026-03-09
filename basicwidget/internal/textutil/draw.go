@@ -143,6 +143,9 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if !options.KeepTailingSpace {
 			lineStr = strings.TrimRightFunc(lineStr, unicode.IsSpace)
 		}
+		if options.EllipsisString != "" && advance(lineStr, options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
+			lineStr = truncateWithEllipsis(lineStr, options.EllipsisString, float64(bounds.Dx()), options.Face, options.TabWidth)
+		}
 		x := oneLineLeft(bounds.Dx(), lineStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 		op.GeoM.Translate(x, 0)
 		if options.TabWidth == 0 {

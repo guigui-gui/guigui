@@ -20,6 +20,8 @@ type Texts struct {
 	verticalAlignSegmentedControl   basicwidget.SegmentedControl[basicwidget.VerticalAlign]
 	autoWrapText                    basicwidget.Text
 	autoWrapToggle                  basicwidget.Toggle
+	ellipsisText                    basicwidget.Text
+	ellipsisToggle                  basicwidget.Toggle
 	boldText                        basicwidget.Text
 	boldToggle                      basicwidget.Toggle
 	selectableText                  basicwidget.Text
@@ -116,6 +118,12 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 	t.autoWrapToggle.SetValue(model.Texts().AutoWrap())
 
+	t.ellipsisText.SetValue("Ellipsis")
+	t.ellipsisToggle.OnValueChanged(func(context *guigui.Context, value bool) {
+		model.Texts().SetEllipsis(value)
+	})
+	t.ellipsisToggle.SetValue(model.Texts().Ellipsis())
+
 	t.boldText.SetValue("Bold")
 	t.boldToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Texts().SetBold(value)
@@ -148,6 +156,10 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			SecondaryWidget: &t.autoWrapToggle,
 		},
 		{
+			PrimaryWidget:   &t.ellipsisText,
+			SecondaryWidget: &t.ellipsisToggle,
+		},
+		{
 			PrimaryWidget:   &t.boldText,
 			SecondaryWidget: &t.boldToggle,
 		},
@@ -168,6 +180,11 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.sampleText.SetBold(model.Texts().Bold())
 	t.sampleText.SetSelectable(model.Texts().Selectable())
 	t.sampleText.SetEditable(model.Texts().Editable())
+	if model.Texts().Ellipsis() {
+		t.sampleText.SetEllipsisString("…")
+	} else {
+		t.sampleText.SetEllipsisString("")
+	}
 	t.sampleText.OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		if committed {
 			model.Texts().SetText(text)
