@@ -87,9 +87,6 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	if s.select2.SelectedItemIndex() < 0 {
 		s.select2.SelectItemByIndex(0)
 	}
-	for i := range s.select2Items {
-		s.select2ItemWidgets[i].SetTextColor(s.select2.ItemTextColor(context, i))
-	}
 
 	s.listForm.SetItems([]basicwidget.FormItem{
 		{
@@ -141,6 +138,10 @@ func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+
+	for i := range s.select2Items {
+		s.select2ItemWidgets[i].SetTextColor(s.select2.ItemTextColor(context, i))
+	}
 }
 
 type selectItem struct {

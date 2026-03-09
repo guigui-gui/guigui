@@ -159,6 +159,9 @@ func tableHeaderHeight(context *guigui.Context) int {
 	return u
 }
 
+// ItemTextColor returns the text color for the item at the given index.
+// ItemTextColor must not be called in Build because it depends on the finished widget tree
+// (e.g. focused states of child widgets are available only after the widget tree is built).
 func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
 	item := t.tableRowWidgets.At(index)
 	switch {

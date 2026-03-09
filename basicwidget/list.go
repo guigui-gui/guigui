@@ -191,9 +191,8 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
-		item.text.SetColor(l.ItemTextColor(context, i))
-		item.keyText.SetColor(l.ItemTextColor(context, i))
 	}
+
 	return nil
 }
 
@@ -201,38 +200,23 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y += l.headerHeight
 	bounds.Max.Y -= l.footerHeight
+
 	layouter.LayoutWidget(&l.background1, widgetBounds.Bounds())
 	layouter.LayoutWidget(&l.panel, bounds)
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
+
+	for i := range l.listItemWidgets.Len() {
+		item := l.listItemWidgets.At(i)
+		item.text.SetColor(l.ItemTextColor(context, i))
+		item.keyText.SetColor(l.ItemTextColor(context, i))
+	}
 }
 
-func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) bool {
-	if l.content.Style() != ListStyleMenu {
-		return l.content.IsSelectedItemIndex(index)
-	}
-
-	if !l.content.isHoveringVisible() {
-		return false
-	}
-	// TODO: The hovered item index is not updated yet.
-	// This requires the list's widgetBounds.
-	if l.content.hoveredItemIndexPlus1-1 != index {
-		return false
-	}
-	if index < 0 || index >= l.listItemWidgets.Len() {
-		return false
-	}
-	if !l.abstractListItems[index].selectable() {
-		return false
-	}
-	if !context.IsEnabled(l.listItemWidgets.At(index)) {
-		return false
-	}
-	return true
-}
-
+// ItemTextColor returns the text color for the item at the given index.
+// ItemTextColor must not be called in Build because it depends on the finished widget tree
+// (e.g. focused states of child widgets are available only after the widget tree is built).
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.isHighlightedItemIndex(context, index) && context.IsEnabled(l) {
+	if l.content.isHighlightedItemIndex(context, index) {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -607,7 +591,6 @@ type listContent[T comparable] struct {
 	pressStartPlus1           image.Point
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
-	prevFocused               bool
 	widthForCachedHeight      int
 	cachedHeight              int
 
@@ -1359,6 +1342,16 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 	return r
 }
 
+func (l *listContent[T]) isHighlightedItemIndex(context *guigui.Context, index int) bool {
+	if !l.useHighlightedBackgroundColor(context) {
+		return false
+	}
+	if l.isHoveringVisible() {
+		return l.hoveredItemIndexPlus1-1 == index
+	}
+	return l.IsSelectedItemIndex(index)
+}
+
 func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) bool {
 	if !context.IsEnabled(l) {
 		return false
@@ -1368,12 +1361,12 @@ func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) 
 
 func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context) color.Color {
 	if !context.IsEnabled(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 	}
 	if l.useHighlightedBackgroundColor(context) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
 }
 
 type listBackground1[T comparable] struct {
