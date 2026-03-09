@@ -60,8 +60,6 @@ type List[T comparable] struct {
 	onScrollDeltaY            func(context *guigui.Context, deltaY float64)
 	scrollOffsetYTopMinus1    float64
 	scrollOffsetYBottomMinus1 float64
-	focused                   bool
-	onFocusChanged            func(context *guigui.Context, hasFocus bool)
 }
 
 type ListItem[T comparable] struct {
@@ -190,21 +188,11 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	}
 	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
-	if l.onFocusChanged == nil {
-		l.onFocusChanged = func(context *guigui.Context, hasFocus bool) {
-			l.focused = hasFocus
-		}
-	}
-
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
-
-		// This is a little dirty hack to get focus state at ItemTextColor.
-		// ItemTextColor can be invoked in a build phase, and context.IsFocusedOrHasFocusedChildren is not available.
-		guigui.OnFocusChanged(item, l.onFocusChanged)
 	}
 
 	return nil
@@ -250,8 +238,7 @@ func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) boo
 		if !l.content.IsSelectedItemIndex(index) {
 			return false
 		}
-		// context.IsFocusedOrHasFocusedChild cannot be invoked in a build phase.
-		if !l.focused {
+		if !context.IsFocusedOrHasFocusedChild(l) {
 			return false
 		}
 		return true
@@ -411,6 +398,7 @@ func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		l.scrollOffsetYTopMinus1 = 0
 		l.scrollOffsetYBottomMinus1 = 0
 	}
+
 	return nil
 }
 
