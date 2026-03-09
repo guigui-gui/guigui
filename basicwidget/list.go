@@ -1357,15 +1357,15 @@ func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover
 		return nil
 	}
 	if !context.IsEnabled(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.2)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
 	}
 	if l.style == ListStyleSidebar {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.3)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
 	if context.IsFocusedOrHasFocusedChild(l) || includeHover {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.3)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.6, 0.3)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
 }
 
 type listBackground1[T comparable] struct {
