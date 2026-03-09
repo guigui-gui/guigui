@@ -194,7 +194,6 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
 	}
-
 	return nil
 }
 
@@ -208,45 +207,32 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 }
 
 func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) bool {
-	if !context.IsEnabled(l) {
-		return false
+	if l.content.Style() != ListStyleMenu {
+		return l.content.IsSelectedItemIndex(index)
 	}
 
-	switch l.content.Style() {
-	case ListStyleSidebar:
-		return l.content.IsSelectedItemIndex(index)
-	case ListStyleMenu:
-		if !l.content.isHoveringVisible() {
-			return false
-		}
-		// TODO: The hovered item index is not updated yet.
-		// This requires the list's widgetBounds.
-		if l.content.hoveredItemIndexPlus1-1 != index {
-			return false
-		}
-		if index < 0 || index >= l.listItemWidgets.Len() {
-			return false
-		}
-		if !l.abstractListItems[index].selectable() {
-			return false
-		}
-		if !context.IsEnabled(l.listItemWidgets.At(index)) {
-			return false
-		}
-		return true
-	default:
-		if !l.content.IsSelectedItemIndex(index) {
-			return false
-		}
-		if !context.IsFocusedOrHasFocusedChild(l) {
-			return false
-		}
-		return true
+	if !l.content.isHoveringVisible() {
+		return false
 	}
+	// TODO: The hovered item index is not updated yet.
+	// This requires the list's widgetBounds.
+	if l.content.hoveredItemIndexPlus1-1 != index {
+		return false
+	}
+	if index < 0 || index >= l.listItemWidgets.Len() {
+		return false
+	}
+	if !l.abstractListItems[index].selectable() {
+		return false
+	}
+	if !context.IsEnabled(l.listItemWidgets.At(index)) {
+		return false
+	}
+	return true
 }
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.isHighlightedItemIndex(context, index) {
+	if l.isHighlightedItemIndex(context, index) && context.IsEnabled(l) {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -398,7 +384,6 @@ func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		l.scrollOffsetYTopMinus1 = 0
 		l.scrollOffsetYBottomMinus1 = 0
 	}
-
 	return nil
 }
 
@@ -622,6 +607,7 @@ type listContent[T comparable] struct {
 	pressStartPlus1           image.Point
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
+	prevFocused               bool
 	widthForCachedHeight      int
 	cachedHeight              int
 
@@ -1381,15 +1367,15 @@ func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover
 		return nil
 	}
 	if !context.IsEnabled(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
 	}
 	if l.style == ListStyleSidebar {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
 	if context.IsFocusedOrHasFocusedChild(l) || includeHover {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
 }
 
 type listBackground1[T comparable] struct {

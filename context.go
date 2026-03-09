@@ -283,6 +283,10 @@ func (c *Context) IsFocused(widget Widget) bool {
 }
 
 func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
+	if c.inBuild {
+		panic("guigui: IsFocusedOrHasFocusedChild cannot be called in Build")
+	}
+
 	if len(widget.widgetState().children) == 0 {
 		return areWidgetsSame(c.app.focusedWidget, widget)
 	}
