@@ -319,6 +319,10 @@ func (l *List[T]) SelectItemsByIndices(indices []int) {
 	l.content.SelectItemsByIndices(indices)
 }
 
+func (l *List[T]) SelectAllItems() {
+	l.content.SelectAllItems()
+}
+
 func (l *List[T]) SelectItemByValue(value T) {
 	l.content.SelectItemByValue(value)
 }
@@ -958,6 +962,12 @@ func (l *listContent[T]) SelectItemByIndex(index int) {
 
 func (l *listContent[T]) SelectItemsByIndices(indices []int) {
 	if l.abstractList.SelectItemsByIndices(indices, false) {
+		guigui.RequestRebuild(l)
+	}
+}
+
+func (l *listContent[T]) SelectAllItems() {
+	if l.abstractList.SelectAllItems(false) {
 		guigui.RequestRebuild(l)
 	}
 }

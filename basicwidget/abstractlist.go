@@ -194,6 +194,25 @@ func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFir
 	return a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
 }
 
+func (a *abstractList[Value, Item]) SelectAllItems(forceFireEvents bool) bool {
+	clear(a.tmpIndexMap)
+	if a.tmpIndexMap == nil {
+		a.tmpIndexMap = make(map[int]struct{}, len(a.items))
+	}
+	newAnchor := math.MaxInt
+	for i := range a.items {
+		a.tmpIndexMap[i] = struct{}{}
+		if !a.isItemIndexSelectable(i) {
+			continue
+		}
+		newAnchor = min(newAnchor, i)
+	}
+	if newAnchor == math.MaxInt {
+		newAnchor = 0
+	}
+	return a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
+}
+
 func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{}, newAnchorCandidate int, updateAnchor bool, forceFireEvents bool) bool {
 	// maps.DeleteFunc changes the indices directly.
 	// It is caller's responsibility to make a copy if needed.
