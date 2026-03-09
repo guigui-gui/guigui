@@ -1359,20 +1359,14 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 	return r
 }
 
-func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover bool) color.Color {
-	if !includeHover && l.SelectedItemIndex() < 0 || l.SelectedItemIndex() >= l.abstractList.ItemCount() {
-		return nil
-	}
-	if !includeHover && l.style == ListStyleMenu {
-		return nil
-	}
+func (l *listContent[T]) selectedItemColor(context *guigui.Context) color.Color {
 	if !context.IsEnabled(l) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
 	}
 	if l.style == ListStyleSidebar {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
-	if context.IsFocusedOrHasFocusedChild(l) || includeHover {
+	if context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleMenu {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
 	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
@@ -1441,8 +1435,10 @@ func (l *listBackground2[T]) setListContent(content *listContent[T]) {
 func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	vb := widgetBounds.VisibleBounds()
 
+	clr := l.content.selectedItemColor(context)
+
 	// Draw the selected item background.
-	if clr := l.content.selectedItemColor(context, false); clr != nil {
+	if !l.content.isHoveringVisible() {
 		// TODO: Improve the performance.
 		indexToVisibleItemIndex := map[int]int{}
 		var visibleItemIndexToIndex []int
@@ -1499,9 +1495,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
 		if bounds.Overlaps(vb) {
-			if clr := l.content.selectedItemColor(context, true); clr != nil {
-				basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
-			}
+			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
 
