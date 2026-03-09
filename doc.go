@@ -11,17 +11,12 @@
 // The framework is built on Ebitengine's game loop. During each Update (tick),
 // the following methods are called in order:
 //
-//  1. Build phase (1) (skipped if unnecessary):
-//     [Widget.Build] constructs the child widget tree.
-//     [Widget.Layout] positions and sizes children within the widget's bounds.
-//  2. Input phase:
-//     [Widget.HandlePointingInput] handles mouse and touch input.
-//     [Widget.HandleButtonInput] handles keyboard and gamepad input.
-//  3. Build phase (2) (skipped if unnecessary):
-//     [Widget.Build] constructs the child widget tree.
-//     [Widget.Layout] positions and sizes children within the widget's bounds.
-//  4. Tick phase:
-//     [Widget.Tick] updates widget state.
+//  1. Build phase (1) - [Widget.Build] constructs the child widget tree (skipped if unnecessary).
+//  2. Layout phase (1) - [Widget.Layout] positions and sizes children within the widget's bounds (skipped if unnecessary).
+//  3. Input phase - [Widget.HandlePointingInput] handles mouse and touch input, and [Widget.HandleButtonInput] handles keyboard and gamepad input.
+//  4. Build phase (2) - [Widget.Build] constructs the child widget tree (skipped if unnecessary).
+//  5. Layout phase (2) - [Widget.Layout] positions and sizes children within the widget's bounds (skipped if unnecessary).
+//  6. Tick phase - [Widget.Tick] updates widget state.
 //
 // During each Draw (frame), the following method is called:
 //
