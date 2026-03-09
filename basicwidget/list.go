@@ -1360,7 +1360,7 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 }
 
 func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover bool) color.Color {
-	if l.SelectedItemIndex() < 0 || l.SelectedItemIndex() >= l.abstractList.ItemCount() {
+	if !includeHover && l.SelectedItemIndex() < 0 || l.SelectedItemIndex() >= l.abstractList.ItemCount() {
 		return nil
 	}
 	if !includeHover && l.style == ListStyleMenu {
