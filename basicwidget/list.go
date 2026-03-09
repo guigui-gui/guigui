@@ -60,6 +60,8 @@ type List[T comparable] struct {
 	onScrollDeltaY            func(context *guigui.Context, deltaY float64)
 	scrollOffsetYTopMinus1    float64
 	scrollOffsetYBottomMinus1 float64
+	focused                   bool
+	onFocusChanged            func(context *guigui.Context, hasFocus bool)
 }
 
 type ListItem[T comparable] struct {
@@ -188,12 +190,23 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	}
 	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
 
+	if l.onFocusChanged == nil {
+		l.onFocusChanged = func(context *guigui.Context, hasFocus bool) {
+			l.focused = hasFocus
+		}
+	}
+
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
 		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
 		item.text.SetColor(l.ItemTextColor(context, i))
 		item.keyText.SetColor(l.ItemTextColor(context, i))
+
+		// This is a little dirty hack to get focus state at ItemTextColor.
+		// ItemTextColor can be invoked in a build phase, and context.IsFocusedOrHasFocusedChildren is not available.
+		guigui.OnFocusChanged(item, l.onFocusChanged)
 	}
+
 	return nil
 }
 
@@ -207,32 +220,46 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 }
 
 func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) bool {
-	if l.content.Style() != ListStyleMenu {
-		return l.content.IsSelectedItemIndex(index)
+	if !context.IsEnabled(l) {
+		return false
 	}
 
-	if !l.content.isHoveringVisible() {
-		return false
+	switch l.content.Style() {
+	case ListStyleSidebar:
+		return l.content.IsSelectedItemIndex(index)
+	case ListStyleMenu:
+		if !l.content.isHoveringVisible() {
+			return false
+		}
+		// TODO: The hovered item index is not updated yet.
+		// This requires the list's widgetBounds.
+		if l.content.hoveredItemIndexPlus1-1 != index {
+			return false
+		}
+		if index < 0 || index >= l.listItemWidgets.Len() {
+			return false
+		}
+		if !l.abstractListItems[index].selectable() {
+			return false
+		}
+		if !context.IsEnabled(l.listItemWidgets.At(index)) {
+			return false
+		}
+		return true
+	default:
+		if !l.content.IsSelectedItemIndex(index) {
+			return false
+		}
+		// context.IsFocusedOrHasFocusedChild cannot be invoked in a build phase.
+		if !l.focused {
+			return false
+		}
+		return true
 	}
-	// TODO: The hovered item index is not updated yet.
-	// This requires the list's widgetBounds.
-	if l.content.hoveredItemIndexPlus1-1 != index {
-		return false
-	}
-	if index < 0 || index >= l.listItemWidgets.Len() {
-		return false
-	}
-	if !l.abstractListItems[index].selectable() {
-		return false
-	}
-	if !context.IsEnabled(l.listItemWidgets.At(index)) {
-		return false
-	}
-	return true
 }
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.isHighlightedItemIndex(context, index) && context.IsEnabled(l) {
+	if l.isHighlightedItemIndex(context, index) {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -607,7 +634,6 @@ type listContent[T comparable] struct {
 	pressStartPlus1           image.Point
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
-	prevFocused               bool
 	widthForCachedHeight      int
 	cachedHeight              int
 
@@ -1367,15 +1393,15 @@ func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover
 		return nil
 	}
 	if !context.IsEnabled(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
 	}
 	if l.style == ListStyleSidebar {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
 	}
 	if context.IsFocusedOrHasFocusedChild(l) || includeHover {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9, 0.4)
 }
 
 type listBackground1[T comparable] struct {
