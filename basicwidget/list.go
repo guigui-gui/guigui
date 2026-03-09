@@ -232,7 +232,7 @@ func (l *List[T]) isHighlightedItemIndex(context *guigui.Context, index int) boo
 }
 
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.isHighlightedItemIndex(context, index) {
+	if l.isHighlightedItemIndex(context, index) && context.IsEnabled(l) {
 		return defaultActiveListItemTextColor(context)
 	}
 	item := l.listItemWidgets.At(index)
@@ -1356,8 +1356,11 @@ func (l *listContent[T]) selectedItemColor(context *guigui.Context) color.Color 
 	if l.style == ListStyleMenu {
 		return nil
 	}
-	if context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleSidebar {
-		return draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+	if l.style == ListStyleSidebar {
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5, 0.4)
+	}
+	if context.IsFocusedOrHasFocusedChild(l) {
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.55)
 	}
 	if !context.IsEnabled(l) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.2)
