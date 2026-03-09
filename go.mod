@@ -6,7 +6,7 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260302122915-c1069c18e771
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
-	github.com/kisielk/errcheck v1.9.0
+	github.com/kisielk/errcheck v1.10.0
 	github.com/rivo/uniseg v0.4.7
 	golang.design/x/clipboard v0.7.1
 	golang.org/x/text v0.34.0
