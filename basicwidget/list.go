@@ -1359,14 +1359,18 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 	return r
 }
 
-func (l *listContent[T]) selectedItemColor(context *guigui.Context) color.Color {
+func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) bool {
+	if !context.IsEnabled(l) {
+		return false
+	}
+	return l.style == ListStyleSidebar || context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleMenu
+}
+
+func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context) color.Color {
 	if !context.IsEnabled(l) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.25)
 	}
-	if l.style == ListStyleSidebar {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
-	}
-	if context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleMenu {
+	if l.useHighlightedBackgroundColor(context) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	}
 	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.35)
@@ -1435,7 +1439,7 @@ func (l *listBackground2[T]) setListContent(content *listContent[T]) {
 func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	vb := widgetBounds.VisibleBounds()
 
-	clr := l.content.selectedItemColor(context)
+	clr := l.content.selectedItemBackgroundColor(context)
 
 	// Draw the selected item background.
 	if !l.content.isHoveringVisible() {
