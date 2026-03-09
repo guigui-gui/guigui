@@ -1349,23 +1349,23 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 	return r
 }
 
-func (l *listContent[T]) selectedItemColor(context *guigui.Context) color.Color {
+func (l *listContent[T]) selectedItemColor(context *guigui.Context, includeHover bool) color.Color {
 	if l.SelectedItemIndex() < 0 || l.SelectedItemIndex() >= l.abstractList.ItemCount() {
 		return nil
 	}
-	if l.style == ListStyleMenu {
+	if !includeHover && l.style == ListStyleMenu {
 		return nil
-	}
-	if l.style == ListStyleSidebar {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5, 0.4)
-	}
-	if context.IsFocusedOrHasFocusedChild(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.55)
 	}
 	if !context.IsEnabled(l) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.2)
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.5)
+	if l.style == ListStyleSidebar {
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.3)
+	}
+	if context.IsFocusedOrHasFocusedChild(l) || includeHover {
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.3)
+	}
+	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.6, 0.3)
 }
 
 type listBackground1[T comparable] struct {
@@ -1432,7 +1432,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	vb := widgetBounds.VisibleBounds()
 
 	// Draw the selected item background.
-	if clr := l.content.selectedItemColor(context); clr != nil {
+	if clr := l.content.selectedItemColor(context, false); clr != nil {
 		// TODO: Improve the performance.
 		indexToVisibleItemIndex := map[int]int{}
 		var visibleItemIndexToIndex []int
@@ -1489,11 +1489,9 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
 		if bounds.Overlaps(vb) {
-			clr := draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.9)
-			if l.content.style == ListStyleMenu {
-				clr = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+			if clr := l.content.selectedItemColor(context, true); clr != nil {
+				basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 			}
-			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
 

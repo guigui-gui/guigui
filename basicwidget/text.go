@@ -1119,7 +1119,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end
-			op.SelectionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8)
+			op.SelectionColor = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8, 0.3)
 		} else {
 			op.DrawSelection = false
 		}
