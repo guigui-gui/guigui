@@ -31,6 +31,7 @@ var (
 	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemsSelected        guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemsMoved           guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsCanMove         guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemExpanderToggled  guigui.EventKey = guigui.GenerateEventKey()
 	listEventScrollY              guigui.EventKey = guigui.GenerateEventKey()
 	listEventScrollYEnsureVisible guigui.EventKey = guigui.GenerateEventKey()
@@ -112,6 +113,10 @@ func (l *List[T]) OnItemsSelected(f func(context *guigui.Context, indices []int)
 
 func (l *List[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to int)) {
 	l.content.OnItemsMoved(f)
+}
+
+func (l *List[T]) OnItemsCanMove(f func(context *guigui.Context, from, count, to int) bool) {
+	l.content.OnItemsCanMove(f)
 }
 
 func (l *List[T]) OnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
@@ -620,6 +625,10 @@ func (l *listContent[T]) OnItemsMoved(f func(context *guigui.Context, from, coun
 	guigui.SetEventHandler(l, listEventItemsMoved, f)
 }
 
+func (l *listContent[T]) OnItemsCanMove(f func(context *guigui.Context, from, count, to int) bool) {
+	guigui.SetEventHandler(l, listEventItemsCanMove, f)
+}
+
 func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, index int, expanded bool)) {
 	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
 }
@@ -1100,7 +1109,18 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				guigui.DispatchEvent(l, listEventScrollDeltaY, dy)
 			}
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
-				l.dragDstIndexPlus1 = i + 1
+				droppable := true
+				indices := l.abstractList.AppendSelectedItemIndices(nil)
+				if len(indices) > 0 {
+					if result, handled := guigui.DispatchEvent(l, listEventItemsCanMove, indices[0], len(indices), i); handled {
+						droppable = result[0].(bool)
+					}
+				}
+				if droppable {
+					l.dragDstIndexPlus1 = i + 1
+				} else {
+					l.dragDstIndexPlus1 = 0
+				}
 				guigui.RequestRedraw(l)
 				return guigui.HandleInputByWidget(l)
 			}
@@ -1109,7 +1129,14 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		if l.dragDstIndexPlus1 > 0 {
 			indices := l.abstractList.AppendSelectedItemIndices(nil)
 			if len(indices) > 0 {
-				guigui.DispatchEvent(l, listEventItemsMoved, indices[0], len(indices), l.dragDstIndexPlus1-1)
+				from, count, to := indices[0], len(indices), l.dragDstIndexPlus1-1
+				canMove := true
+				if result, handled := guigui.DispatchEvent(l, listEventItemsCanMove, from, count, to); handled {
+					canMove = result[0].(bool)
+				}
+				if canMove {
+					guigui.DispatchEvent(l, listEventItemsMoved, from, count, to)
+				}
 			}
 			l.dragDstIndexPlus1 = 0
 		}
