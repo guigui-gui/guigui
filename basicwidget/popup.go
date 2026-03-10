@@ -587,38 +587,31 @@ func (p *popupFrame) setDrawerEdge(edge DrawerEdge) {
 
 func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr1, clr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 
-	width := float32(1 * context.Scale())
-	if p.style != popupStyleDrawer {
-		basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, basicwidgetdraw.RoundedRectBorderTypeOutset)
-	} else {
-		var x0, y0, x1, y1 float32
+	clr1, clr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+	if p.style == popupStyleDrawer {
+		u := UnitSize(context)
 		switch p.drawerEdge {
 		case DrawerEdgeStart:
-			x0 = float32(bounds.Max.X) - width/2
-			y0 = float32(bounds.Min.Y)
-			x1 = float32(bounds.Max.X) - width/2
-			y1 = float32(bounds.Max.Y)
+			bounds.Min.X -= u
+			bounds.Min.Y -= u
+			bounds.Max.Y += u
 		case DrawerEdgeTop:
-			x0 = float32(bounds.Min.X)
-			y0 = float32(bounds.Max.Y) - width/2
-			x1 = float32(bounds.Max.X)
-			y1 = float32(bounds.Max.Y) - width/2
+			bounds.Min.X -= u
+			bounds.Min.Y -= u
+			bounds.Max.X += u
 		case DrawerEdgeEnd:
-			x0 = float32(bounds.Min.X) + width/2
-			y0 = float32(bounds.Min.Y)
-			x1 = float32(bounds.Min.X) + width/2
-			y1 = float32(bounds.Max.Y)
+			bounds.Max.X += u
+			bounds.Min.Y -= u
+			bounds.Max.Y += u
 		case DrawerEdgeBottom:
-			x0 = float32(bounds.Min.X)
-			y0 = float32(bounds.Min.Y) + width/2
-			x1 = float32(bounds.Max.X)
-			y1 = float32(bounds.Min.Y) + width/2
+			bounds.Min.X -= u
+			bounds.Max.Y += u
+			bounds.Max.X += u
 		}
-		// TODO: Use clr2 as a gradation
-		vector.StrokeLine(dst, x0, y0, x1, y1, width, clr1, true)
 	}
+	width := float32(1 * context.Scale())
+	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, basicwidgetdraw.RoundedRectBorderTypeOutset)
 }
 
 type popupBlurredBackground struct {
