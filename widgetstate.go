@@ -351,8 +351,7 @@ func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	})
 }
 
-func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
-	var handled bool
+func DispatchEvent(widget Widget, eventKey EventKey, args ...any) ([]any, bool) {
 	widgetState := widget.widgetState()
 	for _, h := range widgetState.eventHandlers {
 		if h.key != eventKey {
@@ -364,15 +363,20 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) {
 		for _, arg := range args {
 			widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
 		}
-		f.Call(widgetState.tmpArgs)
+		results := f.Call(widgetState.tmpArgs)
 		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 		widgetState.eventDispatched = true
-		handled = true
-	}
-
-	if handled {
 		RequestRebuild(widget)
+		if len(results) == 0 {
+			return nil, true
+		}
+		ret := make([]any, len(results))
+		for i, r := range results {
+			ret[i] = r.Interface()
+		}
+		return ret, true
 	}
+	return nil, false
 }
 
 var widgetEventFocusChanged EventKey = GenerateEventKey()
