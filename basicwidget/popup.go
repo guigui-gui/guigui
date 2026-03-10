@@ -674,7 +674,14 @@ func (p *popupDarkBackground) SetOpeningRate(rate float64) {
 func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
-	clr := draw.ScaleAlpha(draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.7, 0.1), 0.75*p.openingRate)
+	colorMode := context.ResolvedColorMode()
+	var alpha float64
+	if colorMode == ebiten.ColorModeLight {
+		alpha = 0.25 * p.openingRate
+	} else {
+		alpha = 0.5 * p.openingRate
+	}
+	clr := draw.ScaleAlpha(draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.1, 0.1), alpha)
 	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 }
 
