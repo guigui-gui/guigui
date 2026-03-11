@@ -250,7 +250,9 @@ func (a *app) updateEventDispatchStates() Widget {
 	return dispatchedWidget
 }
 
-func (a *app) updateRedrawRequestedRegionsByWidgets() {
+// collectWidgetRedrawRequests collects redraw regions from widgets that requested redraw or rebuild,
+// then clears the requests.
+func (a *app) collectWidgetRedrawRequests() {
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		if widgetState.rebuildRequested || widgetState.redrawRequested {
@@ -271,6 +273,30 @@ func (a *app) updateRedrawRequestedRegionsByWidgets() {
 		widgetState.redrawRequestedAt = ""
 		return nil
 	})
+}
+
+func (a *app) updateRequiredPhases(inputHandledWidget Widget) {
+	dispatchedWidget := a.updateEventDispatchStates()
+
+	a.requiredPhases = requiredPhasesNone
+	if dispatchedWidget != nil {
+		a.requiredPhases = a.requiredPhases.addBuild()
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
+		}
+	}
+	if inputHandledWidget != nil {
+		a.requiredPhases = a.requiredPhases.addBuild()
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
+		}
+	}
+	if !a.redrawAndRebuildRequestedRegions.empty() {
+		a.requiredPhases = a.requiredPhases.addBuild()
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
+		}
+	}
 }
 
 func (a *app) Update() error {
@@ -320,28 +346,8 @@ func (a *app) Update() error {
 		}
 	}
 
-	dispatchedWidget := a.updateEventDispatchStates()
-	a.updateRedrawRequestedRegionsByWidgets()
-	a.requiredPhases = requiredPhasesNone
-	if dispatchedWidget != nil {
-		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
-		}
-	}
-	if !a.redrawAndRebuildRequestedRegions.empty() {
-		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
-		}
-	}
-	if inputHandledWidget != nil {
-		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
-		}
-	}
-
+	a.collectWidgetRedrawRequests()
+	a.updateRequiredPhases(inputHandledWidget)
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 
@@ -382,22 +388,8 @@ func (a *app) Update() error {
 	// After its call, reset the previous widget state.
 	a.resetPrevWidgets(a.root)
 
-	dispatchedWidget = a.updateEventDispatchStates()
-	a.updateRedrawRequestedRegionsByWidgets()
-	a.requiredPhases = requiredPhasesNone
-	if dispatchedWidget != nil {
-		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
-		}
-	}
-	if !a.redrawAndRebuildRequestedRegions.empty() {
-		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
-		}
-	}
-
+	a.collectWidgetRedrawRequests()
+	a.updateRequiredPhases(nil)
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 
