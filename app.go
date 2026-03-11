@@ -491,18 +491,37 @@ func (a *app) requestRedrawIfDifferentParentLayer(widget Widget, reason requestR
 	}
 }
 
+// buildAndLayoutWidgets runs the build and layout phases based on requiredPhases,
+// then updates the hit-test widget list. Build or layout may trigger further
+// rebuild/relayout requests, so this method loops until no more phases are
+// required or a maximum iteration count is reached. Between iterations,
+// settleRedrawAndRebuildState collects pending requests and determines whether
+// another pass is needed.
 func (a *app) buildAndLayoutWidgets() (bool, error) {
-	if a.requiredPhases.requiresBuild() {
-		a.context.inBuild = true
-		if err := a.buildWidgets(); err != nil {
-			return false, err
-		}
-		a.context.inBuild = false
-	}
+	const maxBuildLayoutIterations = 2
 
-	layoutChanged := a.requiredPhases.requiresLayout()
-	if layoutChanged {
-		a.layoutWidgets()
+	var layoutChanged bool
+	var counter int
+	for a.requiredPhases.requiresBuild() || a.requiredPhases.requiresLayout() {
+		if a.requiredPhases.requiresBuild() {
+			a.context.inBuild = true
+			if err := a.buildWidgets(); err != nil {
+				return false, err
+			}
+			a.context.inBuild = false
+		}
+
+		if a.requiredPhases.requiresLayout() {
+			layoutChanged = true
+			a.layoutWidgets()
+		}
+
+		counter++
+		if counter >= maxBuildLayoutIterations {
+			break
+		}
+
+		a.settleRedrawAndRebuildState(nil)
 	}
 
 	a.updateHitWidgets(layoutChanged)
