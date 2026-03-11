@@ -235,7 +235,8 @@ func (a *app) focusWidget(widget Widget) {
 	a.requestRedraw(a.bounds(), requestRedrawReasonFocus, nil)
 }
 
-func (a *app) updateEventDispatchStates() Widget {
+// collectEventDispatchedWidget returns the first widget that dispatched an event and clears all dispatch flags.
+func (a *app) collectEventDispatchedWidget() Widget {
 	var dispatchedWidget Widget
 	_ = traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
@@ -276,7 +277,7 @@ func (a *app) collectWidgetRedrawRequests() {
 }
 
 func (a *app) updateRequiredPhases(inputHandledWidget Widget) {
-	dispatchedWidget := a.updateEventDispatchStates()
+	dispatchedWidget := a.collectEventDispatchedWidget()
 
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
