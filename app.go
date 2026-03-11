@@ -294,21 +294,11 @@ func (a *app) Update() error {
 	rootState.bounds = a.bounds()
 
 	// Call the first buildWidgets.
-	a.redrawRequestedRegions.reset()
-	a.redrawAndRebuildRequestedRegions.reset()
-	if a.requiredPhases.requiresBuild() {
-		a.context.inBuild = true
-		if err := a.buildWidgets(); err != nil {
-			return err
-		}
-		a.context.inBuild = false
-	}
-	if a.requiredPhases.requiresLayout() {
-		a.layoutWidgets()
+	if layoutChanged, err := a.buildAndLayoutWidgets(); err != nil {
+		return err
+	} else if layoutChanged {
 		layoutChangedInUpdate = true
 	}
-
-	a.updateHitWidgets(a.requiredPhases.requiresLayout())
 
 	// Handle user inputs.
 	// TODO: Handle this in Ebitengine's HandleInput in the future (hajimehoshi/ebiten#1704)
@@ -356,21 +346,11 @@ func (a *app) Update() error {
 	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
-	a.redrawRequestedRegions.reset()
-	a.redrawAndRebuildRequestedRegions.reset()
-	if a.requiredPhases.requiresBuild() {
-		a.context.inBuild = true
-		if err := a.buildWidgets(); err != nil {
-			return err
-		}
-		a.context.inBuild = false
-	}
-	if a.requiredPhases.requiresLayout() {
-		a.layoutWidgets()
+	if layoutChanged, err := a.buildAndLayoutWidgets(); err != nil {
+		return err
+	} else if layoutChanged {
 		layoutChangedInUpdate = true
 	}
-
-	a.updateHitWidgets(a.requiredPhases.requiresLayout())
 
 	if !a.cursorShape() {
 		ebiten.SetCursorShape(ebiten.CursorShapeDefault)
@@ -511,6 +491,28 @@ func (a *app) requestRedrawIfDifferentParentLayer(widget Widget, reason requestR
 	for _, child := range widgetState.children {
 		a.requestRedrawIfDifferentParentLayer(child, reason)
 	}
+}
+
+func (a *app) buildAndLayoutWidgets() (bool, error) {
+	a.redrawRequestedRegions.reset()
+	a.redrawAndRebuildRequestedRegions.reset()
+
+	if a.requiredPhases.requiresBuild() {
+		a.context.inBuild = true
+		if err := a.buildWidgets(); err != nil {
+			return false, err
+		}
+		a.context.inBuild = false
+	}
+
+	layoutChanged := a.requiredPhases.requiresLayout()
+	if layoutChanged {
+		a.layoutWidgets()
+	}
+
+	a.updateHitWidgets(layoutChanged)
+
+	return layoutChanged, nil
 }
 
 func (a *app) buildWidgets() error {
