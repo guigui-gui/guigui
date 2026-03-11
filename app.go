@@ -276,9 +276,17 @@ func (a *app) collectWidgetRedrawRequests() {
 	})
 }
 
-func (a *app) updateRequiredPhases(inputHandledWidget Widget) {
+// settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
+// determines which phases are required for the next buildAndLayoutWidgets call,
+// and accumulates draw regions into regionsToDraw.
+//
+// The region buffers are not reset here; they are reset by buildAndLayoutWidgets
+// at the start of each build+layout cycle.
+func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
+	a.collectWidgetRedrawRequests()
 	dispatchedWidget := a.collectEventDispatchedWidget()
 
+	// Determine which phases are required for the next build+layout cycle.
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
 		a.requiredPhases = a.requiredPhases.addBuild()
@@ -298,6 +306,9 @@ func (a *app) updateRequiredPhases(inputHandledWidget Widget) {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
 		}
 	}
+
+	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
+	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
 }
 
 func (a *app) Update() error {
@@ -347,10 +358,7 @@ func (a *app) Update() error {
 		}
 	}
 
-	a.collectWidgetRedrawRequests()
-	a.updateRequiredPhases(inputHandledWidget)
-	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
-	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
+	a.settleRedrawAndRebuildState(inputHandledWidget)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
 	if layoutChanged, err := a.buildAndLayoutWidgets(); err != nil {
@@ -389,10 +397,7 @@ func (a *app) Update() error {
 	// After its call, reset the previous widget state.
 	a.resetPrevWidgets(a.root)
 
-	a.collectWidgetRedrawRequests()
-	a.updateRequiredPhases(nil)
-	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
-	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
+	a.settleRedrawAndRebuildState(nil)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
