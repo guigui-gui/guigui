@@ -346,7 +346,9 @@ func (l *List[T]) scrollOffset() (float64, float64) {
 }
 
 func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return l.content.Measure(context, constraints)
+	s := l.content.Measure(context, constraints)
+	s.Y += l.headerHeight + l.footerHeight
+	return s
 }
 
 func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
