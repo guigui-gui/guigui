@@ -278,10 +278,7 @@ func (a *app) collectWidgetRedrawRequests() {
 
 // settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
 // determines which phases are required for the next buildAndLayoutWidgets call,
-// and accumulates draw regions into regionsToDraw.
-//
-// The region buffers are not reset here; they are reset by buildAndLayoutWidgets
-// at the start of each build+layout cycle.
+// accumulates draw regions into regionsToDraw, and resets the region buffers.
 func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 	a.collectWidgetRedrawRequests()
 	dispatchedWidget := a.collectEventDispatchedWidget()
@@ -309,6 +306,9 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
+
+	a.redrawRequestedRegions.reset()
+	a.redrawAndRebuildRequestedRegions.reset()
 }
 
 func (a *app) Update() error {
@@ -492,9 +492,6 @@ func (a *app) requestRedrawIfDifferentParentLayer(widget Widget, reason requestR
 }
 
 func (a *app) buildAndLayoutWidgets() (bool, error) {
-	a.redrawRequestedRegions.reset()
-	a.redrawAndRebuildRequestedRegions.reset()
-
 	if a.requiredPhases.requiresBuild() {
 		a.context.inBuild = true
 		if err := a.buildWidgets(); err != nil {
