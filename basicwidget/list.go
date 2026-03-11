@@ -655,6 +655,9 @@ func (l *listContent[T]) SetContentWidth(width int) {
 }
 
 func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
+	if index < 0 || index >= len(l.itemBoundsForLayoutFromIndex) {
+		return image.Rectangle{}
+	}
 	return l.itemBoundsForLayoutFromIndex[index]
 }
 
