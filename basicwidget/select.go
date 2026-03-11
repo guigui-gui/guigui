@@ -241,16 +241,19 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 		s.layoutItems = append(s.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: &s.dummyContent,
+				Size:   guigui.FlexibleSize(1),
 			})
 	} else if s.content != nil {
 		s.layoutItems = append(s.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: s.content,
+				Size:   guigui.FlexibleSize(1),
 			})
 	} else {
 		s.layoutItems = append(s.layoutItems,
 			guigui.LinearLayoutItem{
 				Widget: &s.text,
+				Size:   guigui.FlexibleSize(1),
 			})
 	}
 
@@ -258,9 +261,6 @@ func (s *selectButtonContent) layout(context *guigui.Context) guigui.LinearLayou
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
 			Size: guigui.FixedSize(buttonTextAndImagePadding(context)),
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &s.icon,
