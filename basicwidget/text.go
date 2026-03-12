@@ -294,6 +294,16 @@ func (t *Text) Value() string {
 	return t.stringValue()
 }
 
+// HasValue reports whether the text has a non-empty value.
+// This is more efficient than checking Value() != "" as it avoids
+// allocating a string.
+func (t *Text) HasValue() bool {
+	if t.nextTextSet {
+		return t.nextText != ""
+	}
+	return !t.isEqualToStringValue("")
+}
+
 func (t *Text) SetValue(text string) {
 	if t.nextTextSet && t.nextText == text {
 		return
