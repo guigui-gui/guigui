@@ -41,6 +41,13 @@ func (t *TextInput) Value() string {
 	return t.textInput.Value()
 }
 
+// HasValue reports whether the text input has a non-empty value.
+// This is more efficient than checking Value() != "" as it avoids
+// allocating a string.
+func (t *TextInput) HasValue() bool {
+	return t.textInput.HasValue()
+}
+
 func (t *TextInput) SetValue(text string) {
 	t.textInput.SetValue(text)
 }
@@ -208,6 +215,10 @@ func (t *textInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.
 
 func (t *textInput) Value() string {
 	return t.text.Text().Value()
+}
+
+func (t *textInput) HasValue() bool {
+	return t.text.Text().HasValue()
 }
 
 func (t *textInput) SetValue(text string) {
