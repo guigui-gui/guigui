@@ -1,16 +1,16 @@
 module github.com/guigui-gui/guigui
 
-go 1.24.0
+go 1.25.0
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260310135525-b35899ed0698
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260312045457-26819f0a29da
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.10.0
 	github.com/rivo/uniseg v0.4.7
 	golang.design/x/clipboard v0.7.1
-	golang.org/x/text v0.34.0
-	golang.org/x/tools v0.42.0
+	golang.org/x/text v0.35.0
+	golang.org/x/tools v0.43.0
 	howett.net/plist v1.0.1
 )
 
@@ -21,9 +21,9 @@ require (
 	github.com/go-text/typesetting v0.3.4 // indirect
 	github.com/jezek/xgb v1.3.0 // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
-	golang.org/x/image v0.36.0 // indirect
+	golang.org/x/image v0.37.0 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
-	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/mod v0.34.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )
