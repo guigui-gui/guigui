@@ -340,6 +340,11 @@ func requestRedraw(widgetState *widgetState) {
 	}
 }
 
+// SetEventHandler registers an event handler for the given event key on the widget.
+// At most one handler can be registered per event key on a widget.
+// If a handler is already registered for the same key, it is replaced.
+// All event handlers are reset before the build phase starts,
+// so SetEventHandler must be called during every Build to keep the handler active.
 func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	widgetState := widget.widgetState()
 	widgetState.eventHandlers = slices.DeleteFunc(widgetState.eventHandlers, func(h eventHandler) bool {
@@ -351,6 +356,11 @@ func SetEventHandler(widget Widget, eventKey EventKey, handler any) {
 	})
 }
 
+// DispatchEvent invokes the event handler registered for the given event key on the widget.
+// The handler must have been set via SetEventHandler during the current build phase,
+// as all handlers are reset before each build.
+// args are passed to the handler after the *Context argument.
+// It returns the handler's return values and true if a handler was found, or nil and false otherwise.
 func DispatchEvent(widget Widget, eventKey EventKey, args ...any) ([]any, bool) {
 	widgetState := widget.widgetState()
 	for _, h := range widgetState.eventHandlers {
