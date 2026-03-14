@@ -139,6 +139,17 @@ func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Con
 	return l.appendWidgetBounds(boundsArr, context, bounds, false)
 }
 
+// ItemBoundsAt returns the bounds for the item at the given index.
+func (l LinearLayout) ItemBoundsAt(index int, context *Context, bounds image.Rectangle) image.Rectangle {
+	tmpBoundsArr := theLinearLayoutBoundsPool.Get().(*[]image.Rectangle)
+	defer func() {
+		*tmpBoundsArr = (*tmpBoundsArr)[:0]
+		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
+	}()
+	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds, false)
+	return (*tmpBoundsArr)[index]
+}
+
 func (l *LinearLayout) alongSize(bounds image.Rectangle) int {
 	switch l.Direction {
 	case LayoutDirectionHorizontal:
