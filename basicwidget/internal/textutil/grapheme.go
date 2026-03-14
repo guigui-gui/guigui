@@ -5,17 +5,17 @@ package textutil
 
 import (
 	"iter"
-
-	"github.com/rivo/uniseg"
 )
 
 func graphemes(str string) iter.Seq[string] {
 	return func(yield func(s string) bool) {
-		state := -1
-		for len(str) > 0 {
-			var cluster string
-			cluster, str, _, state = uniseg.StepString(str, state)
-			if !yield(cluster) {
+		seg := pushSegmenter()
+		defer popSegmenter()
+		initSegmenterWithString(seg, str)
+		it := seg.GraphemeIterator()
+		for it.Next() {
+			g := it.Grapheme()
+			if !yield(string(g.Text)) {
 				return
 			}
 		}
@@ -23,12 +23,18 @@ func graphemes(str string) iter.Seq[string] {
 }
 
 func PrevPositionOnGraphemes(str string, position int) int {
-	var pos int
-	for c := range graphemes(str) {
-		startPos := pos
-		endPos := pos + len(c)
+	seg := pushSegmenter()
+	defer popSegmenter()
+	initSegmenterWithString(seg, str)
+	it := seg.GraphemeIterator()
+	var bytePos int
+	for it.Next() {
+		g := it.Grapheme()
+		s := string(g.Text)
+		startPos := bytePos
+		endPos := bytePos + len(s)
 		if position > endPos {
-			pos = endPos
+			bytePos = endPos
 			continue
 		}
 		return startPos
@@ -37,12 +43,18 @@ func PrevPositionOnGraphemes(str string, position int) int {
 }
 
 func NextPositionOnGraphemes(str string, position int) int {
-	var pos int
-	for c := range graphemes(str) {
-		startPos := pos
-		endPos := pos + len(c)
+	seg := pushSegmenter()
+	defer popSegmenter()
+	initSegmenterWithString(seg, str)
+	it := seg.GraphemeIterator()
+	var bytePos int
+	for it.Next() {
+		g := it.Grapheme()
+		s := string(g.Text)
+		startPos := bytePos
+		endPos := bytePos + len(s)
 		if position > startPos {
-			pos = endPos
+			bytePos = endPos
 			continue
 		}
 		return endPos

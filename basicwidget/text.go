@@ -12,13 +12,11 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/rivo/uniseg"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
@@ -69,29 +67,6 @@ func repeat(duration int) bool {
 		return false
 	}
 	return (duration-delay)%4 == 0
-}
-
-func findWordBoundaries(text string, idx int) (start, end int) {
-	start = idx
-	end = idx
-
-	word, _, _ := uniseg.FirstWordInString(text[idx:], -1)
-	end += len(word)
-
-	for {
-		word, _, _ = uniseg.FirstWordInString(text[start:], -1)
-		if start+len(word) < end {
-			start += len(word)
-			break
-		}
-		if start == 0 {
-			break
-		}
-		_, l := utf8.DecodeLastRuneInString(text[:start])
-		start -= l
-	}
-
-	return start, end
 }
 
 type Text struct {
@@ -757,7 +732,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 	case 2:
 		t.dragging = true
-		start, end := findWordBoundaries(t.stringValue(), idx)
+		start, end := textutil.FindWordBoundaries(t.stringValue(), idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
 		t.setSelection(start, end, -1, false)

@@ -12,7 +12,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/rivo/uniseg"
 )
 
 func nextIndentPosition(position float64, indentWidth float64) float64 {
@@ -67,19 +66,20 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 	}
 
 	var lastFittingEnd int
-	remaining := str
-	pos := 0
-	state := -1
-	for len(remaining) > 0 {
-		cluster, rest, _, newState := uniseg.StepString(remaining, state)
-		candidateEnd := pos + len(cluster)
+	seg := pushSegmenter()
+	defer popSegmenter()
+	initSegmenterWithString(seg, str)
+	it := seg.GraphemeIterator()
+	var bytePos int
+	for it.Next() {
+		g := it.Grapheme()
+		s := string(g.Text)
+		candidateEnd := bytePos + len(s)
 		if advance(str[:candidateEnd], face, tabWidth, false) > targetWidth {
 			break
 		}
 		lastFittingEnd = candidateEnd
-		pos = candidateEnd
-		remaining = rest
-		state = newState
+		bytePos = candidateEnd
 	}
 
 	return str[:lastFittingEnd] + ellipsis
@@ -152,13 +152,18 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 			var lineStart int
 			var lineEnd int
 			var pos int
-			state := -1
-			for len(str) > 0 {
-				segment, nextStr, mustBreak, nextState := uniseg.FirstLineSegmentInString(str, state)
+
+			seg := pushSegmenter()
+			defer popSegmenter()
+			initSegmenterWithString(seg, str)
+			it := seg.LineIterator()
+			for it.Next() {
+				l := it.Line()
+				segment := string(l.Text)
 				if lineEnd-lineStart > 0 {
-					l := origStr[lineStart : lineEnd+len(segment)]
+					candidate := origStr[lineStart : lineEnd+len(segment)]
 					// TODO: Consider a line alignment and/or editable/selectable states when calculating the width.
-					if advance(l[:len(l)-tailingLineBreakLen(l)]) > float64(width) {
+					if advance(candidate[:len(candidate)-tailingLineBreakLen(candidate)]) > float64(width) {
 						if !yield(line{
 							pos: pos,
 							str: origStr[lineStart:lineEnd],
@@ -170,7 +175,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 					}
 				}
 				lineEnd += len(segment)
-				if mustBreak {
+				if l.IsMandatoryBreak {
 					if !yield(line{
 						pos: pos,
 						str: origStr[lineStart:lineEnd],
@@ -180,8 +185,6 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 					pos += lineEnd - lineStart
 					lineStart = lineEnd
 				}
-				str = nextStr
-				state = nextState
 			}
 
 			if lineEnd-lineStart > 0 {
@@ -362,7 +365,6 @@ func FirstLineBreakPositionAndLen(str string) (pos, length int) {
 }
 
 func tailingLineBreakLen(str string) int {
-	// uniseg.HasTrailingLineBreakInString is slow and doesn't check \r\n.
 	// Hard-code the check here.
 	// See also: https://en.wikipedia.org/wiki/Newline#Unicode
 	if r, s := utf8.DecodeLastRuneInString(str); s > 0 {
@@ -441,4 +443,25 @@ func textPositionYOffset(size image.Point, str string, options *Options) float64
 		yOffset += float64(size.Y) - textHeight
 	}
 	return yOffset
+}
+
+func FindWordBoundaries(text string, idx int) (start, end int) {
+	seg := pushSegmenter()
+	defer popSegmenter()
+	initSegmenterWithString(seg, text)
+	it := seg.WordIterator()
+
+	var bytePos int
+	for it.Next() {
+		w := it.Word()
+		s := string(w.Text)
+		wordStart := bytePos
+		wordEnd := bytePos + len(s)
+		if wordStart <= idx && idx < wordEnd {
+			return wordStart, wordEnd
+		}
+		bytePos = wordEnd
+	}
+
+	return idx, idx
 }
