@@ -1,6 +1,6 @@
 # Guigui (ぐいぐい)
 
-**An immediate-mode-like GUI framework for Go**
+**An immediate-mode-inspired GUI framework for Go**
 
 > [!CAUTION]
 > **This project is an alpha version, and everything may change in the future.**
