@@ -1379,7 +1379,14 @@ func (l *listContent[T]) isHighlightedItemIndex(context *guigui.Context, index i
 		return false
 	}
 	if l.isHoveringVisible() {
-		return l.hoveredItemIndexPlus1-1 == index
+		if l.hoveredItemIndexPlus1-1 != index {
+			return false
+		}
+		item, ok := l.abstractList.ItemByIndex(index)
+		if !ok {
+			return false
+		}
+		return !item.Unselectable
 	}
 	return l.IsSelectedItemIndex(index)
 }
