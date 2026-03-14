@@ -401,6 +401,17 @@ func (c *Context) SetWindowTitle(title string) {
 	ebiten.SetWindowTitle(title)
 }
 
+// SetWindowSize sets the window size.
+func (c *Context) SetWindowSize(width, height int) {
+	ebiten.SetWindowSize(width, height)
+}
+
+// SetWindowSizeLimits sets the size limits of the window.
+// A negative value indicates the size is not limited.
+func (c *Context) SetWindowSizeLimits(minw, minh, maxw, maxh int) {
+	ebiten.SetWindowSizeLimits(minw, minh, maxw, maxh)
+}
+
 func (c *Context) isDefaultMethodCalled() bool {
 	return c.defaultMethodCalled
 }
