@@ -14,6 +14,12 @@ import (
 // Widget is the interface that all UI components must implement.
 // Implementations must embed DefaultWidget, as it is the only way to satisfy
 // the unexported widgetState method in this interface.
+//
+// A Widget implementation should work with its zero value.
+// In Go, the zero value of a variable is the default value
+// (0 for numbers, false for booleans, "" for strings, nil for pointers, etc.).
+// This means that the default state of a widget should be reasonable
+// without any explicit initialization.
 type Widget interface {
 	// Data returns arbitrary data associated with the widget for the given key.
 	// [Context.Data] calls this method on the given widget first. If this returns nil,
