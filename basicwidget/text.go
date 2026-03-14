@@ -1117,7 +1117,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end
-			op.SelectionColor = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8, 0.35)
+			op.SelectionColor = basicwidgetdraw.TextSelectionColor(context.ResolvedColorMode())
 		} else {
 			op.DrawSelection = false
 		}
@@ -1128,8 +1128,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.CompositionEnd = uEnd
 		op.CompositionActiveStart = cStart
 		op.CompositionActiveEnd = cEnd
-		op.InactiveCompositionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.8)
-		op.ActiveCompositionColor = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.4)
+		op.InactiveCompositionColor = basicwidgetdraw.TextInactiveCompositionColor(context.ResolvedColorMode())
+		op.ActiveCompositionColor = basicwidgetdraw.TextActiveCompositionColor(context.ResolvedColorMode())
 		op.CompositionBorderWidth = float32(textCursorWidth(context))
 	} else {
 		op.DrawComposition = false
