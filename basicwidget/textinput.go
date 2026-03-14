@@ -80,6 +80,12 @@ func (t *TextInput) SetAutoWrap(autoWrap bool) {
 	t.textInput.SetAutoWrap(autoWrap)
 }
 
+// SetCursorBlinking sets whether the cursor blinks.
+// The default value is true.
+func (t *TextInput) SetCursorBlinking(cursorBlinking bool) {
+	t.textInput.SetCursorBlinking(cursorBlinking)
+}
+
 func (t *TextInput) SelectAll() {
 	t.textInput.SelectAll()
 }
@@ -251,6 +257,10 @@ func (t *textInput) SetVerticalAlign(valign VerticalAlign) {
 
 func (t *textInput) SetAutoWrap(autoWrap bool) {
 	t.text.Text().SetAutoWrap(autoWrap)
+}
+
+func (t *textInput) SetCursorBlinking(cursorBlinking bool) {
+	t.text.Text().SetCursorBlinking(cursorBlinking)
 }
 
 func (t *textInput) SelectAll() {

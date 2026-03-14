@@ -94,6 +94,7 @@ type Text struct {
 	editable         bool
 	multiline        bool
 	autoWrap         bool
+	cursorStatic     bool
 	keepTailingSpace bool
 	ellipsisString   string
 
@@ -564,6 +565,18 @@ func (t *Text) SetAutoWrap(autoWrap bool) {
 
 	t.autoWrap = autoWrap
 	guigui.RequestRebuild(t)
+}
+
+// SetCursorBlinking sets whether the cursor blinks.
+// The default value is true.
+func (t *Text) SetCursorBlinking(cursorBlinking bool) {
+	cursorStatic := !cursorBlinking
+	if t.cursorStatic == cursorStatic {
+		return
+	}
+
+	t.cursorStatic = cursorStatic
+	guigui.RequestRedraw(t)
 }
 
 func (t *Text) SetEllipsisString(str string) {
@@ -1492,6 +1505,9 @@ func (t *textCursor) alpha(context *guigui.Context, widgetBounds *guigui.WidgetB
 	}
 	if s != e {
 		return 0
+	}
+	if text.cursorStatic {
+		return 1
 	}
 	offset := ebiten.TPS() / 2
 	if t.counter <= offset {

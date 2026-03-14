@@ -238,6 +238,7 @@ type TextInputsModel struct {
 	horizontalAlign basicwidget.HorizontalAlign
 	verticalAlign   basicwidget.VerticalAlign
 	noWrap          bool
+	cursorStatic    bool
 	uneditable      bool
 	disabled        bool
 }
@@ -290,6 +291,14 @@ func (t *TextInputsModel) AutoWrap() bool {
 
 func (t *TextInputsModel) SetAutoWrap(autoWrap bool) {
 	t.noWrap = !autoWrap
+}
+
+func (t *TextInputsModel) CursorBlinking() bool {
+	return !t.cursorStatic
+}
+
+func (t *TextInputsModel) SetCursorBlinking(cursorBlinking bool) {
+	t.cursorStatic = !cursorBlinking
 }
 
 func (t *TextInputsModel) Editable() bool {

@@ -30,6 +30,8 @@ type TextInputs struct {
 	verticalAlignSegmentedControl   basicwidget.SegmentedControl[basicwidget.VerticalAlign]
 	autoWrapText                    basicwidget.Text
 	autoWrapToggle                  basicwidget.Toggle
+	cursorBlinkingText              basicwidget.Text
+	cursorBlinkingToggle            basicwidget.Toggle
 	editableText                    basicwidget.Text
 	editableToggle                  basicwidget.Toggle
 	enabledText                     basicwidget.Text
@@ -86,6 +88,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.singleLineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.singleLineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
 	t.singleLineTextInput.Widget().SetEditable(model.TextInputs().Editable())
+	t.singleLineTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
 	context.SetEnabled(&t.singleLineTextInput, model.TextInputs().Enabled())
 	t.singleLineTextInput.SetFixedWidth(width)
 
@@ -93,6 +96,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.singleLineWithIconTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.singleLineWithIconTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
 	t.singleLineWithIconTextInput.Widget().SetEditable(model.TextInputs().Editable())
+	t.singleLineWithIconTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
 	t.singleLineWithIconTextInput.Widget().SetIcon(imgSearch)
 	context.SetEnabled(&t.singleLineWithIconTextInput, model.TextInputs().Enabled())
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
@@ -109,6 +113,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.multilineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
 	t.multilineTextInput.Widget().SetAutoWrap(model.TextInputs().AutoWrap())
 	t.multilineTextInput.Widget().SetEditable(model.TextInputs().Editable())
+	t.multilineTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
 	context.SetEnabled(&t.multilineTextInput, model.TextInputs().Enabled())
 	t.multilineTextInput.SetFixedSize(image.Pt(width, 4*u))
 
@@ -116,6 +121,7 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.inlineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.inlineTextInput.Widget().textInput.SetVerticalAlign(model.TextInputs().VerticalAlign())
 	t.inlineTextInput.Widget().textInput.SetEditable(model.TextInputs().Editable())
+	t.inlineTextInput.Widget().textInput.SetCursorBlinking(model.TextInputs().CursorBlinking())
 	context.SetEnabled(&t.inlineTextInput, model.TextInputs().Enabled())
 	t.inlineTextInput.SetFixedWidth(width)
 
@@ -195,6 +201,12 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	})
 	t.autoWrapToggle.SetValue(model.TextInputs().AutoWrap())
 
+	t.cursorBlinkingText.SetValue("Cursor blinking")
+	t.cursorBlinkingToggle.OnValueChanged(func(context *guigui.Context, value bool) {
+		model.TextInputs().SetCursorBlinking(value)
+	})
+	t.cursorBlinkingToggle.SetValue(model.TextInputs().CursorBlinking())
+
 	t.editableText.SetValue("Editable")
 	t.editableToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.TextInputs().SetEditable(value)
@@ -219,6 +231,10 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 		{
 			PrimaryWidget:   &t.autoWrapText,
 			SecondaryWidget: &t.autoWrapToggle,
+		},
+		{
+			PrimaryWidget:   &t.cursorBlinkingText,
+			SecondaryWidget: &t.cursorBlinkingToggle,
 		},
 		{
 			PrimaryWidget:   &t.editableText,
