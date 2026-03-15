@@ -31,8 +31,8 @@ func ensureWhiteRoundedShadowRect(radius int) *ebiten.Image {
 		return x * x
 	}
 
-	for j := 0; j < radius; j++ {
-		for i := 0; i < radius; i++ {
+	for j := range radius {
+		for i := range radius {
 			x := float64(radius - i)
 			y := float64(radius - j)
 			d := max(0, min(1, math.Hypot(x, y)/float64(radius)))
@@ -62,7 +62,7 @@ func ensureWhiteRoundedShadowRect(radius int) *ebiten.Image {
 		}
 	}
 	for j := radius; j < 2*radius; j++ {
-		for i := 0; i < radius; i++ {
+		for i := range radius {
 			d := max(0, min(1, float64(radius-i)/float64(radius)))
 			a := byte(0xff * easeInQuad(1-d))
 			pix[4*(j*s+i)] = a
@@ -86,7 +86,7 @@ func ensureWhiteRoundedShadowRect(radius int) *ebiten.Image {
 		}
 	}
 	for j := 2 * radius; j < 3*radius; j++ {
-		for i := 0; i < radius; i++ {
+		for i := range radius {
 			x := float64(radius - i)
 			y := float64(j - 2*radius)
 			d := max(0, min(1, math.Hypot(x, y)/float64(radius)))

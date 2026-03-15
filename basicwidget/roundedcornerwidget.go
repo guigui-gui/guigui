@@ -119,7 +119,7 @@ type lazyWidget[T guigui.Widget] struct {
 func (l *lazyWidget[T]) Widget() T {
 	l.once.Do(func() {
 		t := reflect.TypeFor[T]()
-		if t.Kind() == reflect.Ptr {
+		if t.Kind() == reflect.Pointer {
 			l.widget = reflect.New(t.Elem()).Interface().(T)
 		}
 	})
