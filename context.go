@@ -22,7 +22,7 @@ var envLocales []language.Tag
 
 func init() {
 	if locales := os.Getenv("GUIGUI_LOCALES"); locales != "" {
-		for _, tag := range strings.Split(os.Getenv("GUIGUI_LOCALES"), ",") {
+		for tag := range strings.SplitSeq(os.Getenv("GUIGUI_LOCALES"), ",") {
 			l, err := language.Parse(strings.TrimSpace(tag))
 			if err != nil {
 				slog.Warn(fmt.Sprintf("invalid GUIGUI_LOCALES: %s", tag))

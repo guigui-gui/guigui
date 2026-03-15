@@ -30,7 +30,7 @@ type debugMode struct {
 var theDebugMode debugMode
 
 func init() {
-	for _, token := range strings.Split(os.Getenv("GUIGUI_DEBUG"), ",") {
+	for token := range strings.SplitSeq(os.Getenv("GUIGUI_DEBUG"), ",") {
 		switch {
 		case token == "showrenderingregions":
 			theDebugMode.showRenderingRegions = true
