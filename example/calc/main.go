@@ -41,6 +41,16 @@ func (b *buttonLabel) Measure(context *guigui.Context, constraints guigui.Constr
 	return b.text.Measure(context, constraints)
 }
 
+var buttonLabels = [...]calc.ButtonLabel{
+	calc.ButtonLabelClear, calc.ButtonLabelNegate, calc.ButtonLabelPercent, calc.ButtonLabelDivide,
+	calc.ButtonLabel7, calc.ButtonLabel8, calc.ButtonLabel9, calc.ButtonLabelMultiply,
+	calc.ButtonLabel4, calc.ButtonLabel5, calc.ButtonLabel6, calc.ButtonLabelSubtract,
+	calc.ButtonLabel1, calc.ButtonLabel2, calc.ButtonLabel3, calc.ButtonLabelAdd,
+	calc.ButtonLabel0, calc.ButtonLabelDot, calc.ButtonLabelEquals,
+}
+
+const buttonCount = len(buttonLabels)
+
 type Root struct {
 	guigui.DefaultWidget
 
@@ -48,8 +58,8 @@ type Root struct {
 
 	background         basicwidget.Background
 	displayText        basicwidget.Text
-	buttons            [calc.ButtonCount]basicwidget.Button
-	buttonLabelWidgets [calc.ButtonCount]buttonLabel
+	buttons            [buttonCount]basicwidget.Button
+	buttonLabelWidgets [buttonCount]buttonLabel
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -65,11 +75,11 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.displayText.SetValue(r.calc.Display())
 
 	for i := range r.buttons {
-		r.buttonLabelWidgets[i].SetText(calc.ButtonLabelAt(i))
+		r.buttonLabelWidgets[i].SetText(string(buttonLabels[i]))
 		r.buttons[i].SetContent(&r.buttonLabelWidgets[i])
 		adder.AddWidget(&r.buttons[i])
 		r.buttons[i].OnDown(func(context *guigui.Context) {
-			r.calc.PressButton(i)
+			r.calc.PressButton(buttonLabels[i])
 		})
 	}
 

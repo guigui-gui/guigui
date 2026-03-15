@@ -6,57 +6,34 @@ package calc
 import (
 	"fmt"
 	"math"
-	"slices"
 	"strconv"
 	"strings"
 )
 
-type buttonLabel string
+// ButtonLabel represents a calculator button label.
+type ButtonLabel string
 
 const (
-	buttonLabel0        buttonLabel = "0"
-	buttonLabel1        buttonLabel = "1"
-	buttonLabel2        buttonLabel = "2"
-	buttonLabel3        buttonLabel = "3"
-	buttonLabel4        buttonLabel = "4"
-	buttonLabel5        buttonLabel = "5"
-	buttonLabel6        buttonLabel = "6"
-	buttonLabel7        buttonLabel = "7"
-	buttonLabel8        buttonLabel = "8"
-	buttonLabel9        buttonLabel = "9"
-	buttonLabelDot      buttonLabel = "."
-	buttonLabelAdd      buttonLabel = "+"
-	buttonLabelSubtract buttonLabel = "−"
-	buttonLabelMultiply buttonLabel = "×"
-	buttonLabelDivide   buttonLabel = "÷"
-	buttonLabelPercent  buttonLabel = "%"
-	buttonLabelEquals   buttonLabel = "="
-	buttonLabelNegate   buttonLabel = "±"
-	buttonLabelClear    buttonLabel = "C"
+	ButtonLabel0        ButtonLabel = "0"
+	ButtonLabel1        ButtonLabel = "1"
+	ButtonLabel2        ButtonLabel = "2"
+	ButtonLabel3        ButtonLabel = "3"
+	ButtonLabel4        ButtonLabel = "4"
+	ButtonLabel5        ButtonLabel = "5"
+	ButtonLabel6        ButtonLabel = "6"
+	ButtonLabel7        ButtonLabel = "7"
+	ButtonLabel8        ButtonLabel = "8"
+	ButtonLabel9        ButtonLabel = "9"
+	ButtonLabelDot      ButtonLabel = "."
+	ButtonLabelAdd      ButtonLabel = "+"
+	ButtonLabelSubtract ButtonLabel = "−"
+	ButtonLabelMultiply ButtonLabel = "×"
+	ButtonLabelDivide   ButtonLabel = "÷"
+	ButtonLabelPercent  ButtonLabel = "%"
+	ButtonLabelEquals   ButtonLabel = "="
+	ButtonLabelNegate   ButtonLabel = "±"
+	ButtonLabelClear    ButtonLabel = "C"
 )
-
-var buttonLabels = [...]buttonLabel{
-	buttonLabelClear, buttonLabelNegate, buttonLabelPercent, buttonLabelDivide,
-	buttonLabel7, buttonLabel8, buttonLabel9, buttonLabelMultiply,
-	buttonLabel4, buttonLabel5, buttonLabel6, buttonLabelSubtract,
-	buttonLabel1, buttonLabel2, buttonLabel3, buttonLabelAdd,
-	buttonLabel0, buttonLabelDot, buttonLabelEquals,
-}
-
-// ButtonCount is the number of buttons.
-const ButtonCount = len(buttonLabels)
-
-// ButtonLabelAt returns the label string for the button at the given index.
-func ButtonLabelAt(idx int) string {
-	return string(buttonLabels[idx])
-}
-
-// ButtonIndex returns the index of the button with the given label string.
-func ButtonIndex(label string) int {
-	return slices.IndexFunc(buttonLabels[:], func(l buttonLabel) bool {
-		return string(l) == label
-	})
-}
 
 type operator int
 
@@ -84,14 +61,14 @@ func (c *Calc) Display() string {
 	return c.display
 }
 
-func (c *Calc) PressButton(idx int) {
+// PressButton processes a button press with the given label.
+func (c *Calc) PressButton(label ButtonLabel) {
 	if c.display == "" {
 		c.display = "0"
 	}
-	label := buttonLabels[idx]
 	switch label {
-	case buttonLabel0, buttonLabel1, buttonLabel2, buttonLabel3, buttonLabel4,
-		buttonLabel5, buttonLabel6, buttonLabel7, buttonLabel8, buttonLabel9:
+	case ButtonLabel0, ButtonLabel1, ButtonLabel2, ButtonLabel3, ButtonLabel4,
+		ButtonLabel5, ButtonLabel6, ButtonLabel7, ButtonLabel8, ButtonLabel9:
 		c.lastOperator = operatorNone
 		if c.newOperand {
 			c.display = string(label)
@@ -101,22 +78,22 @@ func (c *Calc) PressButton(idx int) {
 		} else {
 			c.display += string(label)
 		}
-	case buttonLabelDot:
+	case ButtonLabelDot:
 		if c.newOperand {
 			c.display = "0."
 			c.newOperand = false
 		} else if !strings.Contains(c.display, ".") {
 			c.display += "."
 		}
-	case buttonLabelAdd:
+	case ButtonLabelAdd:
 		c.applyOperator(operatorAdd)
-	case buttonLabelSubtract:
+	case ButtonLabelSubtract:
 		c.applyOperator(operatorSubtract)
-	case buttonLabelMultiply:
+	case ButtonLabelMultiply:
 		c.applyOperator(operatorMultiply)
-	case buttonLabelDivide:
+	case ButtonLabelDivide:
 		c.applyOperator(operatorDivide)
-	case buttonLabelEquals:
+	case ButtonLabelEquals:
 		if c.operator != operatorNone {
 			current, err := strconv.ParseFloat(c.display, 64)
 			if err == nil {
@@ -133,14 +110,14 @@ func (c *Calc) PressButton(idx int) {
 			c.operator = operatorNone
 		}
 		c.newOperand = true
-	case buttonLabelClear:
+	case ButtonLabelClear:
 		c.display = "0"
 		c.operand = 0
 		c.operator = operatorNone
 		c.lastOperand = 0
 		c.lastOperator = operatorNone
 		c.newOperand = false
-	case buttonLabelNegate:
+	case ButtonLabelNegate:
 		if c.display != "0" {
 			if strings.HasPrefix(c.display, "-") {
 				c.display = c.display[1:]
@@ -148,7 +125,7 @@ func (c *Calc) PressButton(idx int) {
 				c.display = "-" + c.display
 			}
 		}
-	case buttonLabelPercent:
+	case ButtonLabelPercent:
 		val, err := strconv.ParseFloat(c.display, 64)
 		if err == nil {
 			c.display = formatNumber(val / 100)
