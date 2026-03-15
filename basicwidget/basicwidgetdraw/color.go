@@ -100,6 +100,39 @@ func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	}
 }
 
+func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		return textSelectionLightColor
+	case ebiten.ColorModeDark:
+		return textSelectionDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
+func TextActiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		return textActiveCompositionLightColor
+	case ebiten.ColorModeDark:
+		return textActiveCompositionDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
+func TextInactiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		return textInactiveCompositionLightColor
+	case ebiten.ColorModeDark:
+		return textInactiveCompositionDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
 func ControlColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
 	case ebiten.ColorModeLight:
@@ -157,39 +190,6 @@ func BackgroundColor(colorMode ebiten.ColorMode) color.Color {
 		return backgroundLightColor
 	case ebiten.ColorModeDark:
 		return backgroundDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
-}
-
-func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textSelectionLightColor
-	case ebiten.ColorModeDark:
-		return textSelectionDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
-}
-
-func TextActiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textActiveCompositionLightColor
-	case ebiten.ColorModeDark:
-		return textActiveCompositionDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
-}
-
-func TextInactiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textInactiveCompositionLightColor
-	case ebiten.ColorModeDark:
-		return textInactiveCompositionDarkColor
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}
