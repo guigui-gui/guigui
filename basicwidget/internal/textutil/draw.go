@@ -47,7 +47,6 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	}
 
 	op.LineSpacing = options.LineHeight
-	// Do not use op.PrimaryAlign due to tab width.
 
 	yOffset := textPositionYOffset(bounds.Size(), str, &options.Options)
 	op.GeoM.Translate(0, yOffset)
@@ -146,11 +145,29 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if options.EllipsisString != "" && advance(lineStr, options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
 			lineStr = truncateWithEllipsis(lineStr, options.EllipsisString, float64(bounds.Dx()), options.Face, options.TabWidth)
 		}
-		x := oneLineLeft(bounds.Dx(), lineStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-		op.GeoM.Translate(x, 0)
-		if options.TabWidth == 0 {
+		// Ebitengine's text.Draw does not handle tab characters, so lines
+		// containing tabs must use manual alignment via oneLineLeft and GeoM.
+		if !strings.Contains(lineStr, "\t") {
+			// Use Ebitengine's PrimaryAlign for horizontal alignment so that the
+			// text origin accounts for the alignment offset. This ensures that each
+			// glyph's subpixel position is determined relative to the aligned origin,
+			// producing consistent rendering when the text content changes
+			// (e.g., right-aligned text gaining/losing characters).
+			switch options.HorizontalAlign {
+			case HorizontalAlignCenter:
+				op.PrimaryAlign = text.AlignCenter
+				op.GeoM.Translate(float64(bounds.Dx())/2, 0)
+			case HorizontalAlignEnd, HorizontalAlignRight:
+				op.PrimaryAlign = text.AlignEnd
+				op.GeoM.Translate(float64(bounds.Dx()), 0)
+			default:
+				op.PrimaryAlign = text.AlignStart
+			}
 			text.Draw(dst, lineStr, options.Face, op)
 		} else {
+			op.PrimaryAlign = text.AlignStart
+			x := oneLineLeft(bounds.Dx(), lineStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			op.GeoM.Translate(x, 0)
 			var origX float64
 			for {
 				head, tail, ok := strings.Cut(lineStr, "\t")
