@@ -37,6 +37,30 @@ const (
 	listItemColorTypeListDisabled
 )
 
+func (t listItemColorType) TextColor(context *guigui.Context) color.Color {
+	switch t {
+	case listItemColorTypeHighlighted:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 1)
+	case listItemColorTypeItemDisabled, listItemColorTypeListDisabled:
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), false)
+	default:
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), true)
+	}
+}
+
+func (t listItemColorType) BackgroundColor(context *guigui.Context) color.Color {
+	switch t {
+	case listItemColorTypeHighlighted:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
+	case listItemColorTypeListDisabled:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+	case listItemColorTypeSelectedInUnfocusedList:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
+	default:
+		return nil
+	}
+}
+
 var (
 	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemsSelected        guigui.EventKey = guigui.GenerateEventKey()
@@ -47,10 +71,6 @@ var (
 	listEventScrollYEnsureVisible guigui.EventKey = guigui.GenerateEventKey()
 	listEventScrollDeltaY         guigui.EventKey = guigui.GenerateEventKey()
 )
-
-func defaultActiveListItemTextColor(context *guigui.Context) color.Color {
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 1)
-}
 
 type List[T comparable] struct {
 	guigui.DefaultWidget
@@ -237,18 +257,14 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 // ItemTextColor must not be called in Build because it depends on the finished widget tree
 // (e.g. focused states of child widgets are available only after the widget tree is built).
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	switch l.content.itemColorType(context, index) {
-	case listItemColorTypeHighlighted:
-		return defaultActiveListItemTextColor(context)
-	case listItemColorTypeItemDisabled, listItemColorTypeListDisabled:
-		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), false)
-	default:
+	ct := l.content.itemColorType(context, index)
+	if ct == listItemColorTypeDefault {
 		item := l.listItemWidgets.At(index)
 		if clr := item.textColor(); clr != nil {
 			return clr
 		}
-		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), true)
 	}
+	return ct.TextColor(context)
 }
 
 func (l *List[T]) SelectedItemCount() int {
@@ -1445,16 +1461,7 @@ func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) 
 }
 
 func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context, index int) color.Color {
-	switch l.itemColorType(context, index) {
-	case listItemColorTypeHighlighted:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
-	case listItemColorTypeListDisabled:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
-	case listItemColorTypeSelectedInUnfocusedList:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
-	default:
-		return nil
-	}
+	return l.itemColorType(context, index).BackgroundColor(context)
 }
 
 type listBackground1[T comparable] struct {
