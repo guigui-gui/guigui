@@ -27,6 +27,16 @@ const (
 	ListStyleMenu
 )
 
+type listItemColorType int
+
+const (
+	listItemColorTypeDefault listItemColorType = iota
+	listItemColorTypeHighlighted
+	listItemColorTypeSelectedInUnfocusedList
+	listItemColorTypeItemDisabled
+	listItemColorTypeListDisabled
+)
+
 var (
 	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
 	listEventItemsSelected        guigui.EventKey = guigui.GenerateEventKey()
@@ -227,14 +237,18 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 // ItemTextColor must not be called in Build because it depends on the finished widget tree
 // (e.g. focused states of child widgets are available only after the widget tree is built).
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	if l.content.isHighlightedItemIndex(context, index) {
+	switch l.content.itemColorType(context, index) {
+	case listItemColorTypeHighlighted:
 		return defaultActiveListItemTextColor(context)
+	case listItemColorTypeItemDisabled, listItemColorTypeListDisabled:
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), false)
+	default:
+		item := l.listItemWidgets.At(index)
+		if clr := item.textColor(); clr != nil {
+			return clr
+		}
+		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), true)
 	}
-	item := l.listItemWidgets.At(index)
-	if clr := item.textColor(); clr != nil {
-		return clr
-	}
-	return basicwidgetdraw.TextColor(context.ResolvedColorMode(), context.IsEnabled(item))
 }
 
 func (l *List[T]) SelectedItemCount() int {
@@ -1407,6 +1421,22 @@ func (l *listContent[T]) isHighlightedItemIndex(context *guigui.Context, index i
 	return l.IsSelectedItemIndex(index)
 }
 
+func (l *listContent[T]) itemColorType(context *guigui.Context, index int) listItemColorType {
+	if !context.IsEnabled(l) {
+		return listItemColorTypeListDisabled
+	}
+	if item, ok := l.ItemByIndex(index); ok && !context.IsEnabled(item.Content) {
+		return listItemColorTypeItemDisabled
+	}
+	if l.isHighlightedItemIndex(context, index) {
+		return listItemColorTypeHighlighted
+	}
+	if l.IsSelectedItemIndex(index) && !l.unfocusedSelectionHidden {
+		return listItemColorTypeSelectedInUnfocusedList
+	}
+	return listItemColorTypeDefault
+}
+
 func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) bool {
 	if !context.IsEnabled(l) {
 		return false
@@ -1414,17 +1444,17 @@ func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) 
 	return l.style == ListStyleSidebar || context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleMenu
 }
 
-func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context) color.Color {
-	if !context.IsEnabled(l) {
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
-	}
-	if l.useHighlightedBackgroundColor(context) {
+func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context, index int) color.Color {
+	switch l.itemColorType(context, index) {
+	case listItemColorTypeHighlighted:
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
-	}
-	if l.unfocusedSelectionHidden {
+	case listItemColorTypeListDisabled:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+	case listItemColorTypeSelectedInUnfocusedList:
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
+	default:
 		return nil
 	}
-	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
 }
 
 type listBackground1[T comparable] struct {
@@ -1490,10 +1520,8 @@ func (l *listBackground2[T]) setListContent(content *listContent[T]) {
 func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	vb := widgetBounds.VisibleBounds()
 
-	clr := l.content.selectedItemBackgroundColor(context)
-
 	// Draw the selected item background.
-	if clr != nil && !l.content.isHoveringVisible() {
+	if !l.content.isHoveringVisible() {
 		// TODO: Improve the performance.
 		indexToVisibleItemIndex := map[int]int{}
 		var visibleItemIndexToIndex []int
@@ -1504,6 +1532,10 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			count++
 		}
 		for _, index := range l.content.AppendSelectedItemIndices(nil) {
+			clr := l.content.selectedItemBackgroundColor(context, index)
+			if clr == nil {
+				continue
+			}
 			if !l.content.isItemVisible(index) {
 				continue
 			}
@@ -1545,11 +1577,12 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
 	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemVisible(hoveredItemIndex) {
+		clr := l.content.selectedItemBackgroundColor(context, hoveredItemIndex)
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
 		if l.content.style == ListStyleMenu {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
-		if bounds.Overlaps(vb) {
+		if clr != nil && bounds.Overlaps(vb) {
 			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}
