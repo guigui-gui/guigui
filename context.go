@@ -325,30 +325,13 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 // Env returns an environment value for the given key by walking up the widget tree.
 // It calls [Widget.Env] on the given widget first. If it returns nil,
 // it tries the parent widget, repeating recursively up to the root widget.
-//
-// For backward compatibility, if [Widget.Env] returns nil, Env also tries the deprecated
-// Data method if the widget implements it.
 func (c *Context) Env(widget Widget, key EnvKey) any {
 	for w := widget; w != nil; w = w.widgetState().parent {
 		if v := w.Env(c, key); v != nil {
 			return v
 		}
-		if dp, ok := w.(interface {
-			Data(context *Context, key EnvKey) any
-		}); ok {
-			if v := dp.Data(c, key); v != nil {
-				return v
-			}
-		}
 	}
 	return nil
-}
-
-// Data is a deprecated alias for [Context.Env].
-//
-// Deprecated: Use [Context.Env] instead.
-func (c *Context) Data(widget Widget, key DataKey) any {
-	return c.Env(widget, key)
 }
 
 func (c *Context) Passthrough(widget Widget) bool {

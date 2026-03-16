@@ -25,18 +25,6 @@ func GenerateEnvKey() EnvKey {
 	return EnvKey(generateUniqueKey())
 }
 
-// DataKey is a deprecated alias for [EnvKey].
-//
-// Deprecated: Use [EnvKey] instead.
-type DataKey = EnvKey
-
-// GenerateDataKey is a deprecated alias for [GenerateEnvKey].
-//
-// Deprecated: Use [GenerateEnvKey] instead.
-func GenerateDataKey() DataKey {
-	return GenerateEnvKey()
-}
-
 // EventKey is a unique identifier for an event.
 type EventKey uniqueKey
 

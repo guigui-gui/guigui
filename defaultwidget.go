@@ -30,13 +30,6 @@ func (*DefaultWidget) Env(context *Context, key EnvKey) any {
 	return nil
 }
 
-// Data is a deprecated alias for [DefaultWidget.Env].
-//
-// Deprecated: Use [DefaultWidget.Env] instead.
-func (d *DefaultWidget) Data(context *Context, key DataKey) any {
-	return d.Env(context, key)
-}
-
 func (*DefaultWidget) Build(context *Context, adder *ChildAdder) error {
 	return nil
 }
