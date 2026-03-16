@@ -91,6 +91,12 @@ func (l *List[T]) SetStripeVisible(visible bool) {
 	l.content.SetStripeVisible(visible)
 }
 
+// SetUnfocusedSelectionVisible sets whether to show the selection background when the list is unfocused.
+// The default is true.
+func (l *List[T]) SetUnfocusedSelectionVisible(visible bool) {
+	l.content.SetUnfocusedSelectionVisible(visible)
+}
+
 func (l *List[T]) SetMultiSelection(multi bool) {
 	l.content.abstractList.SetMultiSelection(multi)
 }
@@ -585,6 +591,7 @@ type listContent[T comparable] struct {
 
 	abstractList              abstractList[T, abstractListItem[T]]
 	stripeVisible             bool
+	unfocusedSelectionHidden  bool
 	style                     ListStyle
 	checkmarkIndexPlus1       int
 	hoveredItemIndexPlus1     int
@@ -1025,6 +1032,15 @@ func (l *listContent[T]) SetStripeVisible(visible bool) {
 	guigui.RequestRedraw(l)
 }
 
+func (l *listContent[T]) SetUnfocusedSelectionVisible(visible bool) {
+	hidden := !visible
+	if l.unfocusedSelectionHidden == hidden {
+		return
+	}
+	l.unfocusedSelectionHidden = hidden
+	guigui.RequestRedraw(l)
+}
+
 func (l *listContent[T]) isHoveringVisible() bool {
 	return l.style == ListStyleMenu
 }
@@ -1405,6 +1421,9 @@ func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context) co
 	if l.useHighlightedBackgroundColor(context) {
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
 	}
+	if l.unfocusedSelectionHidden {
+		return nil
+	}
 	return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
 }
 
@@ -1474,7 +1493,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	clr := l.content.selectedItemBackgroundColor(context)
 
 	// Draw the selected item background.
-	if !l.content.isHoveringVisible() {
+	if clr != nil && !l.content.isHoveringVisible() {
 		// TODO: Improve the performance.
 		indexToVisibleItemIndex := map[int]int{}
 		var visibleItemIndexToIndex []int
