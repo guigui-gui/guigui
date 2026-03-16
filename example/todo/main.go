@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	modelKeyModel = guigui.GenerateDataKey()
+	modelKeyModel = guigui.GenerateEnvKey()
 )
 
 type Root struct {
@@ -31,7 +31,7 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Data(context *guigui.Context, key guigui.DataKey) any {
+func (r *Root) Env(context *guigui.Context, key guigui.EnvKey) any {
 	switch key {
 	case modelKeyModel:
 		return &r.model
@@ -183,7 +183,7 @@ func (t *tasksPanelContent) OnDeleted(f func(context *guigui.Context, id int)) {
 }
 
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	model := context.Data(t, modelKeyModel).(*Model)
+	model := context.Env(t, modelKeyModel).(*Model)
 
 	t.taskWidgets.SetLen(model.TaskCount())
 	for i := range t.taskWidgets.Len() {

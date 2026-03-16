@@ -37,7 +37,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	adder.AddWidget(&n.numberInputForm)
 	adder.AddWidget(&n.configForm)
 
-	model := context.Data(n, modelKeyModel).(*Model)
+	model := context.Env(n, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
 

@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	modelKeyModel = guigui.GenerateDataKey()
+	modelKeyModel = guigui.GenerateEnvKey()
 )
 
 type Root struct {
@@ -40,7 +40,7 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Data(context *guigui.Context, key guigui.DataKey) any {
+func (r *Root) Env(context *guigui.Context, key guigui.EnvKey) any {
 	switch key {
 	case modelKeyModel:
 		return &r.model

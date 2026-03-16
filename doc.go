@@ -22,7 +22,7 @@
 //
 //   - [Widget.Draw] — renders the widget (pre-order, per layer from bottom to top; only when necessary).
 //
-// [Widget.Measure] and [Widget.Data] are called on demand by other widgets or the framework.
+// [Widget.Measure] and [Widget.Env] are called on demand by other widgets or the framework.
 //
 // # Running an application
 //

@@ -32,7 +32,7 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddWidget(&t.table)
 	adder.AddWidget(&t.configForm)
 
-	model := context.Data(t, modelKeyModel).(*Model)
+	model := context.Env(t, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
 	t.table.SetColumns([]basicwidget.TableColumn{

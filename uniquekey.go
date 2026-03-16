@@ -17,12 +17,24 @@ func generateUniqueKey() uniqueKey {
 	return uniqueKey{theUniqueKey.Add(1)}
 }
 
-// DataKey is a unique identifier for a model.
-type DataKey uniqueKey
+// EnvKey is a unique identifier for an environment value.
+type EnvKey uniqueKey
 
-// GenerateDataKey generates a new DataKey.
+// GenerateEnvKey generates a new EnvKey.
+func GenerateEnvKey() EnvKey {
+	return EnvKey(generateUniqueKey())
+}
+
+// DataKey is a deprecated alias for [EnvKey].
+//
+// Deprecated: Use [EnvKey] instead.
+type DataKey = EnvKey
+
+// GenerateDataKey is a deprecated alias for [GenerateEnvKey].
+//
+// Deprecated: Use [GenerateEnvKey] instead.
 func GenerateDataKey() DataKey {
-	return DataKey(generateUniqueKey())
+	return GenerateEnvKey()
 }
 
 // EventKey is a unique identifier for an event.

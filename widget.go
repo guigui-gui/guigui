@@ -21,10 +21,10 @@ import (
 // This means that the default state of a widget should be reasonable
 // without any explicit initialization.
 type Widget interface {
-	// Data returns arbitrary data associated with the widget for the given key.
-	// [Context.Data] calls this method on the given widget first. If this returns nil,
+	// Env returns an environment value associated with the widget for the given key.
+	// [Context.Env] calls this method on the given widget first. If this returns nil,
 	// it tries the parent widget, repeating recursively up to the root widget.
-	Data(context *Context, key DataKey) any
+	Env(context *Context, key EnvKey) any
 
 	// Build constructs the widget's child widget tree.
 	// Use adder to add child widgets that this widget contains.

@@ -35,7 +35,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.sampleText)
 	adder.AddWidget(&t.form)
 
-	model := context.Data(t, modelKeyModel).(*Model)
+	model := context.Env(t, modelKeyModel).(*Model)
 
 	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ResolvedColorMode())
 	if err != nil {

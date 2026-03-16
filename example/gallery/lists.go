@@ -48,7 +48,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&l.jumpForm)
 	adder.AddWidget(&l.configForm)
 
-	model := context.Data(l, modelKeyModel).(*Model)
+	model := context.Env(l, modelKeyModel).(*Model)
 
 	u := basicwidget.UnitSize(context)
 

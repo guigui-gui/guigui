@@ -29,7 +29,7 @@ func (c *Checkboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	adder.AddWidget(&c.checkboxesForm)
 	adder.AddWidget(&c.configForm)
 
-	model := context.Data(c, modelKeyModel).(*Model)
+	model := context.Env(c, modelKeyModel).(*Model)
 
 	c.checkbox1Text.SetValue("Checkbox 1")
 	c.checkbox1.OnValueChanged(func(ctx *guigui.Context, value bool) {
