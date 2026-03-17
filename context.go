@@ -53,6 +53,7 @@ type Context struct {
 	locales              []language.Tag
 	allLocales           []language.Tag
 	frontLayer           int64
+	envSource            EnvSource
 
 	defaultMethodCalled bool
 }
@@ -336,12 +337,14 @@ type EnvSource struct {
 // It calls [Widget.Env] on the given widget first. If it returns nil,
 // it tries the parent widget, repeating recursively up to the root widget.
 func (c *Context) Env(widget Widget, key EnvKey) any {
-	source := EnvSource{Origin: widget}
+	c.envSource.Origin = widget
+	c.envSource.Child = nil
+
 	for w := widget; w != nil; w = w.widgetState().parent {
-		if v := w.Env(c, key, &source); v != nil {
+		if v := w.Env(c, key, &c.envSource); v != nil {
 			return v
 		}
-		source.Child = w
+		c.envSource.Child = w
 	}
 	return nil
 }
