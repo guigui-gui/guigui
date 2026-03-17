@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"maps"
 	"reflect"
 	"runtime"
 	"slices"
@@ -45,45 +44,49 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 }
 
 type widgetsAndBounds struct {
-	bounds3Ds       map[*widgetState]bounds3D
-	currentBounds3D map[*widgetState]bounds3D
+	bounds3Ds       []widgetStateAndBounds
+	currentBounds3D []widgetStateAndBounds
+}
+
+type widgetStateAndBounds struct {
+	widgetState *widgetState
+	bounds3D    bounds3D
 }
 
 func (w *widgetsAndBounds) reset() {
-	clear(w.bounds3Ds)
+	w.bounds3Ds = slices.Delete(w.bounds3Ds, 0, len(w.bounds3Ds))
 }
 
 func (w *widgetsAndBounds) append(context *Context, widget Widget) {
-	if w.bounds3Ds == nil {
-		w.bounds3Ds = map[*widgetState]bounds3D{}
-	}
 	b, ok := bounds3DFromWidget(context, widget)
 	if !ok {
 		return
 	}
-	w.bounds3Ds[widget.widgetState()] = b
+	w.bounds3Ds = append(w.bounds3Ds, widgetStateAndBounds{
+		widgetState: widget.widgetState(),
+		bounds3D:    b,
+	})
 }
 
 func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) bool {
-	if w.currentBounds3D == nil {
-		w.currentBounds3D = map[*widgetState]bounds3D{}
-	} else {
-		clear(w.currentBounds3D)
-	}
+	w.currentBounds3D = slices.Delete(w.currentBounds3D, 0, len(w.currentBounds3D))
 	for _, widget := range currentWidgets {
 		b, ok := bounds3DFromWidget(context, widget)
 		if !ok {
 			continue
 		}
-		w.currentBounds3D[widget.widgetState()] = b
+		w.currentBounds3D = append(w.currentBounds3D, widgetStateAndBounds{
+			widgetState: widget.widgetState(),
+			bounds3D:    b,
+		})
 	}
-	return maps.Equal(w.bounds3Ds, w.currentBounds3D)
+	return slices.Equal(w.bounds3Ds, w.currentBounds3D)
 }
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {
-	for widgetState, bounds3D := range w.bounds3Ds {
-		app.requestRedraw(bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
-		requestRedraw(widgetState)
+	for _, wb := range w.bounds3Ds {
+		app.requestRedraw(wb.bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
+		requestRedraw(wb.widgetState)
 	}
 }
 
