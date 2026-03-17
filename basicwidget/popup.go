@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"iter"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -58,7 +57,7 @@ type Popup struct {
 	onOpen func(context *guigui.Context)
 }
 
-func (p *Popup) Env(context *guigui.Context, key guigui.EnvKey, source iter.Seq[guigui.Widget]) any {
+func (p *Popup) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
 	switch key {
 	case EnvKeyListItemColorType:
 		return ListItemColorTypeDefault

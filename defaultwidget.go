@@ -5,7 +5,6 @@ package guigui
 
 import (
 	"image"
-	"iter"
 
 	"github.com/hajimehoshi/ebiten/v2"
 )
@@ -27,7 +26,7 @@ func (d *DefaultWidget) copyCheck() {
 	}
 }
 
-func (*DefaultWidget) Env(context *Context, key EnvKey, source iter.Seq[Widget]) any {
+func (*DefaultWidget) Env(context *Context, key EnvKey, source *EnvSource) any {
 	return nil
 }
 

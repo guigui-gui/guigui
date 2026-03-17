@@ -5,7 +5,6 @@ package guigui
 
 import (
 	"image"
-	"iter"
 	"reflect"
 	"sync"
 
@@ -25,9 +24,8 @@ type Widget interface {
 	// Env returns an environment value associated with the widget for the given key.
 	// [Context.Env] calls this method on the given widget first. If this returns nil,
 	// it tries the parent widget, repeating recursively up to the root widget.
-	// source is a sequence of widgets from the original requester up to (but not including)
-	// the current widget.
-	Env(context *Context, key EnvKey, source iter.Seq[Widget]) any
+	// source provides information about the origin of the [Context.Env] call.
+	Env(context *Context, key EnvKey, source *EnvSource) any
 
 	// Build constructs the widget's child widget tree.
 	// Use adder to add child widgets that this widget contains.

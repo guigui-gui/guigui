@@ -759,15 +759,10 @@ func (l *listContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source iter.Seq[guigui.Widget]) any {
+func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
 	switch key {
 	case EnvKeyListItemColorType:
-		// Find the direct child of listContent by iterating the entire source sequence.
-		// The last widget is the direct child since source is ordered from the original requester upward.
-		var child guigui.Widget
-		for w := range source {
-			child = w
-		}
+		child := source.Child
 		if child == nil {
 			return nil
 		}

@@ -322,21 +322,26 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 	RequestRebuild(widget)
 }
 
+// EnvSource provides information about the origin of an [Context.Env] call.
+type EnvSource struct {
+	// Origin is the widget that originally called [Context.Env].
+	Origin Widget
+
+	// Child is the direct child of the current widget in the walk path.
+	// Child is nil when the current widget is the Origin itself.
+	Child Widget
+}
+
 // Env returns an environment value for the given key by walking up the widget tree.
 // It calls [Widget.Env] on the given widget first. If it returns nil,
 // it tries the parent widget, repeating recursively up to the root widget.
 func (c *Context) Env(widget Widget, key EnvKey) any {
+	source := EnvSource{Origin: widget}
 	for w := widget; w != nil; w = w.widgetState().parent {
-		source := func(yield func(Widget) bool) {
-			for s := widget; s != w; s = s.widgetState().parent {
-				if !yield(s) {
-					return
-				}
-			}
-		}
-		if v := w.Env(c, key, source); v != nil {
+		if v := w.Env(c, key, &source); v != nil {
 			return v
 		}
+		source.Child = w
 	}
 	return nil
 }
