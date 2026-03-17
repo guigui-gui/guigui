@@ -183,7 +183,7 @@ func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 	if ct, ok := context.Env(s, basicwidget.EnvKeyListItemColorType).(basicwidget.ListItemColorType); ok {
 		s.text.SetColor(ct.TextColor(context))
 	} else {
-		s.text.SetColor(basicwidget.ListItemColorTypeDefault.TextColor(context))
+		s.text.SetColor(nil)
 	}
 }
 
