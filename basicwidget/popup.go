@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"iter"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -55,6 +56,14 @@ type Popup struct {
 	backgroundBounds image.Rectangle
 
 	onOpen func(context *guigui.Context)
+}
+
+func (p *Popup) Env(context *guigui.Context, key guigui.EnvKey, source iter.Seq[guigui.Widget]) any {
+	switch key {
+	case EnvKeyListItemColorType:
+		return ListItemColorTypeDefault
+	}
+	return nil
 }
 
 // BringToFrontLayer brings the popup to the front layer.
