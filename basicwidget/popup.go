@@ -57,12 +57,12 @@ type Popup struct {
 	onOpen func(context *guigui.Context)
 }
 
-func (p *Popup) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
+func (p *Popup) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
 	switch key {
 	case EnvKeyListItemColorType:
-		return ListItemColorTypeDefault
+		return nil, true
 	}
-	return nil
+	return nil, false
 }
 
 // BringToFrontLayer brings the popup to the front layer.

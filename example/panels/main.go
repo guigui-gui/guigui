@@ -32,12 +32,12 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
+func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
 	switch key {
 	case modelKeyModel:
-		return &r.model
+		return &r.model, true
 	default:
-		return nil
+		return nil, false
 	}
 }
 

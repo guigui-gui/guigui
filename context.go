@@ -334,19 +334,19 @@ type EnvSource struct {
 }
 
 // Env returns an environment value for the given key by walking up the widget tree.
-// It calls [Widget.Env] on the given widget first. If it returns nil,
+// It calls [Widget.Env] on the given widget first. If the second return value is false,
 // it tries the parent widget, repeating recursively up to the root widget.
-func (c *Context) Env(widget Widget, key EnvKey) any {
+func (c *Context) Env(widget Widget, key EnvKey) (any, bool) {
 	c.envSource.Origin = widget
 	c.envSource.Child = nil
 
 	for w := widget; w != nil; w = w.widgetState().parent {
-		if v := w.Env(c, key, &c.envSource); v != nil {
-			return v
+		if v, ok := w.Env(c, key, &c.envSource); ok {
+			return v, true
 		}
 		c.envSource.Child = w
 	}
-	return nil
+	return nil, false
 }
 
 func (c *Context) Passthrough(widget Widget) bool {

@@ -48,7 +48,11 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 	adder.AddWidget(&t.leftPanelButton)
 	adder.AddWidget(&t.rightPanelButton)
 
-	model := context.Env(t, modelKeyModel).(*Model)
+	v, ok := context.Env(t, modelKeyModel)
+	if !ok {
+		return nil
+	}
+	model := v.(*Model)
 
 	if model.IsLeftPanelOpen() {
 		img, err := theImageCache.GetMonochrome("left_panel_close", context.ResolvedColorMode())

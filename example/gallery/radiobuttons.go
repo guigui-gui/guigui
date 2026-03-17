@@ -36,7 +36,11 @@ func (r *RadioButtons) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	adder.AddWidget(&r.configForm)
 
-	model := context.Env(r, modelKeyModel).(*Model)
+	v, ok := context.Env(r, modelKeyModel)
+	if !ok {
+		return nil
+	}
+	model := v.(*Model)
 
 	r.radioButtonGroup1.SetValues([]int{1, 2, 3})
 	r.radioButtonGroup1.OnItemSelected(func(ctx *guigui.Context, index int) {

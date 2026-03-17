@@ -26,8 +26,8 @@ func (d *DefaultWidget) copyCheck() {
 	}
 }
 
-func (*DefaultWidget) Env(context *Context, key EnvKey, source *EnvSource) any {
-	return nil
+func (*DefaultWidget) Env(context *Context, key EnvKey, source *EnvSource) (any, bool) {
+	return nil, false
 }
 
 func (*DefaultWidget) Build(context *Context, adder *ChildAdder) error {

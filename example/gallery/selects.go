@@ -34,7 +34,11 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	adder.AddWidget(&s.listForm)
 	adder.AddWidget(&s.configForm)
 
-	model := context.Env(s, modelKeyModel).(*Model)
+	v, ok := context.Env(s, modelKeyModel)
+	if !ok {
+		return nil
+	}
+	model := v.(*Model)
 
 	// Select (Text)
 	s.select1Text.SetValue("Selects")
@@ -180,7 +184,8 @@ func (s *selectItem) layout(context *guigui.Context) guigui.LinearLayout {
 
 func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
-	if ct, ok := context.Env(s, basicwidget.EnvKeyListItemColorType).(basicwidget.ListItemColorType); ok {
+	if v, ok := context.Env(s, basicwidget.EnvKeyListItemColorType); ok {
+		ct := v.(basicwidget.ListItemColorType)
 		s.text.SetColor(ct.TextColor(context))
 	} else {
 		s.text.SetColor(nil)

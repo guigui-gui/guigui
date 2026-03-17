@@ -761,18 +761,18 @@ func (l *listContent[T]) isItemVisible(index int) bool {
 	return true
 }
 
-func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
+func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
 	switch key {
 	case EnvKeyListItemColorType:
 		child := source.Child
 		if child == nil {
-			return nil
+			return nil, false
 		}
 		if i, ok := l.widgetToIndex[child]; ok {
-			return l.itemColorType(context, i)
+			return l.itemColorType(context, i), true
 		}
 	}
-	return nil
+	return nil, false
 }
 
 func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

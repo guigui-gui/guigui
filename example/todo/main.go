@@ -31,12 +31,12 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) any {
+func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
 	switch key {
 	case modelKeyModel:
-		return &r.model
+		return &r.model, true
 	default:
-		return nil
+		return nil, false
 	}
 }
 
@@ -183,7 +183,11 @@ func (t *tasksPanelContent) OnDeleted(f func(context *guigui.Context, id int)) {
 }
 
 func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	model := context.Env(t, modelKeyModel).(*Model)
+	v, ok := context.Env(t, modelKeyModel)
+	if !ok {
+		return nil
+	}
+	model := v.(*Model)
 
 	t.taskWidgets.SetLen(model.TaskCount())
 	for i := range t.taskWidgets.Len() {
