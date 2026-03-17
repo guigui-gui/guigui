@@ -5,7 +5,6 @@ package main
 
 import (
 	"image"
-	"image/color"
 	"slices"
 
 	"github.com/guigui-gui/guigui"
@@ -138,10 +137,6 @@ func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
-
-	for i := range s.select2Items {
-		s.select2ItemWidgets[i].SetTextColor(s.select2.ItemTextColor(context, i))
-	}
 }
 
 type selectItem struct {
@@ -157,10 +152,6 @@ func (s *selectItem) SetImage(img *ebiten.Image) {
 
 func (d *selectItem) SetText(s string) {
 	d.text.SetValue(s)
-}
-
-func (s *selectItem) SetTextColor(clr color.Color) {
-	s.text.SetColor(clr)
 }
 
 func (s *selectItem) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -189,6 +180,11 @@ func (s *selectItem) layout(context *guigui.Context) guigui.LinearLayout {
 
 func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	if ct, ok := context.Env(s, basicwidget.EnvKeyListItemColorType).(basicwidget.ListItemColorType); ok {
+		s.text.SetColor(ct.TextColor(context))
+	} else {
+		s.text.SetColor(basicwidget.ListItemColorTypeDefault.TextColor(context))
+	}
 }
 
 func (s *selectItem) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

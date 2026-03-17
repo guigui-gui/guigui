@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"iter"
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -40,7 +41,7 @@ type Root struct {
 	model Model
 }
 
-func (r *Root) Env(context *guigui.Context, key guigui.EnvKey) any {
+func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source iter.Seq[guigui.Widget]) any {
 	switch key {
 	case modelKeyModel:
 		return &r.model

@@ -166,7 +166,7 @@ func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color
 	item := t.tableRowWidgets.At(index)
 	switch {
 	case t.list.SelectedItemIndex() == index && item.selectable():
-		return listItemColorTypeHighlighted.TextColor(context)
+		return ListItemColorTypeHighlighted.TextColor(context)
 	default:
 		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), context.IsEnabled(item))
 	}

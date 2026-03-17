@@ -19,6 +19,13 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+// EnvKeyListItemColorType is the environment key for obtaining a [ListItemColorType] from a list item.
+// This is provided by the list's internal content widget, so descendant widgets of list items
+// can query their color type without needing to know their index.
+//
+// This value is available after the build phase (e.g., during the layout phase).
+var EnvKeyListItemColorType guigui.EnvKey = guigui.GenerateEnvKey()
+
 type ListStyle int
 
 const (
@@ -27,34 +34,38 @@ const (
 	ListStyleMenu
 )
 
-type listItemColorType int
+// ListItemColorType represents the color state of a list item.
+type ListItemColorType int
 
 const (
-	listItemColorTypeDefault listItemColorType = iota
-	listItemColorTypeHighlighted
-	listItemColorTypeSelectedInUnfocusedList
-	listItemColorTypeItemDisabled
-	listItemColorTypeListDisabled
+	ListItemColorTypeDefault ListItemColorType = iota
+	ListItemColorTypeHighlighted
+	ListItemColorTypeSelectedInUnfocusedList
+	ListItemColorTypeItemDisabled
+	ListItemColorTypeListDisabled
 )
 
-func (t listItemColorType) TextColor(context *guigui.Context) color.Color {
+// TextColor returns the text color for the given color type.
+func (t ListItemColorType) TextColor(context *guigui.Context) color.Color {
 	switch t {
-	case listItemColorTypeHighlighted:
+	case ListItemColorTypeHighlighted:
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 1)
-	case listItemColorTypeItemDisabled, listItemColorTypeListDisabled:
+	case ListItemColorTypeItemDisabled, ListItemColorTypeListDisabled:
 		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), false)
 	default:
 		return basicwidgetdraw.TextColor(context.ResolvedColorMode(), true)
 	}
 }
 
-func (t listItemColorType) BackgroundColor(context *guigui.Context) color.Color {
+// BackgroundColor returns the background color for the given color type.
+// BackgroundColor returns nil when no special background should be applied.
+func (t ListItemColorType) BackgroundColor(context *guigui.Context) color.Color {
 	switch t {
-	case listItemColorTypeHighlighted:
+	case ListItemColorTypeHighlighted:
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
-	case listItemColorTypeListDisabled:
+	case ListItemColorTypeListDisabled:
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
-	case listItemColorTypeSelectedInUnfocusedList:
+	case ListItemColorTypeSelectedInUnfocusedList:
 		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
 	default:
 		return nil
@@ -71,6 +82,26 @@ var (
 	listEventScrollYEnsureVisible guigui.EventKey = guigui.GenerateEventKey()
 	listEventScrollDeltaY         guigui.EventKey = guigui.GenerateEventKey()
 )
+
+type ListItem[T comparable] struct {
+	Text         string
+	TextColor    color.Color
+	Header       bool
+	Content      guigui.Widget
+	KeyText      string
+	Unselectable bool
+	Border       bool
+	Disabled     bool
+	Movable      bool
+	Value        T
+	IndentLevel  int
+	Padding      guigui.Padding
+	Collapsed    bool
+}
+
+func (l *ListItem[T]) selectable() bool {
+	return !l.Header && !l.Unselectable && !l.Border && !l.Disabled
+}
 
 type List[T comparable] struct {
 	guigui.DefaultWidget
@@ -91,26 +122,6 @@ type List[T comparable] struct {
 	onScrollDeltaY            func(context *guigui.Context, deltaY float64)
 	scrollOffsetYTopMinus1    float64
 	scrollOffsetYBottomMinus1 float64
-}
-
-type ListItem[T comparable] struct {
-	Text         string
-	TextColor    color.Color
-	Header       bool
-	Content      guigui.Widget
-	KeyText      string
-	Unselectable bool
-	Border       bool
-	Disabled     bool
-	Movable      bool
-	Value        T
-	IndentLevel  int
-	Padding      guigui.Padding
-	Collapsed    bool
-}
-
-func (l *ListItem[T]) selectable() bool {
-	return !l.Header && !l.Unselectable && !l.Border && !l.Disabled
 }
 
 func (l *List[T]) SetBackground(widget guigui.Widget) {
@@ -256,9 +267,11 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 // ItemTextColor returns the text color for the item at the given index.
 // ItemTextColor must not be called in Build because it depends on the finished widget tree
 // (e.g. focused states of child widgets are available only after the widget tree is built).
+//
+// Deprecated: use [EnvKeyListItemColorType] via [guigui.Context.Env].
 func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
 	ct := l.content.itemColorType(context, index)
-	if ct == listItemColorTypeDefault {
+	if ct == ListItemColorTypeDefault {
 		item := l.listItemWidgets.At(index)
 		if clr := item.textColor(); clr != nil {
 			return clr
@@ -744,6 +757,27 @@ func (l *listContent[T]) isItemVisible(index int) bool {
 		}
 	}
 	return true
+}
+
+func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source iter.Seq[guigui.Widget]) any {
+	switch key {
+	case EnvKeyListItemColorType:
+		// Find the direct child of listContent by iterating the entire source sequence.
+		// The last widget is the direct child since source is ordered from the original requester upward.
+		var child guigui.Widget
+		for w := range source {
+			child = w
+		}
+		if child == nil {
+			return nil
+		}
+		for i := range l.abstractList.ItemCount() {
+			if item, ok := l.abstractList.ItemByIndex(i); ok && item.Content == child {
+				return l.itemColorType(context, i)
+			}
+		}
+	}
+	return nil
 }
 
 func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -1437,20 +1471,20 @@ func (l *listContent[T]) isHighlightedItemIndex(context *guigui.Context, index i
 	return l.IsSelectedItemIndex(index)
 }
 
-func (l *listContent[T]) itemColorType(context *guigui.Context, index int) listItemColorType {
+func (l *listContent[T]) itemColorType(context *guigui.Context, index int) ListItemColorType {
 	if !context.IsEnabled(l) {
-		return listItemColorTypeListDisabled
+		return ListItemColorTypeListDisabled
 	}
 	if item, ok := l.ItemByIndex(index); ok && !context.IsEnabled(item.Content) {
-		return listItemColorTypeItemDisabled
+		return ListItemColorTypeItemDisabled
 	}
 	if l.isHighlightedItemIndex(context, index) {
-		return listItemColorTypeHighlighted
+		return ListItemColorTypeHighlighted
 	}
 	if l.IsSelectedItemIndex(index) && !l.unfocusedSelectionHidden {
-		return listItemColorTypeSelectedInUnfocusedList
+		return ListItemColorTypeSelectedInUnfocusedList
 	}
-	return listItemColorTypeDefault
+	return ListItemColorTypeDefault
 }
 
 func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) bool {

@@ -327,7 +327,14 @@ func (c *Context) SetOpacity(widget Widget, opacity float64) {
 // it tries the parent widget, repeating recursively up to the root widget.
 func (c *Context) Env(widget Widget, key EnvKey) any {
 	for w := widget; w != nil; w = w.widgetState().parent {
-		if v := w.Env(c, key); v != nil {
+		source := func(yield func(Widget) bool) {
+			for s := widget; s != w; s = s.widgetState().parent {
+				if !yield(s) {
+					return
+				}
+			}
+		}
+		if v := w.Env(c, key, source); v != nil {
 			return v
 		}
 	}
