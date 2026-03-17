@@ -657,6 +657,8 @@ type listContent[T comparable] struct {
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
 
+	widgetToIndex map[guigui.Widget]int
+
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
 }
@@ -766,10 +768,8 @@ func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source 
 		if child == nil {
 			return nil
 		}
-		for i := range l.abstractList.ItemCount() {
-			if item, ok := l.abstractList.ItemByIndex(i); ok && item.Content == child {
-				return l.itemColorType(context, i)
-			}
+		if i, ok := l.widgetToIndex[child]; ok {
+			return l.itemColorType(context, i)
 		}
 	}
 	return nil
@@ -781,6 +781,18 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	}
 	adder.AddWidget(&l.background2)
 	l.expanderImages.SetLen(l.abstractList.ItemCount())
+
+	// Build a widget-to-index map for O(1) lookup in Env.
+	if l.widgetToIndex == nil {
+		l.widgetToIndex = make(map[guigui.Widget]int)
+	}
+	clear(l.widgetToIndex)
+	for i := range l.abstractList.ItemCount() {
+		if item, ok := l.abstractList.ItemByIndex(i); ok {
+			l.widgetToIndex[item.Content] = i
+		}
+	}
+
 	for i := range l.visibleItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		if l.checkmarkIndexPlus1 == i+1 {
