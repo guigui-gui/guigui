@@ -784,7 +784,7 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 	// Build a widget-to-index map for O(1) lookup in Env.
 	if l.widgetToIndex == nil {
-		l.widgetToIndex = make(map[guigui.Widget]int)
+		l.widgetToIndex = map[guigui.Widget]int{}
 	}
 	clear(l.widgetToIndex)
 	for i := range l.abstractList.ItemCount() {
@@ -1558,6 +1558,9 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 type listBackground2[T comparable] struct {
 	guigui.DefaultWidget
 
+	indexToVisibleItemIndex map[int]int
+	visibleItemIndexToIndex []int
+
 	content *listContent[T]
 }
 
@@ -1570,13 +1573,15 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	// Draw the selected item background.
 	if !l.content.isHoveringVisible() {
-		// TODO: Improve the performance.
-		indexToVisibleItemIndex := map[int]int{}
-		var visibleItemIndexToIndex []int
+		if l.indexToVisibleItemIndex == nil {
+			l.indexToVisibleItemIndex = map[int]int{}
+		}
+		clear(l.indexToVisibleItemIndex)
+		l.visibleItemIndexToIndex = l.visibleItemIndexToIndex[:0]
 		var count int
 		for index := range l.content.visibleItems() {
-			indexToVisibleItemIndex[index] = count
-			visibleItemIndexToIndex = append(visibleItemIndexToIndex, index)
+			l.indexToVisibleItemIndex[index] = count
+			l.visibleItemIndexToIndex = append(l.visibleItemIndexToIndex, index)
 			count++
 		}
 		for _, index := range l.content.AppendSelectedItemIndices(nil) {
@@ -1594,10 +1599,10 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if bounds.Overlaps(vb) {
 				item, _ := l.content.ItemByIndex(index)
 				var corners basicwidgetdraw.Corners
-				vi := indexToVisibleItemIndex[index]
+				vi := l.indexToVisibleItemIndex[index]
 				// If prev visible item is adjacent to this item, don't draw the top corner.
-				if item.Padding.Top == 0 && vi-1 >= 0 && vi-1 < len(visibleItemIndexToIndex) {
-					prevIndex := visibleItemIndexToIndex[vi-1]
+				if item.Padding.Top == 0 && vi-1 >= 0 && vi-1 < len(l.visibleItemIndexToIndex) {
+					prevIndex := l.visibleItemIndexToIndex[vi-1]
 					if prevItem, ok := l.content.ItemByIndex(prevIndex); ok && prevItem.Padding.Bottom == 0 {
 						if l.content.IsSelectedItemIndex(prevIndex) {
 							corners.TopStart = prevItem.IndentLevel <= item.IndentLevel &&
@@ -1607,8 +1612,8 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 					}
 				}
 				// If next visible item is adjacent to this item, don't draw the bottom corner.
-				if item.Padding.Bottom == 0 && vi+1 >= 0 && vi+1 < len(visibleItemIndexToIndex) {
-					nextIndex := visibleItemIndexToIndex[vi+1]
+				if item.Padding.Bottom == 0 && vi+1 >= 0 && vi+1 < len(l.visibleItemIndexToIndex) {
+					nextIndex := l.visibleItemIndexToIndex[vi+1]
 					if nextItem, ok := l.content.ItemByIndex(nextIndex); ok && nextItem.Padding.Top == 0 {
 						if l.content.IsSelectedItemIndex(nextIndex) {
 							corners.BottomStart = nextItem.IndentLevel <= item.IndentLevel &&
