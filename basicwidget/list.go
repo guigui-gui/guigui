@@ -1642,7 +1642,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	// Draw a drag indicator.
 	if context.IsEnabled(l) && l.content.dragSrcIndexPlus1 == 0 {
-		if item, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex); ok && item.Movable {
+		if item, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex); ok && item.Movable && item.selectable() {
 			img, err := theResourceImages.Get("drag_indicator", context.ResolvedColorMode())
 			if err != nil {
 				panic(fmt.Sprintf("basicwidget: failed to get drag indicator image: %v", err))
