@@ -86,6 +86,136 @@ func TestNoWrapLines(t *testing.T) {
 	}
 }
 
+func TestFindWordBoundaries(t *testing.T) {
+	testCases := []struct {
+		text      string
+		idx       int
+		wantStart int
+		wantEnd   int
+	}{
+		// Basic word selection
+		{
+			text:      "hello",
+			idx:       0,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		{
+			text:      "hello",
+			idx:       2,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		{
+			text:      "hello",
+			idx:       4,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		// Clicking at the end of a word should select that word
+		{
+			text:      "hello",
+			idx:       5,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		// Words with spaces between them
+		{
+			text:      "hello world",
+			idx:       0,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		{
+			text:      "hello world",
+			idx:       3,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		{
+			text:      "hello world",
+			idx:       4,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		// Clicking at the end of the first word (before space)
+		{
+			text:      "hello world",
+			idx:       5,
+			wantStart: 0,
+			wantEnd:   5,
+		},
+		// Clicking at the start of the second word
+		{
+			text:      "hello world",
+			idx:       6,
+			wantStart: 6,
+			wantEnd:   11,
+		},
+		{
+			text:      "hello world",
+			idx:       8,
+			wantStart: 6,
+			wantEnd:   11,
+		},
+		// Clicking at the end of the second word
+		{
+			text:      "hello world",
+			idx:       11,
+			wantStart: 6,
+			wantEnd:   11,
+		},
+		// Japanese katakana: "テスト" is treated as a single word (9 bytes)
+		{
+			text:      "テスト",
+			idx:       0,
+			wantStart: 0,
+			wantEnd:   9,
+		},
+		{
+			text:      "テスト",
+			idx:       3,
+			wantStart: 0,
+			wantEnd:   9,
+		},
+		{
+			text:      "テスト",
+			idx:       9,
+			wantStart: 0,
+			wantEnd:   9,
+		},
+		// Japanese with a space: the second word starts at byte 10.
+		// This tests the bug where manual bytePos tracking skipped non-word bytes.
+		// "日本語 テスト": "日" [0,3), "語" [6,9), " " [9,10), "テスト" [10,19)
+		{
+			text:      "日本語 テスト",
+			idx:       10,
+			wantStart: 10,
+			wantEnd:   19,
+		},
+		{
+			text:      "日本語 テスト",
+			idx:       14,
+			wantStart: 10,
+			wantEnd:   19,
+		},
+		{
+			text:      "日本語 テスト",
+			idx:       19,
+			wantStart: 10,
+			wantEnd:   19,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%q/%d", tc.text, tc.idx), func(t *testing.T) {
+			gotStart, gotEnd := textutil.FindWordBoundaries(tc.text, tc.idx)
+			if gotStart != tc.wantStart || gotEnd != tc.wantEnd {
+				t.Errorf("got (%d, %d), want (%d, %d)", gotStart, gotEnd, tc.wantStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
 func TestNextIndentPosition(t *testing.T) {
 	testCases := []struct {
 		position    float64

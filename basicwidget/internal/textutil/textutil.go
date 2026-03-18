@@ -451,16 +451,13 @@ func FindWordBoundaries(text string, idx int) (start, end int) {
 	initSegmenterWithString(seg, text)
 	it := seg.WordIterator()
 
-	var bytePos int
 	for it.Next() {
 		w := it.Word()
-		s := string(w.Text)
-		wordStart := bytePos
-		wordEnd := bytePos + len(s)
-		if wordStart <= idx && idx < wordEnd {
+		wordStart := w.OffsetInBytes
+		wordEnd := w.OffsetInBytes + w.LengthInBytes
+		if wordStart <= idx && idx <= wordEnd {
 			return wordStart, wordEnd
 		}
-		bytePos = wordEnd
 	}
 
 	return idx, idx
