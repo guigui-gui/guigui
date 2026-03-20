@@ -323,6 +323,7 @@ func (a *app) requestRebuild(widgetState *widgetState, redrawReason requestRedra
 	}
 	widgetState.rebuildRequested = true
 	widgetState.redrawReasonOnRebuild = redrawReason
+	a.hasDirtyWidgets = true
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.rebuildRequestedAt = fmt.Sprintf("%s:%d", file, line)
@@ -336,6 +337,7 @@ func RequestRedraw(widget Widget) {
 
 func requestRedraw(widgetState *widgetState) {
 	widgetState.redrawRequested = true
+	theApp.hasDirtyWidgets = true
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
@@ -379,6 +381,7 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) ([]any, bool) 
 		results := f.Call(widgetState.tmpArgs)
 		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 		widgetState.eventDispatched = true
+		theApp.hasDirtyWidgets = true
 		RequestRebuild(widget)
 		if len(results) == 0 {
 			return nil, true

@@ -137,6 +137,10 @@ type app struct {
 	// It is used to avoid re-traversing the tree for passes that don't modify the tree structure.
 	widgetList []Widget
 
+	// hasDirtyWidgets is true when any widget has rebuildRequested, redrawRequested, or eventDispatched set.
+	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
+	hasDirtyWidgets bool
+
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
 }
@@ -249,30 +253,34 @@ func (a *app) focusWidget(widget Widget) {
 // and event-dispatched widgets.
 func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 	// Single pass: collect redraw requests and find the first event-dispatched widget.
+	// Skip the entire loop when no widget has set any dirty flag.
 	var dispatchedWidget Widget
-	for _, widget := range a.widgetList {
-		widgetState := widget.widgetState()
-		if widgetState.rebuildRequested || widgetState.redrawRequested {
-			if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-				var reason requestRedrawReason
-				if widgetState.rebuildRequested {
-					reason = widgetState.redrawReasonOnRebuild
-				} else {
-					reason = requestRedrawReasonRedrawWidget
+	if a.hasDirtyWidgets {
+		a.hasDirtyWidgets = false
+		for _, widget := range a.widgetList {
+			widgetState := widget.widgetState()
+			if widgetState.rebuildRequested || widgetState.redrawRequested {
+				if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
+					var reason requestRedrawReason
+					if widgetState.rebuildRequested {
+						reason = widgetState.redrawReasonOnRebuild
+					} else {
+						reason = requestRedrawReasonRedrawWidget
+					}
+					a.requestRedrawWidget(widget, reason)
 				}
-				a.requestRedrawWidget(widget, reason)
+				widgetState.rebuildRequested = false
+				widgetState.rebuildRequestedAt = ""
+				widgetState.redrawReasonOnRebuild = 0
+				widgetState.redrawRequested = false
+				widgetState.redrawRequestedAt = ""
 			}
-			widgetState.rebuildRequested = false
-			widgetState.rebuildRequestedAt = ""
-			widgetState.redrawReasonOnRebuild = 0
-			widgetState.redrawRequested = false
-			widgetState.redrawRequestedAt = ""
-		}
-		if widgetState.eventDispatched {
-			if dispatchedWidget == nil {
-				dispatchedWidget = widget
+			if widgetState.eventDispatched {
+				if dispatchedWidget == nil {
+					dispatchedWidget = widget
+				}
+				widgetState.eventDispatched = false
 			}
-			widgetState.eventDispatched = false
 		}
 	}
 
