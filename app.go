@@ -129,6 +129,8 @@ type app struct {
 	lastCursorPosition image.Point
 	lastColorMode      ebiten.ColorMode
 
+	inputState inputState
+
 	focusedWidget Widget
 
 	// widgetList is a flat DFS-ordered list of all widgets, populated after each buildWidgets call.
@@ -342,15 +344,22 @@ func (a *app) Update() error {
 
 	// Handle user inputs.
 	// TODO: Handle this in Ebitengine's HandleInput in the future (hajimehoshi/ebiten#1704)
+	a.inputState.update()
 	var inputHandledWidget Widget
-	if r := a.handleInputWidget(handleInputTypePointing); r.widget != nil {
-		if !r.aborted {
-			inputHandledWidget = r.widget
-		}
-		if theDebugMode.showInputLogs {
-			slog.Info("pointing input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
+	if a.inputState.isPointingActive(layoutChangedInUpdate) {
+		if r := a.handleInputWidget(handleInputTypePointing); r.widget != nil {
+			if !r.aborted {
+				inputHandledWidget = r.widget
+			}
+			if theDebugMode.showInputLogs {
+				slog.Info("pointing input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
+			}
 		}
 	}
+	// TODO: Skip handleInputWidget for button input when no relevant input is active,
+	// like handleInputTypePointing. This is not done because textinput.Field.HandleInputWithBounds
+	// must be called every tick when the field is focused, even when no key is pressed
+	// (e.g. the OS may deliver committed text asynchronously via a channel).
 	if r := a.handleInputWidget(handleInputTypeButton); r.widget != nil {
 		if !r.aborted {
 			inputHandledWidget = r.widget

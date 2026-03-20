@@ -14,7 +14,7 @@
 //  1. Build+Layout phase (1) - [Widget.Build] constructs the child widget tree (pre-order; skipped if unnecessary),
 //     then [Widget.Layout] positions and sizes children within the widget's bounds (pre-order; skipped if unnecessary).
 //     This may repeat if build or layout triggers further rebuild/relayout requests, up to a fixed limit.
-//  2. Input phase - [Widget.HandlePointingInput] handles mouse and touch input, and [Widget.HandleButtonInput] handles keyboard and gamepad input (post-order, per layer from top to bottom).
+//  2. Input phase - [Widget.HandlePointingInput] handles mouse and touch input (skipped when no relevant pointing input is active), and [Widget.HandleButtonInput] handles keyboard and gamepad input (post-order, per layer from top to bottom).
 //  3. Build+Layout phase (2) - Same as phase 1, reflecting the latest state after input handling.
 //  4. Tick phase - [Widget.Tick] updates widget state (pre-order).
 //
