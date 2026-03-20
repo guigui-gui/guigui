@@ -242,24 +242,14 @@ func (a *app) focusWidget(widget Widget) {
 	a.requestRedraw(a.bounds(), requestRedrawReasonFocus, nil)
 }
 
-// collectEventDispatchedWidget returns the first widget that dispatched an event and clears all dispatch flags.
-func (a *app) collectEventDispatchedWidget() Widget {
+// settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
+// determines which phases are required for the next buildAndLayoutWidgets call,
+// accumulates draw regions into regionsToDraw, and resets the region buffers.
+// It performs a single pass over the widget list to collect both redraw requests
+// and event-dispatched widgets.
+func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
+	// Single pass: collect redraw requests and find the first event-dispatched widget.
 	var dispatchedWidget Widget
-	for _, widget := range a.widgetList {
-		widgetState := widget.widgetState()
-		if widgetState.eventDispatched {
-			if dispatchedWidget == nil {
-				dispatchedWidget = widget
-			}
-			widgetState.eventDispatched = false
-		}
-	}
-	return dispatchedWidget
-}
-
-// collectWidgetRedrawRequests collects redraw regions from widgets that requested redraw or rebuild,
-// then clears the requests.
-func (a *app) collectWidgetRedrawRequests() {
 	for _, widget := range a.widgetList {
 		widgetState := widget.widgetState()
 		if widgetState.rebuildRequested || widgetState.redrawRequested {
@@ -272,21 +262,19 @@ func (a *app) collectWidgetRedrawRequests() {
 				}
 				a.requestRedrawWidget(widget, reason)
 			}
+			widgetState.rebuildRequested = false
+			widgetState.rebuildRequestedAt = ""
+			widgetState.redrawReasonOnRebuild = 0
+			widgetState.redrawRequested = false
+			widgetState.redrawRequestedAt = ""
 		}
-		widgetState.rebuildRequested = false
-		widgetState.rebuildRequestedAt = ""
-		widgetState.redrawReasonOnRebuild = 0
-		widgetState.redrawRequested = false
-		widgetState.redrawRequestedAt = ""
+		if widgetState.eventDispatched {
+			if dispatchedWidget == nil {
+				dispatchedWidget = widget
+			}
+			widgetState.eventDispatched = false
+		}
 	}
-}
-
-// settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
-// determines which phases are required for the next buildAndLayoutWidgets call,
-// accumulates draw regions into regionsToDraw, and resets the region buffers.
-func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
-	a.collectWidgetRedrawRequests()
-	dispatchedWidget := a.collectEventDispatchedWidget()
 
 	// Determine which phases are required for the next build+layout cycle.
 	a.requiredPhases = requiredPhasesNone
