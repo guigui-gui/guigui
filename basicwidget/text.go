@@ -277,6 +277,10 @@ func (t *Text) HasValue() bool {
 	if t.nextTextSet {
 		return t.nextText != ""
 	}
+	return t.hasValueInField()
+}
+
+func (t *Text) hasValueInField() bool {
 	return !t.isEqualToStringValue("")
 }
 
@@ -398,7 +402,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	// Reset the selection to (0, 0).
 
 	if textChanged {
-		if t.textInited || t.field.TextLengthInBytes() > 0 {
+		if t.textInited || t.hasValueInField() {
 			t.field.SetTextAndSelection(text, start, end)
 		} else {
 			// Reset the text so that the undo history's first item is the initial text.
@@ -1065,7 +1069,7 @@ func (t *Text) commit() {
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	// Once a text is input, it is regarded as initialized.
-	if t.field.TextLengthInBytes() > 0 {
+	if t.hasValueInField() {
 		t.textInited = true
 	}
 	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
