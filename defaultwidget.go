@@ -76,6 +76,5 @@ func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image
 }
 
 func (d *DefaultWidget) widgetState() *widgetState {
-	d.copyCheck()
 	return &d.s
 }

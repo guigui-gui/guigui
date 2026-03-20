@@ -64,6 +64,7 @@ type Widget interface {
 	// The constraints may specify fixed width and/or height that the widget should respect.
 	Measure(context *Context, constraints Constraints) image.Point
 
+	copyCheck()
 	widgetState() *widgetState
 }
 

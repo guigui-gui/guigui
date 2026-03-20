@@ -190,6 +190,7 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 
 	a := &theApp
 	a.root = root
+	root.copyCheck()
 	a.deviceScale = deviceScaleFactor()
 	a.root.widgetState().root = true
 	a.context.app = a
