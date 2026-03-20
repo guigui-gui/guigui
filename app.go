@@ -131,6 +131,10 @@ type app struct {
 
 	focusedWidget Widget
 
+	// widgetList is a flat DFS-ordered list of all widgets, populated after each buildWidgets call.
+	// It is used to avoid re-traversing the tree for passes that don't modify the tree structure.
+	widgetList []Widget
+
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
 }
@@ -238,7 +242,7 @@ func (a *app) focusWidget(widget Widget) {
 // collectEventDispatchedWidget returns the first widget that dispatched an event and clears all dispatch flags.
 func (a *app) collectEventDispatchedWidget() Widget {
 	var dispatchedWidget Widget
-	_ = traverseWidget(a.root, func(widget Widget) error {
+	for _, widget := range a.widgetList {
 		widgetState := widget.widgetState()
 		if widgetState.eventDispatched {
 			if dispatchedWidget == nil {
@@ -246,15 +250,14 @@ func (a *app) collectEventDispatchedWidget() Widget {
 			}
 			widgetState.eventDispatched = false
 		}
-		return nil
-	})
+	}
 	return dispatchedWidget
 }
 
 // collectWidgetRedrawRequests collects redraw regions from widgets that requested redraw or rebuild,
 // then clears the requests.
 func (a *app) collectWidgetRedrawRequests() {
-	_ = traverseWidget(a.root, func(widget Widget) error {
+	for _, widget := range a.widgetList {
 		widgetState := widget.widgetState()
 		if widgetState.rebuildRequested || widgetState.redrawRequested {
 			if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
@@ -272,8 +275,7 @@ func (a *app) collectWidgetRedrawRequests() {
 		widgetState.redrawReasonOnRebuild = 0
 		widgetState.redrawRequested = false
 		widgetState.redrawRequestedAt = ""
-		return nil
-	})
+	}
 }
 
 // settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
@@ -536,7 +538,7 @@ func (a *app) buildWidgets() error {
 
 	// Clear event handlers to prevent unexpected handlings.
 	// An event handler is often a closure capturing variables, and this might cause unexpected behaviors.
-	_ = traverseWidget(a.root, func(widget Widget) error {
+	for _, widget := range a.widgetList {
 		widgetState := widget.widgetState()
 		widgetState.eventHandlers = slices.Delete(widgetState.eventHandlers, 0, len(widgetState.eventHandlers))
 		widgetState.focusDelegate = nil
@@ -549,10 +551,10 @@ func (a *app) buildWidgets() error {
 		widgetState.passthroughCacheValid = false
 		widgetState.passthroughCache = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
-		return nil
-	})
+	}
 
 	var adder ChildAdder
+	a.widgetList = slices.Delete(a.widgetList, 0, len(a.widgetList))
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
@@ -561,6 +563,7 @@ func (a *app) buildWidgets() error {
 		if err := widget.Build(&a.context, &adder); err != nil {
 			return err
 		}
+		a.widgetList = append(a.widgetList, widget)
 		return nil
 	}); err != nil {
 		return err
@@ -576,7 +579,7 @@ func (a *app) layoutWidgets() {
 	}
 
 	var layouter ChildLayouter
-	_ = traverseWidget(a.root, func(widget Widget) error {
+	for _, widget := range a.widgetList {
 		widgetState := widget.widgetState()
 		widgetState.hasVisibleBoundsCache = false
 		widgetState.visibleBoundsCache = image.Rectangle{}
@@ -591,9 +594,7 @@ func (a *app) layoutWidgets() {
 		widget.Layout(&a.context, bounds, &layouter)
 
 		a.visitedLayers[widgetState.actualLayer()] = struct{}{}
-
-		return nil
-	})
+	}
 
 	a.layers = slices.Delete(a.layers, 0, len(a.layers))
 	a.layers = slices.AppendSeq(a.layers, maps.Keys(a.visitedLayers))
