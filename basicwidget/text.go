@@ -72,13 +72,15 @@ func repeat(duration int) bool {
 type Text struct {
 	guigui.DefaultWidget
 
-	field             textinput.Field
-	valueBuilder      stringBuilderWithRange
-	valueEqualChecker stringEqualChecker
-	nextTextSet       bool
-	nextText          string
-	nextSelectAll     bool
-	textInited        bool
+	field                   textinput.Field
+	valueBuilder            stringBuilderWithRange
+	valueEqualChecker       stringEqualChecker
+	valueLengthEqualChecker stringLengthEqualChecker
+
+	nextTextSet   bool
+	nextText      string
+	nextSelectAll bool
+	textInited    bool
 
 	hAlign      HorizontalAlign
 	vAlign      VerticalAlign
@@ -239,6 +241,12 @@ func (t *Text) isEqualToStringValue(text string) bool {
 	return t.valueEqualChecker.Result()
 }
 
+func (t *Text) isEqualToStringValueLength(len int) bool {
+	t.valueLengthEqualChecker.Reset(len)
+	_ = t.field.WriteText(&t.valueLengthEqualChecker)
+	return t.valueLengthEqualChecker.Result()
+}
+
 func (t *Text) stringValue() string {
 	t.valueBuilder.Reset()
 	_ = t.field.WriteText(&t.valueBuilder)
@@ -281,7 +289,7 @@ func (t *Text) HasValue() bool {
 }
 
 func (t *Text) hasValueInField() bool {
-	return !t.isEqualToStringValue("")
+	return !t.isEqualToStringValueLength(0)
 }
 
 func (t *Text) SetValue(text string) {
@@ -1654,6 +1662,34 @@ func (s *stringEqualChecker) Write(b []byte) (int, error) {
 		return 0, io.EOF
 	}
 	if !bytes.Equal([]byte(s.str[s.pos:s.pos+len(b)]), b) {
+		s.result = false
+		return 0, io.EOF
+	}
+	s.pos += len(b)
+	return len(b), nil
+}
+
+type stringLengthEqualChecker struct {
+	len    int
+	pos    int
+	result bool
+}
+
+func (s *stringLengthEqualChecker) Reset(len int) {
+	s.len = len
+	s.pos = 0
+	s.result = true
+}
+
+func (s *stringLengthEqualChecker) Result() bool {
+	if s.pos != s.len {
+		return false
+	}
+	return s.result
+}
+
+func (s *stringLengthEqualChecker) Write(b []byte) (int, error) {
+	if s.pos+len(b) > s.len {
 		s.result = false
 		return 0, io.EOF
 	}
