@@ -406,7 +406,7 @@ func (a *app) Update() error {
 	}
 	// The previous widget state affects requestRedrawIfTreeChanged.
 	// After its call, reset the previous widget state.
-	a.resetPrevWidgets(a.root)
+	a.resetPrevWidgets()
 
 	a.settleRedrawAndRebuildState(nil)
 
@@ -754,15 +754,14 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 	}
 }
 
-func (a *app) resetPrevWidgets(widget Widget) {
-	widgetState := widget.widgetState()
-	// Reset the states.
-	widgetState.prev.reset()
-	for _, child := range widgetState.children {
-		widgetState.prev.append(&a.context, child)
-	}
-	for _, child := range widgetState.children {
-		a.resetPrevWidgets(child)
+func (a *app) resetPrevWidgets() {
+	for _, widget := range a.widgetList {
+		widgetState := widget.widgetState()
+		// Reset the states.
+		widgetState.prev.reset()
+		for _, child := range widgetState.children {
+			widgetState.prev.append(&a.context, child)
+		}
 	}
 }
 
