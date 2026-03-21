@@ -223,13 +223,21 @@ func (p *panel) contentSize(context *guigui.Context, widgetBounds *guigui.Widget
 }
 
 func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	// Apply pending scroll offset changes immediately during layout
+	// so that the content is positioned with the latest offset.
+	oldOffsetX, oldOffsetY := p.offsetX, p.offsetY
+	p.applyPendingScrollOffset()
+
 	bounds := widgetBounds.Bounds()
 	if p.content != nil {
 		p.contentSizeAtLayout = p.contentSize(context, widgetBounds)
 		p.scrollWheel.setContentSize(p.contentSizeAtLayout)
 		p.scrollHBar.setContentSize(p.contentSizeAtLayout)
 		p.scrollVBar.setContentSize(p.contentSizeAtLayout)
-		p.SetScrollOffset(p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY))
+		// Adjust the offset directly instead of calling setScrollOffset,
+		// since setScrollOffset defers the update to Tick and would not
+		// take effect for the content positioning below.
+		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
 
 		pt := bounds.Min.Add(image.Pt(int(p.offsetX), int(p.offsetY)))
 		layouter.LayoutWidget(p.content, image.Rectangle{
@@ -238,7 +246,11 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		})
 	} else {
 		p.contentSizeAtLayout = image.Point{}
-		p.SetScrollOffset(p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY))
+		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
+	}
+
+	if p.offsetX != oldOffsetX || p.offsetY != oldOffsetY {
+		guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
 	}
 
 	layouter.LayoutWidget(&p.border, bounds)
@@ -330,30 +342,37 @@ func (p *panel) startShowingBarsIfNeeded(context *guigui.Context, widgetBounds *
 	}
 }
 
+// applyPendingScrollOffset applies the pending scroll offset to offsetX/Y
+// and clears the pending state. It returns true if there was a pending offset.
+func (p *panel) applyPendingScrollOffset() bool {
+	if !p.nextOffsetSet {
+		return false
+	}
+	if p.isNextOffsetDelta {
+		p.offsetX += p.nextOffsetX
+		p.offsetY += p.nextOffsetY
+	} else {
+		p.offsetX = p.nextOffsetX
+		p.offsetY = p.nextOffsetY
+	}
+	p.nextOffsetSet = false
+	p.nextOffsetX = 0
+	p.nextOffsetY = 0
+	p.isNextOffsetDelta = false
+	return true
+}
+
 func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowBar := p.isBarVisible(context, widgetBounds)
 
-	if p.nextOffsetSet {
-		var newOffsetX, newOffsetY float64
-		if p.isNextOffsetDelta {
-			newOffsetX = p.offsetX + p.nextOffsetX
-			newOffsetY = p.offsetY + p.nextOffsetY
-		} else {
-			newOffsetX = p.nextOffsetX
-			newOffsetY = p.nextOffsetY
-		}
-		newOffsetX, newOffsetY = p.adjustOffset(context, widgetBounds, newOffsetX, newOffsetY)
-		if p.offsetX != newOffsetX || p.offsetY != newOffsetY {
-			p.offsetX = newOffsetX
-			p.offsetY = newOffsetY
+	oldOffsetX, oldOffsetY := p.offsetX, p.offsetY
+	if p.applyPendingScrollOffset() {
+		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
+		if p.offsetX != oldOffsetX || p.offsetY != oldOffsetY {
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
 			// Rebuilding the widget tree is needed to invoke this panel's Layout (#298).
 			guigui.RequestRebuild(p)
 		}
-		p.nextOffsetSet = false
-		p.nextOffsetX = 0
-		p.nextOffsetY = 0
-		p.isNextOffsetDelta = false
 		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
 			shouldShowBar = true
 		}

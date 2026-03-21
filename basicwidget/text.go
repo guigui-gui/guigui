@@ -815,6 +815,19 @@ func (t *Text) compositionSelectionToDraw(context *guigui.Context) (uStart, cSta
 }
 
 func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	r := t.handleButtonInput(context, widgetBounds)
+	// Adjust the scroll offset right after handling the input so that
+	// the scroll delta is applied during the next Build & Layout pass
+	// within the same tick, avoiding a one-tick wobble.
+	if r.IsHandled() && (t.selectable || t.editable) {
+		if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
+			guigui.DispatchEvent(t, textEventScrollDelta, dx, dy)
+		}
+	}
+	return r
+}
+
+func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if t.onHandleButtonInput != nil {
 		if r := t.onHandleButtonInput(context, widgetBounds); r.IsHandled() {
 			return r
@@ -1079,7 +1092,8 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 		t.nextSelectAll = false
 	}
 
-	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
+	// Adjust the scroll offset for cases not covered by HandleButtonInput,
+	// such as continuous scrolling during drag selection.
 	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
 	if t.selectable || t.editable {
 		if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
