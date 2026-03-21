@@ -1064,6 +1064,12 @@ func (t *Text) commit() {
 }
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Fast path: skip Tick entirely for non-selectable, non-editable text
+	// that is already initialized and has no pending text update.
+	if !t.selectable && !t.editable && t.textInited && !t.nextTextSet {
+		return nil
+	}
+
 	// Once a text is input, it is regarded as initialized.
 	if !t.textInited && t.hasValueInField() {
 		t.textInited = true
