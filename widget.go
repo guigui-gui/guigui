@@ -96,7 +96,8 @@ func AbortHandlingInputByWidget(widget Widget) HandleInputResult {
 	}
 }
 
-func (r *HandleInputResult) shouldRaise() bool {
+// IsHandled reports whether the input was handled by a widget.
+func (r HandleInputResult) IsHandled() bool {
 	return r.widget != nil || r.aborted
 }
 

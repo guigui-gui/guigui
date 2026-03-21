@@ -45,9 +45,8 @@ const (
 )
 
 var (
-	textEventKeyJustPressed guigui.EventKey = guigui.GenerateEventKey()
-	textEventValueChanged   guigui.EventKey = guigui.GenerateEventKey()
-	textEventScrollDelta    guigui.EventKey = guigui.GenerateEventKey()
+	textEventValueChanged guigui.EventKey = guigui.GenerateEventKey()
+	textEventScrollDelta  guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
@@ -128,7 +127,8 @@ type Text struct {
 	prevEnd                int
 	paddingForScrollOffset guigui.Padding
 
-	onFocusChanged func(context *guigui.Context, focused bool)
+	onFocusChanged      func(context *guigui.Context, focused bool)
+	onHandleButtonInput func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
 }
 
 type cachedTextSizeEntry struct {
@@ -155,8 +155,8 @@ func (t *Text) OnValueChanged(f func(context *guigui.Context, text string, commi
 	guigui.SetEventHandler(t, textEventValueChanged, f)
 }
 
-func (t *Text) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	guigui.SetEventHandler(t, textEventKeyJustPressed, f)
+func (t *Text) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
+	t.onHandleButtonInput = f
 }
 
 func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY float64)) {
@@ -815,10 +815,9 @@ func (t *Text) compositionSelectionToDraw(context *guigui.Context) (uStart, cSta
 }
 
 func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	// Handle a key input by user-setting callback, unless IME is working.
-	if t.field.UncommittedTextLengthInBytes() == 0 {
-		for _, key := range inpututil.AppendJustPressedKeys(nil) {
-			guigui.DispatchEvent(t, textEventKeyJustPressed, key)
+	if t.onHandleButtonInput != nil {
+		if r := t.onHandleButtonInput(context, widgetBounds); r.IsHandled() {
+			return r
 		}
 	}
 

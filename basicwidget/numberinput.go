@@ -80,8 +80,8 @@ func (n *NumberInput) OnValueChangedUint64(f func(context *guigui.Context, value
 	guigui.SetEventHandler(n, numberInputEventValueChangedUint64, f)
 }
 
-func (n *NumberInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	n.textInput.OnKeyJustPressed(f)
+func (n *NumberInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
+	n.textInput.OnHandleButtonInput(f)
 }
 
 func (n *NumberInput) Value() int {
@@ -204,6 +204,18 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddWidget(&n.upButton)
 	adder.AddWidget(&n.downButton)
 
+	n.textInput.OnHandleButtonInput(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+		if isKeyRepeating(ebiten.KeyUp) {
+			n.increment()
+			return guigui.HandleInputByWidget(n)
+		}
+		if isKeyRepeating(ebiten.KeyDown) {
+			n.decrement()
+			return guigui.HandleInputByWidget(n)
+		}
+		return guigui.HandleInputResult{}
+	})
+
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {
 			guigui.DispatchEvent(n, numberInputEventValueChanged, value, committed)
@@ -314,18 +326,6 @@ func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 		},
 		Max: b.Max,
 	})
-}
-
-func (n *NumberInput) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if isKeyRepeating(ebiten.KeyUp) {
-		n.increment()
-		return guigui.HandleInputByWidget(n)
-	}
-	if isKeyRepeating(ebiten.KeyDown) {
-		n.decrement()
-		return guigui.HandleInputByWidget(n)
-	}
-	return guigui.HandleInputResult{}
 }
 
 func (n *NumberInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

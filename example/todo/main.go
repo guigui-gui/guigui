@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -46,10 +47,12 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.createButton)
 	adder.AddWidget(&r.tasksPanel)
 
-	r.textInput.OnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
-		if key == ebiten.KeyEnter {
+	r.textInput.OnHandleButtonInput(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			r.tryCreateTask(r.textInput.Value())
+			return guigui.HandleInputByWidget(&r.textInput)
 		}
+		return guigui.HandleInputResult{}
 	})
 
 	r.createButton.SetText("Create")

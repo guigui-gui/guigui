@@ -629,7 +629,7 @@ const (
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 	for i := len(a.layers) - 1; i >= 0; i-- {
 		layer := a.layers[i]
-		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root)); r.shouldRaise() {
+		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root)); r.IsHandled() {
 			return r
 		}
 	}
@@ -661,7 +661,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 	focused := a.context.IsFocused(widget)
 	for i := len(widgetState.children) - 1; i >= 0; i-- {
 		child := widgetState.children[i]
-		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorFocused || focused); r.shouldRaise() {
+		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorFocused || focused); r.IsHandled() {
 			return r
 		}
 	}

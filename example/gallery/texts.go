@@ -5,6 +5,7 @@ package main
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -194,13 +195,15 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			model.Texts().SetText(text)
 		}
 	})
-	t.sampleText.OnKeyJustPressed(func(context *guigui.Context, key ebiten.Key) {
+	t.sampleText.OnHandleButtonInput(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 		if !t.sampleText.IsEditable() {
-			return
+			return guigui.HandleInputResult{}
 		}
-		if key == ebiten.KeyTab {
+		if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
 			t.sampleText.ReplaceValueAtSelection("\t")
+			return guigui.HandleInputByWidget(&t.sampleText)
 		}
+		return guigui.HandleInputResult{}
 	})
 	t.sampleText.SetValue(model.Texts().Text())
 

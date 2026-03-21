@@ -33,8 +33,8 @@ func (t *TextInput) OnValueChanged(f func(context *guigui.Context, text string, 
 	t.textInput.OnValueChanged(f)
 }
 
-func (t *TextInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.textInput.OnKeyJustPressed(f)
+func (t *TextInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
+	t.textInput.OnHandleButtonInput(f)
 }
 
 func (t *TextInput) Value() string {
@@ -215,8 +215,8 @@ func (t *textInput) OnValueChanged(f func(context *guigui.Context, text string, 
 	t.text.Text().OnValueChanged(f)
 }
 
-func (t *textInput) OnKeyJustPressed(f func(context *guigui.Context, key ebiten.Key)) {
-	t.text.Text().OnKeyJustPressed(f)
+func (t *textInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
+	t.text.Text().OnHandleButtonInput(f)
 }
 
 func (t *textInput) Value() string {
