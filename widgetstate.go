@@ -55,6 +55,7 @@ type widgetStateAndBounds struct {
 
 func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) bool {
 	w.currentBounds3D = slices.Delete(w.currentBounds3D, 0, len(w.currentBounds3D))
+	w.currentBounds3D = slices.Grow(w.currentBounds3D, len(currentWidgets))
 	for _, widget := range currentWidgets {
 		b, ok := bounds3DFromWidget(context, widget)
 		if !ok {
