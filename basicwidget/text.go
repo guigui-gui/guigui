@@ -151,6 +151,11 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 	return key
 }
 
+// OnValueChanged sets the event handler that is called when the text value changes.
+// The handler receives the current text and whether the change is committed.
+// A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
+// An uncommitted change occurs on every keystroke or text modification during editing.
+// Note that the handler might be called even when the text content has not actually changed.
 func (t *Text) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	guigui.SetEventHandler(t, textEventValueChanged, f)
 }
@@ -839,7 +844,6 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	if t.editable {
-		origText := t.stringValue()
 		start, _ := t.field.Selection()
 		var processed bool
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
@@ -848,11 +852,9 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		if processed {
 			guigui.RequestRebuild(t)
-			// Reset the cache size before adjust the scroll offset in order to get the correct text size.gi
+			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
-			if !t.isEqualToStringValue(origText) {
-				guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
-			}
+			guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
 			return guigui.HandleInputByWidget(t)
 		}
 

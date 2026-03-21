@@ -29,6 +29,11 @@ type TextInput struct {
 	style TextInputStyle
 }
 
+// OnValueChanged sets the event handler that is called when the text value changes.
+// The handler receives the current text and whether the change is committed.
+// A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
+// An uncommitted change occurs on every keystroke or text modification during editing.
+// Note that the handler might be called even when the text content has not actually changed.
 func (t *TextInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	t.textInput.OnValueChanged(f)
 }
