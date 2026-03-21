@@ -353,16 +353,14 @@ func (a *app) Update() error {
 			}
 		}
 	}
-	// TODO: Skip handleInputWidget for button input when no relevant input is active,
-	// like handleInputTypePointing. This is not done because textinput.Field.HandleInputWithBounds
-	// must be called every tick when the field is focused, even when no key is pressed
-	// (e.g. the OS may deliver committed text asynchronously via a channel).
-	if r := a.handleInputWidget(handleInputTypeButton); r.widget != nil {
-		if !r.aborted {
-			inputHandledWidget = r.widget
-		}
-		if theDebugMode.showInputLogs {
-			slog.Info("keyboard input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
+	if a.inputState.isButtonActive() {
+		if r := a.handleInputWidget(handleInputTypeButton); r.widget != nil {
+			if !r.aborted {
+				inputHandledWidget = r.widget
+			}
+			if theDebugMode.showInputLogs {
+				slog.Info("keyboard input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
+			}
 		}
 	}
 

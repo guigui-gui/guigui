@@ -5,6 +5,7 @@ package guigui
 
 import (
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 type inputState struct {
@@ -13,6 +14,8 @@ type inputState struct {
 	anyTouch         bool
 	wheelX, wheelY   float64
 	cursorX, cursorY int
+	pressedKeys      []ebiten.Key
+	justReleasedKeys []ebiten.Key
 
 	prevAnyMousePressed      bool
 	prevAnyTouch             bool
@@ -32,6 +35,12 @@ func (s *inputState) update() {
 	s.anyTouch = len(s.touchIDs) > 0
 	s.wheelX, s.wheelY = ebiten.Wheel()
 	s.cursorX, s.cursorY = ebiten.CursorPosition()
+	s.pressedKeys = inpututil.AppendPressedKeys(s.pressedKeys[:0])
+	s.justReleasedKeys = inpututil.AppendJustReleasedKeys(s.justReleasedKeys[:0])
+}
+
+func (s *inputState) isButtonActive() bool {
+	return len(s.pressedKeys) > 0 || len(s.justReleasedKeys) > 0
 }
 
 func (s *inputState) isPointingActive(layoutChanged bool) bool {

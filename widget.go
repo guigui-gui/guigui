@@ -38,12 +38,14 @@ type Widget interface {
 
 	// HandlePointingInput handles mouse or touch input events for the widget.
 	// widgetBounds provides the widget's position and hit-testing information.
+	// It is skipped entirely when no relevant pointing input is active.
 	HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 
 	// HandleButtonInput handles keyboard and gamepad button input events for the widget.
 	// widgetBounds provides the widget's position and hit-testing information.
 	// It is invoked when the widget or its ancestor is focused,
 	// or when the widget contains a focused child widget.
+	// It is skipped entirely when no buttons are pressed.
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 
 	// Tick is called every tick to update the widget's state.
