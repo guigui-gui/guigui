@@ -714,9 +714,18 @@ func (a *app) cursorShape() bool {
 
 func (a *app) tickWidgets() error {
 	for _, widget := range a.widgetList {
+		ws := widget.widgetState()
+		if ws.hasCustomTickChecked && !ws.hasCustomTick {
+			continue
+		}
 		bounds := widgetBoundsFromWidget(&a.context, widget)
+		a.context.resetDefaultMethodCalled()
 		if err := widget.Tick(&a.context, bounds); err != nil {
 			return err
+		}
+		if !ws.hasCustomTickChecked {
+			ws.hasCustomTickChecked = true
+			ws.hasCustomTick = !a.context.isDefaultMethodCalled()
 		}
 	}
 	return nil

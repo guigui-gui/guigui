@@ -131,8 +131,10 @@ type widgetState struct {
 
 	widgetBounds_ WidgetBounds
 
-	isProxyCacheValid bool
-	isProxyCache      bool
+	isProxyChecked       bool
+	isProxy              bool
+	hasCustomTickChecked bool
+	hasCustomTick        bool
 
 	_ noCopy
 }
@@ -244,8 +246,8 @@ var (
 // A proxy widget mainly manages its children and doesn't handle pointing input and drawing.
 // A proxy widget is ignored for cursor hit tests.
 func isProxyWidget(context *Context, widget Widget) bool {
-	if widget.widgetState().isProxyCacheValid {
-		return widget.widgetState().isProxyCache
+	if widget.widgetState().isProxyChecked {
+		return widget.widgetState().isProxy
 	}
 
 	// Do not use widgetBoundsFromWidget returning a cached WidgetBounds.
@@ -275,8 +277,8 @@ func isProxyWidget(context *Context, widget Widget) bool {
 		isProxy = false
 	}
 
-	widget.widgetState().isProxyCacheValid = true
-	widget.widgetState().isProxyCache = isProxy
+	widget.widgetState().isProxyChecked = true
+	widget.widgetState().isProxy = isProxy
 	return isProxy
 }
 

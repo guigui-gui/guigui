@@ -47,6 +47,7 @@ func (*DefaultWidget) HandleButtonInput(context *Context, widgetBounds *WidgetBo
 }
 
 func (*DefaultWidget) Tick(context *Context, widgetBounds *WidgetBounds) error {
+	context.setDefaultMethodCalledFlag()
 	return nil
 }
 
