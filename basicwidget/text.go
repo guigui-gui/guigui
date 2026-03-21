@@ -1080,8 +1080,10 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 
 	// Adjust the scroll offset at Tick, as this requires all the widgets are already laid out.
 	// TODO: The cursor position might be unstable when the text horizontal align is center or right. Fix this.
-	if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
-		guigui.DispatchEvent(t, textEventScrollDelta, dx, dy)
+	if t.selectable || t.editable {
+		if dx, dy := t.adjustScrollOffset(context, widgetBounds); dx != 0 || dy != 0 {
+			guigui.DispatchEvent(t, textEventScrollDelta, dx, dy)
+		}
 	}
 
 	return nil
