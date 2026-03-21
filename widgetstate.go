@@ -53,21 +53,6 @@ type widgetStateAndBounds struct {
 	bounds3D    bounds3D
 }
 
-func (w *widgetsAndBounds) reset() {
-	w.bounds3Ds = slices.Delete(w.bounds3Ds, 0, len(w.bounds3Ds))
-}
-
-func (w *widgetsAndBounds) append(context *Context, widget Widget) {
-	b, ok := bounds3DFromWidget(context, widget)
-	if !ok {
-		return
-	}
-	w.bounds3Ds = append(w.bounds3Ds, widgetStateAndBounds{
-		widgetState: widget.widgetState(),
-		bounds3D:    b,
-	})
-}
-
 func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) bool {
 	w.currentBounds3D = slices.Delete(w.currentBounds3D, 0, len(w.currentBounds3D))
 	for _, widget := range currentWidgets {
@@ -81,6 +66,12 @@ func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) boo
 		})
 	}
 	return slices.Equal(w.bounds3Ds, w.currentBounds3D)
+}
+
+func (w *widgetsAndBounds) commitCurrent() {
+	// Swap to reuse the old bounds3Ds backing array for the next equals() call.
+	w.bounds3Ds, w.currentBounds3D = w.currentBounds3D, w.bounds3Ds
+	w.currentBounds3D = w.currentBounds3D[:0]
 }
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {

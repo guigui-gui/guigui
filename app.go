@@ -396,14 +396,12 @@ func (a *app) Update() error {
 	}
 	if screenInvalidated {
 		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize, nil)
-	} else if layoutChangedInUpdate {
+	}
+	if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
 		a.requestRedrawIfTreeChanged(a.root)
 	}
-	// The previous widget state affects requestRedrawIfTreeChanged.
-	// After its call, reset the previous widget state.
-	a.resetPrevWidgets()
 
 	a.settleRedrawAndRebuildState(nil)
 
@@ -746,19 +744,11 @@ func (a *app) requestRedrawIfTreeChanged(widget Widget) {
 			}
 		}
 	}
+	// Update prev to the current state for the next frame's comparison,
+	// reusing the currentBounds3D already computed by equals().
+	widgetState.prev.commitCurrent()
 	for _, child := range widgetState.children {
 		a.requestRedrawIfTreeChanged(child)
-	}
-}
-
-func (a *app) resetPrevWidgets() {
-	for _, widget := range a.widgetList {
-		widgetState := widget.widgetState()
-		// Reset the states.
-		widgetState.prev.reset()
-		for _, child := range widgetState.children {
-			widgetState.prev.append(&a.context, child)
-		}
 	}
 }
 
