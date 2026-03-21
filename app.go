@@ -380,7 +380,7 @@ func (a *app) Update() error {
 	}
 
 	// Tick
-	if err := a.tickWidgets(a.root); err != nil {
+	if err := a.tickWidgets(); err != nil {
 		return err
 	}
 
@@ -400,7 +400,7 @@ func (a *app) Update() error {
 	if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
-		a.requestRedrawIfTreeChanged(a.root)
+		a.requestRedrawIfTreeChanged()
 	}
 
 	a.settleRedrawAndRebuildState(nil)
@@ -714,41 +714,35 @@ func (a *app) cursorShape() bool {
 	return false
 }
 
-func (a *app) tickWidgets(widget Widget) error {
-	bounds := widgetBoundsFromWidget(&a.context, widget)
-	if err := widget.Tick(&a.context, bounds); err != nil {
-		return err
-	}
-
-	for _, child := range widget.widgetState().children {
-		if err := a.tickWidgets(child); err != nil {
+func (a *app) tickWidgets() error {
+	for _, widget := range a.widgetList {
+		bounds := widgetBoundsFromWidget(&a.context, widget)
+		if err := widget.Tick(&a.context, bounds); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func (a *app) requestRedrawIfTreeChanged(widget Widget) {
-	widgetState := widget.widgetState()
-	// If the children and/or children's bounds are changed, request redraw.
-	if !widgetState.prev.equals(&a.context, widgetState.children) {
-		a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
+func (a *app) requestRedrawIfTreeChanged() {
+	for _, widget := range a.widgetList {
+		widgetState := widget.widgetState()
+		// If the children and/or children's bounds are changed, request redraw.
+		if !widgetState.prev.equals(&a.context, widgetState.children) {
+			a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
 
-		widgetState.prev.requestRedraw(a)
+			widgetState.prev.requestRedraw(a)
 
-		// If the widget is a clipping widget, all the children are included in the visible bounds.
-		if !widgetState.clipChildren {
-			for _, child := range widgetState.children {
-				a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
+			// If the widget is a clipping widget, all the children are included in the visible bounds.
+			if !widgetState.clipChildren {
+				for _, child := range widgetState.children {
+					a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
+				}
 			}
 		}
-	}
-	// Update prev to the current state for the next frame's comparison,
-	// reusing the currentBounds3D already computed by equals().
-	widgetState.prev.commitCurrent()
-	for _, child := range widgetState.children {
-		a.requestRedrawIfTreeChanged(child)
+		// Update prev to the current state for the next frame's comparison,
+		// reusing the currentBounds3D already computed by equals().
+		widgetState.prev.commitCurrent()
 	}
 }
 
