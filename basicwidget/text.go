@@ -1070,7 +1070,7 @@ func (t *Text) commit() {
 
 func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	// Once a text is input, it is regarded as initialized.
-	if t.hasValueInField() {
+	if !t.textInited && t.hasValueInField() {
 		t.textInited = true
 	}
 	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
