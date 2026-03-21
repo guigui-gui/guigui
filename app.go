@@ -719,13 +719,15 @@ func (a *app) tickWidgets() error {
 			continue
 		}
 		bounds := widgetBoundsFromWidget(&a.context, widget)
-		a.context.resetDefaultMethodCalled()
+		if !ws.hasCustomTickChecked {
+			a.context.resetDefaultTickMethodCalled()
+		}
 		if err := widget.Tick(&a.context, bounds); err != nil {
 			return err
 		}
 		if !ws.hasCustomTickChecked {
 			ws.hasCustomTickChecked = true
-			ws.hasCustomTick = !a.context.isDefaultMethodCalled()
+			ws.hasCustomTick = !a.context.isDefaultTickMethodCalled()
 		}
 	}
 	return nil

@@ -261,19 +261,19 @@ func isProxyWidget(context *Context, widget Widget) bool {
 	isProxy := true
 	// Actually invoke HandlePointingInput and Draw to check if they are the default implementation.
 	// TODO: Is this safe?
-	context.resetDefaultMethodCalled()
+	context.resetDefaultProxyMethodCalled()
 	widget.HandlePointingInput(context, &wb)
-	if !context.isDefaultMethodCalled() {
+	if !context.isDefaultProxyMethodCalled() {
 		isProxy = false
 	}
-	context.resetDefaultMethodCalled()
+	context.resetDefaultProxyMethodCalled()
 	widget.Draw(context, &wb, dummyImage)
-	if !context.isDefaultMethodCalled() {
+	if !context.isDefaultProxyMethodCalled() {
 		isProxy = false
 	}
-	context.resetDefaultMethodCalled()
+	context.resetDefaultProxyMethodCalled()
 	widget.CursorShape(context, &wb)
-	if !context.isDefaultMethodCalled() {
+	if !context.isDefaultProxyMethodCalled() {
 		isProxy = false
 	}
 

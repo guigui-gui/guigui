@@ -55,7 +55,8 @@ type Context struct {
 	frontLayer           int64
 	envSource            EnvSource
 
-	defaultMethodCalled bool
+	defaultProxyMethodCalled bool
+	defaultTickMethodCalled  bool
 }
 
 func (c *Context) Scale() float64 {
@@ -430,16 +431,28 @@ func (c *Context) SetWindowSizeLimits(minw, minh, maxw, maxh int) {
 	ebiten.SetWindowSizeLimits(minw, minh, maxw, maxh)
 }
 
-func (c *Context) isDefaultMethodCalled() bool {
-	return c.defaultMethodCalled
+func (c *Context) isDefaultProxyMethodCalled() bool {
+	return c.defaultProxyMethodCalled
 }
 
-func (c *Context) resetDefaultMethodCalled() {
-	c.defaultMethodCalled = false
+func (c *Context) resetDefaultProxyMethodCalled() {
+	c.defaultProxyMethodCalled = false
 }
 
-func (c *Context) setDefaultMethodCalledFlag() {
-	c.defaultMethodCalled = true
+func (c *Context) setDefaultProxyMethodCalledFlag() {
+	c.defaultProxyMethodCalled = true
+}
+
+func (c *Context) isDefaultTickMethodCalled() bool {
+	return c.defaultTickMethodCalled
+}
+
+func (c *Context) resetDefaultTickMethodCalled() {
+	c.defaultTickMethodCalled = false
+}
+
+func (c *Context) setDefaultTickMethodCalledFlag() {
+	c.defaultTickMethodCalled = true
 }
 
 // DelegateFocus delegates the focus to another widget.
