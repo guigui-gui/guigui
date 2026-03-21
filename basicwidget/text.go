@@ -830,12 +830,8 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, _ := t.field.Selection()
 		var processed bool
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
-			var err error
-			processed, err = t.field.HandleInputWithBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
-			if err != nil {
-				slog.Error(err.Error())
-				return guigui.AbortHandlingInputByWidget(t)
-			}
+			t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
+			processed = t.field.Handled()
 		}
 		if processed {
 			guigui.RequestRebuild(t)
