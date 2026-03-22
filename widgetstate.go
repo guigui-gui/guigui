@@ -31,6 +31,10 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 		return bounds3D{}, false
 	}
 	vb := context.visibleBounds(ws)
+	// Union the visible bounds with all descendant visible bounds.
+	// Without this, when a child widget extends beyond the parent's bounds,
+	// the child's area would not be redrawn on widget tree changes.
+	vb = visibleBoundsWithDescendants(context, ws, vb)
 	if vb.Empty() {
 		return bounds3D{}, false
 	}
@@ -41,6 +45,16 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 		visible:       ws.isVisible(),
 		passthrough:   ws.passthrough,
 	}, true
+}
+
+func visibleBoundsWithDescendants(context *Context, ws *widgetState, vb image.Rectangle) image.Rectangle {
+	for _, child := range ws.children {
+		cs := child.widgetState()
+		cvb := context.visibleBounds(cs)
+		vb = vb.Union(cvb)
+		vb = visibleBoundsWithDescendants(context, cs, vb)
+	}
+	return vb
 }
 
 type widgetsAndBounds struct {
