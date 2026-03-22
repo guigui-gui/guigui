@@ -59,13 +59,14 @@ type Button struct {
 	layoutItems []guigui.LinearLayoutItem
 	iconLayout  guigui.LinearLayout
 
-	pressed         bool
-	keepPressed     bool
-	borderInvisible bool
-	prevPressed     bool
-	sharpCorners    Corners
-	pairedButton    *Button
-	prevCanPress    bool
+	pressed              bool
+	keepPressed          bool
+	keepPressedClickable bool
+	borderInvisible      bool
+	prevPressed          bool
+	sharpCorners         Corners
+	pairedButton         *Button
+	prevCanPress         bool
 }
 
 func (b *Button) OnDown(f func(context *guigui.Context)) {
@@ -141,7 +142,16 @@ func (b *Button) setKeepPressed(keep bool) {
 		return
 	}
 	b.keepPressed = keep
+	// When a clickable keep-pressed button is deselected, clear the physical pressed state
+	// so the button doesn't remain visually pressed while the mouse is still held down.
+	if !keep && b.keepPressedClickable {
+		b.pressed = false
+	}
 	guigui.RequestRebuild(b)
+}
+
+func (b *Button) setKeepPressedClickable(clickable bool) {
+	b.keepPressedClickable = clickable
 }
 
 func (b *Button) SetSharpCorners(sharpCorners Corners) {
@@ -337,7 +347,7 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 		// Check both.
 		var justPressedOrReleased bool
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			if b.keepPressed {
+			if b.keepPressed && !b.keepPressedClickable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 			context.SetFocused(b, true)
@@ -349,7 +359,7 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 			justPressedOrReleased = true
 		}
 		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && b.pressed {
-			if b.keepPressed {
+			if b.keepPressed && !b.keepPressedClickable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 			b.setPressed(false)
@@ -381,7 +391,10 @@ func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (b *Button) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	if (b.canPress(context, widgetBounds) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && !b.keepPressed {
+	if b.keepPressedClickable && context.IsEnabled(b) && widgetBounds.IsHitAtCursor() {
+		return ebiten.CursorShapePointer, true
+	}
+	if (b.canPress(context, widgetBounds) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && (!b.keepPressed || b.keepPressedClickable) {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
@@ -407,6 +420,9 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		case buttonTypeActiveSegmentControlButton:
 			if b.isPressed(context, widgetBounds) {
 				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.875, 0.5)
+				if b.keepPressedClickable && widgetBounds.IsHitAtCursor() {
+					backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.85, 0.475)
+				}
 			} else if b.canPress(context, widgetBounds) {
 				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
 			}
@@ -453,7 +469,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (b *Button) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	return context.IsEnabled(b) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !b.keepPressed
+	return context.IsEnabled(b) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && (!b.keepPressed || b.keepPressedClickable)
 }
 
 func (b *Button) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {

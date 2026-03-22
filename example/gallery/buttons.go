@@ -13,23 +13,19 @@ import (
 type Buttons struct {
 	guigui.DefaultWidget
 
-	buttonsForm           basicwidget.Form
-	buttonText            basicwidget.Text
-	button                basicwidget.Button
-	primaryButtonText     basicwidget.Text
-	primaryButton         basicwidget.Button
-	textIconButton1Text   basicwidget.Text
-	textIconButton1       guigui.WidgetWithSize[*basicwidget.Button]
-	textIconButton2Text   basicwidget.Text
-	textIconButton2       guigui.WidgetWithSize[*basicwidget.Button]
-	imageButtonText       basicwidget.Text
-	imageButton           guigui.WidgetWithSize[*basicwidget.Button]
-	segmentedControlHText basicwidget.Text
-	segmentedControlH     basicwidget.SegmentedControl[int]
-	segmentedControlVText basicwidget.Text
-	segmentedControlV     basicwidget.SegmentedControl[int]
-	toggleText            basicwidget.Text
-	toggle                basicwidget.Toggle
+	buttonsForm         basicwidget.Form
+	buttonText          basicwidget.Text
+	button              basicwidget.Button
+	primaryButtonText   basicwidget.Text
+	primaryButton       basicwidget.Button
+	textIconButton1Text basicwidget.Text
+	textIconButton1     guigui.WidgetWithSize[*basicwidget.Button]
+	textIconButton2Text basicwidget.Text
+	textIconButton2     guigui.WidgetWithSize[*basicwidget.Button]
+	imageButtonText     basicwidget.Text
+	imageButton         guigui.WidgetWithSize[*basicwidget.Button]
+	toggleText          basicwidget.Text
+	toggle              basicwidget.Toggle
 
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
@@ -83,36 +79,6 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	context.SetEnabled(&b.imageButton, model.Buttons().Enabled())
 	b.imageButton.SetFixedSize(image.Pt(2*u, 2*u))
 
-	b.segmentedControlHText.SetValue("Segmented control (Horizontal)")
-	b.segmentedControlH.SetItems([]basicwidget.SegmentedControlItem[int]{
-		{
-			Text: "One",
-		},
-		{
-			Text: "Two",
-		},
-		{
-			Text: "Three",
-		},
-	})
-	b.segmentedControlH.SetDirection(basicwidget.SegmentedControlDirectionHorizontal)
-	context.SetEnabled(&b.segmentedControlH, model.Buttons().Enabled())
-
-	b.segmentedControlVText.SetValue("Segmented control (Vertical)")
-	b.segmentedControlV.SetItems([]basicwidget.SegmentedControlItem[int]{
-		{
-			Text: "One",
-		},
-		{
-			Text: "Two",
-		},
-		{
-			Text: "Three",
-		},
-	})
-	b.segmentedControlV.SetDirection(basicwidget.SegmentedControlDirectionVertical)
-	context.SetEnabled(&b.segmentedControlV, model.Buttons().Enabled())
-
 	b.toggleText.SetValue("Toggle")
 	context.SetEnabled(&b.toggle, model.Buttons().Enabled())
 
@@ -136,14 +102,6 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		{
 			PrimaryWidget:   &b.imageButtonText,
 			SecondaryWidget: &b.imageButton,
-		},
-		{
-			PrimaryWidget:   &b.segmentedControlHText,
-			SecondaryWidget: &b.segmentedControlH,
-		},
-		{
-			PrimaryWidget:   &b.segmentedControlVText,
-			SecondaryWidget: &b.segmentedControlV,
 		},
 		{
 			PrimaryWidget:   &b.toggleText,

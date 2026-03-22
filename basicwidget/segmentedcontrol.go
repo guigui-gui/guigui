@@ -13,7 +13,8 @@ import (
 )
 
 var (
-	segmentedControlEventItemSelected guigui.EventKey = guigui.GenerateEventKey()
+	segmentedControlEventItemSelected  guigui.EventKey = guigui.GenerateEventKey()
+	segmentedControlEventItemsSelected guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type SegmentedControlDirection int
@@ -52,7 +53,8 @@ type SegmentedControl[T comparable] struct {
 	direction   SegmentedControlDirection
 	layoutItems []guigui.LinearLayoutItem
 
-	onItemSelected func(index int)
+	onItemSelected  func(index int)
+	onItemsSelected func(indices []int)
 
 	onButtonDowns []func(context *guigui.Context)
 }
@@ -65,8 +67,16 @@ func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) 
 	guigui.RequestRebuild(s)
 }
 
+func (s *SegmentedControl[T]) SetMultiSelection(multi bool) {
+	s.abstractList.SetMultiSelection(multi)
+}
+
 func (s *SegmentedControl[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
 	guigui.SetEventHandler(s, segmentedControlEventItemSelected, f)
+}
+
+func (s *SegmentedControl[T]) OnItemsSelected(f func(context *guigui.Context, indices []int)) {
+	guigui.SetEventHandler(s, segmentedControlEventItemsSelected, f)
 }
 
 func (s *SegmentedControl[T]) SetItems(items []SegmentedControlItem[T]) {
@@ -97,6 +107,26 @@ func (s *SegmentedControl[T]) SelectItemByValue(value T) {
 	}
 }
 
+func (s *SegmentedControl[T]) SelectItemsByIndices(indices []int) {
+	if s.abstractList.SelectItemsByIndices(indices, false) {
+		guigui.RequestRebuild(s)
+	}
+}
+
+func (s *SegmentedControl[T]) SelectItemsByValues(values []T) {
+	if s.abstractList.SelectItemsByValues(values, false) {
+		guigui.RequestRebuild(s)
+	}
+}
+
+func (s *SegmentedControl[T]) SelectedItemCount() int {
+	return s.abstractList.SelectedItemCount()
+}
+
+func (s *SegmentedControl[T]) AppendSelectedItemIndices(indices []int) []int {
+	return s.abstractList.AppendSelectedItemIndices(indices)
+}
+
 func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	// WidgetSlice.SetLen should be called before AddChild.
 	s.buttons.SetLen(s.abstractList.ItemCount())
@@ -113,12 +143,19 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 	}
 	s.abstractList.OnItemSelected(s.onItemSelected)
 
+	if s.onItemsSelected == nil {
+		s.onItemsSelected = func(indices []int) {
+			guigui.DispatchEvent(s, segmentedControlEventItemsSelected, indices)
+		}
+	}
+	s.abstractList.OnItemsSelected(s.onItemsSelected)
+
 	for i := range s.abstractList.ItemCount() {
 		item, _ := s.abstractList.ItemByIndex(i)
 		s.buttons.At(i).SetText(item.Text)
 		s.buttons.At(i).SetIcon(item.Icon)
 		s.buttons.At(i).SetIconAlign(item.IconAlign)
-		s.buttons.At(i).SetTextBold(s.abstractList.SelectedItemIndex() == i)
+		s.buttons.At(i).SetTextBold(s.abstractList.IsSelectedItemIndex(i))
 		s.buttons.At(i).SetType(buttonTypeActiveSegmentControlButton)
 		if s.abstractList.ItemCount() > 1 {
 			switch i {
@@ -158,10 +195,17 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			}
 		}
 		context.SetEnabled(s.buttons.At(i), !item.Disabled)
-		s.buttons.At(i).setKeepPressed(s.abstractList.SelectedItemIndex() == i)
+		s.buttons.At(i).setKeepPressed(s.abstractList.IsSelectedItemIndex(i))
+		s.buttons.At(i).setKeepPressedClickable(s.abstractList.MultiSelection())
 		if s.onButtonDowns[i] == nil {
 			s.onButtonDowns[i] = func(context *guigui.Context) {
-				s.SelectItemByIndex(i)
+				if s.abstractList.MultiSelection() {
+					if s.abstractList.ToggleItemSelectionByIndex(i, false) {
+						guigui.RequestRebuild(s)
+					}
+				} else {
+					s.SelectItemByIndex(i)
+				}
 			}
 		}
 		s.buttons.At(i).OnDown(s.onButtonDowns[i])

@@ -15,15 +15,16 @@ import (
 type Model struct {
 	mode string
 
-	buttons      ButtonsModel
-	checkboxes   CheckboxesModel
-	radioButtons RadioButtonsModel
-	texts        TextsModel
-	textInputs   TextInputsModel
-	numberInputs NumberInputsModel
-	lists        ListsModel
-	selects      SelectsModel
-	tables       TablesModel
+	buttons           ButtonsModel
+	segmentedControls SegmentedControlsModel
+	checkboxes        CheckboxesModel
+	radioButtons      RadioButtonsModel
+	texts             TextsModel
+	textInputs        TextInputsModel
+	numberInputs      NumberInputsModel
+	lists             ListsModel
+	selects           SelectsModel
+	tables            TablesModel
 }
 
 func (m *Model) Mode() string {
@@ -39,6 +40,10 @@ func (m *Model) SetMode(mode string) {
 
 func (m *Model) Buttons() *ButtonsModel {
 	return &m.buttons
+}
+
+func (m *Model) SegmentedControls() *SegmentedControlsModel {
+	return &m.segmentedControls
 }
 
 func (m *Model) Checkboxes() *CheckboxesModel {
@@ -83,6 +88,18 @@ func (b *ButtonsModel) Enabled() bool {
 
 func (b *ButtonsModel) SetEnabled(enabled bool) {
 	b.disabled = !enabled
+}
+
+type SegmentedControlsModel struct {
+	disabled bool
+}
+
+func (s *SegmentedControlsModel) Enabled() bool {
+	return !s.disabled
+}
+
+func (s *SegmentedControlsModel) SetEnabled(enabled bool) {
+	s.disabled = !enabled
 }
 
 type CheckboxesModel struct {

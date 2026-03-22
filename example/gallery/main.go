@@ -22,21 +22,22 @@ var (
 type Root struct {
 	guigui.DefaultWidget
 
-	background   basicwidget.Background
-	sidebar      Sidebar
-	settings     Settings
-	basic        Basic
-	buttons      Buttons
-	checkboxes   Checkboxes
-	radioButtons RadioButtons
-	texts        Texts
-	textInputs   TextInputs
-	numberInputs NumberInputs
-	lists        Lists
-	selects      Selects
-	tables       Tables
-	popups       Popups
-	tooltips     Tooltips
+	background        basicwidget.Background
+	sidebar           Sidebar
+	settings          Settings
+	basic             Basic
+	buttons           Buttons
+	segmentedControls SegmentedControls
+	checkboxes        Checkboxes
+	radioButtons      RadioButtons
+	texts             Texts
+	textInputs        TextInputs
+	numberInputs      NumberInputs
+	lists             Lists
+	selects           Selects
+	tables            Tables
+	popups            Popups
+	tooltips          Tooltips
 
 	model Model
 }
@@ -58,6 +59,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.basic
 	case "buttons":
 		return &r.buttons
+	case "segmentedcontrols":
+		return &r.segmentedControls
 	case "checkboxes":
 		return &r.checkboxes
 	case "radiobuttons":
