@@ -104,6 +104,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Text:  "Popups",
 			Value: "popups",
 		},
+		{
+			Text:  "Tooltips",
+			Value: "tooltips",
+		},
 	}
 
 	s.list.SetItems(items)

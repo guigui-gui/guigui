@@ -36,6 +36,7 @@ type Root struct {
 	selects      Selects
 	tables       Tables
 	popups       Popups
+	tooltips     Tooltips
 
 	model Model
 }
@@ -75,6 +76,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.tables
 	case "popups":
 		return &r.popups
+	case "tooltips":
+		return &r.tooltips
 	}
 	return nil
 }
