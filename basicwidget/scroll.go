@@ -215,14 +215,45 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 		if tb := s.thumbBounds; !tb.Empty() {
 			x, y := ebiten.CursorPosition()
 			offsetX, offsetY := s.offsetGetSetter.scrollOffset()
-			if s.horizontal && y >= tb.Min.Y && x >= tb.Min.X && x < tb.Max.X {
-				s.dragging = true
-				s.draggingStartPosition = x
-				s.draggingStartOffset = offsetX
-			} else if !s.horizontal && x >= tb.Min.X && y >= tb.Min.Y && y < tb.Max.Y {
-				s.dragging = true
-				s.draggingStartPosition = y
-				s.draggingStartOffset = offsetY
+
+			var pos, thumbMin, thumbMax int
+			var offset float64
+			var pageSize int
+			if s.horizontal {
+				pos = x
+				thumbMin = tb.Min.X
+				thumbMax = tb.Max.X
+				offset = offsetX
+				pageSize = widgetBounds.Bounds().Dx()
+			} else {
+				pos = y
+				thumbMin = tb.Min.Y
+				thumbMax = tb.Max.Y
+				offset = offsetY
+				pageSize = widgetBounds.Bounds().Dy()
+			}
+
+			// Check the cross-axis: the cursor must be on the scroll bar's side.
+			if (s.horizontal && y >= tb.Min.Y) || (!s.horizontal && x >= tb.Min.X) {
+				if pos >= thumbMin && pos < thumbMax {
+					// Clicked on the thumb. Start dragging.
+					s.dragging = true
+					s.draggingStartPosition = pos
+					s.draggingStartOffset = offset
+				} else {
+					// Clicked on the track area outside the thumb. Move by one page.
+					if pos < thumbMin {
+						offset += float64(pageSize)
+					} else {
+						offset -= float64(pageSize)
+					}
+					if s.horizontal {
+						s.offsetGetSetter.setScrollOffset(offset, offsetY)
+					} else {
+						s.offsetGetSetter.setScrollOffset(offsetX, offset)
+					}
+					return guigui.HandleInputByWidget(s)
+				}
 			}
 		}
 		if s.dragging {
