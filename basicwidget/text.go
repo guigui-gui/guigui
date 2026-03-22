@@ -922,6 +922,22 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	switch {
+	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyLeft):
+		idx := 0
+		start, end := t.field.Selection()
+		if i := strings.LastIndex(t.stringValueWithRange(0, start), "\n"); i >= 0 {
+			idx = i + 1
+		}
+		t.setSelection(idx, end, idx, true)
+		return guigui.HandleInputByWidget(t)
+	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyRight):
+		idx := t.field.TextLengthInBytes()
+		start, end := t.field.Selection()
+		if i := strings.Index(t.stringValueWithRange(end, -1), "\n"); i >= 0 {
+			idx = end + i
+		}
+		t.setSelection(start, idx, idx, true)
+		return guigui.HandleInputByWidget(t)
 	case isKeyRepeating(ebiten.KeyLeft) ||
 		isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyB):
 		start, end := t.field.Selection()
