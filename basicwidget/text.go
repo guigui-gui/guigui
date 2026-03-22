@@ -925,15 +925,15 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyLeft):
 		idx := 0
 		start, end := t.field.Selection()
-		if i := strings.LastIndex(t.stringValueWithRange(0, start), "\n"); i >= 0 {
-			idx = i + 1
+		if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, start)); i >= 0 {
+			idx = i + l
 		}
 		t.setSelection(idx, end, idx, true)
 		return guigui.HandleInputByWidget(t)
 	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyRight):
 		idx := t.field.TextLengthInBytes()
 		start, end := t.field.Selection()
-		if i := strings.Index(t.stringValueWithRange(end, -1), "\n"); i >= 0 {
+		if i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(end, -1)); i >= 0 {
 			idx = end + i
 		}
 		t.setSelection(start, idx, idx, true)
@@ -1031,8 +1031,8 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyA):
 		idx := 0
 		start, end := t.field.Selection()
-		if i := strings.LastIndex(t.stringValueWithRange(0, start), "\n"); i >= 0 {
-			idx = i + 1
+		if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, start)); i >= 0 {
+			idx = i + l
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			t.setSelection(idx, end, idx, true)
@@ -1043,7 +1043,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyE):
 		idx := t.field.TextLengthInBytes()
 		start, end := t.field.Selection()
-		if i := strings.Index(t.stringValueWithRange(end, -1), "\n"); i >= 0 {
+		if i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(end, -1)); i >= 0 {
 			idx = end + i
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
@@ -1065,13 +1065,13 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		// 'Kill' the text after the cursor or the selection.
 		start, end := t.field.Selection()
 		if start == end {
-			end = strings.Index(t.stringValueWithRange(start, -1), "\n")
-			if end < 0 {
+			i, l := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(start, -1))
+			if i < 0 {
 				end = t.field.TextLengthInBytes()
-			} else if end == 0 {
-				end += start + 1
+			} else if i == 0 {
+				end = start + l
 			} else {
-				end += start
+				end = start + i
 			}
 		}
 		t.tmpClipboard = t.stringValueWithRange(start, end)

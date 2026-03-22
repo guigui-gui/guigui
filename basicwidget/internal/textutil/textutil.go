@@ -364,6 +364,41 @@ func FirstLineBreakPositionAndLen(str string) (pos, length int) {
 	return -1, 0
 }
 
+// LastLineBreakPositionAndLen returns the position and the byte length of the last line break in str.
+// If no line break is found, it returns (-1, 0).
+func LastLineBreakPositionAndLen(str string) (pos, length int) {
+	for i := len(str); i > 0; {
+		r, s := utf8.DecodeLastRuneInString(str[:i])
+		if s == 0 {
+			break
+		}
+		i -= s
+		if r == 0x000b || r == 0x000c {
+			return i, 1
+		}
+		if r == 0x0085 {
+			return i, 2
+		}
+		if r == 0x2028 || r == 0x2029 {
+			return i, 3
+		}
+		if r == 0x000a {
+			// \r\n
+			if i > 0 {
+				r2, s2 := utf8.DecodeLastRuneInString(str[:i])
+				if s2 > 0 && r2 == 0x000d {
+					return i - s2, 2
+				}
+			}
+			return i, 1
+		}
+		if r == 0x000d {
+			return i, 1
+		}
+	}
+	return -1, 0
+}
+
 func tailingLineBreakLen(str string) int {
 	// Hard-code the check here.
 	// See also: https://en.wikipedia.org/wiki/Newline#Unicode

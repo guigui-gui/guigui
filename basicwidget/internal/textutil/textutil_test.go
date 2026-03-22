@@ -262,3 +262,66 @@ func TestNextIndentPosition(t *testing.T) {
 		})
 	}
 }
+
+func TestFirstLineBreakPositionAndLen(t *testing.T) {
+	testCases := []struct {
+		str        string
+		wantPos    int
+		wantLength int
+	}{
+		{"", -1, 0},
+		{"abc", -1, 0},
+		{"abc\ndef", 3, 1},
+		{"abc\rdef", 3, 1},
+		{"abc\r\ndef", 3, 2},
+		{"\ndef", 0, 1},
+		{"abc\vdef", 3, 1},
+		{"abc\fdef", 3, 1},
+		{"abc\u0085def", 3, 2},
+		{"abc\u2028def", 3, 3},
+		{"abc\u2029def", 3, 3},
+		{"abc\ndef\nghi", 3, 1},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%q", tc.str), func(t *testing.T) {
+			gotPos, gotLen := textutil.FirstLineBreakPositionAndLen(tc.str)
+			if gotPos != tc.wantPos || gotLen != tc.wantLength {
+				t.Errorf("got (%d, %d), want (%d, %d)", gotPos, gotLen, tc.wantPos, tc.wantLength)
+			}
+		})
+	}
+}
+
+func TestLastLineBreakPositionAndLen(t *testing.T) {
+	testCases := []struct {
+		str        string
+		wantPos    int
+		wantLength int
+	}{
+		{"", -1, 0},
+		{"abc", -1, 0},
+		{"abc\ndef", 3, 1},
+		{"abc\rdef", 3, 1},
+		{"abc\r\ndef", 3, 2},
+		{"\ndef", 0, 1},
+		{"abc\vdef", 3, 1},
+		{"abc\fdef", 3, 1},
+		{"abc\u0085def", 3, 2},
+		{"abc\u2028def", 3, 3},
+		{"abc\u2029def", 3, 3},
+		{"abc\ndef\nghi", 7, 1},
+		{"abc\ndef\r\nghi", 7, 2},
+		{"abc\n", 3, 1},
+		{"\n", 0, 1},
+		{"\r\n", 0, 2},
+		{"abc\ndef\n", 7, 1},
+	}
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%q", tc.str), func(t *testing.T) {
+			gotPos, gotLen := textutil.LastLineBreakPositionAndLen(tc.str)
+			if gotPos != tc.wantPos || gotLen != tc.wantLength {
+				t.Errorf("got (%d, %d), want (%d, %d)", gotPos, gotLen, tc.wantPos, tc.wantLength)
+			}
+		})
+	}
+}
