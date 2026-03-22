@@ -88,7 +88,9 @@ func (w *gameWidget) Build(context *guigui.Context, childAdder *guigui.ChildAdde
 
 func (w *gameWidget) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if !w.paused {
-		w.game.Update()
+		if err := w.game.Update(); err != nil {
+			return err
+		}
 		guigui.RequestRedraw(w)
 	}
 	return nil
