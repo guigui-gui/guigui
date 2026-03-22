@@ -88,6 +88,8 @@ func (w *gameWidget) Build(context *guigui.Context, childAdder *guigui.ChildAdde
 
 func (w *gameWidget) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if !w.paused {
+		// TODO: If the game used Ebitengine's input APIs, these would not work well.
+		// Improve the current situation.
 		if err := w.game.Update(); err != nil {
 			return err
 		}
