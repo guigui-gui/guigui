@@ -25,7 +25,8 @@ type WidgetWithTooltip[T guigui.Widget] struct {
 
 	hovering        bool
 	hoverTicks      int
-	toShow          bool
+	toShowTooltip   bool
+	showTooltip     bool
 	showPosition    image.Point
 	contentMeasured image.Point
 }
@@ -65,14 +66,16 @@ func (t *WidgetWithTooltip[T]) SetTooltipText(text string) {
 // Build implements [guigui.Widget.Build].
 func (t *WidgetWithTooltip[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(t.Widget())
-	adder.AddWidget(&t.layer)
 
 	// Defer showing until Build so that Layout positions the tooltip correctly
 	// before it becomes visible, avoiding a flash at a stale position.
-	if t.toShow {
-		t.toShow = false
-		t.layer.Widget().setVisible(true)
+	if t.toShowTooltip {
+		t.toShowTooltip = false
+		t.showTooltip = true
 		t.layer.BringToFrontLayer(context)
+	}
+	if t.showTooltip {
+		adder.AddWidget(&t.layer)
 	}
 
 	return nil
@@ -125,14 +128,14 @@ func (t *WidgetWithTooltip[T]) HandlePointingInput(context *guigui.Context, widg
 			t.hoverTicks = 0
 		}
 		// Only update position before the tooltip is shown, so it stays fixed once visible.
-		if !t.toShow && !t.layer.Widget().visible {
+		if !t.toShowTooltip && !t.showTooltip {
 			t.showPosition = image.Pt(ebiten.CursorPosition())
 		}
 	} else {
 		if t.hovering {
 			t.hovering = false
 			t.hoverTicks = 0
-			t.layer.Widget().setVisible(false)
+			t.showTooltip = false
 			guigui.RequestRebuild(t)
 		}
 	}
@@ -144,7 +147,7 @@ func (t *WidgetWithTooltip[T]) Tick(context *guigui.Context, widgetBounds *guigu
 	if t.hovering {
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {
-			t.toShow = true
+			t.toShowTooltip = true
 			guigui.RequestRebuild(t)
 		}
 	}
@@ -158,7 +161,8 @@ type tooltipLayer struct {
 	shadow  tooltipShadow
 	content guigui.Widget
 	text    Text
-	visible bool
+
+	textContent string
 }
 
 func (t *tooltipLayer) setContent(content guigui.Widget) {
@@ -166,8 +170,7 @@ func (t *tooltipLayer) setContent(content guigui.Widget) {
 }
 
 func (t *tooltipLayer) setText(text string) {
-	t.text.SetValue(text)
-	t.text.SetColor(color.White)
+	t.textContent = text
 }
 
 func (t *tooltipLayer) activeWidget() guigui.Widget {
@@ -177,19 +180,15 @@ func (t *tooltipLayer) activeWidget() guigui.Widget {
 	return &t.text
 }
 
-func (t *tooltipLayer) setVisible(visible bool) {
-	t.visible = visible
-}
-
 // Build implements [guigui.Widget.Build].
 func (t *tooltipLayer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	if t.visible {
-		adder.AddWidget(&t.shadow)
-		if w := t.activeWidget(); w != nil {
-			adder.AddWidget(w)
-		}
-	}
-	context.SetPassthrough(t, !t.visible)
+	adder.AddWidget(&t.shadow)
+	adder.AddWidget(t.activeWidget())
+
+	t.text.SetColor(color.White)
+	t.text.SetMultiline(true)
+	t.text.SetValue(t.textContent)
+
 	return nil
 }
 
@@ -231,9 +230,6 @@ func (t *tooltipLayer) Measure(context *guigui.Context, constraints guigui.Const
 
 // Draw implements [guigui.Widget.Draw].
 func (t *tooltipLayer) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	if !t.visible {
-		return
-	}
 	bounds := widgetBounds.Bounds()
 	radius := RoundedCornerRadius(context)
 	// Always draw a dark background regardless of color mode.
