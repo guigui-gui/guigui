@@ -89,11 +89,14 @@ func (t *WidgetWithTooltip[T]) Layout(context *guigui.Context, widgetBounds *gui
 	tooltipSize := t.layer.Widget().Measure(context, guigui.Constraints{})
 	t.contentMeasured = tooltipSize
 
-	// Position the tooltip above the hover position.
+	// Position the tooltip above the widget bounds, centered horizontally on the cursor.
+	wb := widgetBounds.Bounds()
 	pos := t.showPosition
+	u := UnitSize(context)
+	gap := u / 8
 	tooltipBounds := image.Rectangle{
-		Min: image.Pt(pos.X-tooltipSize.X/2, pos.Y-tooltipSize.Y-int(8*context.Scale())),
-		Max: image.Pt(pos.X+tooltipSize.X/2+tooltipSize.X%2, pos.Y-int(8*context.Scale())),
+		Min: image.Pt(pos.X-tooltipSize.X/2, wb.Min.Y-tooltipSize.Y-gap),
+		Max: image.Pt(pos.X+tooltipSize.X/2+tooltipSize.X%2, wb.Min.Y-gap),
 	}
 
 	// Clamp to app bounds so it doesn't go off screen.
@@ -105,10 +108,10 @@ func (t *WidgetWithTooltip[T]) Layout(context *guigui.Context, widgetBounds *gui
 		tooltipBounds = tooltipBounds.Add(image.Pt(appBounds.Max.X-tooltipBounds.Max.X, 0))
 	}
 	if tooltipBounds.Min.Y < appBounds.Min.Y {
-		// If no room above, show below the cursor.
+		// If no room above, show below the widget.
 		tooltipBounds = image.Rectangle{
-			Min: image.Pt(tooltipBounds.Min.X, pos.Y+int(16*context.Scale())),
-			Max: image.Pt(tooltipBounds.Max.X, pos.Y+int(16*context.Scale())+tooltipSize.Y),
+			Min: image.Pt(tooltipBounds.Min.X, wb.Max.Y+gap),
+			Max: image.Pt(tooltipBounds.Max.X, wb.Max.Y+gap+tooltipSize.Y),
 		}
 	}
 
