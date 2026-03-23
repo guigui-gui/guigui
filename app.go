@@ -759,7 +759,7 @@ func (a *app) drawWidget(screen *ebiten.Image) {
 	if a.regionsToDraw.Empty() {
 		return
 	}
-	dst := screen.SubImage(a.regionsToDraw).(*ebiten.Image)
+	dst := screen.RecyclableSubImage(a.regionsToDraw)
 	for _, layer := range a.layers {
 		a.doDrawWidget(dst, a.root, layer)
 	}
@@ -801,7 +801,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 			copiedDst.DrawImage(dst, op)
 		}
 		widgetBounds := widgetBoundsFromWidget(&a.context, widget)
-		subDst := dst.SubImage(vb).(*ebiten.Image)
+		subDst := dst.RecyclableSubImage(vb)
 		widget.Draw(&a.context, widgetBounds, subDst)
 		// SubImage might return the same image as the receiver.
 		// Check this before calling Recycle.
