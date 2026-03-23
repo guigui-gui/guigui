@@ -50,15 +50,23 @@ var (
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
+	if !ebiten.IsMouseButtonPressed(button) {
+		return false
+	}
 	return repeat(inpututil.MouseButtonPressDuration(button))
 }
 
 func isKeyRepeating(key ebiten.Key) bool {
+	if !ebiten.IsKeyPressed(key) {
+		return false
+	}
 	return repeat(inpututil.KeyPressDuration(key))
 }
 
 func repeat(duration int) bool {
-	if duration == 1 {
+	// duration can be 0 e.g. when pressing Ctrl+A on macOS.
+	// A release event might be sent too quickly after the press event.
+	if duration <= 1 {
 		return true
 	}
 	delay := ebiten.TPS() * 24 / 60
