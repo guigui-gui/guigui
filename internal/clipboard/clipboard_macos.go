@@ -7,6 +7,7 @@ package clipboard
 
 import (
 	"fmt"
+	"runtime"
 	"unsafe"
 
 	"github.com/ebitengine/purego"
@@ -58,6 +59,9 @@ func init() {
 }
 
 func readAll() ([]byte, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	pool := objc.ID(class_NSAutoreleasePool).Send(sel_new)
 	defer pool.Send(sel_release)
 
@@ -78,6 +82,9 @@ func readAll() ([]byte, error) {
 }
 
 func writeAll(text []byte) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	pool := objc.ID(class_NSAutoreleasePool).Send(sel_new)
 	defer pool.Send(sel_release)
 
