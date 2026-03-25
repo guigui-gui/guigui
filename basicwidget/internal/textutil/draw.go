@@ -43,7 +43,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	op.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
 	op.ColorScale.ScaleWithColor(options.TextColor)
 	if dst.Bounds() != bounds {
-		dst = dst.SubImage(bounds).(*ebiten.Image)
+		dst = dst.RecyclableSubImage(bounds)
+		defer dst.Recycle()
 	}
 
 	op.LineSpacing = options.LineHeight

@@ -130,7 +130,9 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	} else {
 		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 	}
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	dstSub := dst.RecyclableSubImage(b)
+	defer dstSub.Recycle()
+	basicwidgetdraw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
 	// Thumb
 	cxOff := float64(bounds.Min.X) + float64(r)
@@ -150,7 +152,9 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	// Border (lower)
 	b = bounds
 	b.Min.Y += halfHeight
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst.SubImage(b).(*ebiten.Image), bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	dstSub = dst.RecyclableSubImage(b)
+	defer dstSub.Recycle()
+	basicwidgetdraw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
 	t.onceRendered = true
 }

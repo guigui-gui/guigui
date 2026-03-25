@@ -83,7 +83,9 @@ func (r *roundedCornerWidget[T]) Draw(context *guigui.Context, widgetBounds *gui
 	op := &ebiten.DrawImageOptions{}
 	op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
 	op.Blend = ebiten.BlendCopy
-	r.corners.image.SubImage(dst.Bounds()).(*ebiten.Image).DrawImage(dst, op)
+	dstSub := r.corners.image.RecyclableSubImage(dst.Bounds())
+	defer dstSub.Recycle()
+	dstSub.DrawImage(dst, op)
 }
 
 type roundedCornerWidgetCorners struct {
