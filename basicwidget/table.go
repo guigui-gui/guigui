@@ -85,6 +85,27 @@ func (t *Table[T]) ItemBounds(index int) image.Rectangle {
 	return t.list.ItemBounds(index)
 }
 
+// CellBounds returns the bounds for the cell at the given row and column indices.
+// CellBounds is valid only after the table's layout finishes.
+func (t *Table[T]) CellBounds(rowIndex, colIndex int) image.Rectangle {
+	itemBounds := t.list.ItemBounds(rowIndex)
+	if itemBounds.Empty() {
+		return image.Rectangle{}
+	}
+	if colIndex < 0 || colIndex >= len(t.columnWidthsInPixels) {
+		return image.Rectangle{}
+	}
+
+	x := itemBounds.Min.X
+	for i := range colIndex {
+		x += t.columnWidthsInPixels[i]
+	}
+	return image.Rectangle{
+		Min: image.Pt(x, itemBounds.Min.Y),
+		Max: image.Pt(x+t.columnWidthsInPixels[colIndex], itemBounds.Max.Y),
+	}
+}
+
 func (t *Table[T]) IsItemVisible(index int) bool {
 	return t.list.IsItemVisible(index)
 }
