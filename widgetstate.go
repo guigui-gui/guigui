@@ -48,13 +48,22 @@ func bounds3DFromWidget(context *Context, widget Widget) (bounds3D, bool) {
 }
 
 func visibleBoundsWithDescendants(context *Context, ws *widgetState, vb image.Rectangle) image.Rectangle {
+	if ws.hasVisibleBoundsWithDescendantsCache {
+		return vb.Union(ws.visibleBoundsWithDescendantsCache)
+	}
+
+	var descendantsVB image.Rectangle
 	for _, child := range ws.children {
 		cs := child.widgetState()
 		cvb := context.visibleBounds(cs)
-		vb = vb.Union(cvb)
-		vb = visibleBoundsWithDescendants(context, cs, vb)
+		descendantsVB = descendantsVB.Union(cvb)
+		descendantsVB = visibleBoundsWithDescendants(context, cs, descendantsVB)
 	}
-	return vb
+
+	ws.hasVisibleBoundsWithDescendantsCache = true
+	ws.visibleBoundsWithDescendantsCache = descendantsVB
+
+	return vb.Union(descendantsVB)
 }
 
 type widgetsAndBounds struct {
@@ -143,6 +152,9 @@ type widgetState struct {
 
 	hasVisibleBoundsCache bool
 	visibleBoundsCache    image.Rectangle
+
+	hasVisibleBoundsWithDescendantsCache bool
+	visibleBoundsWithDescendantsCache    image.Rectangle
 
 	widgetBounds_ WidgetBounds
 

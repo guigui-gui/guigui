@@ -585,6 +585,8 @@ func (a *app) layoutWidgets() {
 		widgetState := widget.widgetState()
 		widgetState.hasVisibleBoundsCache = false
 		widgetState.visibleBoundsCache = image.Rectangle{}
+		widgetState.hasVisibleBoundsWithDescendantsCache = false
+		widgetState.visibleBoundsWithDescendantsCache = image.Rectangle{}
 
 		// Reset child layouts.
 		for _, child := range widgetState.children {
