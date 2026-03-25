@@ -81,6 +81,14 @@ func (t *Table[T]) SetFooterHeight(height int) {
 	t.list.SetFooterHeight(height)
 }
 
+func (t *Table[T]) ItemBounds(index int) image.Rectangle {
+	return t.list.ItemBounds(index)
+}
+
+func (t *Table[T]) IsItemVisible(index int) bool {
+	return t.list.IsItemVisible(index)
+}
+
 func (t *Table[T]) updateTableRows() {
 	t.tableRowWidgets.SetLen(len(t.tableRows))
 	t.listItems = adjustSliceSize(t.listItems, len(t.tableRows))
