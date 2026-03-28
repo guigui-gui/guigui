@@ -5,12 +5,10 @@ package basicwidget
 
 import (
 	"image"
-	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 // Tooltip is a standalone widget that shows a balloon popup when the mouse cursor hovers
@@ -174,7 +172,6 @@ func (t *tooltipContent) activeWidget() guigui.Widget {
 func (t *tooltipContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(t.activeWidget())
 
-	t.text.SetColor(color.White)
 	t.text.SetMultiline(true)
 	t.text.SetValue(t.textContent)
 
@@ -205,16 +202,4 @@ func (t *tooltipContent) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 // Measure implements [guigui.Widget.Measure].
 func (t *tooltipContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return t.layout(context).Measure(context, constraints)
-}
-
-// Draw implements [guigui.Widget.Draw].
-func (t *tooltipContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	bounds := widgetBounds.Bounds()
-	radius := RoundedCornerRadius(context)
-	// Always draw a dark background regardless of color mode.
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, basicwidgetdraw.BackgroundColor(ebiten.ColorModeDark), radius)
-	// Draw a border like a popup.
-	clr1, clr2 := basicwidgetdraw.BorderColors(ebiten.ColorModeDark, basicwidgetdraw.RoundedRectBorderTypeOutset)
-	width := float32(1 * context.Scale())
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, radius, width, basicwidgetdraw.RoundedRectBorderTypeOutset)
 }
