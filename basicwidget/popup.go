@@ -52,8 +52,6 @@ type Popup struct {
 
 	popup guigui.LayerWidget[*popup]
 
-	backgroundBounds image.Rectangle
-
 	onOpen func(context *guigui.Context)
 }
 
@@ -102,15 +100,19 @@ func (p *Popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.popup.Widget().SetCloseByClickingOutside(closeByClickingOutside)
 }
 
+func (p *Popup) SetModal(modal bool) {
+	p.popup.Widget().SetModal(modal)
+}
+
 func (p *Popup) SetAnimated(animateOnFading bool) {
 	p.popup.Widget().SetAnimated(animateOnFading)
 }
 
 func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
-	if p.backgroundBounds == bounds {
+	if p.popup.Widget().backgroundBounds == bounds {
 		return
 	}
-	p.backgroundBounds = bounds
+	p.popup.Widget().backgroundBounds = bounds
 	guigui.RequestRebuild(p)
 }
 
@@ -124,7 +126,6 @@ func (p *Popup) canUpdateContent() bool {
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&p.popup)
-	context.SetClipChildren(&p.popup, true)
 
 	if p.onOpen == nil {
 		p.onOpen = func(context *guigui.Context) {
@@ -136,11 +137,7 @@ func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 func (p *Popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	bounds := p.backgroundBounds
-	if bounds.Empty() {
-		bounds = context.AppBounds()
-	}
-	layouter.LayoutWidget(&p.popup, bounds)
+	layouter.LayoutWidget(&p.popup, widgetBounds.Bounds())
 
 	p.popup.Widget().setContentBounds(widgetBounds.Bounds())
 }
@@ -152,10 +149,11 @@ func (p *Popup) Measure(context *guigui.Context, constraints guigui.Constraints)
 type popup struct {
 	guigui.DefaultWidget
 
-	blurredBackground popupBlurredBackground
-	darkBackground    popupDarkBackground
-	shadow            popupShadow
-	contentAndFrame   roundedCornerWidget[*popupContentAndFrame]
+	transparentBackground popupTransparentBackground
+	blurredBackground     popupBlurredBackground
+	darkBackground        popupDarkBackground
+	shadow                popupShadow
+	contentAndFrame       roundedCornerWidget[*popupContentAndFrame]
 
 	style                  popupStyle
 	toOpen                 bool
@@ -164,9 +162,11 @@ type popup struct {
 	showing                bool
 	hiding                 bool
 	closeReason            PopupCloseReason
+	backgroundBounds       image.Rectangle
 	backgroundDark         bool
 	backgroundBlurred      bool
 	closeByClickingOutside bool
+	modeless               bool
 	animateOnFading        bool
 	contentPosition        image.Point
 	nextContentPosition    image.Point
@@ -210,7 +210,7 @@ func (p *popup) setContentBounds(bounds image.Rectangle) {
 	guigui.RequestRebuild(p)
 }
 
-func (p *popup) actualContentBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *popup) actualContentBounds(context *guigui.Context, bgBounds image.Rectangle) image.Rectangle {
 	pt := p.contentPosition
 	if p.animateOnFading {
 		rate := p.openingRate()
@@ -218,7 +218,6 @@ func (p *popup) actualContentBounds(context *guigui.Context, widgetBounds *guigu
 			dy := int(-float64(UnitSize(context)) * (1 - rate))
 			pt = pt.Add(image.Pt(0, dy))
 		} else {
-			bgBounds := widgetBounds.Bounds()
 			srcPt := p.contentBounds.Min
 			switch p.drawerEdge {
 			case DrawerEdgeStart:
@@ -256,6 +255,10 @@ func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.closeByClickingOutside = closeByClickingOutside
 }
 
+func (p *popup) SetModal(modal bool) {
+	p.modeless = !modal
+}
+
 func (p *popup) SetAnimated(animateOnFading bool) {
 	// TODO: Rename Popup to basePopup and create Popup with animateOnFading true.
 	p.animateOnFading = animateOnFading
@@ -271,7 +274,11 @@ func (p *popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)
 }
 
 func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	p.transparentBackground.popup = p
 	if p.openingRate() > 0 {
+		if !p.modeless {
+			adder.AddWidget(&p.transparentBackground)
+		}
 		if p.backgroundBlurred {
 			adder.AddWidget(&p.blurredBackground)
 		}
@@ -283,12 +290,26 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	context.SetPassthrough(p, p.passthrough())
+	context.SetPassthrough(&p.blurredBackground, true)
+	context.SetPassthrough(&p.darkBackground, true)
+	context.SetPassthrough(&p.shadow, true)
 	p.contentAndFrame.SetCornderRouneded(p.style != popupStyleDrawer)
 
 	return nil
 }
 
+func (p *popup) bounds(context *guigui.Context) image.Rectangle {
+	// Ignore widgetBounds and use p.backgroundBounds.
+	bounds := p.backgroundBounds
+	if bounds.Empty() {
+		return context.AppBounds()
+	}
+	return bounds
+}
+
 func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := p.bounds(context)
+
 	if (p.hiding || p.toClose) && p.openingCount > 0 {
 		// When the popup is fading out, keep the current position.
 		// This matters especially when the same popup menu is reopened at a different position.
@@ -300,10 +321,10 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		p.nextContentPosition = image.Point{}
 		p.hasNextContentPosition = false
 	}
-	contentBounds := p.actualContentBounds(context, widgetBounds)
+	contentBounds := p.actualContentBounds(context, bounds)
 	p.shadow.SetContentBounds(contentBounds)
 
-	bounds := widgetBounds.Bounds()
+	layouter.LayoutWidget(&p.transparentBackground, bounds)
 	layouter.LayoutWidget(&p.blurredBackground, bounds)
 	layouter.LayoutWidget(&p.darkBackground, bounds)
 	layouter.LayoutWidget(&p.shadow, bounds)
@@ -311,13 +332,36 @@ func (p *popup) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	p.contentAndFrame.SetRenderingBounds(contentBounds)
 }
 
+// tryCloseByClickingOutside attempts to close the popup when clicking outside.
+// It returns true if input handling should continue (not abort), which happens
+// when a right-click closes the popup so that other widgets can reopen context menus.
+func (p *popup) tryCloseByClickingOutside(context *guigui.Context) bool {
+	if !p.closeByClickingOutside {
+		return false
+	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		p.close(context, PopupCloseReasonClickOutside)
+		// Continue handling inputs so that clicking a right button can be handled by other widgets.
+		// This is a little tricky, but this is needed to reopen context menu popups.
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if p.openingRate() == 0 {
 		return guigui.HandleInputResult{}
 	}
 
-	bounds := widgetBounds.Bounds()
+	bounds := p.bounds(context)
 	if !image.Pt(ebiten.CursorPosition()).In(bounds) {
+		return guigui.HandleInputResult{}
+	}
+
+	if p.modeless {
+		p.tryCloseByClickingOutside(context)
 		return guigui.HandleInputResult{}
 	}
 
@@ -325,17 +369,8 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 		return guigui.AbortHandlingInputByWidget(p)
 	}
 
-	if !p.closeByClickingOutside {
-		return guigui.AbortHandlingInputByWidget(p)
-	}
-
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-		p.close(context, PopupCloseReasonClickOutside)
-		// Continue handling inputs so that clicking a right button can be handled by other widgets.
-		// This is a little tricky, but this is needed to reopen context menu popups.
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
-			return guigui.HandleInputResult{}
-		}
+	if p.tryCloseByClickingOutside(context) {
+		return guigui.HandleInputResult{}
 	}
 
 	return guigui.AbortHandlingInputByWidget(p)
@@ -521,6 +556,8 @@ func (p *popupContentAndFrame) hasContent() bool {
 func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&p.content)
 	adder.AddWidget(&p.frame)
+
+	context.SetClipChildren(&p.content, true)
 	return nil
 }
 
@@ -620,6 +657,28 @@ func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	}
 	width := float32(1 * context.Scale())
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, basicwidgetdraw.RoundedRectBorderTypeOutset)
+}
+
+type popupTransparentBackground struct {
+	guigui.DefaultWidget
+
+	popup *popup
+}
+
+func (p *popupTransparentBackground) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if p.popup.showing || p.popup.hiding {
+		return guigui.AbortHandlingInputByWidget(p)
+	}
+
+	if p.popup.tryCloseByClickingOutside(context) {
+		return guigui.HandleInputResult{}
+	}
+
+	return guigui.AbortHandlingInputByWidget(p)
+}
+
+func (p *popupTransparentBackground) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	return ebiten.CursorShapeDefault, true
 }
 
 type popupBlurredBackground struct {

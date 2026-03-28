@@ -907,18 +907,27 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 
 func (a *app) appendWidgetsAt(widgets []widgetAndLayer, point image.Point, widget Widget, parentHit bool) []widgetAndLayer {
 	widgetState := widget.widgetState()
-	var hit bool
+	var selfHit bool
+	// Even if this widget is not hit, a descendant might be hit if it extends beyond
+	// this widget's bounds (when clipChildren is false). Use visibleBoundsWithDescendants
+	// to check whether any descendant could be hit.
+	childrenParentHit := selfHit
 	if parentHit || widgetState.inDifferentLayerFromParent() {
-		hit = point.In(a.context.visibleBounds(widgetState))
+		selfHit = point.In(a.context.visibleBounds(widgetState))
+		childrenParentHit = selfHit
+		if !selfHit {
+			vbwd := visibleBoundsWithDescendants(&a.context, widgetState, a.context.visibleBounds(widgetState))
+			childrenParentHit = point.In(vbwd)
+		}
 	}
 
 	children := widgetState.children
 	for i := len(children) - 1; i >= 0; i-- {
 		child := children[i]
-		widgets = a.appendWidgetsAt(widgets, point, child, hit)
+		widgets = a.appendWidgetsAt(widgets, point, child, childrenParentHit)
 	}
 
-	if !hit {
+	if !selfHit {
 		return widgets
 	}
 

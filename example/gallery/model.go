@@ -25,6 +25,7 @@ type Model struct {
 	lists             ListsModel
 	selects           SelectsModel
 	tables            TablesModel
+	popups            PopupsModel
 }
 
 func (m *Model) Mode() string {
@@ -76,6 +77,10 @@ func (m *Model) Selects() *SelectsModel {
 
 func (m *Model) Tables() *TablesModel {
 	return &m.tables
+}
+
+func (m *Model) Popups() *PopupsModel {
+	return &m.popups
 }
 
 type ButtonsModel struct {
@@ -615,4 +620,16 @@ func (t *TablesModel) Enabled() bool {
 
 func (t *TablesModel) SetEnabled(enabled bool) {
 	t.disabled = !enabled
+}
+
+type PopupsModel struct {
+	modeless bool
+}
+
+func (p *PopupsModel) Modal() bool {
+	return !p.modeless
+}
+
+func (p *PopupsModel) SetModal(modal bool) {
+	p.modeless = !modal
 }

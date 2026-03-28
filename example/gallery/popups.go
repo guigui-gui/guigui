@@ -25,6 +25,8 @@ type Popups struct {
 	closeByClickingOutsideToggle basicwidget.Toggle
 	narrowBackgroundText         basicwidget.Text
 	narrowBackgroundToggle       basicwidget.Toggle
+	modalText                    basicwidget.Text
+	modalToggle                  basicwidget.Toggle
 	showButton                   basicwidget.Button
 
 	contextMenuPopupText          basicwidget.Text
@@ -39,6 +41,12 @@ type Popups struct {
 }
 
 func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	v, ok := context.Env(p, modelKeyModel)
+	if !ok {
+		return nil
+	}
+	model := v.(*Model)
+
 	for i := range p.forms {
 		adder.AddWidget(&p.forms[i])
 	}
@@ -49,6 +57,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	p.blurBackgroundText.SetValue("Blur the background")
 	p.closeByClickingOutsideText.SetValue("Close by clicking outside")
 	p.narrowBackgroundText.SetValue("Narrow the background")
+	p.modalText.SetValue("Modal")
 	p.showButton.SetText("Show")
 	p.showButton.OnUp(func(context *guigui.Context) {
 		p.simplePopup.SetOpen(true)
@@ -72,6 +81,10 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 			SecondaryWidget: &p.narrowBackgroundToggle,
 		},
 		{
+			PrimaryWidget:   &p.modalText,
+			SecondaryWidget: &p.modalToggle,
+		},
+		{
 			SecondaryWidget: &p.showButton,
 		},
 	})
@@ -91,6 +104,11 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	p.simplePopup.SetBackgroundDark(p.darkenBackgroundToggle.Value())
 	p.simplePopup.SetBackgroundBlurred(p.blurBackgroundToggle.Value())
 	p.simplePopup.SetCloseByClickingOutside(p.closeByClickingOutsideToggle.Value())
+	p.modalToggle.OnValueChanged(func(context *guigui.Context, modal bool) {
+		model.Popups().SetModal(modal)
+	})
+	p.modalToggle.SetValue(model.Popups().Modal())
+	p.simplePopup.SetModal(model.Popups().Modal())
 	p.simplePopup.SetAnimated(true)
 
 	p.simplePopupContent.SetFixedSize(p.contentSize(context))
