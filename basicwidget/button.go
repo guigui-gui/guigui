@@ -428,7 +428,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			}
 		default:
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.25)
+				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.3)
 			} else if b.canPress(context, widgetBounds) {
 				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
 			}
