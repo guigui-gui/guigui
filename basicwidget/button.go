@@ -411,26 +411,26 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	if context.IsEnabled(b) {
 		switch b.typ {
 		case ButtonTypePrimary:
-			backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.5, 0.5)
+			backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.5, 0.5)
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.475, 0.475)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.475, 0.475)
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.45, 0.45)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
 			}
 		case buttonTypeActiveSegmentControlButton:
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.875, 0.5)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.875, 0.5)
 				if b.keepPressedClickable && widgetBounds.IsHitAtCursor() {
-					backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.85, 0.475)
+					backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.85, 0.475)
 				}
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
 			}
 		default:
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.3)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.95, 0.3)
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeBase, 0.975, 0.275)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
 			}
 		}
 	}

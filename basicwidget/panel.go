@@ -484,7 +484,7 @@ func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 		offsetX, offsetY = p.panel.offset()
 		r = p.panel.scrollRange(context, widgetBounds)
 	}
-	clr := draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
+	clr := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
 	if (p.panel != nil && p.autoBorder && offsetX < float64(r.Max.X)) || p.borders.Start {
 		vector.StrokeLine(dst, x0+strokeWidth/2, y0, x0+strokeWidth/2, y1, strokeWidth, clr, false)
 	}

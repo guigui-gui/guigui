@@ -145,9 +145,9 @@ func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	if context.IsEnabled(c) {
 		if c.value {
 			if c.isActive(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.45, 0.45)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
 			} else {
-				backgroundColor = draw.Color(cm, draw.ColorTypeAccent, 0.5)
+				backgroundColor = draw.Color(cm, draw.SemanticColorAccent, 0.5)
 			}
 		} else {
 			if c.isActive(context, widgetBounds) {

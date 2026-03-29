@@ -12,56 +12,56 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-type ColorType int
+type SemanticColor int
 
 const (
-	ColorTypeBase    ColorType = ColorType(draw.ColorTypeBase)
-	ColorTypeAccent  ColorType = ColorType(draw.ColorTypeAccent)
-	ColorTypeInfo    ColorType = ColorType(draw.ColorTypeInfo)
-	ColorTypeSuccess ColorType = ColorType(draw.ColorTypeSuccess)
-	ColorTypeWarning ColorType = ColorType(draw.ColorTypeWarning)
-	ColorTypeDanger  ColorType = ColorType(draw.ColorTypeDanger)
+	SemanticColorBase    SemanticColor = SemanticColor(draw.SemanticColorBase)
+	SemanticColorAccent  SemanticColor = SemanticColor(draw.SemanticColorAccent)
+	SemanticColorInfo    SemanticColor = SemanticColor(draw.SemanticColorInfo)
+	SemanticColorSuccess SemanticColor = SemanticColor(draw.SemanticColorSuccess)
+	SemanticColorWarning SemanticColor = SemanticColor(draw.SemanticColorWarning)
+	SemanticColorDanger  SemanticColor = SemanticColor(draw.SemanticColorDanger)
 )
 
 var (
-	borderRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
-	borderRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
-	borderRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.8, 0.1)
-	borderRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.8, 0.1)
-	borderInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.7, 0)
-	borderInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.15)
-	borderInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.7, 0)
-	borderInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.15)
-	borderOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.5)
-	borderOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.7, 0.2)
-	borderOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.5)
-	borderOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.7, 0.2)
+	borderRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.8, 0.1)
+	borderRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.8, 0.1)
+	borderRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.8, 0.1)
+	borderRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.8, 0.1)
+	borderInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.7, 0)
+	borderInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.15)
+	borderInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.7, 0)
+	borderInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.15)
+	borderOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.5)
+	borderOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.7, 0.2)
+	borderOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.5)
+	borderOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.7, 0.2)
 
-	borderAccentRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.325, 0.2)
-	borderAccentInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.325, 0.2)
-	borderAccentInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.6, 0.8)
-	borderAccentOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
-	borderAccentOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.6, 0.8)
-	borderAccentOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.325, 0.2)
+	borderAccentInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.325, 0.2)
+	borderAccentInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.6, 0.8)
+	borderAccentOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
+	borderAccentOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.6, 0.8)
+	borderAccentOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
 
-	borderAccentSecondaryRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8, 0.1)
-	borderAccentSecondaryInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.7, 0.2)
-	borderAccentSecondaryInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.85, 0.05)
-	borderAccentSecondaryInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.7, 0.2)
-	borderAccentSecondaryInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.7, 0.2)
-	borderAccentSecondaryOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.7, 0.2)
+	borderAccentSecondaryRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.1)
+	borderAccentSecondaryInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.7, 0.2)
+	borderAccentSecondaryInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.85, 0.05)
+	borderAccentSecondaryInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.7, 0.2)
+	borderAccentSecondaryInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.7, 0.2)
+	borderAccentSecondaryOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.7, 0.2)
 )
 
 func BorderColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
@@ -137,34 +137,34 @@ func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedR
 }
 
 var (
-	textEnabledLightColor              = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.1)
-	textEnabledDarkColor               = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.1)
-	textDisabledLightColor             = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.5)
-	textDisabledDarkColor              = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.5)
-	textSelectionLightColor            = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8, 0.35)
-	textSelectionDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8, 0.35)
-	textActiveCompositionLightColor    = draw.Color(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.4)
-	textActiveCompositionDarkColor     = draw.Color(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.4)
-	textInactiveCompositionLightColor  = draw.Color(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8)
-	textInactiveCompositionDarkColor   = draw.Color(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8)
-	controlEnabledLightColor           = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.25)
-	controlEnabledDarkColor            = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.25)
-	controlDisabledLightColor          = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9, 0.15)
-	controlDisabledDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9, 0.15)
-	controlSecondaryEnabledLightColor  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.95, 0.3)
-	controlSecondaryEnabledDarkColor   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.95, 0.3)
-	controlSecondaryDisabledLightColor = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.25)
-	controlSecondaryDisabledDarkColor  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.25)
-	thumbEnabledLightColor             = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.6)
-	thumbEnabledDarkColor              = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.6)
-	thumbDisabledLightColor            = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9, 0.55)
-	thumbDisabledDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9, 0.55)
-	backgroundLightColor               = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.95)
-	backgroundDarkColor                = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.95)
-	backgroundSecondaryColorLightColor = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9)
-	backgroundSecondaryColorDarkColor  = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9)
-	popupBackgroundLightColor          = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.05)
-	popupBackgroundDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.05)
+	textEnabledLightColor              = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.1)
+	textEnabledDarkColor               = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.1)
+	textDisabledLightColor             = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.5)
+	textDisabledDarkColor              = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.5)
+	textSelectionLightColor            = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.35)
+	textSelectionDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.35)
+	textActiveCompositionLightColor    = draw.Color(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.4)
+	textActiveCompositionDarkColor     = draw.Color(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.4)
+	textInactiveCompositionLightColor  = draw.Color(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8)
+	textInactiveCompositionDarkColor   = draw.Color(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8)
+	controlEnabledLightColor           = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.25)
+	controlEnabledDarkColor            = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.25)
+	controlDisabledLightColor          = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9, 0.15)
+	controlDisabledDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9, 0.15)
+	controlSecondaryEnabledLightColor  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.95, 0.3)
+	controlSecondaryEnabledDarkColor   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.95, 0.3)
+	controlSecondaryDisabledLightColor = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.25)
+	controlSecondaryDisabledDarkColor  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.25)
+	thumbEnabledLightColor             = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.6)
+	thumbEnabledDarkColor              = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.6)
+	thumbDisabledLightColor            = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9, 0.55)
+	thumbDisabledDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9, 0.55)
+	backgroundLightColor               = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.95)
+	backgroundDarkColor                = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.95)
+	backgroundSecondaryColorLightColor = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9)
+	backgroundSecondaryColorDarkColor  = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9)
+	popupBackgroundLightColor          = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.05)
+	popupBackgroundDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.05)
 )
 
 func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
@@ -184,11 +184,11 @@ func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	}
 }
 
-func TextColorWithType(colorMode ebiten.ColorMode, colorType ColorType) color.Color {
-	if colorType == ColorTypeBase {
+func TextColorWithType(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
+	if semanticColor == SemanticColorBase {
 		return TextColor(colorMode, true)
 	}
-	return draw.Color2(colorMode, draw.ColorType(colorType), 0.2, 0.9)
+	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.2, 0.9)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
@@ -308,9 +308,9 @@ func PopupBackgroundColor(colorMode ebiten.ColorMode) color.Color {
 	}
 }
 
-func PopupBackgroundColorWithType(colorMode ebiten.ColorMode, colorType ColorType) color.Color {
-	if colorType == ColorTypeBase {
+func PopupBackgroundColorWithType(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
+	if semanticColor == SemanticColorBase {
 		return PopupBackgroundColor(colorMode)
 	}
-	return draw.Color2(colorMode, draw.ColorType(colorType), 0.9, 0.2)
+	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.9, 0.2)
 }

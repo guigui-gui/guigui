@@ -766,7 +766,7 @@ func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui
 	} else {
 		alpha = 0.5 * p.openingRate
 	}
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.1, 0), alpha)
+	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.1, 0), alpha)
 	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 }
 
@@ -805,7 +805,7 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
 	// TODO: When openingRate < 1, only the edges should be rendered.
-	clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0, 0)
+	clr := draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0, 0)
 	alpha := 0.25
 	if p.style != popupStyleDrawer {
 		// As the popup itself is also transparent, the shadow should be more transparent.

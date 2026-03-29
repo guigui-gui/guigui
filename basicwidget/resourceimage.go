@@ -58,7 +58,7 @@ func (i *resourceImages) Get(name string, colorMode ebiten.ColorMode) (*ebiten.I
 }
 
 func CreateMonochromeImage(colorMode ebiten.ColorMode, img image.Image) image.Image {
-	base := draw.Color(colorMode, draw.ColorTypeBase, 0)
+	base := draw.Color(colorMode, draw.SemanticColorBase, 0)
 	r, g, b, _ := base.RGBA()
 
 	bounds := img.Bounds()

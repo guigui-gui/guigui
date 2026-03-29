@@ -36,38 +36,38 @@ var (
 	gray  = iro.ColorFromOKLch(0.6, 0, 0, 1)
 )
 
-type ColorType int
+type SemanticColor int
 
 const (
-	ColorTypeBase ColorType = iota
-	ColorTypeAccent
-	ColorTypeInfo
-	ColorTypeSuccess
-	ColorTypeWarning
-	ColorTypeDanger
+	SemanticColorBase SemanticColor = iota
+	SemanticColorAccent
+	SemanticColorInfo
+	SemanticColorSuccess
+	SemanticColorWarning
+	SemanticColorDanger
 )
 
-func Color(colorMode ebiten.ColorMode, typ ColorType, lightnessInLightMode float64) color.Color {
-	return Color2(colorMode, typ, lightnessInLightMode, 1-lightnessInLightMode)
+func Color(colorMode ebiten.ColorMode, semanticColor SemanticColor, lightnessInLightMode float64) color.Color {
+	return Color2(colorMode, semanticColor, lightnessInLightMode, 1-lightnessInLightMode)
 }
 
-func Color2(colorMode ebiten.ColorMode, typ ColorType, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
+func Color2(colorMode ebiten.ColorMode, semanticColor SemanticColor, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
 	var base iro.Color
-	switch typ {
-	case ColorTypeBase:
+	switch semanticColor {
+	case SemanticColorBase:
 		base = gray
-	case ColorTypeAccent:
+	case SemanticColorAccent:
 		base = blue
-	case ColorTypeInfo:
+	case SemanticColorInfo:
 		base = blue
-	case ColorTypeSuccess:
+	case SemanticColorSuccess:
 		base = green
-	case ColorTypeWarning:
+	case SemanticColorWarning:
 		base = orange
-	case ColorTypeDanger:
+	case SemanticColorDanger:
 		base = red
 	default:
-		panic(fmt.Sprintf("draw: invalid color type: %d", typ))
+		panic(fmt.Sprintf("draw: invalid color type: %d", semanticColor))
 	}
 	switch colorMode {
 	case ebiten.ColorModeLight:

@@ -49,7 +49,7 @@ const (
 func (t ListItemColorType) TextColor(context *guigui.Context) color.Color {
 	switch t {
 	case ListItemColorTypeHighlighted:
-		return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 1)
+		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 1, 1)
 	case ListItemColorTypeItemDisabled, ListItemColorTypeListDisabled:
 		return basicwidgetdraw.TextColor(context.ColorMode(), false)
 	default:
@@ -62,11 +62,11 @@ func (t ListItemColorType) TextColor(context *guigui.Context) color.Color {
 func (t ListItemColorType) BackgroundColor(context *guigui.Context) color.Color {
 	switch t {
 	case ListItemColorTypeHighlighted:
-		return draw.Color2(context.ColorMode(), draw.ColorTypeAccent, 0.6, 0.475)
+		return draw.Color2(context.ColorMode(), draw.SemanticColorAccent, 0.6, 0.475)
 	case ListItemColorTypeListDisabled:
-		return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.35)
+		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.8, 0.35)
 	case ListItemColorTypeSelectedInUnfocusedList:
-		return draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.85, 0.475)
+		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.85, 0.475)
 	default:
 		return nil
 	}
@@ -580,12 +580,12 @@ func (l *listItemWidget[T]) Draw(context *guigui.Context, widgetBounds *guigui.W
 		x1 := float32(b.Max.X - u/4)
 		y := float32(b.Min.Y) + float32(b.Dy())/2
 		width := float32(1 * context.Scale())
-		vector.StrokeLine(dst, x0, y, x1, y, width, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), false)
+		vector.StrokeLine(dst, x0, y, x1, y, width, draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8), false)
 		return
 	}
 	/*if l.item.Header {
 		bounds := widgetBounds.Bounds()
-		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8), RoundedCornerRadius(context))
+		draw.DrawRoundedRect(context, dst, bounds, draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8), RoundedCornerRadius(context))
 	}*/
 }
 
@@ -1673,7 +1673,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		y := float32(p.Y)
 		if itemY, ok := l.content.itemYFromIndex(context, l.content.dragDstIndexPlus1-1); ok {
 			y += float32(itemY)
-			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5), false)
+			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.5), false)
 		}
 	}
 }
@@ -1741,9 +1741,9 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		x1 := float32(bounds.Max.X)
 		y0 := float32(bounds.Max.Y)
 		y1 := float32(bounds.Max.Y)
-		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+		clr := draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.9, 0.4)
 		if !context.IsEnabled(l) {
-			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+			clr = draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}
@@ -1762,9 +1762,9 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		x1 := float32(bounds.Max.X)
 		y0 := float32(bounds.Min.Y)
 		y1 := float32(bounds.Min.Y)
-		clr := draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.9, 0.4)
+		clr := draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.9, 0.4)
 		if !context.IsEnabled(l) {
-			clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+			clr = draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.8, 0.3)
 		}
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}

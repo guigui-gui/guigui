@@ -177,9 +177,9 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	if context.IsEnabled(r) {
 		if isSelected {
 			if r.isActive(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.ColorTypeAccent, 0.45, 0.45)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
 			} else {
-				backgroundColor = draw.Color(cm, draw.ColorTypeAccent, 0.5)
+				backgroundColor = draw.Color(cm, draw.SemanticColorAccent, 0.5)
 			}
 		} else {
 			if r.isActive(context, widgetBounds) {
@@ -215,7 +215,7 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		if cm == ebiten.ColorModeLight && !context.IsEnabled(r) {
 			imageCM = ebiten.ColorModeLight
 		}
-		innerColor := draw.Color(imageCM, draw.ColorTypeBase, 0)
+		innerColor := draw.Color(imageCM, draw.SemanticColorBase, 0)
 		if !context.IsEnabled(r) {
 			innerColor = draw.ScaleAlpha(innerColor, 0.5)
 		}
