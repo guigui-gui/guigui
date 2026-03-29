@@ -188,7 +188,7 @@ func TextColorWithType(colorMode ebiten.ColorMode, colorType ColorType) color.Co
 	if colorType == ColorTypeBase {
 		return TextColor(colorMode, true)
 	}
-	return draw.Color(colorMode, draw.ColorType(colorType), 0.2)
+	return draw.Color2(colorMode, draw.ColorType(colorType), 0.2, 0.9)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
@@ -312,5 +312,5 @@ func PopupBackgroundColorWithType(colorMode ebiten.ColorMode, colorType ColorTyp
 	if colorType == ColorTypeBase {
 		return PopupBackgroundColor(colorMode)
 	}
-	return draw.Color(colorMode, draw.ColorType(colorType), 0.9)
+	return draw.Color2(colorMode, draw.ColorType(colorType), 0.9, 0.2)
 }
