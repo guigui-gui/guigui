@@ -12,46 +12,117 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+var (
+	borderRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
+	borderRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
+	borderRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.8, 0.1)
+	borderRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.8, 0.1)
+	borderInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.7, 0)
+	borderInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.15)
+	borderInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.7, 0)
+	borderInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.15)
+	borderOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.85, 0.5)
+	borderOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.7, 0.2)
+	borderOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.85, 0.5)
+	borderOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 0.7, 0.2)
+
+	borderAccentRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.325, 0.2)
+	borderAccentInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.325, 0.2)
+	borderAccentInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.6, 0.8)
+	borderAccentOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.35, 0.35)
+	borderAccentOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.6, 0.8)
+	borderAccentOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.35, 0.35)
+
+	borderAccentSecondaryRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8, 0.1)
+	borderAccentSecondaryRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.8, 0.1)
+	borderAccentSecondaryInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.7, 0.2)
+	borderAccentSecondaryInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.85, 0.05)
+	borderAccentSecondaryInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.7, 0.2)
+	borderAccentSecondaryInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeAccent, 0.7, 0.2)
+	borderAccentSecondaryOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.85, 0.05)
+	borderAccentSecondaryOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeAccent, 0.7, 0.2)
+)
+
 func BorderColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	typ1 := draw.ColorTypeBase
-	typ2 := draw.ColorTypeBase
-	switch borderType {
-	case RoundedRectBorderTypeRegular:
-		return draw.Color2(colorMode, typ1, 0.8, 0.1), draw.Color2(colorMode, typ2, 0.8, 0.1)
-	case RoundedRectBorderTypeInset:
-		return draw.Color2(colorMode, typ1, 0.7, 0), draw.Color2(colorMode, typ2, 0.85, 0.15)
-	case RoundedRectBorderTypeOutset:
-		return draw.Color2(colorMode, typ1, 0.85, 0.5), draw.Color2(colorMode, typ2, 0.7, 0.2)
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderRegularLightColor1, borderRegularLightColor2
+		case RoundedRectBorderTypeInset:
+			return borderInsetLightColor1, borderInsetLightColor2
+		case RoundedRectBorderTypeOutset:
+			return borderOutsetLightColor1, borderOutsetLightColor2
+		}
+	case ebiten.ColorModeDark:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderRegularDarkColor1, borderRegularDarkColor2
+		case RoundedRectBorderTypeInset:
+			return borderInsetDarkColor1, borderInsetDarkColor2
+		case RoundedRectBorderTypeOutset:
+			return borderOutsetDarkColor1, borderOutsetDarkColor2
+		}
 	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
+	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
 }
 
 func BorderAccentColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	typ1 := draw.ColorTypeAccent
-	typ2 := draw.ColorTypeAccent
-	switch borderType {
-	case RoundedRectBorderTypeRegular:
-		return draw.Color2(colorMode, typ1, 0.35, 0.35), draw.Color2(colorMode, typ2, 0.35, 0.35)
-	case RoundedRectBorderTypeInset:
-		return draw.Color2(colorMode, typ1, 0.325, 0.2), draw.Color2(colorMode, typ2, 0.35, 0.35)
-	case RoundedRectBorderTypeOutset:
-		return draw.Color2(colorMode, typ1, 0.6, 0.8), draw.Color2(colorMode, typ2, 0.35, 0.35)
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderAccentRegularLightColor1, borderAccentRegularLightColor2
+		case RoundedRectBorderTypeInset:
+			return borderAccentInsetLightColor1, borderAccentInsetLightColor2
+		case RoundedRectBorderTypeOutset:
+			return borderAccentOutsetLightColor1, borderAccentOutsetLightColor2
+		}
+	case ebiten.ColorModeDark:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderAccentRegularDarkColor1, borderAccentRegularDarkColor2
+		case RoundedRectBorderTypeInset:
+			return borderAccentInsetDarkColor1, borderAccentInsetDarkColor2
+		case RoundedRectBorderTypeOutset:
+			return borderAccentOutsetDarkColor1, borderAccentOutsetDarkColor2
+		}
 	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
+	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
 }
 
 func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	typ1 := draw.ColorTypeAccent
-	typ2 := draw.ColorTypeAccent
-	switch borderType {
-	case RoundedRectBorderTypeRegular:
-		return draw.Color2(colorMode, typ1, 0.8, 0.1), draw.Color2(colorMode, typ2, 0.8, 0.1)
-	case RoundedRectBorderTypeInset:
-		return draw.Color2(colorMode, typ1, 0.7, 0.2), draw.Color2(colorMode, typ2, 0.85, 0.05)
-	case RoundedRectBorderTypeOutset:
-		return draw.Color2(colorMode, typ1, 0.85, 0.05), draw.Color2(colorMode, typ2, 0.7, 0.2)
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderAccentSecondaryRegularLightColor1, borderAccentSecondaryRegularLightColor2
+		case RoundedRectBorderTypeInset:
+			return borderAccentSecondaryInsetLightColor1, borderAccentSecondaryInsetLightColor2
+		case RoundedRectBorderTypeOutset:
+			return borderAccentSecondaryOutsetLightColor1, borderAccentSecondaryOutsetLightColor2
+		}
+	case ebiten.ColorModeDark:
+		switch borderType {
+		case RoundedRectBorderTypeRegular:
+			return borderAccentSecondaryRegularDarkColor1, borderAccentSecondaryRegularDarkColor2
+		case RoundedRectBorderTypeInset:
+			return borderAccentSecondaryInsetDarkColor1, borderAccentSecondaryInsetDarkColor2
+		case RoundedRectBorderTypeOutset:
+			return borderAccentSecondaryOutsetDarkColor1, borderAccentSecondaryOutsetDarkColor2
+		}
 	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
+	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
 }
 
 var (
