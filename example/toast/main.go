@@ -75,6 +75,10 @@ func (t *Toast) SetDuration(duration time.Duration) {
 	t.duration = duration
 }
 
+func (t *Toast) BringToFrontLayer(context *guigui.Context) {
+	t.popup.BringToFrontLayer(context)
+}
+
 func (t *Toast) SetOpen(open bool) {
 	if open {
 		t.openedAt = time.Now()
@@ -171,6 +175,17 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.showToastButton.OnUp(func(context *guigui.Context) {
 		r.showToast(context)
 	})
+
+	// Call BringToFrontLayer in reverse order (topmost to bottommost).
+	// This ensures the bottommost toast has the highest layer,
+	// so an upper toast's downward shadow is behind the lower toast's content.
+	for i := r.toasts.Len() - 1; i >= 0; i-- {
+		t := r.toasts.At(i)
+		if !t.IsOpen() {
+			continue
+		}
+		t.BringToFrontLayer(context)
+	}
 
 	return nil
 }
