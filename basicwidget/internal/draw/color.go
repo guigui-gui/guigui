@@ -26,7 +26,7 @@ func EqualColor(c0, c1 color.Color) bool {
 var (
 	blue   = iro.ColorFromSRGB(0x00/255.0, 0x5a/255.0, 0xff/255.0, 1)
 	green  = iro.ColorFromSRGB(0x03/255.0, 0xaf/255.0, 0x7a/255.0, 1)
-	yellow = iro.ColorFromSRGB(0xff/255.0, 0xf1/255.0, 0x00/255.0, 1)
+	orange = iro.ColorFromSRGB(0xf6/255.0, 0xaa/255.0, 0x00/255.0, 1)
 	red    = iro.ColorFromSRGB(0xff/255.0, 0x4b/255.0, 0x00/255.0, 1)
 )
 
@@ -63,7 +63,7 @@ func Color2(colorMode ebiten.ColorMode, typ ColorType, lightnessInLightMode, lig
 	case ColorTypeSuccess:
 		base = green
 	case ColorTypeWarning:
-		base = yellow
+		base = orange
 	case ColorTypeDanger:
 		base = red
 	default:

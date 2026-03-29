@@ -12,6 +12,17 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+type ColorType int
+
+const (
+	ColorTypeBase    ColorType = ColorType(draw.ColorTypeBase)
+	ColorTypeAccent  ColorType = ColorType(draw.ColorTypeAccent)
+	ColorTypeInfo    ColorType = ColorType(draw.ColorTypeInfo)
+	ColorTypeSuccess ColorType = ColorType(draw.ColorTypeSuccess)
+	ColorTypeWarning ColorType = ColorType(draw.ColorTypeWarning)
+	ColorTypeDanger  ColorType = ColorType(draw.ColorTypeDanger)
+)
+
 var (
 	borderRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
 	borderRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 0.8, 0.1)
@@ -152,6 +163,8 @@ var (
 	backgroundDarkColor                = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.95)
 	backgroundSecondaryColorLightColor = draw.Color(ebiten.ColorModeLight, draw.ColorTypeBase, 0.9)
 	backgroundSecondaryColorDarkColor  = draw.Color(ebiten.ColorModeDark, draw.ColorTypeBase, 0.9)
+	popupBackgroundLightColor          = draw.Color2(ebiten.ColorModeLight, draw.ColorTypeBase, 1, 0.05)
+	popupBackgroundDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.ColorTypeBase, 1, 0.05)
 )
 
 func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
@@ -169,6 +182,13 @@ func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}
+}
+
+func TextColorWithType(colorMode ebiten.ColorMode, colorType ColorType) color.Color {
+	if colorType == ColorTypeBase {
+		return TextColor(colorMode, true)
+	}
+	return draw.Color(colorMode, draw.ColorType(colorType), 0.2)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
@@ -275,4 +295,22 @@ func BackgroundSecondaryColor(colorMode ebiten.ColorMode) color.Color {
 	default:
 		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
 	}
+}
+
+func PopupBackgroundColor(colorMode ebiten.ColorMode) color.Color {
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		return popupBackgroundLightColor
+	case ebiten.ColorModeDark:
+		return popupBackgroundDarkColor
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	}
+}
+
+func PopupBackgroundColorWithType(colorMode ebiten.ColorMode, colorType ColorType) color.Color {
+	if colorType == ColorTypeBase {
+		return PopupBackgroundColor(colorMode)
+	}
+	return draw.Color(colorMode, draw.ColorType(colorType), 0.9)
 }

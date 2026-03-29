@@ -631,7 +631,7 @@ func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.Widget
 	if p.backgroundColor != nil {
 		clr = p.backgroundColor
 	} else {
-		clr = draw.Color2(context.ColorMode(), draw.ColorTypeBase, 1, 0.05)
+		clr = basicwidgetdraw.PopupBackgroundColor(context.ColorMode())
 	}
 	if p.style != popupStyleDrawer {
 		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))

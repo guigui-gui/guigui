@@ -14,6 +14,7 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
+	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 type Toast struct {
@@ -22,9 +23,10 @@ type Toast struct {
 	popup   basicwidget.Popup
 	content toastContent
 
-	openedAt time.Time
-	duration time.Duration
-	message  string
+	openedAt  time.Time
+	duration  time.Duration
+	message   string
+	colorType basicwidgetdraw.ColorType
 }
 
 func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -34,9 +36,11 @@ func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		t.popup.SetOpen(false)
 	})
 	t.content.text.SetValue(t.message)
+	t.content.text.SetColor(basicwidgetdraw.TextColorWithType(context.ColorMode(), t.colorType))
 	t.popup.SetContent(&t.content)
 	t.popup.SetModal(false)
 	t.popup.SetCloseByClickingOutside(false)
+	t.popup.SetBackgroundColor(basicwidgetdraw.PopupBackgroundColorWithType(context.ColorMode(), t.colorType))
 
 	return nil
 }
@@ -77,6 +81,10 @@ func (t *Toast) SetDuration(duration time.Duration) {
 
 func (t *Toast) BringToFrontLayer(context *guigui.Context) {
 	t.popup.BringToFrontLayer(context)
+}
+
+func (t *Toast) SetColorType(colorType basicwidgetdraw.ColorType) {
+	t.colorType = colorType
 }
 
 func (t *Toast) SetOpen(open bool) {
@@ -154,22 +162,40 @@ func (t *toastContent) Measure(context *guigui.Context, constraints guigui.Const
 type Root struct {
 	guigui.DefaultWidget
 
-	background      basicwidget.Background
-	showToastButton basicwidget.Button
+	background       basicwidget.Background
+	colorTypeControl basicwidget.SegmentedControl[basicwidgetdraw.ColorType]
+	showToastButton  basicwidget.Button
 
 	toasts        guigui.WidgetSlice[*Toast]
 	bottomOffsets []int
 
 	toastCounter     int
 	nextBottomOffset int
+	colorType        basicwidgetdraw.ColorType
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
+	adder.AddWidget(&r.colorTypeControl)
 	adder.AddWidget(&r.showToastButton)
 	for i := range r.toasts.Len() {
 		adder.AddWidget(r.toasts.At(i))
 	}
+
+	r.colorTypeControl.SetItems([]basicwidget.SegmentedControlItem[basicwidgetdraw.ColorType]{
+		{Text: "Base", Value: basicwidgetdraw.ColorTypeBase},
+		{Text: "Accent", Value: basicwidgetdraw.ColorTypeAccent},
+		{Text: "Info", Value: basicwidgetdraw.ColorTypeInfo},
+		{Text: "Success", Value: basicwidgetdraw.ColorTypeSuccess},
+		{Text: "Warning", Value: basicwidgetdraw.ColorTypeWarning},
+		{Text: "Danger", Value: basicwidgetdraw.ColorTypeDanger},
+	})
+	r.colorTypeControl.SelectItemByValue(r.colorType)
+	r.colorTypeControl.OnItemSelected(func(context *guigui.Context, index int) {
+		if item, ok := r.colorTypeControl.ItemByIndex(index); ok {
+			r.colorType = item.Value
+		}
+	})
 
 	r.showToastButton.SetText("Show Toast")
 	r.showToastButton.OnUp(func(context *guigui.Context) {
@@ -213,6 +239,7 @@ func (r *Root) showToast(context *guigui.Context) {
 	t.SetMessage(fmt.Sprintf("Toast #%d", r.toastCounter))
 	t.SetHasCloseButton(hasCloseButton)
 	t.SetDuration(3 * time.Second)
+	t.SetColorType(r.colorType)
 
 	// Grow the offsets slice if needed.
 	if len(r.bottomOffsets) <= idx {
@@ -234,11 +261,19 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	u := basicwidget.UnitSize(context)
 	appBounds := context.AppBounds()
 
-	// Position the button at the top-left with some padding.
+	// Position the segmented control and button at the top-left with some padding.
+	topLeft := appBounds.Min.Add(image.Pt(u, u))
+	controlSize := r.colorTypeControl.Measure(context, guigui.Constraints{})
+	layouter.LayoutWidget(&r.colorTypeControl, image.Rectangle{
+		Min: topLeft,
+		Max: topLeft.Add(controlSize),
+	})
+
+	buttonTop := topLeft.Y + controlSize.Y + u/2
 	buttonSize := r.showToastButton.Measure(context, guigui.Constraints{})
 	layouter.LayoutWidget(&r.showToastButton, image.Rectangle{
-		Min: appBounds.Min.Add(image.Pt(u, u)),
-		Max: appBounds.Min.Add(image.Pt(u+buttonSize.X, u+buttonSize.Y)),
+		Min: image.Pt(topLeft.X, buttonTop),
+		Max: image.Pt(topLeft.X+buttonSize.X, buttonTop+buttonSize.Y),
 	})
 
 	// Position each toast based on its assigned bottom offset.
