@@ -52,7 +52,12 @@ func (t *Toast) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 
 func (t *Toast) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.popup.IsOpen() && t.duration > 0 {
-		if widgetBounds.IsHitAtCursor() {
+		// Check if the cursor is on the toast by a simple geometric check.
+		// IsHitAtCursor is not suitable here because the popup content is in a higher layer,
+		// which blocks the Toast widget from being considered "hit".
+		// TODO: There might be a need for an API to check another widget's hit test (e.g., WidgetBounds.IsWidgetHitAtCursor),
+		// but this has not been decided yet.
+		if image.Pt(ebiten.CursorPosition()).In(widgetBounds.VisibleBounds()) {
 			// Reset the timer while the cursor is on the toast.
 			t.openedAt = time.Now()
 		} else if time.Since(t.openedAt) >= t.duration {
