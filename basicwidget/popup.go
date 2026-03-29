@@ -624,7 +624,7 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.PopupBackgroundColorWithType(context.ColorMode(), p.backgroundSemanticColor)
+	clr := basicwidgetdraw.PopupBackgroundColorFromSemanticColor(context.ColorMode(), p.backgroundSemanticColor)
 	if p.style != popupStyleDrawer {
 		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	} else {

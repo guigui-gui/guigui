@@ -1149,7 +1149,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	if t.color != nil {
 		textColor = t.color
 	} else if t.semanticColor != basicwidgetdraw.SemanticColorBase {
-		textColor = basicwidgetdraw.TextColorWithType(context.ColorMode(), t.semanticColor)
+		textColor = basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), t.semanticColor)
 	} else {
 		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}

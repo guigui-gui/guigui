@@ -171,7 +171,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	if !context.IsEnabled(b) {
 		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
 	} else if b.semanticColor != basicwidgetdraw.SemanticColorBase {
-		b.text.SetColor(basicwidgetdraw.TextColorWithType(context.ColorMode(), b.semanticColor))
+		b.text.SetColor(basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
@@ -427,7 +427,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
 			}
 		default:
-			backgroundColor = basicwidgetdraw.ButtonBackgroundColorWithType(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
+			backgroundColor = basicwidgetdraw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		}
 	}
 

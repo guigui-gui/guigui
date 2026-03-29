@@ -25,5 +25,5 @@ func (b *Background) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColo
 }
 
 func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	dst.Fill(basicwidgetdraw.BackgroundColorWithType(context.ColorMode(), b.semanticColor))
+	dst.Fill(basicwidgetdraw.BackgroundColorFromSemanticColor(context.ColorMode(), b.semanticColor))
 }
