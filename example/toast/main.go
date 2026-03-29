@@ -198,7 +198,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	r.showToastButton.SetText("Show Toast")
-	r.showToastButton.OnUp(func(context *guigui.Context) {
+	r.showToastButton.OnDown(func(context *guigui.Context) {
 		r.showToast(context)
 	})
 
