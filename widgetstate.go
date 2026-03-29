@@ -158,8 +158,6 @@ type widgetState struct {
 
 	widgetBounds_ WidgetBounds
 
-	isProxyChecked       bool
-	isProxy              bool
 	hasCustomTickChecked bool
 	hasCustomTick        bool
 
@@ -262,51 +260,6 @@ func (w *widgetState) inDifferentLayerFromParent() bool {
 		return w.layer != 0
 	}
 	return w.actualLayer() != w.parent.widgetState().actualLayer()
-}
-
-var (
-	dummyImage = ebiten.NewImage(1, 1)
-)
-
-// isProxyWidget returns true if the widget is a proxy.
-// A proxy widget is a widget whose Draw, HandlePointingInput, and CursorShape are the default implementation.
-// A proxy widget mainly manages its children and doesn't handle pointing input and drawing.
-// A proxy widget is ignored for cursor hit tests.
-func isProxyWidget(context *Context, widget Widget) bool {
-	if widget.widgetState().isProxyChecked {
-		return widget.widgetState().isProxy
-	}
-
-	// Do not use widgetBoundsFromWidget returning a cached WidgetBounds.
-	// Disable the hit test, or isProxyWidget will be recursively called at HandlePointingInput.
-	wb := WidgetBounds{
-		widget:      widget,
-		context:     context,
-		hitDisabled: true,
-	}
-
-	isProxy := true
-	// Actually invoke HandlePointingInput and Draw to check if they are the default implementation.
-	// TODO: Is this safe?
-	context.resetDefaultProxyMethodCalled()
-	widget.HandlePointingInput(context, &wb)
-	if !context.isDefaultProxyMethodCalled() {
-		isProxy = false
-	}
-	context.resetDefaultProxyMethodCalled()
-	widget.Draw(context, &wb, dummyImage)
-	if !context.isDefaultProxyMethodCalled() {
-		isProxy = false
-	}
-	context.resetDefaultProxyMethodCalled()
-	widget.CursorShape(context, &wb)
-	if !context.isDefaultProxyMethodCalled() {
-		isProxy = false
-	}
-
-	widget.widgetState().isProxyChecked = true
-	widget.widgetState().isProxy = isProxy
-	return isProxy
 }
 
 func widgetBoundsFromWidget(context *Context, widget Widget) *WidgetBounds {

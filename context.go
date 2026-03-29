@@ -55,8 +55,7 @@ type Context struct {
 	frontLayer           int64
 	envSource            EnvSource
 
-	defaultProxyMethodCalled bool
-	defaultTickMethodCalled  bool
+	defaultTickMethodCalled bool
 }
 
 // Scale returns the overall scale factor used for rendering.
@@ -465,18 +464,6 @@ func (c *Context) SetWindowSize(width, height int) {
 // A negative value indicates the size is not limited.
 func (c *Context) SetWindowSizeLimits(minw, minh, maxw, maxh int) {
 	ebiten.SetWindowSizeLimits(minw, minh, maxw, maxh)
-}
-
-func (c *Context) isDefaultProxyMethodCalled() bool {
-	return c.defaultProxyMethodCalled
-}
-
-func (c *Context) resetDefaultProxyMethodCalled() {
-	c.defaultProxyMethodCalled = false
-}
-
-func (c *Context) setDefaultProxyMethodCalledFlag() {
-	c.defaultProxyMethodCalled = true
 }
 
 func (c *Context) isDefaultTickMethodCalled() bool {

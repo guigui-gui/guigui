@@ -38,7 +38,6 @@ func (*DefaultWidget) Layout(context *Context, widgetBounds *WidgetBounds, layou
 }
 
 func (*DefaultWidget) HandlePointingInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult {
-	context.setDefaultProxyMethodCalledFlag()
 	return HandleInputResult{}
 }
 
@@ -52,12 +51,10 @@ func (*DefaultWidget) Tick(context *Context, widgetBounds *WidgetBounds) error {
 }
 
 func (*DefaultWidget) CursorShape(context *Context, widgetBounds *WidgetBounds) (ebiten.CursorShapeType, bool) {
-	context.setDefaultProxyMethodCalledFlag()
 	return 0, false
 }
 
 func (*DefaultWidget) Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image) {
-	context.setDefaultProxyMethodCalledFlag()
 }
 
 func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image.Point {

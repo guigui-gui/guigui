@@ -696,9 +696,6 @@ func (a *app) cursorShape() bool {
 		if widgetState.isPassthrough() {
 			continue
 		}
-		if isProxyWidget(&a.context, wl.widget) {
-			continue
-		}
 		if !widgetState.isEnabled() {
 			return false
 		}
@@ -866,10 +863,6 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 	if widgetState.isPassthrough() {
 		return false
 	}
-	if isProxyWidget(&a.context, widget) {
-		return false
-	}
-
 	layer := widgetState.actualLayer()
 
 	// hitWidgets are ordered by descending layer values.
@@ -895,10 +888,6 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 		if wl.widget.widgetState().isPassthrough() {
 			continue
 		}
-		if isProxyWidget(&a.context, wl.widget) {
-			continue
-		}
-
 		// w overlaps widget at point.
 		return false
 	}

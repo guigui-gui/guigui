@@ -47,6 +47,10 @@ const (
 	PopupCloseReasonReopen
 )
 
+// Popup is a widget that displays its content on a separate layer.
+//
+// Popup manages its own passthrough state based on whether it is open.
+// Do not call [guigui.Context.SetPassthrough] on a Popup.
 type Popup struct {
 	guigui.DefaultWidget
 
@@ -130,6 +134,8 @@ func (p *Popup) canUpdateContent() bool {
 
 func (p *Popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&p.popup)
+
+	context.SetPassthrough(p, p.popup.Widget().passthrough())
 
 	if p.onOpen == nil {
 		p.onOpen = func(context *guigui.Context) {
@@ -297,7 +303,6 @@ func (p *popup) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		adder.AddWidget(&p.contentAndFrame)
 	}
 
-	context.SetPassthrough(p, p.passthrough())
 	context.SetPassthrough(&p.blurredBackground, true)
 	context.SetPassthrough(&p.darkBackground, true)
 	context.SetPassthrough(&p.shadow, true)
@@ -424,7 +429,6 @@ func (p *popup) close(context *guigui.Context, reason PopupCloseReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
-	context.SetPassthrough(p, p.passthrough())
 }
 
 func (p *popup) passthrough() bool {
@@ -513,8 +517,6 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 	}
 
-	// TODO: Is this needed?
-	context.SetPassthrough(p, p.passthrough())
 	rate := p.openingRate()
 	p.blurredBackground.SetOpeningRate(rate)
 	p.darkBackground.SetOpeningRate(rate)

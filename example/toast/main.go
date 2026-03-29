@@ -52,7 +52,10 @@ func (t *Toast) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 
 func (t *Toast) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.popup.IsOpen() && t.duration > 0 {
-		if time.Since(t.openedAt) >= t.duration {
+		if widgetBounds.IsHitAtCursor() {
+			// Reset the timer while the cursor is on the toast.
+			t.openedAt = time.Now()
+		} else if time.Since(t.openedAt) >= t.duration {
 			t.popup.SetOpen(false)
 		}
 	}
