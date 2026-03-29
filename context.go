@@ -59,18 +59,24 @@ type Context struct {
 	defaultTickMethodCalled  bool
 }
 
+// Scale returns the overall scale factor used for rendering.
+// Scale is the product of [Context.DeviceScale] and [Context.AppScale].
 func (c *Context) Scale() float64 {
 	return c.DeviceScale() * c.AppScale()
 }
 
+// DeviceScale returns the device scale factor.
 func (c *Context) DeviceScale() float64 {
 	return c.app.deviceScale
 }
 
+// AppScale returns the application scale factor set by [Context.SetAppScale].
+// The default value is 1.
 func (c *Context) AppScale() float64 {
 	return c.appScaleMinus1 + 1
 }
 
+// SetAppScale sets the application scale factor.
 func (c *Context) SetAppScale(scale float64) {
 	if c.appScaleMinus1 == scale-1 {
 		return
@@ -126,6 +132,9 @@ func init() {
 	}
 }
 
+// AppendLocales appends all effective locales to the given slice and returns the result.
+// The effective locales are determined by the app locales, the environment variable GUIGUI_LOCALES,
+// and the system locales, in that priority order.
 func (c *Context) AppendLocales(locales []language.Tag) []language.Tag {
 	if len(c.allLocales) == 0 {
 		// App locales
@@ -153,6 +162,8 @@ func (c *Context) AppendLocales(locales []language.Tag) []language.Tag {
 	return append(locales, c.allLocales...)
 }
 
+// AppendAppLocales appends the app locales set by [Context.SetAppLocales] to the given slice
+// and returns the result.
 func (c *Context) AppendAppLocales(locales []language.Tag) []language.Tag {
 	origLen := len(locales)
 	for _, l := range c.locales {
@@ -164,6 +175,8 @@ func (c *Context) AppendAppLocales(locales []language.Tag) []language.Tag {
 	return locales
 }
 
+// SetAppLocales sets the application-level locales.
+// These take the highest priority when resolving locales.
 func (c *Context) SetAppLocales(locales []language.Tag) {
 	if slices.Equal(c.locales, locales) {
 		return
@@ -176,10 +189,13 @@ func (c *Context) SetAppLocales(locales []language.Tag) {
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonLocale, nil)
 }
 
+// AppBounds returns the bounds of the application.
 func (c *Context) AppBounds() image.Rectangle {
 	return c.app.bounds()
 }
 
+// SetVisible sets whether the widget is visible.
+// An invisible widget and its descendants do not receive any events and are not rendered.
 func (c *Context) SetVisible(widget Widget, visible bool) {
 	widgetState := widget.widgetState()
 	if widgetState.hidden == !visible {
@@ -197,10 +213,13 @@ func (c *Context) SetVisible(widget Widget, visible bool) {
 	RequestRebuild(widget)
 }
 
+// IsVisible reports whether the widget is visible.
 func (c *Context) IsVisible(widget Widget) bool {
 	return widget.widgetState().isVisible()
 }
 
+// SetEnabled sets whether the widget is enabled.
+// A disabled widget and its descendants do not receive any input events.
 func (c *Context) SetEnabled(widget Widget, enabled bool) {
 	widgetState := widget.widgetState()
 	if widgetState.disabled == !enabled {
@@ -218,10 +237,12 @@ func (c *Context) SetEnabled(widget Widget, enabled bool) {
 	RequestRebuild(widget)
 }
 
+// IsEnabled reports whether the widget is enabled.
 func (c *Context) IsEnabled(widget Widget) bool {
 	return widget.widgetState().isEnabled()
 }
 
+// SetFocused sets or removes the focus on the widget.
 func (c *Context) SetFocused(widget Widget, focused bool) {
 	if focused {
 		c.focus(widget)
@@ -280,10 +301,16 @@ func (c *Context) canHaveFocus(widgetState *widgetState) bool {
 	return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible() && widgetState.isEnabled()
 }
 
+// IsFocused reports whether the widget is focused.
 func (c *Context) IsFocused(widget Widget) bool {
 	return c.canHaveFocus(widget.widgetState()) && areWidgetsSame(c.app.focusedWidget, widget)
 }
 
+// IsFocusedOrHasFocusedChild reports whether the widget is focused
+// or has a focused descendant.
+//
+// IsFocusedOrHasFocusedChild must not be called in [Widget.Build] implementations
+// because it depends on the finished widget tree.
 func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
 	if c.inBuild {
 		panic("guigui: IsFocusedOrHasFocusedChild cannot be called in Build")
@@ -310,10 +337,14 @@ func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
 	return false
 }
 
+// Opacity returns the opacity of the widget.
+// The value is in the range [0, 1], where 0 is fully transparent and 1 is fully opaque.
 func (c *Context) Opacity(widget Widget) float64 {
 	return widget.widgetState().opacity()
 }
 
+// SetOpacity sets the opacity of the widget.
+// The value is clamped to the range [0, 1].
 func (c *Context) SetOpacity(widget Widget, opacity float64) {
 	opacity = min(max(opacity, 0), 1)
 	widgetState := widget.widgetState()
@@ -350,10 +381,14 @@ func (c *Context) Env(widget Widget, key EnvKey) (any, bool) {
 	return nil, false
 }
 
+// Passthrough reports whether the widget is in passthrough mode.
+// A passthrough widget does not receive any input events, but its descendants do.
 func (c *Context) Passthrough(widget Widget) bool {
 	return widget.widgetState().isPassthrough()
 }
 
+// SetPassthrough sets whether the widget is in passthrough mode.
+// A passthrough widget does not receive any input events, but its descendants do.
 func (c *Context) SetPassthrough(widget Widget, passthrough bool) {
 	widgetState := widget.widgetState()
 	if widgetState.passthrough == passthrough {
@@ -416,6 +451,7 @@ func (c *Context) SetClipChildren(widget Widget, clip bool) {
 	widget.widgetState().clipChildren = clip
 }
 
+// SetWindowTitle sets the window title.
 func (c *Context) SetWindowTitle(title string) {
 	ebiten.SetWindowTitle(title)
 }

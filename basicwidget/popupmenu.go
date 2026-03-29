@@ -191,7 +191,7 @@ func (p *PopupMenu[T]) SelectItemByValue(value T) {
 }
 
 // ItemTextColor returns the text color for the item at the given index.
-// ItemTextColor must not be called in Build because it depends on the finished widget tree
+// ItemTextColor must not be called in [guigui.Widget.Build] implementations because it depends on the finished widget tree
 // (e.g. focused states of child widgets are available only after the widget tree is built).
 //
 // Deprecated: use [EnvKeyListItemColorType] via [guigui.Context.Env].
