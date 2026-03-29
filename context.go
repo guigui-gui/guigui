@@ -81,7 +81,7 @@ func (c *Context) SetAppScale(scale float64) {
 
 // ResolvedColorMode returns the color mode.
 //
-// ResolvedColorMode never returns ebiten.ColorModeUnknown.
+// ResolvedColorMode never returns [ebiten.ColorModeUnknown].
 func (c *Context) ResolvedColorMode() ebiten.ColorMode {
 	if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
 		return mode
@@ -94,14 +94,14 @@ func (c *Context) ResolvedColorMode() ebiten.ColorMode {
 
 // ColorMode returns the color mode set by SetColorMode.
 //
-// ColorMode might return ebiten.ColorModeUnknown if the color mode is not set.
+// ColorMode might return [ebiten.ColorModeUnknown] if the color mode is not set.
 func (c *Context) ColorMode() ebiten.ColorMode {
 	return ebiten.WindowColorMode()
 }
 
 // SetColorMode sets the color mode.
 //
-// If mode is ebiten.ColorModeUnknown, SetColorMode specifies the default system color mode.
+// If mode is [ebiten.ColorModeUnknown], SetColorMode specifies the default system color mode.
 func (c *Context) SetColorMode(mode ebiten.ColorMode) {
 	if mode == ebiten.WindowColorMode() {
 		return
