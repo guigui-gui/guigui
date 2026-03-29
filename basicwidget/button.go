@@ -172,13 +172,13 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	if b.textColor != nil {
 		b.text.SetColor(b.textColor)
 	} else if !context.IsEnabled(b) {
-		b.text.SetColor(basicwidgetdraw.TextColor(context.ResolvedColorMode(), false))
+		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
 			b.text.SetColor(basicwidgetdraw.TextColor(ebiten.ColorModeDark, true))
 		default:
-			b.text.SetColor(basicwidgetdraw.TextColor(context.ResolvedColorMode(), true))
+			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
 		}
 	}
 	if b.textBold {
@@ -406,8 +406,8 @@ func (b *Button) radius(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 }
 
 func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	cm := context.ResolvedColorMode()
-	backgroundColor := basicwidgetdraw.ControlColor(context.ResolvedColorMode(), context.IsEnabled(b))
+	cm := context.ColorMode()
+	backgroundColor := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
 		switch b.typ {
 		case ButtonTypePrimary:
@@ -450,16 +450,16 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		if b.isPressed(context, widgetBounds) {
 			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 		if context.IsEnabled(b) {
 			switch b.typ {
 			case ButtonTypePrimary:
-				clr1, clr2 = basicwidgetdraw.BorderAccentColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+				clr1, clr2 = basicwidgetdraw.BorderAccentColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 			case buttonTypeActiveSegmentControlButton:
 				if b.isPressed(context, widgetBounds) {
-					clr1, clr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+					clr1, clr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 				} else {
-					clr1, clr2 = basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+					clr1, clr2 = basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
 				}
 			}
 		}

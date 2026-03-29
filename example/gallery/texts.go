@@ -42,27 +42,27 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 	model := v.(*Model)
 
-	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ResolvedColorMode())
+	imgAlignStart, err := theImageCache.GetMonochrome("format_align_left", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgAlignCenter, err := theImageCache.GetMonochrome("format_align_center", context.ResolvedColorMode())
+	imgAlignCenter, err := theImageCache.GetMonochrome("format_align_center", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgAlignEnd, err := theImageCache.GetMonochrome("format_align_right", context.ResolvedColorMode())
+	imgAlignEnd, err := theImageCache.GetMonochrome("format_align_right", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgAlignTop, err := theImageCache.GetMonochrome("vertical_align_top", context.ResolvedColorMode())
+	imgAlignTop, err := theImageCache.GetMonochrome("vertical_align_top", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgAlignMiddle, err := theImageCache.GetMonochrome("vertical_align_center", context.ResolvedColorMode())
+	imgAlignMiddle, err := theImageCache.GetMonochrome("vertical_align_center", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgAlignBottom, err := theImageCache.GetMonochrome("vertical_align_bottom", context.ResolvedColorMode())
+	imgAlignBottom, err := theImageCache.GetMonochrome("vertical_align_bottom", context.ColorMode())
 	if err != nil {
 		return err
 	}

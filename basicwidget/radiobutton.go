@@ -169,7 +169,7 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		Min: pt,
 		Max: pt.Add(image.Pt(LineHeight(context), LineHeight(context))),
 	}
-	cm := context.ResolvedColorMode()
+	cm := context.ColorMode()
 	radius := LineHeight(context) / 2
 
 	var backgroundColor color.Color

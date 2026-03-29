@@ -30,11 +30,11 @@ var hongKongChinese = language.MustParse("zh-HK")
 func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&s.form)
 
-	lightModeImg, err := theImageCache.GetMonochrome("light_mode", context.ResolvedColorMode())
+	lightModeImg, err := theImageCache.GetMonochrome("light_mode", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	darkModeImg, err := theImageCache.GetMonochrome("dark_mode", context.ResolvedColorMode())
+	darkModeImg, err := theImageCache.GetMonochrome("dark_mode", context.ColorMode())
 	if err != nil {
 		return err
 	}
@@ -57,19 +57,19 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	s.colorModeSegmentedControl.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := s.colorModeSegmentedControl.ItemByIndex(index)
 		if !ok {
-			context.SetColorMode(ebiten.ColorModeLight)
+			context.SetPreferredColorMode(ebiten.ColorModeLight)
 			return
 		}
 		switch item.Value {
 		case "light":
-			context.SetColorMode(ebiten.ColorModeLight)
+			context.SetPreferredColorMode(ebiten.ColorModeLight)
 		case "dark":
-			context.SetColorMode(ebiten.ColorModeDark)
+			context.SetPreferredColorMode(ebiten.ColorModeDark)
 		default:
-			context.SetColorMode(ebiten.ColorModeUnknown)
+			context.SetPreferredColorMode(ebiten.ColorModeUnknown)
 		}
 	})
-	switch context.ColorMode() {
+	switch context.PreferredColorMode() {
 	case ebiten.ColorModeLight:
 		s.colorModeSegmentedControl.SelectItemByValue("light")
 	case ebiten.ColorModeDark:

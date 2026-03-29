@@ -93,8 +93,8 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	bounds := widgetBounds.Bounds()
 
-	cm := context.ResolvedColorMode()
-	thumbColor := basicwidgetdraw.ThumbColor(context.ResolvedColorMode(), context.IsEnabled(t))
+	cm := context.ColorMode()
+	thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(t))
 	if t.isActive(context, widgetBounds) {
 		thumbColor = draw.Color2(cm, draw.ColorTypeBase, 0.95, 0.55)
 	} else if t.canPress(context, widgetBounds) {
@@ -107,8 +107,8 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		bgColorOff = draw.Color2(cm, draw.ColorTypeBase, 0.775, 0.175)
 		bgColorOn = draw.Color2(cm, draw.ColorTypeAccent, 0.475, 0.475)
 	} else {
-		bgColorOff = draw.Color(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8)
-		bgColorOn = draw.Color(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.5)
+		bgColorOff = draw.Color(context.ColorMode(), draw.ColorTypeBase, 0.8)
+		bgColorOn = draw.Color(context.ColorMode(), draw.ColorTypeAccent, 0.5)
 	}
 	var bgColor color.Color
 	if t.value && context.IsEnabled(t) {
@@ -126,9 +126,9 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	strokeWidth := float32(1 * context.Scale())
 	var borderClr1, borderClr2 color.Color
 	if t.value && context.IsEnabled(t) {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 	} else {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 	}
 	dstSub := dst.RecyclableSubImage(b)
 	defer dstSub.Recycle()
@@ -144,7 +144,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		cx = int((1-rate)*cxOn + rate*cxOff)
 	}
 	cy := bounds.Min.Y + r
-	thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ResolvedColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+	thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 	thumbBounds := image.Rect(cx-r, cy-r, cx+r, cy+r)
 	basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeOutset)

@@ -104,7 +104,7 @@ func (c *Checkbox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	}
 
 	imageCM := ebiten.ColorModeDark
-	if context.ResolvedColorMode() == ebiten.ColorModeLight && !context.IsEnabled(c) {
+	if context.ColorMode() == ebiten.ColorModeLight && !context.IsEnabled(c) {
 		imageCM = ebiten.ColorModeLight
 	}
 	checkImg, err := theResourceImages.Get("check2", imageCM)
@@ -138,7 +138,7 @@ func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 		Min: pt,
 		Max: pt.Add(image.Pt(LineHeight(context), LineHeight(context))),
 	}
-	cm := context.ResolvedColorMode()
+	cm := context.ColorMode()
 	r := UnitSize(context) / 8
 
 	var backgroundColor color.Color

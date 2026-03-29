@@ -266,11 +266,11 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	}
 	n.textInput.OnValueChanged(n.onTextInputValueChanged)
 
-	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ResolvedColorMode())
+	imgUp, err := theResourceImages.Get("keyboard_arrow_up", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	imgDown, err := theResourceImages.Get("keyboard_arrow_down", context.ResolvedColorMode())
+	imgDown, err := theResourceImages.Get("keyboard_arrow_down", context.ColorMode())
 	if err != nil {
 		return err
 	}

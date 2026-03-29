@@ -227,7 +227,7 @@ func (s *selectButtonContent) Build(context *guigui.Context, adder *guigui.Child
 	adder.AddWidget(&s.icon)
 	s.text.SetVerticalAlign(VerticalAlignMiddle)
 
-	img, err := theResourceImages.Get("unfold_more", context.ResolvedColorMode())
+	img, err := theResourceImages.Get("unfold_more", context.ColorMode())
 	if err != nil {
 		return err
 	}

@@ -85,10 +85,10 @@ func (c *Context) SetAppScale(scale float64) {
 	c.app.requestRedraw(c.app.bounds(), requestRedrawReasonAppScale, nil)
 }
 
-// ResolvedColorMode returns the color mode.
+// ColorMode returns the resolved color mode.
 //
-// ResolvedColorMode never returns [ebiten.ColorModeUnknown].
-func (c *Context) ResolvedColorMode() ebiten.ColorMode {
+// ColorMode never returns [ebiten.ColorModeUnknown].
+func (c *Context) ColorMode() ebiten.ColorMode {
 	if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
 		return mode
 	}
@@ -98,17 +98,17 @@ func (c *Context) ResolvedColorMode() ebiten.ColorMode {
 	return ebiten.ColorModeLight
 }
 
-// ColorMode returns the color mode set by SetColorMode.
+// PreferredColorMode returns the color mode set by SetPreferredColorMode.
 //
-// ColorMode might return [ebiten.ColorModeUnknown] if the color mode is not set.
-func (c *Context) ColorMode() ebiten.ColorMode {
+// PreferredColorMode might return [ebiten.ColorModeUnknown] if the color mode is not set.
+func (c *Context) PreferredColorMode() ebiten.ColorMode {
 	return ebiten.WindowColorMode()
 }
 
-// SetColorMode sets the color mode.
+// SetPreferredColorMode sets the preferred color mode.
 //
-// If mode is [ebiten.ColorModeUnknown], SetColorMode specifies the default system color mode.
-func (c *Context) SetColorMode(mode ebiten.ColorMode) {
+// If mode is [ebiten.ColorModeUnknown], SetPreferredColorMode specifies the default system color mode.
+func (c *Context) SetPreferredColorMode(mode ebiten.ColorMode) {
 	if mode == ebiten.WindowColorMode() {
 		return
 	}
