@@ -62,11 +62,11 @@ func (t ListItemColorType) TextColor(context *guigui.Context) color.Color {
 func (t ListItemColorType) BackgroundColor(context *guigui.Context) color.Color {
 	switch t {
 	case ListItemColorTypeHighlighted:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.35)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeAccent, 0.6, 0.4)
 	case ListItemColorTypeListDisabled:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.3)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.8, 0.35)
 	case ListItemColorTypeSelectedInUnfocusedList:
-		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.35)
+		return draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 0.85, 0.4)
 	default:
 		return nil
 	}
