@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"image/color"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -52,9 +51,9 @@ type Button struct {
 	icon      Image
 	iconAlign IconAlign
 
-	typ       ButtonType
-	textColor color.Color
-	textBold  bool
+	typ           ButtonType
+	semanticColor basicwidgetdraw.SemanticColor
+	textBold      bool
 
 	layoutItems []guigui.LinearLayoutItem
 	iconLayout  guigui.LinearLayout
@@ -129,11 +128,11 @@ func (b *Button) SetType(typ ButtonType) {
 	guigui.RequestRebuild(b)
 }
 
-func (b *Button) SetTextColor(clr color.Color) {
-	if draw.EqualColor(b.textColor, clr) {
+func (b *Button) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	if b.semanticColor == semanticColor {
 		return
 	}
-	b.textColor = clr
+	b.semanticColor = semanticColor
 	guigui.RequestRebuild(b)
 }
 
@@ -169,10 +168,10 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddWidget(&b.text)
 	adder.AddWidget(&b.icon)
 
-	if b.textColor != nil {
-		b.text.SetColor(b.textColor)
-	} else if !context.IsEnabled(b) {
+	if !context.IsEnabled(b) {
 		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
+	} else if b.semanticColor != basicwidgetdraw.SemanticColorBase {
+		b.text.SetColor(basicwidgetdraw.TextColorWithType(context.ColorMode(), b.semanticColor))
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
@@ -411,11 +410,12 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	if context.IsEnabled(b) {
 		switch b.typ {
 		case ButtonTypePrimary:
-			backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.5, 0.5)
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.475, 0.475)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.55)
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.475, 0.525)
+			} else {
+				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.5, 0.5)
 			}
 		case buttonTypeActiveSegmentControlButton:
 			if b.isPressed(context, widgetBounds) {
@@ -427,11 +427,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
 			}
 		default:
-			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.95, 0.3)
-			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
-			}
+			backgroundColor = basicwidgetdraw.ButtonBackgroundColorWithType(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		}
 	}
 

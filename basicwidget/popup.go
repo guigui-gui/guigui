@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -117,10 +116,8 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 	guigui.RequestRebuild(p)
 }
 
-// SetBackgroundColor sets the background color of the popup content.
-// If clr is nil, the default background color is used.
-func (p *Popup) SetBackgroundColor(clr color.Color) {
-	p.popup.Widget().setBackgroundColor(clr)
+func (p *Popup) SetBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	p.popup.Widget().setBackgroundSemanticColor(semanticColor)
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
@@ -258,8 +255,8 @@ func (p *popup) SetBackgroundBlurred(blurred bool) {
 	p.backgroundBlurred = blurred
 }
 
-func (p *popup) setBackgroundColor(clr color.Color) {
-	p.contentAndFrame.Widget().setBackgroundColor(clr)
+func (p *popup) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	p.contentAndFrame.Widget().setBackgroundSemanticColor(semanticColor)
 }
 
 func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
@@ -556,8 +553,8 @@ func (p *popupContentAndFrame) setStyle(style popupStyle) {
 	p.frame.setStyle(style)
 }
 
-func (p *popupContentAndFrame) setBackgroundColor(clr color.Color) {
-	p.content.setBackgroundColor(clr)
+func (p *popupContentAndFrame) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	p.content.setBackgroundSemanticColor(semanticColor)
 }
 
 func (p *popupContentAndFrame) setDrawerEdge(edge DrawerEdge) {
@@ -584,9 +581,9 @@ func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *gui
 type popupContent struct {
 	guigui.DefaultWidget
 
-	content         guigui.Widget
-	style           popupStyle
-	backgroundColor color.Color
+	content                 guigui.Widget
+	style                   popupStyle
+	backgroundSemanticColor basicwidgetdraw.SemanticColor
 }
 
 func (p *popupContent) setContent(widget guigui.Widget) {
@@ -597,8 +594,8 @@ func (p *popupContent) setStyle(style popupStyle) {
 	p.style = style
 }
 
-func (p *popupContent) setBackgroundColor(clr color.Color) {
-	p.backgroundColor = clr
+func (p *popupContent) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	p.backgroundSemanticColor = semanticColor
 }
 
 func (p *popupContent) hasContent() bool {
@@ -627,12 +624,7 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	var clr color.Color
-	if p.backgroundColor != nil {
-		clr = p.backgroundColor
-	} else {
-		clr = basicwidgetdraw.PopupBackgroundColor(context.ColorMode())
-	}
+	clr := basicwidgetdraw.PopupBackgroundColorWithType(context.ColorMode(), p.backgroundSemanticColor)
 	if p.style != popupStyleDrawer {
 		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	} else {

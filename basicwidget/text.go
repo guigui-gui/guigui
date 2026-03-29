@@ -88,15 +88,16 @@ type Text struct {
 	nextSelectAll bool
 	textInited    bool
 
-	hAlign      HorizontalAlign
-	vAlign      VerticalAlign
-	color       color.Color
-	transparent float64
-	locales     []language.Tag
-	scaleMinus1 float64
-	bold        bool
-	tabular     bool
-	tabWidth    float64
+	hAlign        HorizontalAlign
+	vAlign        VerticalAlign
+	color         color.Color
+	semanticColor basicwidgetdraw.SemanticColor
+	transparent   float64
+	locales       []language.Tag
+	scaleMinus1   float64
+	bold          bool
+	tabular       bool
+	tabWidth      float64
 
 	selectable       bool
 	editable         bool
@@ -533,6 +534,14 @@ func (t *Text) SetColor(color color.Color) {
 	}
 
 	t.color = color
+	guigui.RequestRebuild(t)
+}
+
+func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	if t.semanticColor == semanticColor {
+		return
+	}
+	t.semanticColor = semanticColor
 	guigui.RequestRebuild(t)
 }
 
@@ -1139,6 +1148,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	var textColor color.Color
 	if t.color != nil {
 		textColor = t.color
+	} else if t.semanticColor != basicwidgetdraw.SemanticColorBase {
+		textColor = basicwidgetdraw.TextColorWithType(context.ColorMode(), t.semanticColor)
 	} else {
 		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}

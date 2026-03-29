@@ -258,6 +258,26 @@ func ControlSecondaryColor(colorMode ebiten.ColorMode, enabled bool) color.Color
 	}
 }
 
+func ButtonBackgroundColorWithType(colorMode ebiten.ColorMode, semanticColor SemanticColor, pressed bool, hovered bool) color.Color {
+	if semanticColor == SemanticColorBase {
+		if pressed {
+			return draw.Color2(colorMode, draw.SemanticColorBase, 0.95, 0.3)
+		}
+		if hovered {
+			return draw.Color2(colorMode, draw.SemanticColorBase, 0.975, 0.275)
+		}
+		return ControlColor(colorMode, true)
+	}
+	sc := draw.SemanticColor(semanticColor)
+	if pressed {
+		return draw.Color2(colorMode, sc, 0.75, 0.4)
+	}
+	if hovered {
+		return draw.Color2(colorMode, sc, 0.775, 0.375)
+	}
+	return draw.Color2(colorMode, sc, 0.8, 0.35)
+}
+
 func ThumbColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	switch colorMode {
 	case ebiten.ColorModeLight:
@@ -311,6 +331,13 @@ func PopupBackgroundColor(colorMode ebiten.ColorMode) color.Color {
 func PopupBackgroundColorWithType(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
 	if semanticColor == SemanticColorBase {
 		return PopupBackgroundColor(colorMode)
+	}
+	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.9, 0.2)
+}
+
+func BackgroundColorWithType(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
+	if semanticColor == SemanticColorBase {
+		return BackgroundColor(colorMode)
 	}
 	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.9, 0.2)
 }

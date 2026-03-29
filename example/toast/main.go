@@ -36,11 +36,12 @@ func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		t.popup.SetOpen(false)
 	})
 	t.content.text.SetValue(t.message)
-	t.content.text.SetColor(basicwidgetdraw.TextColorWithType(context.ColorMode(), t.semanticColor))
+	t.content.text.SetSemanticColor(t.semanticColor)
+	t.content.closeButton.SetSemanticColor(t.semanticColor)
 	t.popup.SetContent(&t.content)
 	t.popup.SetModal(false)
 	t.popup.SetCloseByClickingOutside(false)
-	t.popup.SetBackgroundColor(basicwidgetdraw.PopupBackgroundColorWithType(context.ColorMode(), t.semanticColor))
+	t.popup.SetBackgroundSemanticColor(t.semanticColor)
 
 	return nil
 }
