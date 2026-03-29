@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -114,6 +115,12 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 	}
 	p.popup.Widget().backgroundBounds = bounds
 	guigui.RequestRebuild(p)
+}
+
+// SetBackgroundColor sets the background color of the popup content.
+// If clr is nil, the default background color is used.
+func (p *Popup) SetBackgroundColor(clr color.Color) {
+	p.popup.Widget().setBackgroundColor(clr)
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
@@ -249,6 +256,10 @@ func (p *popup) SetBackgroundDark(dark bool) {
 
 func (p *popup) SetBackgroundBlurred(blurred bool) {
 	p.backgroundBlurred = blurred
+}
+
+func (p *popup) setBackgroundColor(clr color.Color) {
+	p.contentAndFrame.Widget().setBackgroundColor(clr)
 }
 
 func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
@@ -545,6 +556,10 @@ func (p *popupContentAndFrame) setStyle(style popupStyle) {
 	p.frame.setStyle(style)
 }
 
+func (p *popupContentAndFrame) setBackgroundColor(clr color.Color) {
+	p.content.setBackgroundColor(clr)
+}
+
 func (p *popupContentAndFrame) setDrawerEdge(edge DrawerEdge) {
 	p.frame.setDrawerEdge(edge)
 }
@@ -569,8 +584,9 @@ func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *gui
 type popupContent struct {
 	guigui.DefaultWidget
 
-	content guigui.Widget
-	style   popupStyle
+	content         guigui.Widget
+	style           popupStyle
+	backgroundColor color.Color
 }
 
 func (p *popupContent) setContent(widget guigui.Widget) {
@@ -579,6 +595,10 @@ func (p *popupContent) setContent(widget guigui.Widget) {
 
 func (p *popupContent) setStyle(style popupStyle) {
 	p.style = style
+}
+
+func (p *popupContent) setBackgroundColor(clr color.Color) {
+	p.backgroundColor = clr
 }
 
 func (p *popupContent) hasContent() bool {
@@ -607,7 +627,12 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 0.05)
+	var clr color.Color
+	if p.backgroundColor != nil {
+		clr = p.backgroundColor
+	} else {
+		clr = draw.Color2(context.ResolvedColorMode(), draw.ColorTypeBase, 1, 0.05)
+	}
 	if p.style != popupStyleDrawer {
 		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	} else {

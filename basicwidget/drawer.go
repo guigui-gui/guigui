@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/guigui-gui/guigui"
 )
@@ -58,6 +59,12 @@ func (d *Drawer) SetAnimated(animateOnFading bool) {
 
 func (d *Drawer) SetBackgroundBounds(bounds image.Rectangle) {
 	d.popup.SetBackgroundBounds(bounds)
+}
+
+// SetBackgroundColor sets the background color of the drawer content.
+// If clr is nil, the default background color is used.
+func (d *Drawer) SetBackgroundColor(clr color.Color) {
+	d.popup.SetBackgroundColor(clr)
 }
 
 func (d *Drawer) SetDrawerEdge(edge DrawerEdge) {
