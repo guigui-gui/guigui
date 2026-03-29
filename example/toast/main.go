@@ -35,9 +35,8 @@ func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.content.OnClose(func(context *guigui.Context) {
 		t.popup.SetOpen(false)
 	})
-	t.content.text.SetValue(t.message)
-	t.content.text.SetSemanticColor(t.semanticColor)
-	t.content.closeButton.SetSemanticColor(t.semanticColor)
+	t.content.SetText(t.message)
+	t.content.SetSemanticColor(t.semanticColor)
 	t.popup.SetContent(&t.content)
 	t.popup.SetModal(false)
 	t.popup.SetCloseByClickingOutside(false)
@@ -112,6 +111,15 @@ type toastContent struct {
 	closeButton basicwidget.Button
 
 	hasCloseButton bool
+}
+
+func (t *toastContent) SetText(text string) {
+	t.text.SetValue(text)
+}
+
+func (t *toastContent) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+	t.text.SetSemanticColor(semanticColor)
+	t.closeButton.SetSemanticColor(semanticColor)
 }
 
 func (t *toastContent) OnClose(f func(context *guigui.Context)) {
