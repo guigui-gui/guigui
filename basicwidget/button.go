@@ -246,7 +246,7 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			}
 		}
 		iconLayoutItem = guigui.LinearLayoutItem{
-			Layout: b.iconLayout,
+			Layout: &b.iconLayout,
 			Size:   guigui.FixedSize(width),
 		}
 	}
