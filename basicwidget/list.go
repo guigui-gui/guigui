@@ -1029,6 +1029,8 @@ func (l *listContent[T]) AppendSelectedItemIndices(indices []int) []int {
 
 func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 	l.abstractList.SetItems(items)
+	// Invalidate the cached height so that Measure recalculates with the new items.
+	l.widthForCachedHeight = 0
 }
 
 func (l *listContent[T]) SelectItemByIndex(index int) {
