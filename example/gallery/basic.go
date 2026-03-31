@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -30,6 +31,8 @@ type Basic struct {
 	slider           basicwidget.Slider
 	listText         basicwidget.Text
 	list             basicwidget.List[int]
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -89,14 +92,16 @@ func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 func (b *Basic) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
+	b.layoutItems = append(b.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &b.form,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &b.form,
-			},
-		},
-		Gap: u / 2,
+		Items:     b.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -111,62 +116,43 @@ type inlineRadioButtons struct {
 
 	group basicwidget.RadioButtonGroup[string]
 	texts [3]basicwidget.Text
+
+	innerLayouts []guigui.LinearLayout
+	innerItems   [3][]guigui.LinearLayoutItem
+	outerItems   []guigui.LinearLayoutItem
+	outerLayout  guigui.LinearLayout
 }
 
-func (i *inlineRadioButtons) layout(context *guigui.Context) guigui.LinearLayout {
+func (i *inlineRadioButtons) buildLayout(context *guigui.Context) {
 	u := basicwidget.UnitSize(context)
-	return guigui.LinearLayout{
+	i.innerLayouts = slices.Delete(i.innerLayouts, 0, len(i.innerLayouts))
+	i.outerItems = slices.Delete(i.outerItems, 0, len(i.outerItems))
+	for j := range 3 {
+		i.innerItems[j] = slices.Delete(i.innerItems[j], 0, len(i.innerItems[j]))
+		i.innerItems[j] = append(i.innerItems[j],
+			guigui.LinearLayoutItem{
+				Size: guigui.FixedSize(i.group.RadioButton(j).Measure(context, guigui.Constraints{}).X),
+			},
+			guigui.LinearLayoutItem{
+				Widget: &i.texts[j],
+			},
+		)
+		i.innerLayouts = append(i.innerLayouts, guigui.LinearLayout{
+			Direction: guigui.LayoutDirectionHorizontal,
+			Items:     i.innerItems[j],
+			Gap:       u / 4,
+		})
+		i.outerItems = append(i.outerItems, guigui.LinearLayoutItem{
+			// By specifying a widget and a layout at the same time, this item's size becomes the maximum of the two.
+			// The region of the radio button is widen to the right to make it easier to click.
+			Widget: i.group.RadioButton(j),
+			Layout: &i.innerLayouts[j],
+		})
+	}
+	i.outerLayout = guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				// By specifying a widget and a layout at the same time, this item's size becomes the maximum of the two.
-				// The region of the radio button is widen to the right to make it easier to click.
-				Widget: i.group.RadioButton(0),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FixedSize(i.group.RadioButton(0).Measure(context, guigui.Constraints{}).X),
-						},
-						{
-							Widget: &i.texts[0],
-						},
-					},
-					Gap: u / 4,
-				},
-			},
-			{
-				Widget: i.group.RadioButton(1),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FixedSize(i.group.RadioButton(1).Measure(context, guigui.Constraints{}).X),
-						},
-						{
-							Widget: &i.texts[1],
-						},
-					},
-					Gap: u / 4,
-				},
-			},
-			{
-				Widget: i.group.RadioButton(2),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FixedSize(i.group.RadioButton(2).Measure(context, guigui.Constraints{}).X),
-						},
-						{
-							Widget: &i.texts[2],
-						},
-					},
-					Gap: u / 4,
-				},
-			},
-		},
-		Gap: u,
+		Items:     i.outerItems,
+		Gap:       u,
 	}
 }
 
@@ -186,9 +172,11 @@ func (i *inlineRadioButtons) Build(context *guigui.Context, adder *guigui.ChildA
 }
 
 func (i *inlineRadioButtons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	i.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	i.buildLayout(context)
+	i.outerLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (i *inlineRadioButtons) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return i.layout(context).Measure(context, constraints)
+	i.buildLayout(context)
+	return i.outerLayout.Measure(context, constraints)
 }

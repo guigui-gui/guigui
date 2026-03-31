@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -22,6 +24,8 @@ type SegmentedControls struct {
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
 	enabledToggle basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (s *SegmentedControls) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -113,20 +117,22 @@ func (s *SegmentedControls) Build(context *guigui.Context, adder *guigui.ChildAd
 
 func (s *SegmentedControls) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
+	s.layoutItems = append(s.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &s.segmentedControlsForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &s.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &s.segmentedControlsForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &s.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     s.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

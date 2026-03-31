@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -36,6 +37,8 @@ type TextInputs struct {
 	editableToggle                  basicwidget.Toggle
 	enabledText                     basicwidget.Text
 	enabledToggle                   basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -255,20 +258,22 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 
 func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.textInputForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &t.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.textInputForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &t.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     t.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

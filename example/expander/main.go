@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -18,6 +19,8 @@ type Root struct {
 	expander    basicwidget.Expander
 	headerText  basicwidget.Text
 	contentText basicwidget.Text
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -44,13 +47,15 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.expander,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.expander,
-			},
-		},
+		Items:     r.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u,
 			Top:    u,

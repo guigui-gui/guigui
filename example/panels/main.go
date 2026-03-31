@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -30,6 +31,9 @@ type Root struct {
 	rightPanel   RightPanel
 
 	model Model
+
+	mainLayoutItems  []guigui.LinearLayoutItem
+	panelLayoutItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
@@ -53,17 +57,19 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
+	r.mainLayoutItems = slices.Delete(r.mainLayoutItems, 0, len(r.mainLayoutItems))
+	r.mainLayoutItems = append(r.mainLayoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.toolbar,
+			Size:   guigui.FixedSize(r.toolbar.Measure(context, guigui.Constraints{}).Y),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+	)
 	mainLayout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.toolbar,
-				Size:   guigui.FixedSize(r.toolbar.Measure(context, guigui.Constraints{}).Y),
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-		},
+		Items:     r.mainLayoutItems,
 	}
 	mainLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 
@@ -73,22 +79,24 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	bounds.Min.X += r.model.LeftPanelWidth(context)
 	bounds.Max.X += r.model.DefaultPanelWidth(context)
 	bounds.Max.X -= r.model.RightPanelWidth(context)
+	r.panelLayoutItems = slices.Delete(r.panelLayoutItems, 0, len(r.panelLayoutItems))
+	r.panelLayoutItems = append(r.panelLayoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.leftPanel,
+			Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.contentPanel,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.rightPanel,
+			Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.leftPanel,
-				Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
-			},
-			{
-				Widget: &r.contentPanel,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &r.rightPanel,
-				Size:   guigui.FixedSize(r.model.DefaultPanelWidth(context)),
-			},
-		},
+		Items:     r.panelLayoutItems,
 	}).LayoutWidgets(context, bounds, layouter)
 }
 

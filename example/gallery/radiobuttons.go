@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -25,6 +27,8 @@ type RadioButtons struct {
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
 	enabledToggle basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (r *RadioButtons) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -120,23 +124,25 @@ func (r *RadioButtons) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 func (r *RadioButtons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.radioButtonsForm1,
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.radioButtonsForm2,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.radioButtonsForm1,
-			},
-			{
-				Widget: &r.radioButtonsForm2,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &r.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     r.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

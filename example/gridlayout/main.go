@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -27,6 +28,23 @@ type Root struct {
 
 	background basicwidget.Background
 	buttons    [16]basicwidget.Button
+
+	// Layout state for center function (non-fill case): 4 rows * 4 cols = 16.
+	centerInnerItems   [16][]guigui.LinearLayoutItem
+	centerInnerLayouts []guigui.LinearLayout
+	centerOuterItems   [16][]guigui.LinearLayoutItem
+	centerOuterLayouts []guigui.LinearLayout
+
+	// Layout state for grid rows.
+	gridRowItems   [4][]guigui.LinearLayoutItem
+	gridRowLayouts []guigui.LinearLayout
+
+	// Layout state for the inner grid layout.
+	gridItems  []guigui.LinearLayoutItem
+	gridLayout guigui.LinearLayout
+
+	// Layout state for the outer layout.
+	outerItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -64,6 +82,94 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	return nil
 }
 
+func (r *Root) setupCenter(idx int, widget guigui.Widget) {
+	r.centerInnerItems[idx] = slices.Delete(r.centerInnerItems[idx], 0, len(r.centerInnerItems[idx]))
+	r.centerInnerItems[idx] = append(r.centerInnerItems[idx],
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: widget,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+	)
+	r.centerInnerLayouts = append(r.centerInnerLayouts, guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     r.centerInnerItems[idx],
+	})
+	r.centerOuterItems[idx] = slices.Delete(r.centerOuterItems[idx], 0, len(r.centerOuterItems[idx]))
+	r.centerOuterItems[idx] = append(r.centerOuterItems[idx],
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Layout: &r.centerInnerLayouts[idx],
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+	)
+	r.centerOuterLayouts = append(r.centerOuterLayouts, guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     r.centerOuterItems[idx],
+	})
+}
+
+func (r *Root) setupGridRow(row, firstColumnWidth, gridGap int) {
+	r.gridRowItems[row] = slices.Delete(r.gridRowItems[row], 0, len(r.gridRowItems[row]))
+	if r.fill {
+		r.gridRowItems[row] = append(r.gridRowItems[row],
+			guigui.LinearLayoutItem{
+				Widget: &r.buttons[4*row],
+				Size:   guigui.FixedSize(firstColumnWidth),
+			},
+			guigui.LinearLayoutItem{
+				Widget: &r.buttons[4*row+1],
+				Size:   guigui.FixedSize(200),
+			},
+			guigui.LinearLayoutItem{
+				Widget: &r.buttons[4*row+2],
+				Size:   guigui.FlexibleSize(1),
+			},
+			guigui.LinearLayoutItem{
+				Widget: &r.buttons[4*row+3],
+				Size:   guigui.FlexibleSize(2),
+			},
+		)
+	} else {
+		centerBase := row * 4
+		r.setupCenter(centerBase, &r.buttons[4*row])
+		r.setupCenter(centerBase+1, &r.buttons[4*row+1])
+		r.setupCenter(centerBase+2, &r.buttons[4*row+2])
+		r.setupCenter(centerBase+3, &r.buttons[4*row+3])
+		r.gridRowItems[row] = append(r.gridRowItems[row],
+			guigui.LinearLayoutItem{
+				Layout: &r.centerOuterLayouts[centerBase],
+				Size:   guigui.FixedSize(firstColumnWidth),
+			},
+			guigui.LinearLayoutItem{
+				Layout: &r.centerOuterLayouts[centerBase+1],
+				Size:   guigui.FixedSize(200),
+			},
+			guigui.LinearLayoutItem{
+				Layout: &r.centerOuterLayouts[centerBase+2],
+				Size:   guigui.FlexibleSize(1),
+			},
+			guigui.LinearLayoutItem{
+				Layout: &r.centerOuterLayouts[centerBase+3],
+				Size:   guigui.FlexibleSize(2),
+			},
+		)
+	}
+	r.gridRowLayouts = append(r.gridRowLayouts, guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     r.gridRowItems[row],
+		Gap:       gridGap,
+	})
+}
+
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
@@ -82,126 +188,59 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		firstRowHeight = max(firstRowHeight, r.buttons[i].Measure(context, guigui.Constraints{}).Y)
 	}
 
-	center := func(widget guigui.Widget) guigui.LinearLayout {
-		return guigui.LinearLayout{
-			Direction: guigui.LayoutDirectionHorizontal,
-			Items: []guigui.LinearLayoutItem{
-				{
-					Size: guigui.FlexibleSize(1),
-				},
-				{
-					Layout: guigui.LinearLayout{
-						Direction: guigui.LayoutDirectionVertical,
-						Items: []guigui.LinearLayoutItem{
-							{
-								Size: guigui.FlexibleSize(1),
-							},
-							{
-								Widget: widget,
-							},
-							{
-								Size: guigui.FlexibleSize(1),
-							},
-						},
-					},
-				},
-				{
-					Size: guigui.FlexibleSize(1),
-				},
-			},
-		}
+	r.centerInnerLayouts = slices.Delete(r.centerInnerLayouts, 0, len(r.centerInnerLayouts))
+	r.centerOuterLayouts = slices.Delete(r.centerOuterLayouts, 0, len(r.centerOuterLayouts))
+	r.gridRowLayouts = slices.Delete(r.gridRowLayouts, 0, len(r.gridRowLayouts))
+	for row := range 4 {
+		r.setupGridRow(row, firstColumnWidth, gridGap)
 	}
 
-	gridRowLayout := func(row int) guigui.LinearLayout {
-		if r.fill {
-			return guigui.LinearLayout{
-				Direction: guigui.LayoutDirectionHorizontal,
-				Items: []guigui.LinearLayoutItem{
-					{
-						Widget: &r.buttons[4*row],
-						Size:   guigui.FixedSize(firstColumnWidth),
-					},
-					{
-						Widget: &r.buttons[4*row+1],
-						Size:   guigui.FixedSize(200),
-					},
-					{
-						Widget: &r.buttons[4*row+2],
-						Size:   guigui.FlexibleSize(1),
-					},
-					{
-						Widget: &r.buttons[4*row+3],
-						Size:   guigui.FlexibleSize(2),
-					},
-				},
-				Gap: gridGap,
-			}
-		}
-		return guigui.LinearLayout{
-			Direction: guigui.LayoutDirectionHorizontal,
-			Items: []guigui.LinearLayoutItem{
-				{
-					Layout: center(&r.buttons[4*row]),
-					Size:   guigui.FixedSize(firstColumnWidth),
-				},
-				{
-					Layout: center(&r.buttons[4*row+1]),
-					Size:   guigui.FixedSize(200),
-				},
-				{
-					Layout: center(&r.buttons[4*row+2]),
-					Size:   guigui.FlexibleSize(1),
-				},
-				{
-					Layout: center(&r.buttons[4*row+3]),
-					Size:   guigui.FlexibleSize(2),
-				},
-			},
-			Gap: gridGap,
-		}
-	}
-
-	layout := guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.configForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionVertical,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size:   guigui.FixedSize(firstRowHeight),
-							Layout: gridRowLayout(0),
-						},
-						{
-							Size:   guigui.FixedSize(100),
-							Layout: gridRowLayout(1),
-						},
-						{
-							Size:   guigui.FlexibleSize(1),
-							Layout: gridRowLayout(2),
-						},
-						{
-							Size:   guigui.FlexibleSize(2),
-							Layout: gridRowLayout(3),
-						},
-					},
-					Gap: gridGap,
-				},
-			},
+	r.gridItems = slices.Delete(r.gridItems, 0, len(r.gridItems))
+	r.gridItems = append(r.gridItems,
+		guigui.LinearLayoutItem{
+			Size:   guigui.FixedSize(firstRowHeight),
+			Layout: &r.gridRowLayouts[0],
 		},
-		Gap: u / 2,
+		guigui.LinearLayoutItem{
+			Size:   guigui.FixedSize(100),
+			Layout: &r.gridRowLayouts[1],
+		},
+		guigui.LinearLayoutItem{
+			Size:   guigui.FlexibleSize(1),
+			Layout: &r.gridRowLayouts[2],
+		},
+		guigui.LinearLayoutItem{
+			Size:   guigui.FlexibleSize(2),
+			Layout: &r.gridRowLayouts[3],
+		},
+	)
+	r.gridLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     r.gridItems,
+		Gap:       gridGap,
+	}
+
+	r.outerItems = slices.Delete(r.outerItems, 0, len(r.outerItems))
+	r.outerItems = append(r.outerItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.configForm,
+		},
+		guigui.LinearLayoutItem{
+			Size:   guigui.FlexibleSize(1),
+			Layout: &r.gridLayout,
+		},
+	)
+	(guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     r.outerItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
 			End:    u / 2,
 			Bottom: u / 2,
 		},
-	}
-	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func main() {

@@ -41,6 +41,8 @@ type Lists struct {
 
 	listItems []basicwidget.ListItem[int]
 	treeItems []basicwidget.ListItem[int]
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -216,21 +218,23 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 func (l *Lists) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	l.layoutItems = slices.Delete(l.layoutItems, 0, len(l.layoutItems))
+	l.layoutItems = append(l.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &l.listFormPanel,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &l.jumpForm,
+		},
+		guigui.LinearLayoutItem{
+			Widget: &l.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &l.listFormPanel,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &l.jumpForm,
-			},
-			{
-				Widget: &l.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     l.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

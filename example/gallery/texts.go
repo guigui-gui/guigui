@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -30,6 +32,8 @@ type Texts struct {
 	editableText                    basicwidget.Text
 	editableToggle                  basicwidget.Toggle
 	sampleText                      basicwidget.Text
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -212,18 +216,20 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 func (t *Texts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.sampleText,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &t.form,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.sampleText,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &t.form,
-			},
-		},
-		Gap: u / 2,
+		Items:     t.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

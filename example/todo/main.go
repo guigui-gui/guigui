@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -30,6 +31,10 @@ type Root struct {
 	tasksPanelContent tasksPanelContent
 
 	model Model
+
+	inputRowLayout guigui.LinearLayout
+	inputRowItems  []guigui.LinearLayoutItem
+	layoutItems    []guigui.LinearLayoutItem
 }
 
 func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
@@ -75,32 +80,37 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
+	r.inputRowItems = slices.Delete(r.inputRowItems, 0, len(r.inputRowItems))
+	r.inputRowItems = append(r.inputRowItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.textInput,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.createButton,
+			Size:   guigui.FixedSize(5 * u),
+		},
+	)
+	r.inputRowLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     r.inputRowItems,
+		Gap:       u / 2,
+	}
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Size:   guigui.FixedSize(u),
+			Layout: &r.inputRowLayout,
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.tasksPanel,
+			Size:   guigui.FlexibleSize(1),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Size: guigui.FixedSize(u),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Widget: &r.textInput,
-							Size:   guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &r.createButton,
-							Size:   guigui.FixedSize(5 * u),
-						},
-					},
-					Gap: u / 2,
-				},
-			},
-			{
-				Widget: &r.tasksPanel,
-				Size:   guigui.FlexibleSize(1),
-			},
-		},
-		Gap: u / 2,
+		Items:     r.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -121,6 +131,8 @@ type taskWidget struct {
 
 	doneButton basicwidget.Button
 	text       basicwidget.Text
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 var (
@@ -151,19 +163,21 @@ func (t *taskWidget) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 
 func (t *taskWidget) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.doneButton,
+			Size:   guigui.FixedSize(3 * u),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &t.text,
+			Size:   guigui.FlexibleSize(1),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.doneButton,
-				Size:   guigui.FixedSize(3 * u),
-			},
-			{
-				Widget: &t.text,
-				Size:   guigui.FlexibleSize(1),
-			},
-		},
-		Gap: u / 2,
+		Items:     t.layoutItems,
+		Gap:       u / 2,
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
@@ -175,6 +189,8 @@ type tasksPanelContent struct {
 	guigui.DefaultWidget
 
 	taskWidgets guigui.WidgetSlice[*taskWidget]
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 var (
@@ -209,20 +225,20 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
-	layout := guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionVertical,
-		Gap:       u / 4,
-	}
-	layout.Items = make([]guigui.LinearLayoutItem, t.taskWidgets.Len())
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
 	for i := range t.taskWidgets.Len() {
 		w := widgetBounds.Bounds().Dx()
 		h := t.taskWidgets.At(i).Measure(context, guigui.FixedWidthConstraints(w)).Y
-		layout.Items[i] = guigui.LinearLayoutItem{
+		t.layoutItems = append(t.layoutItems, guigui.LinearLayoutItem{
 			Widget: t.taskWidgets.At(i),
 			Size:   guigui.FixedSize(h),
-		}
+		})
 	}
-	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	(guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     t.layoutItems,
+		Gap:       u / 4,
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

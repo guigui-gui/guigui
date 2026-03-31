@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -24,6 +25,10 @@ type Root struct {
 	counterText basicwidget.Text
 
 	counter int
+
+	buttonRowLayout guigui.LinearLayout
+	buttonRowItems  []guigui.LinearLayoutItem
+	layoutItems     []guigui.LinearLayoutItem
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -63,39 +68,44 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
+	r.buttonRowItems = slices.Delete(r.buttonRowItems, 0, len(r.buttonRowItems))
+	r.buttonRowItems = append(r.buttonRowItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.resetButton,
+			Size:   guigui.FixedSize(6 * u),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.decButton,
+			Size:   guigui.FixedSize(6 * u),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.incButton,
+			Size:   guigui.FixedSize(6 * u),
+		},
+	)
+	r.buttonRowLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     r.buttonRowItems,
+		Gap:       u / 2,
+	}
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.counterText,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Size:   guigui.FixedSize(u),
+			Layout: &r.buttonRowLayout,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.counterText,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Size: guigui.FixedSize(u),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Widget: &r.resetButton,
-							Size:   guigui.FixedSize(6 * u),
-						},
-						{
-							Size: guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &r.decButton,
-							Size:   guigui.FixedSize(6 * u),
-						},
-						{
-							Widget: &r.incButton,
-							Size:   guigui.FixedSize(6 * u),
-						},
-					},
-					Gap: u / 2,
-				},
-			},
-		},
-		Gap: u,
+		Items:     r.layoutItems,
+		Gap:       u,
 		Padding: guigui.Padding{
 			Start:  u,
 			Top:    u,

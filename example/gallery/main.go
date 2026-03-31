@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -40,6 +41,8 @@ type Root struct {
 	tooltips          Tooltips
 
 	model Model
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
@@ -96,18 +99,20 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.sidebar,
+			Size:   guigui.FixedSize(8 * basicwidget.UnitSize(context)),
+		},
+		guigui.LinearLayoutItem{
+			Widget: r.contentWidgeet(),
+			Size:   guigui.FlexibleSize(1),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.sidebar,
-				Size:   guigui.FixedSize(8 * basicwidget.UnitSize(context)),
-			},
-			{
-				Widget: r.contentWidgeet(),
-				Size:   guigui.FlexibleSize(1),
-			},
-		},
+		Items:     r.layoutItems,
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

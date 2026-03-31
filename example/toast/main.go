@@ -107,6 +107,9 @@ type toastContent struct {
 	closeButton basicwidget.Button
 
 	hasCloseButton bool
+
+	linearLayout      guigui.LinearLayout
+	linearLayoutItems []guigui.LinearLayoutItem
 }
 
 func (t *toastContent) SetText(text string) {
@@ -137,23 +140,23 @@ func (t *toastContent) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	return nil
 }
 
-func (t *toastContent) layout(context *guigui.Context) guigui.LinearLayout {
+func (t *toastContent) buildLayout(context *guigui.Context) {
 	u := basicwidget.UnitSize(context)
 
-	var items []guigui.LinearLayoutItem
-	items = append(items, guigui.LinearLayoutItem{
+	t.linearLayoutItems = slices.Delete(t.linearLayoutItems, 0, len(t.linearLayoutItems))
+	t.linearLayoutItems = append(t.linearLayoutItems, guigui.LinearLayoutItem{
 		Widget: &t.text,
 		Size:   guigui.FlexibleSize(1),
 	})
 	if t.hasCloseButton {
-		items = append(items, guigui.LinearLayoutItem{
+		t.linearLayoutItems = append(t.linearLayoutItems, guigui.LinearLayoutItem{
 			Widget: &t.closeButton,
 		})
 	}
 
-	return guigui.LinearLayout{
+	t.linearLayout = guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items:     items,
+		Items:     t.linearLayoutItems,
 		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
@@ -165,11 +168,13 @@ func (t *toastContent) layout(context *guigui.Context) guigui.LinearLayout {
 }
 
 func (t *toastContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	t.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	t.buildLayout(context)
+	t.linearLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *toastContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return t.layout(context).Measure(context, constraints)
+	t.buildLayout(context)
+	return t.linearLayout.Measure(context, constraints)
 }
 
 type Root struct {

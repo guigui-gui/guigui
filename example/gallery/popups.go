@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -38,6 +39,8 @@ type Popups struct {
 	contextMenuPopup basicwidget.PopupMenu[int]
 
 	contextMenuPopupPosition image.Point
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -173,17 +176,19 @@ func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	})
 
 	u := basicwidget.UnitSize(context)
+	p.layoutItems = slices.Delete(p.layoutItems, 0, len(p.layoutItems))
+	p.layoutItems = append(p.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &p.forms[0],
+		},
+		guigui.LinearLayoutItem{
+			Widget: &p.forms[1],
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &p.forms[0],
-			},
-			{
-				Widget: &p.forms[1],
-			},
-		},
-		Gap: u / 2,
+		Items:     p.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -241,6 +246,10 @@ type simplePopupContent struct {
 
 	titleText   basicwidget.Text
 	closeButton basicwidget.Button
+
+	buttonRowLayout guigui.LinearLayout
+	buttonRowItems  []guigui.LinearLayoutItem
+	layoutItems     []guigui.LinearLayoutItem
 }
 
 func (s *simplePopupContent) SetPopup(popup *basicwidget.Popup) {
@@ -263,28 +272,33 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 
 func (s *simplePopupContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	s.buttonRowItems = slices.Delete(s.buttonRowItems, 0, len(s.buttonRowItems))
+	s.buttonRowItems = append(s.buttonRowItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &s.closeButton,
+		},
+	)
+	s.buttonRowLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     s.buttonRowItems,
+	}
+	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
+	s.layoutItems = append(s.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &s.titleText,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Size:   guigui.FixedSize(s.closeButton.Measure(context, guigui.Constraints{}).Y),
+			Layout: &s.buttonRowLayout,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &s.titleText,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Size: guigui.FixedSize(s.closeButton.Measure(context, guigui.Constraints{}).Y),
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionHorizontal,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &s.closeButton,
-						},
-					},
-				},
-			},
-		},
+		Items:     s.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"golang.org/x/text/language"
@@ -23,6 +24,8 @@ type Settings struct {
 	localeSelect              basicwidget.Select[language.Tag]
 	scaleText                 basicwidget.Text
 	scaleSegmentedControl     basicwidget.SegmentedControl[float64]
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 var hongKongChinese = language.MustParse("zh-HK")
@@ -176,14 +179,16 @@ func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
+	s.layoutItems = append(s.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &s.form,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &s.form,
-			},
-		},
-		Gap: u / 2,
+		Items:     s.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -198,6 +203,9 @@ type textWithSubText struct {
 
 	text    basicwidget.Text
 	subText basicwidget.Text
+
+	linearLayout      guigui.LinearLayout
+	linearLayoutItems []guigui.LinearLayoutItem
 }
 
 func (t *textWithSubText) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -210,24 +218,28 @@ func (t *textWithSubText) Build(context *guigui.Context, adder *guigui.ChildAdde
 	return nil
 }
 
-func (t *textWithSubText) layout() guigui.LinearLayout {
-	return guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.text,
-			},
-			{
-				Widget: &t.subText,
-			},
+func (t *textWithSubText) buildLayout() {
+	t.linearLayoutItems = slices.Delete(t.linearLayoutItems, 0, len(t.linearLayoutItems))
+	t.linearLayoutItems = append(t.linearLayoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.text,
 		},
+		guigui.LinearLayoutItem{
+			Widget: &t.subText,
+		},
+	)
+	t.linearLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     t.linearLayoutItems,
 	}
 }
 
 func (t *textWithSubText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	t.layout().LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	t.buildLayout()
+	t.linearLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 
 func (t *textWithSubText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return t.layout().Measure(context, constraints)
+	t.buildLayout()
+	return t.linearLayout.Measure(context, constraints)
 }

@@ -28,6 +28,8 @@ type Selects struct {
 	select1Items       []basicwidget.SelectItem[int]
 	select2Items       []basicwidget.SelectItem[int]
 	select2ItemWidgets []selectItem
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -121,19 +123,21 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 
 func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
+	s.layoutItems = append(s.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &s.listForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &s.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &s.listForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &s.configForm,
-			},
-		},
+		Items:     s.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -148,6 +152,9 @@ type selectItem struct {
 
 	image basicwidget.Image
 	text  basicwidget.Text
+
+	linearLayout      guigui.LinearLayout
+	linearLayoutItems []guigui.LinearLayoutItem
 }
 
 func (s *selectItem) SetImage(img *ebiten.Image) {
@@ -165,25 +172,28 @@ func (s *selectItem) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	return nil
 }
 
-func (s *selectItem) layout(context *guigui.Context) guigui.LinearLayout {
+func (s *selectItem) buildLayout(context *guigui.Context) {
 	u := basicwidget.UnitSize(context)
-	return guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &s.image,
-				Size:   guigui.FixedSize(2 * u),
-			},
-			{
-				Widget: &s.text,
-			},
+	s.linearLayoutItems = slices.Delete(s.linearLayoutItems, 0, len(s.linearLayoutItems))
+	s.linearLayoutItems = append(s.linearLayoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &s.image,
+			Size:   guigui.FixedSize(2 * u),
 		},
-		Gap: u / 4,
+		guigui.LinearLayoutItem{
+			Widget: &s.text,
+		},
+	)
+	s.linearLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     s.linearLayoutItems,
+		Gap:       u / 4,
 	}
 }
 
 func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	s.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	s.buildLayout(context)
+	s.linearLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 	if v, ok := context.Env(s, basicwidget.EnvKeyListItemColorType); ok {
 		ct := v.(basicwidget.ListItemColorType)
 		s.text.SetColor(ct.TextColor(context))
@@ -193,5 +203,6 @@ func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 }
 
 func (s *selectItem) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return s.layout(context).Measure(context, constraints)
+	s.buildLayout(context)
+	return s.linearLayout.Measure(context, constraints)
 }

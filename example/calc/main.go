@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -60,6 +61,13 @@ type Root struct {
 	displayText        basicwidget.Text
 	buttons            [buttonCount]basicwidget.Button
 	buttonLabelWidgets [buttonCount]buttonLabel
+
+	rowItems      [4][]guigui.LinearLayoutItem
+	rowLayouts    []guigui.LinearLayout
+	lastRowItems  []guigui.LinearLayoutItem
+	lastRowLayout guigui.LinearLayout
+	outerItems    []guigui.LinearLayoutItem
+	outerLayout   guigui.LinearLayout
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -91,64 +99,68 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	u := basicwidget.UnitSize(context)
 
-	rows := make([]guigui.LinearLayoutItem, 0, 6)
+	r.outerItems = slices.Delete(r.outerItems, 0, len(r.outerItems))
 
 	// Display row.
-	rows = append(rows, guigui.LinearLayoutItem{
+	r.outerItems = append(r.outerItems, guigui.LinearLayoutItem{
 		Widget: &r.displayText,
 		Size:   guigui.FlexibleSize(2),
 	})
 
 	// Button rows (4 rows of 4 buttons).
+	r.rowLayouts = slices.Delete(r.rowLayouts, 0, len(r.rowLayouts))
 	for row := range 4 {
-		items := make([]guigui.LinearLayoutItem, 4)
+		r.rowItems[row] = slices.Delete(r.rowItems[row], 0, len(r.rowItems[row]))
 		for col := range 4 {
 			idx := row*4 + col
-			items[col] = guigui.LinearLayoutItem{
+			r.rowItems[row] = append(r.rowItems[row], guigui.LinearLayoutItem{
 				Widget: &r.buttons[idx],
 				Size:   guigui.FlexibleSize(1),
-			}
+			})
 		}
-		rows = append(rows, guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
-			Layout: guigui.LinearLayout{
-				Direction: guigui.LayoutDirectionHorizontal,
-				Items:     items,
-				Gap:       u / 4,
-			},
+		r.rowLayouts = append(r.rowLayouts, guigui.LinearLayout{
+			Direction: guigui.LayoutDirectionHorizontal,
+			Items:     r.rowItems[row],
+			Gap:       u / 4,
+		})
+		r.outerItems = append(r.outerItems, guigui.LinearLayoutItem{
+			Size:   guigui.FlexibleSize(1),
+			Layout: &r.rowLayouts[row],
 		})
 	}
 
 	// Last row: 0 (wide), dot, equals.
 	// Use 4 cells to align with above rows, but merge the first two for the "0" button.
-	lastRowLayout := guigui.LinearLayout{
-		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &r.buttons[17],
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &r.buttons[18],
-				Size:   guigui.FlexibleSize(1),
-			},
+	r.lastRowItems = slices.Delete(r.lastRowItems, 0, len(r.lastRowItems))
+	r.lastRowItems = append(r.lastRowItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
 		},
-		Gap: u / 4,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.buttons[17],
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.buttons[18],
+			Size:   guigui.FlexibleSize(1),
+		},
+	)
+	r.lastRowLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionHorizontal,
+		Items:     r.lastRowItems,
+		Gap:       u / 4,
 	}
-	rows = append(rows, guigui.LinearLayoutItem{
+	r.outerItems = append(r.outerItems, guigui.LinearLayoutItem{
 		Size:   guigui.FlexibleSize(1),
-		Layout: lastRowLayout,
+		Layout: &r.lastRowLayout,
 	})
 
-	outerLayout := guigui.LinearLayout{
+	r.outerLayout = guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items:     rows,
+		Items:     r.outerItems,
 		Gap:       u / 4,
 		Padding: guigui.Padding{
 			Start:  u / 2,
@@ -157,12 +169,12 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			Bottom: u / 2,
 		},
 	}
-	outerLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	r.outerLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 
 	// Layout the "0" button spanning the first two cells of the last row.
-	lastRowBounds := outerLayout.ItemBoundsAt(len(rows)-1, context, widgetBounds.Bounds())
-	b0 := lastRowLayout.ItemBoundsAt(0, context, lastRowBounds)
-	b1 := lastRowLayout.ItemBoundsAt(1, context, lastRowBounds)
+	lastRowBounds := r.outerLayout.ItemBoundsAt(len(r.outerItems)-1, context, widgetBounds.Bounds())
+	b0 := r.lastRowLayout.ItemBoundsAt(0, context, lastRowBounds)
+	b1 := r.lastRowLayout.ItemBoundsAt(1, context, lastRowBounds)
 	layouter.LayoutWidget(&r.buttons[16], b0.Union(b1))
 }
 

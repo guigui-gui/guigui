@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -42,6 +43,8 @@ type toolbarContent struct {
 
 	leftPanelButton  basicwidget.Button
 	rightPanelButton basicwidget.Button
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -92,21 +95,23 @@ func (t *toolbarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 func (t *toolbarContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.leftPanelButton,
+			Size:   guigui.FixedSize(u * 3 / 2),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &t.rightPanelButton,
+			Size:   guigui.FixedSize(u * 3 / 2),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.leftPanelButton,
-				Size:   guigui.FixedSize(u * 3 / 2),
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &t.rightPanelButton,
-				Size:   guigui.FixedSize(u * 3 / 2),
-			},
-		},
+		Items:     t.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 4,
 			Top:    u / 4,

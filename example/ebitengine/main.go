@@ -10,6 +10,7 @@ import (
 	_ "image/jpeg"
 	"math"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/examples/resources/images"
@@ -129,6 +130,8 @@ type Root struct {
 	background        basicwidget.Background
 	gameWidget        gameWidget
 	pauseResumeButton basicwidget.Button
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -152,18 +155,20 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.gameWidget,
+			Size:   guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.pauseResumeButton,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.gameWidget,
-				Size:   guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &r.pauseResumeButton,
-			},
-		},
-		Gap: u / 2,
+		Items:     r.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u,
 			Top:    u,

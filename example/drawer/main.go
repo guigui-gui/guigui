@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -25,6 +26,8 @@ type Root struct {
 	drawerContent drawerContent
 
 	edge basicwidget.DrawerEdge
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -92,16 +95,18 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	layouter.LayoutWidget(&r.background, widgetBounds.Bounds())
 
 	u := basicwidget.UnitSize(context)
+	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
+	r.layoutItems = append(r.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &r.configForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &r.configForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-		},
+		Items:     r.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
@@ -132,6 +137,10 @@ type drawerContent struct {
 	guigui.DefaultWidget
 
 	closeButton basicwidget.Button
+
+	innerLayout guigui.LinearLayout
+	innerItems  []guigui.LinearLayoutItem
+	outerItems  []guigui.LinearLayoutItem
 }
 
 func (d *drawerContent) OnClose(f func(context *guigui.Context)) {
@@ -151,26 +160,31 @@ func (d *drawerContent) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 func (d *drawerContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	d.innerItems = slices.Delete(d.innerItems, 0, len(d.innerItems))
+	d.innerItems = append(d.innerItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &d.closeButton,
+		},
+	)
+	d.innerLayout = guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     d.innerItems,
+	}
+	d.outerItems = slices.Delete(d.outerItems, 0, len(d.outerItems))
+	d.outerItems = append(d.outerItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Layout: &d.innerLayout,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Layout: guigui.LinearLayout{
-					Direction: guigui.LayoutDirectionVertical,
-					Items: []guigui.LinearLayoutItem{
-						{
-							Size: guigui.FlexibleSize(1),
-						},
-						{
-							Widget: &d.closeButton,
-						},
-					},
-				},
-			},
-		},
+		Items:     d.outerItems,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

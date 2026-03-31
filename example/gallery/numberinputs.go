@@ -6,6 +6,7 @@ package main
 import (
 	"math"
 	"math/big"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -31,6 +32,8 @@ type NumberInputs struct {
 	editableToggle basicwidget.Toggle
 	enabledText    basicwidget.Text
 	enabledToggle  basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -155,20 +158,22 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	n.layoutItems = slices.Delete(n.layoutItems, 0, len(n.layoutItems))
+	n.layoutItems = append(n.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &n.numberInputForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &n.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &n.numberInputForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &n.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     n.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

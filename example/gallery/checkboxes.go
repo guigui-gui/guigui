@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -23,6 +25,8 @@ type Checkboxes struct {
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
 	enabledToggle basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (c *Checkboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -89,20 +93,22 @@ func (c *Checkboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 
 func (c *Checkboxes) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	c.layoutItems = slices.Delete(c.layoutItems, 0, len(c.layoutItems))
+	c.layoutItems = append(c.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &c.checkboxesForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &c.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &c.checkboxesForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &c.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     c.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

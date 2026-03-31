@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -30,6 +31,8 @@ type Buttons struct {
 	configForm    basicwidget.Form
 	enabledText   basicwidget.Text
 	enabledToggle basicwidget.Toggle
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -127,20 +130,22 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 
 func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
+	b.layoutItems = append(b.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &b.buttonsForm,
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &b.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &b.buttonsForm,
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &b.configForm,
-			},
-		},
-		Gap: u / 2,
+		Items:     b.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

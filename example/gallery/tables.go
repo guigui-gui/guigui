@@ -26,6 +26,8 @@ type Tables struct {
 	enabledToggle    basicwidget.Toggle
 
 	tableRows []basicwidget.TableRow[int]
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -151,19 +153,22 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.table,
+			Size:   guigui.FixedSize(12 * u),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &t.configForm,
+		},
+	)
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: &t.table, Size: guigui.FixedSize(12 * u),
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Widget: &t.configForm,
-			},
-		},
+		Items:     t.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,
