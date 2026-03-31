@@ -29,11 +29,11 @@ func adjustedWheel() (float64, float64) {
 }
 
 func scrollBarFadingInTime() int {
-	return ebiten.TPS() / 15
+	return ebiten.TPS() / 20
 }
 
 func scrollBarFadingOutTime() int {
-	return ebiten.TPS() / 5
+	return ebiten.TPS() / 10
 }
 
 func scrollBarShowingTime() int {
