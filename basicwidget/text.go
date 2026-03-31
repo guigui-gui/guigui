@@ -69,7 +69,7 @@ func repeat(duration int) bool {
 	if duration <= 1 {
 		return true
 	}
-	delay := ebiten.TPS() * 24 / 60
+	delay := ebiten.TPS() * 2 / 5
 	if duration < delay {
 		return false
 	}
