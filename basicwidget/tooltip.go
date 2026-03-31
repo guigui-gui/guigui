@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -159,6 +160,8 @@ type tooltipContent struct {
 	text    Text
 
 	textContent string
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (t *tooltipContent) activeWidget() guigui.Widget {
@@ -183,13 +186,14 @@ func (t *tooltipContent) layout(context *guigui.Context) guigui.LinearLayout {
 	if t.content == nil {
 		padding = TooltipTextPadding(context)
 	}
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: t.activeWidget(),
+			Size:   guigui.FlexibleSize(1),
+		})
 	return guigui.LinearLayout{
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: t.activeWidget(),
-				Size:   guigui.FlexibleSize(1),
-			},
-		},
+		Items:   t.layoutItems,
 		Padding: padding,
 	}
 }

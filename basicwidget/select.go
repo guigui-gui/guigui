@@ -299,6 +299,8 @@ type selectItemContent struct {
 	guigui.DefaultWidget
 
 	content guigui.Widget
+
+	layoutItems []guigui.LinearLayoutItem
 }
 
 func (s *selectItemContent) SetContent(content guigui.Widget) {
@@ -312,13 +314,14 @@ func (s *selectItemContent) Build(context *guigui.Context, adder *guigui.ChildAd
 
 func (s *selectItemContent) layout(context *guigui.Context) guigui.LinearLayout {
 	u := UnitSize(context)
+	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
+	s.layoutItems = append(s.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: s.content,
+		})
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Widget: s.content,
-			},
-		},
+		Items:     s.layoutItems,
 		Padding: guigui.Padding{
 			Start:  u / 4,
 			Top:    int(context.Scale()),

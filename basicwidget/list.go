@@ -437,8 +437,9 @@ type listItemWidget[T comparable] struct {
 	heightPlus1 int
 	style       ListStyle
 
-	layout      guigui.LinearLayout
-	layoutItems []guigui.LinearLayoutItem
+	layout             guigui.LinearLayout
+	layoutItems        []guigui.LinearLayoutItem
+	wrapperLayoutItems []guigui.LinearLayoutItem
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
@@ -544,14 +545,15 @@ func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearL
 		h = UnitSize(context) * 3 / 2
 	}
 	if h > 0 {
+		l.wrapperLayoutItems = slices.Delete(l.wrapperLayoutItems, 0, len(l.wrapperLayoutItems))
+		l.wrapperLayoutItems = append(l.wrapperLayoutItems,
+			guigui.LinearLayoutItem{
+				Layout: layout,
+				Size:   guigui.FixedSize(h),
+			})
 		l.layout = guigui.LinearLayout{
 			Direction: guigui.LayoutDirectionVertical,
-			Items: []guigui.LinearLayoutItem{
-				{
-					Layout: layout,
-					Size:   guigui.FixedSize(h),
-				},
-			},
+			Items:     l.wrapperLayoutItems,
 		}
 	} else {
 		l.layout = layout

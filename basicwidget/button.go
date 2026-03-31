@@ -55,8 +55,9 @@ type Button struct {
 	semanticColor basicwidgetdraw.SemanticColor
 	textBold      bool
 
-	layoutItems []guigui.LinearLayoutItem
-	iconLayout  guigui.LinearLayout
+	layoutItems     []guigui.LinearLayoutItem
+	iconLayout      guigui.LinearLayout
+	iconLayoutItems []guigui.LinearLayoutItem
 
 	pressed              bool
 	keepPressed          bool
@@ -229,20 +230,21 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 			toCreateIconLayout = iconItem.Widget != &b.icon || iconItem.Size != guigui.FixedSize(height)
 		}
 		if toCreateIconLayout {
+			b.iconLayoutItems = slices.Delete(b.iconLayoutItems, 0, len(b.iconLayoutItems))
+			b.iconLayoutItems = append(b.iconLayoutItems,
+				guigui.LinearLayoutItem{
+					Size: guigui.FlexibleSize(1),
+				},
+				guigui.LinearLayoutItem{
+					Widget: &b.icon,
+					Size:   guigui.FixedSize(height),
+				},
+				guigui.LinearLayoutItem{
+					Size: guigui.FlexibleSize(1),
+				})
 			b.iconLayout = guigui.LinearLayout{
 				Direction: guigui.LayoutDirectionVertical,
-				Items: []guigui.LinearLayoutItem{
-					{
-						Size: guigui.FlexibleSize(1),
-					},
-					{
-						Widget: &b.icon,
-						Size:   guigui.FixedSize(height),
-					},
-					{
-						Size: guigui.FlexibleSize(1),
-					},
-				},
+				Items:     b.iconLayoutItems,
 			}
 		}
 		iconLayoutItem = guigui.LinearLayoutItem{

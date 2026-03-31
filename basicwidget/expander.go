@@ -114,6 +114,9 @@ type expanderHeader struct {
 
 	expanded   bool
 	iconLayout guigui.LinearLayout
+
+	iconLayoutItems []guigui.LinearLayoutItem
+	layoutItems     []guigui.LinearLayoutItem
 }
 
 func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
@@ -159,37 +162,42 @@ func (e *expanderHeader) Build(context *guigui.Context, adder *guigui.ChildAdder
 
 func (e *expanderHeader) layout(context *guigui.Context) guigui.LinearLayout {
 	u := UnitSize(context)
+
+	e.iconLayoutItems = slices.Delete(e.layoutItems, 0, len(e.layoutItems))
+	e.iconLayoutItems = append(e.iconLayoutItems,
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FixedSize(UnitSize(context) / 32),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &e.image,
+			Size:   guigui.FixedSize(defaultIconSize(context)),
+		},
+		guigui.LinearLayoutItem{
+			Size: guigui.FlexibleSize(1),
+		})
 	e.iconLayout = guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-			{
-				Size: guigui.FixedSize(UnitSize(context) / 32),
-			},
-			{
-				Widget: &e.image,
-				Size:   guigui.FixedSize(defaultIconSize(context)),
-			},
-			{
-				Size: guigui.FlexibleSize(1),
-			},
-		},
+		Items:     e.iconLayoutItems,
 	}
+
+	e.layoutItems = slices.Delete(e.layoutItems, 0, len(e.layoutItems))
+	e.layoutItems = append(e.layoutItems,
+		guigui.LinearLayoutItem{
+			Layout: &e.iconLayout,
+			Size:   guigui.FixedSize(defaultIconSize(context)),
+		},
+		guigui.LinearLayoutItem{
+			Widget: e.widget,
+			Size:   guigui.FlexibleSize(1),
+		})
+
 	return guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
 		Gap:       u / 4,
-		Items: []guigui.LinearLayoutItem{
-			{
-				Layout: &e.iconLayout,
-				Size:   guigui.FixedSize(defaultIconSize(context)),
-			},
-			{
-				Widget: e.widget,
-				Size:   guigui.FlexibleSize(1),
-			},
-		},
+		Items:     e.layoutItems,
 	}
 }
 

@@ -260,8 +260,9 @@ type tableRowWidget[T comparable] struct {
 	table *Table[T]
 	texts guigui.WidgetSlice[*Text]
 
-	linearLayoutItems []guigui.LinearLayoutItem
-	textColumnLayouts []guigui.LinearLayout
+	linearLayoutItems     []guigui.LinearLayoutItem
+	textColumnLayouts     []guigui.LinearLayout
+	textColumnLayoutItems []guigui.LinearLayoutItem
 }
 
 func (t *tableRowWidget[T]) setTableRow(row TableRow[T]) {
@@ -300,6 +301,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.linearLayoutItems = slices.Delete(t.linearLayoutItems, 0, len(t.linearLayoutItems))
 	t.textColumnLayouts = t.textColumnLayouts[:0]
+	t.textColumnLayoutItems = slices.Delete(t.textColumnLayoutItems, 0, len(t.textColumnLayoutItems))
 	for i := range t.table.columnWidthsInPixels {
 		if i < len(t.row.Cells) && t.row.Cells[i].Content != nil {
 			t.linearLayoutItems = append(t.linearLayoutItems, guigui.LinearLayoutItem{
@@ -310,15 +312,14 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 			if i >= t.texts.Len() {
 				break
 			}
+			t.textColumnLayoutItems = append(t.textColumnLayoutItems, guigui.LinearLayoutItem{
+				Widget: t.texts.At(i),
+				Size:   guigui.FlexibleSize(1),
+			})
 			t.textColumnLayouts = append(t.textColumnLayouts, guigui.LinearLayout{
 				Direction: guigui.LayoutDirectionHorizontal,
-				Items: []guigui.LinearLayoutItem{
-					{
-						Widget: t.texts.At(i),
-						Size:   guigui.FlexibleSize(1),
-					},
-				},
-				Padding: ListItemTextPadding(context),
+				Items:     t.textColumnLayoutItems[len(t.textColumnLayoutItems)-1 : len(t.textColumnLayoutItems)],
+				Padding:   ListItemTextPadding(context),
 			})
 			t.linearLayoutItems = append(t.linearLayoutItems,
 				guigui.LinearLayoutItem{
