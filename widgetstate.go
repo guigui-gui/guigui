@@ -283,6 +283,8 @@ func traverseWidget(widget Widget, f func(widget Widget) error) error {
 	return nil
 }
 
+// RequestRebuild requests to rebuild the entire widget tree.
+// The widget argument is used only for logging purposes; the entire tree is rebuilt regardless of which widget is passed.
 func RequestRebuild(widget Widget) {
 	theApp.requestRebuild(widget.widgetState(), requestRedrawReasonRebuildWidget)
 }
@@ -304,6 +306,9 @@ func (a *app) requestRebuild(widgetState *widgetState, redrawReason requestRedra
 	}
 }
 
+// RequestRedraw requests to redraw the given widget.
+// RequestRedraw causes Draw invocations, but this might not be enough to reflect the latest state.
+// If unsure, use [RequestRebuild] instead.
 func RequestRedraw(widget Widget) {
 	requestRedraw(widget.widgetState())
 }
