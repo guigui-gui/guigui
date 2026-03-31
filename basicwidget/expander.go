@@ -24,7 +24,9 @@ type Expander struct {
 	headerWidget  guigui.Widget
 	contentWidget guigui.Widget
 
-	expanded bool
+	expanded     bool
+	onceRendered bool
+	count        int
 
 	layoutItems []guigui.LinearLayoutItem
 	onDown      func(context *guigui.Context)
@@ -50,19 +52,48 @@ func (e *Expander) SetContentWidget(w guigui.Widget) {
 	guigui.RequestRebuild(e)
 }
 
+func expanderMaxCount() int {
+	return ebiten.TPS() / 20
+}
+
 func (e *Expander) SetExpanded(expanded bool) {
 	if e.expanded == expanded {
 		return
 	}
 	e.expanded = expanded
 	e.header.setExpanded(e.expanded)
+	if e.onceRendered {
+		e.count = expanderMaxCount() - e.count
+	}
 	guigui.DispatchEvent(e, expanderEventExpansionChanged, e.expanded)
 	guigui.RequestRebuild(e)
 }
 
+func (e *Expander) isContentVisible() bool {
+	return e.expanded || e.animating()
+}
+
+func (e *Expander) animating() bool {
+	return e.count > 0
+}
+
+func (e *Expander) animationRate() float64 {
+	if !e.animating() {
+		if e.expanded {
+			return 1
+		}
+		return 0
+	}
+	rate := 1 - float64(e.count)/float64(expanderMaxCount())
+	if !e.expanded {
+		rate = 1 - rate
+	}
+	return rate
+}
+
 func (e *Expander) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&e.header)
-	if e.expanded && e.contentWidget != nil {
+	if e.isContentVisible() && e.contentWidget != nil {
 		adder.AddWidget(e.contentWidget)
 	}
 
@@ -74,6 +105,8 @@ func (e *Expander) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 	}
 	e.header.setOnDown(e.onDown)
 
+	context.SetClipChildren(e, e.animating())
+
 	return nil
 }
 
@@ -84,7 +117,7 @@ func (e *Expander) layout(context *guigui.Context) guigui.LinearLayout {
 		Widget: &e.header,
 		Size:   guigui.FixedSize(defaultIconSize(context)),
 	})
-	if e.expanded {
+	if e.isContentVisible() {
 		e.layoutItems = append(e.layoutItems, guigui.LinearLayoutItem{
 			Widget: e.contentWidget,
 			Size:   guigui.FlexibleSize(1),
@@ -103,7 +136,28 @@ func (e *Expander) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 }
 
 func (e *Expander) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return e.layout(context).Measure(context, constraints)
+	s := e.layout(context).Measure(context, constraints)
+	if e.animating() {
+		u := UnitSize(context)
+		headerHeight := defaultIconSize(context)
+		gap := u / 4
+		contentHeight := s.Y - headerHeight - gap
+		s.Y = headerHeight + gap + int(float64(contentHeight)*e.animationRate())
+	}
+	return s
+}
+
+func (e *Expander) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if e.count > 0 {
+		e.count--
+		guigui.RequestRedraw(e)
+		guigui.RequestRebuild(e)
+	}
+	return nil
+}
+
+func (e *Expander) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	e.onceRendered = true
 }
 
 type expanderHeader struct {
