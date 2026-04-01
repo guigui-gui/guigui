@@ -310,9 +310,23 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 		theLinearLayoutSizesPool.Put(tmpSizes)
 	}()
 	*tmpSizes = l.appendSizesInPixels((*tmpSizes)[:0], context, contentAlongSize, contentAcrossSize, true)
+
+	// If the across dimension is already fixed by constraints, autoAcrossSize will be
+	// overridden, so skip measuring children for it.
+	var acrossSizeFixed bool
+	switch l.Direction {
+	case LayoutDirectionHorizontal:
+		_, acrossSizeFixed = constraints.FixedHeight()
+	case LayoutDirectionVertical:
+		_, acrossSizeFixed = constraints.FixedWidth()
+	}
+
 	for i, item := range l.Items {
 		s := (*tmpSizes)[i]
 		autoAlongSize += s
+		if acrossSizeFixed {
+			continue
+		}
 		if item.Widget != nil {
 			switch l.Direction {
 			case LayoutDirectionHorizontal:
