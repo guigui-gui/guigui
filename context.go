@@ -131,34 +131,51 @@ func init() {
 	}
 }
 
+// FirstLocale returns the first effective locale.
+// The effective locales are determined by the app locales, the environment variable GUIGUI_LOCALES,
+// and the system locales, in that priority order.
+// If no locales are available, the zero value of language.Tag is returned.
+func (c *Context) FirstLocale() language.Tag {
+	c.ensureAllLocales()
+	if len(c.allLocales) > 0 {
+		return c.allLocales[0]
+	}
+	return language.Tag{}
+}
+
 // AppendLocales appends all effective locales to the given slice and returns the result.
 // The effective locales are determined by the app locales, the environment variable GUIGUI_LOCALES,
 // and the system locales, in that priority order.
 func (c *Context) AppendLocales(locales []language.Tag) []language.Tag {
-	if len(c.allLocales) == 0 {
-		// App locales
-		for _, l := range c.locales {
-			if slices.Contains(c.allLocales, l) {
-				continue
-			}
-			c.allLocales = append(c.allLocales, l)
-		}
-		// Env locales
-		for _, l := range envLocales {
-			if slices.Contains(c.allLocales, l) {
-				continue
-			}
-			c.allLocales = append(c.allLocales, l)
-		}
-		// System locales
-		for _, l := range systemLocales {
-			if slices.Contains(c.allLocales, l) {
-				continue
-			}
-			c.allLocales = append(c.allLocales, l)
-		}
-	}
+	c.ensureAllLocales()
 	return append(locales, c.allLocales...)
+}
+
+func (c *Context) ensureAllLocales() {
+	if len(c.allLocales) > 0 {
+		return
+	}
+	// App locales
+	for _, l := range c.locales {
+		if slices.Contains(c.allLocales, l) {
+			continue
+		}
+		c.allLocales = append(c.allLocales, l)
+	}
+	// Env locales
+	for _, l := range envLocales {
+		if slices.Contains(c.allLocales, l) {
+			continue
+		}
+		c.allLocales = append(c.allLocales, l)
+	}
+	// System locales
+	for _, l := range systemLocales {
+		if slices.Contains(c.allLocales, l) {
+			continue
+		}
+		c.allLocales = append(c.allLocales, l)
+	}
 }
 
 // AppendAppLocales appends the app locales set by [Context.SetAppLocales] to the given slice

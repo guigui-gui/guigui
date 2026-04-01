@@ -128,8 +128,6 @@ type Text struct {
 	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
 
-	tmpLocales []language.Tag
-
 	drawOptions textutil.DrawOptions
 
 	prevStart              int
@@ -657,11 +655,7 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKe
 	if len(t.locales) > 0 {
 		lang = t.locales[0]
 	} else {
-		t.tmpLocales = slices.Delete(t.tmpLocales, 0, len(t.tmpLocales))
-		t.tmpLocales = context.AppendLocales(t.tmpLocales)
-		if len(t.tmpLocales) > 0 {
-			lang = t.tmpLocales[0]
-		}
+		lang = context.FirstLocale()
 	}
 	return faceCacheKey{
 		size:   size,
