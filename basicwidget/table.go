@@ -325,6 +325,21 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 		Direction: guigui.LayoutDirectionHorizontal,
 		Items:     t.linearLayoutItems,
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+
+	// Set text colors based on the list item color type provided by the parent list widget.
+	if v, ok := context.Env(t, EnvKeyListItemColorType); ok {
+		ct := v.(ListItemColorType)
+		clr := ct.TextColor(context)
+		for i, cell := range t.row.Cells {
+			if cell.Content != nil || cell.TextColor != nil {
+				continue
+			}
+			if i >= t.texts.Len() {
+				break
+			}
+			t.texts.At(i).SetColor(clr)
+		}
+	}
 }
 
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

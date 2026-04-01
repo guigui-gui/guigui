@@ -99,13 +99,6 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		t.tableRows[i].Cells[3].TextTabular = true
 	}
 	t.table.SetItems(t.tableRows)
-	// Set the text colors after setting the items, or ItemTextColor will not work correctly.
-	for i := range model.Tables().TableItemCount() {
-		clr := t.table.ItemTextColor(context, i)
-		for j := range n {
-			t.tableRows[i].Cells[j].TextColor = clr
-		}
-	}
 	if model.Tables().IsFooterVisible() {
 		t.table.SetFooterHeight(u)
 	} else {
