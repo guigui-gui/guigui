@@ -217,7 +217,7 @@ func (e *expanderHeader) Build(context *guigui.Context, adder *guigui.ChildAdder
 func (e *expanderHeader) layout(context *guigui.Context) guigui.LinearLayout {
 	u := UnitSize(context)
 
-	e.iconLayoutItems = slices.Delete(e.layoutItems, 0, len(e.layoutItems))
+	e.iconLayoutItems = slices.Delete(e.iconLayoutItems, 0, len(e.iconLayoutItems))
 	e.iconLayoutItems = append(e.iconLayoutItems,
 		guigui.LinearLayoutItem{
 			Size: guigui.FlexibleSize(1),
