@@ -666,8 +666,12 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKe
 	}
 }
 
+// face must be called after [Text.Build], as it relies on lastFaceCacheKey being set.
 func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
-	key := t.faceCacheKey(context, forceBold)
+	key := t.lastFaceCacheKey
+	if forceBold {
+		key.weight = text.WeightBold
+	}
 	return fontFace(context, key)
 }
 
