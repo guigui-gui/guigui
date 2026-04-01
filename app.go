@@ -594,6 +594,7 @@ func (a *app) layoutWidgets() {
 		}
 
 		// Call Layout.
+		// Even if widgetState.bounds.Empty(), call Layout to allow widgets to set up child states.
 		bounds := widgetBoundsFromWidget(&a.context, widget)
 		widget.Layout(&a.context, bounds, &layouter)
 
