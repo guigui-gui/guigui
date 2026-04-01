@@ -227,7 +227,7 @@ func (w *widgetState) opacity() float64 {
 func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 	if w.offscreen != nil {
 		if !bounds.In(w.offscreen.Bounds()) {
-			w.offscreen.Recycle()
+			w.offscreen.Deallocate()
 			w.offscreen = nil
 		}
 	}
