@@ -141,6 +141,8 @@ type widgetState struct {
 	passthroughCache      bool
 	passthroughCacheValid bool
 
+	focusedOrHasFocusedChild bool
+
 	offscreen *ebiten.Image
 
 	rebuildRequested      bool

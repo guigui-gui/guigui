@@ -231,6 +231,7 @@ func (a *app) focusWidget(widget Widget) {
 	if areWidgetsSame(a.focusedWidget, widget) {
 		return
 	}
+	a.clearFocusAncestorFlags()
 	if a.focusedWidget != nil {
 		RequestRebuild(a.focusedWidget)
 		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, false)
@@ -240,10 +241,23 @@ func (a *app) focusWidget(widget Widget) {
 		RequestRebuild(a.focusedWidget)
 		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, true)
 	}
+	a.setFocusAncestorFlags()
 
 	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
 	// requestRedrawReasonFocus also requests rebuilding a tree.
 	a.requestRedraw(a.bounds(), requestRedrawReasonFocus, nil)
+}
+
+func (a *app) clearFocusAncestorFlags() {
+	for w := a.focusedWidget; w != nil; w = w.widgetState().parent {
+		w.widgetState().focusedOrHasFocusedChild = false
+	}
+}
+
+func (a *app) setFocusAncestorFlags() {
+	for w := a.focusedWidget; w != nil; w = w.widgetState().parent {
+		w.widgetState().focusedOrHasFocusedChild = true
+	}
 }
 
 // settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
@@ -513,6 +527,7 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 				return false, err
 			}
 			a.context.inBuild = false
+			a.setFocusAncestorFlags()
 		}
 
 		if a.requiredPhases.requiresLayout() {
@@ -552,6 +567,7 @@ func (a *app) buildWidgets() error {
 		widgetState.enabledCacheValid = false
 		widgetState.passthroughCacheValid = false
 		widgetState.passthroughCache = false
+		widgetState.focusedOrHasFocusedChild = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 	}
 

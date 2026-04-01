@@ -314,26 +314,8 @@ func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
 	if c.inBuild {
 		panic("guigui: IsFocusedOrHasFocusedChild cannot be called in Build")
 	}
-
-	if len(widget.widgetState().children) == 0 {
-		return areWidgetsSame(c.app.focusedWidget, widget)
-	}
-
-	w := c.app.focusedWidget
-	if w == nil {
-		return false
-	}
-	for {
-		widgetState := widget.widgetState()
-		if areWidgetsSame(w, widget) {
-			return widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
-		}
-		if w.widgetState().parent == nil {
-			break
-		}
-		w = w.widgetState().parent
-	}
-	return false
+	widgetState := widget.widgetState()
+	return widgetState.focusedOrHasFocusedChild && widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
 }
 
 // Opacity returns the opacity of the widget.
