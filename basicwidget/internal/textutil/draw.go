@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"math"
-	"slices"
 	"strings"
 	"unicode"
 
@@ -76,8 +75,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -99,8 +98,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -119,8 +118,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, slices.Values(theCachedLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {

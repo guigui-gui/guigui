@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"iter"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -300,12 +301,12 @@ func TextPositionFromIndex(width int, str string, index int, options *Options) (
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndex(width, str, lines(width, str, options.AutoWrap, func(str string) float64 {
+	return textPositionFromIndex(width, str, slices.Collect(lines(width, str, options.AutoWrap, func(str string) float64 {
 		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
-	}), index, options)
+	})), index, options)
 }
 
-func textPositionFromIndex(width int, str string, lines iter.Seq[line], index int, options *Options) (position0, position1 TextPosition, count int) {
+func textPositionFromIndex(width int, str string, lines []line, index int, options *Options) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
 	}
@@ -314,7 +315,7 @@ func textPositionFromIndex(width int, str string, lines iter.Seq[line], index in
 	var indexInLine0, indexInLine1 int
 	var line0, line1 string
 	var found0, found1 bool
-	for l := range lines {
+	for _, l := range lines {
 		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
 		if index == l.pos+len(l.str) {
@@ -453,6 +454,14 @@ func trimTailingLineBreak(str string) string {
 }
 
 func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) int {
+	// Fast path: single-line text that fits within width.
+	// This avoids allocating a closure for the advance function.
+	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
+		if !autoWrap || advance(str, face, tabWidth, keepTailingSpace) <= float64(width) {
+			return 1
+		}
+	}
+
 	var count int
 	for range lines(width, str, autoWrap, func(str string) float64 {
 		return advance(str, face, tabWidth, keepTailingSpace)
