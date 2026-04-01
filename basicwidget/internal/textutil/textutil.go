@@ -123,7 +123,31 @@ type line struct {
 	str string
 }
 
+// cachedSingleLineSeq avoids closure allocation for the common single-line case.
+// The line value is set before returning seq, and seq yields it without capturing any per-call state.
+type cachedSingleLineSeq struct {
+	line line
+	seq  iter.Seq[line]
+}
+
+var theCachedSingleLineSeq cachedSingleLineSeq
+
+func init() {
+	theCachedSingleLineSeq.seq = func(yield func(line) bool) {
+		yield(theCachedSingleLineSeq.line)
+	}
+}
+
 func lines(width int, str string, autoWrap bool, advance func(str string) float64) iter.Seq[line] {
+	// Fast path: single-line text that fits within width.
+	// Returns a cached iter.Seq to avoid closure allocation.
+	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
+		if !autoWrap || advance(str) <= float64(width) {
+			theCachedSingleLineSeq.line = line{pos: 0, str: str}
+			return theCachedSingleLineSeq.seq
+		}
+	}
+
 	return func(yield func(line) bool) {
 		origStr := str
 
