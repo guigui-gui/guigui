@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"iter"
+	"math"
 	"slices"
 	"strings"
 	"unicode"
@@ -143,7 +144,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 	// Fast path: single-line text that fits within width.
 	// Returns a cached iter.Seq to avoid closure allocation.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if !autoWrap || advance(str) <= float64(width) {
+		if !autoWrap || width == math.MaxInt || advance(str) <= float64(width) {
 			theCachedSingleLineSeq.line = line{pos: 0, str: str}
 			return theCachedSingleLineSeq.seq
 		}
@@ -457,7 +458,7 @@ func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth fl
 	// Fast path: single-line text that fits within width.
 	// This avoids allocating a closure for the advance function.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if !autoWrap || advance(str, face, tabWidth, keepTailingSpace) <= float64(width) {
+		if !autoWrap || width == math.MaxInt || advance(str, face, tabWidth, keepTailingSpace) <= float64(width) {
 			return 1
 		}
 	}
