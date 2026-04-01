@@ -863,12 +863,22 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	l.itemBoundsForLayoutFromIndex = adjustSliceSize(l.itemBoundsForLayoutFromIndex, l.abstractList.ItemCount())
 	clear(l.itemBoundsForLayoutFromIndex)
 
+	vb := widgetBounds.VisibleBounds()
+
 	for i := range l.visibleItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		itemW := cw - 2*RoundedCornerRadius(context)
 		itemW -= listItemIndentSize(context, item.IndentLevel)
 		itemW -= item.Padding.Start + item.Padding.End
 		contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
+
+		// Skip layout for items outside the visible bounds.
+		itemTop := p.Y
+		itemBottom := p.Y + contentH + item.Padding.Top + item.Padding.Bottom
+		if itemTop >= vb.Max.Y || itemBottom <= vb.Min.Y {
+			p.Y += contentH + item.Padding.Top + item.Padding.Bottom
+			continue
+		}
 
 		if l.checkmarkIndexPlus1 == i+1 {
 			imgSize := listItemCheckmarkSize(context)
