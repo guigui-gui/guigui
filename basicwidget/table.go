@@ -12,7 +12,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -192,13 +191,7 @@ func tableHeaderHeight(context *guigui.Context) int {
 // ItemTextColor must not be called in [guigui.Widget.Build] implementations because it depends on the finished widget tree
 // (e.g. focused states of child widgets are available only after the widget tree is built).
 func (t *Table[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	item := t.tableRowWidgets.At(index)
-	switch {
-	case t.list.SelectedItemIndex() == index && item.selectable():
-		return ListItemColorTypeHighlighted.TextColor(context)
-	default:
-		return basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(item))
-	}
+	return t.list.ItemTextColor(context, index)
 }
 
 func (t *Table[T]) SelectedItemIndex() int {
