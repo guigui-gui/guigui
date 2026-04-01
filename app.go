@@ -805,11 +805,15 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 	}
 	vb := a.context.visibleBounds(widgetState)
 	var copiedDst *ebiten.Image
+	var recyclable bool
 	renderCurrent := layerToRender == widgetState.actualLayer() && !dst.Bounds().Intersect(vb).Empty()
 	if renderCurrent {
 		if opacity < 1 {
 			// Keep the current destination image to draw it with the opacity later.
-			copiedDst = widgetState.ensureOffscreen(dst.Bounds())
+			copiedDst, recyclable = widgetState.ensureOffscreen(dst.Bounds())
+			if recyclable {
+				defer copiedDst.Recycle()
+			}
 			op := &ebiten.DrawImageOptions{}
 			op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
 			op.Blend = ebiten.BlendCopy

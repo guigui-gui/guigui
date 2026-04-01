@@ -224,7 +224,7 @@ func (w *widgetState) opacity() float64 {
 	return 1 - w.transparency
 }
 
-func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
+func (w *widgetState) ensureOffscreen(bounds image.Rectangle) (*ebiten.Image, bool) {
 	if w.offscreen != nil {
 		if !bounds.In(w.offscreen.Bounds()) {
 			w.offscreen.Deallocate()
@@ -234,7 +234,10 @@ func (w *widgetState) ensureOffscreen(bounds image.Rectangle) *ebiten.Image {
 	if w.offscreen == nil {
 		w.offscreen = ebiten.NewImageWithOptions(bounds, nil)
 	}
-	return w.offscreen.RecyclableSubImage(bounds)
+	if w.offscreen.Bounds() == bounds {
+		return w.offscreen, false
+	}
+	return w.offscreen.RecyclableSubImage(bounds), true
 }
 
 func (w *widgetState) actualLayer() int64 {
