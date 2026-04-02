@@ -240,19 +240,21 @@ func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigu
 		return image.Pt(0, 0)
 	}
 
+	var buttonConstraints guigui.Constraints
+	switch s.direction {
+	case SegmentedControlDirectionHorizontal:
+		if fixedWidth, ok := constraints.FixedWidth(); ok {
+			buttonConstraints = guigui.FixedWidthConstraints(fixedWidth / s.abstractList.ItemCount())
+		}
+	case SegmentedControlDirectionVertical:
+		if fixedHeight, ok := constraints.FixedHeight(); ok {
+			buttonConstraints = guigui.FixedHeightConstraints(fixedHeight / s.abstractList.ItemCount())
+		}
+	}
+
 	var w, h int
 	for i := range s.buttons.Len() {
-		switch s.direction {
-		case SegmentedControlDirectionHorizontal:
-			if fixedWidth, ok := constraints.FixedWidth(); ok {
-				constraints = guigui.FixedWidthConstraints(fixedWidth / s.abstractList.ItemCount())
-			}
-		case SegmentedControlDirectionVertical:
-			if fixedHeight, ok := constraints.FixedHeight(); ok {
-				constraints = guigui.FixedHeightConstraints(fixedHeight / s.abstractList.ItemCount())
-			}
-		}
-		size := s.buttons.At(i).measure(context, constraints, true)
+		size := s.buttons.At(i).measure(context, buttonConstraints, true)
 		w = max(w, size.X)
 		h = max(h, size.Y)
 	}
