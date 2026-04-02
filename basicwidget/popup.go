@@ -690,6 +690,10 @@ type popupTransparentBackground struct {
 }
 
 func (p *popupTransparentBackground) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if !widgetBounds.IsHitAtCursor() {
+		return guigui.HandleInputResult{}
+	}
+
 	if p.popup.showing || p.popup.hiding {
 		return guigui.AbortHandlingInputByWidget(p)
 	}
