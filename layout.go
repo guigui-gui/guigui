@@ -123,7 +123,7 @@ func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, la
 		*tmpBoundsArr = (*tmpBoundsArr)[:0]
 		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
 	}()
-	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds, false)
+	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds)
 
 	for i, item := range l.Items {
 		if item.Widget != nil {
@@ -136,7 +136,7 @@ func (l LinearLayout) LayoutWidgets(context *Context, bounds image.Rectangle, la
 }
 
 func (l LinearLayout) AppendItemBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
-	return l.appendWidgetBounds(boundsArr, context, bounds, false)
+	return l.appendWidgetBounds(boundsArr, context, bounds)
 }
 
 // ItemBoundsAt returns the bounds for the item at the given index.
@@ -146,7 +146,7 @@ func (l LinearLayout) ItemBoundsAt(index int, context *Context, bounds image.Rec
 		*tmpBoundsArr = (*tmpBoundsArr)[:0]
 		theLinearLayoutBoundsPool.Put(tmpBoundsArr)
 	}()
-	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds, false)
+	*tmpBoundsArr = l.appendWidgetBounds((*tmpBoundsArr)[:0], context, bounds)
 	return (*tmpBoundsArr)[index]
 }
 
@@ -389,7 +389,7 @@ func (l LinearLayout) Measure(context *Context, constraints Constraints) image.P
 	return image.Point{}
 }
 
-func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle, measure bool) []image.Rectangle {
+func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *Context, bounds image.Rectangle) []image.Rectangle {
 	alongSize := l.alongSize(bounds)
 	acrossSize := l.acrossSize(bounds)
 	tmpSizes := theLinearLayoutSizesPool.Get().(*[]int)
@@ -397,7 +397,7 @@ func (l *LinearLayout) appendWidgetBounds(boundsArr []image.Rectangle, context *
 		*tmpSizes = (*tmpSizes)[:0]
 		theLinearLayoutSizesPool.Put(tmpSizes)
 	}()
-	*tmpSizes = l.appendSizesInPixels((*tmpSizes)[:0], context, alongSize, acrossSize, measure)
+	*tmpSizes = l.appendSizesInPixels((*tmpSizes)[:0], context, alongSize, acrossSize, false)
 	var progress int
 	for i := range l.Items {
 		boundsArr = append(boundsArr, l.positionAndSizeToBounds(bounds, progress, (*tmpSizes)[i]))
