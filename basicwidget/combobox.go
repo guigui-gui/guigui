@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"slices"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -59,10 +60,8 @@ func (c *Combobox) SetAllowFreeInput(allow bool) {
 		if v == "" {
 			return
 		}
-		for _, item := range c.items {
-			if item == v {
-				return
-			}
+		if slices.Contains(c.items, v) {
+			return
 		}
 		c.textInput.ForceSetValue("")
 		c.lastValidValue = ""
@@ -118,12 +117,10 @@ func (c *Combobox) handleCommit(context *guigui.Context, text string) {
 		guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
 		return
 	}
-	for _, item := range c.items {
-		if item == text {
-			c.lastValidValue = text
-			guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
-			return
-		}
+	if slices.Contains(c.items, text) {
+		c.lastValidValue = text
+		guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
+		return
 	}
 
 	// Revert to the last valid value.
