@@ -188,6 +188,10 @@ func (c *Combobox) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	bounds := widgetBounds.Bounds()
 	layouter.LayoutWidget(&c.textInput, bounds)
 
+	// Exclude the text input bounds from close-by-clicking-outside detection,
+	// so clicking the text input while the popup is open doesn't close the popup.
+	c.popupMenu.setCloseByClickingOutsideExcludedRect(bounds)
+
 	// Match the popup width to the text input width.
 	c.popupMenu.setMinWidth(bounds.Dx())
 	popupSize := c.popupMenu.Measure(context, guigui.Constraints{})

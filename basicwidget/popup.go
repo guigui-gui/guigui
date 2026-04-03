@@ -170,25 +170,26 @@ type popup struct {
 	shadow                popupShadow
 	contentAndFrame       roundedCornerWidget[*popupContentAndFrame]
 
-	style                  popupStyle
-	toOpen                 bool
-	toClose                bool
-	openingCount           int
-	showing                bool
-	hiding                 bool
-	closeReason            PopupCloseReason
-	backgroundBounds       image.Rectangle
-	backgroundDark         bool
-	backgroundBlurred      bool
-	closeByClickingOutside bool
-	modeless               bool
-	animateOnFading        bool
-	contentPosition        image.Point
-	nextContentPosition    image.Point
-	hasNextContentPosition bool
-	openAfterClose         bool
-	contentBounds          image.Rectangle
-	drawerEdge             DrawerEdge
+	style                              popupStyle
+	toOpen                             bool
+	toClose                            bool
+	openingCount                       int
+	showing                            bool
+	hiding                             bool
+	closeReason                        PopupCloseReason
+	backgroundBounds                   image.Rectangle
+	backgroundDark                     bool
+	backgroundBlurred                  bool
+	closeByClickingOutside             bool
+	closeByClickingOutsideExcludedRect image.Rectangle
+	modeless                           bool
+	animateOnFading                    bool
+	contentPosition                    image.Point
+	nextContentPosition                image.Point
+	hasNextContentPosition             bool
+	openAfterClose                     bool
+	contentBounds                      image.Rectangle
+	drawerEdge                         DrawerEdge
 }
 
 func (p *popup) setStyle(style popupStyle) {
@@ -272,6 +273,10 @@ func (p *popup) setBackgroundSemanticColor(semanticColor basicwidgetdraw.Semanti
 
 func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
 	p.closeByClickingOutside = closeByClickingOutside
+}
+
+func (p *popup) setCloseByClickingOutsideExcludedRect(rect image.Rectangle) {
+	p.closeByClickingOutsideExcludedRect = rect
 }
 
 func (p *popup) SetModal(modal bool) {
@@ -358,6 +363,9 @@ func (p *popup) tryCloseByClickingOutside(context *guigui.Context) bool {
 		return false
 	}
 	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) || inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		if image.Pt(ebiten.CursorPosition()).In(p.closeByClickingOutsideExcludedRect) {
+			return false
+		}
 		p.close(context, PopupCloseReasonClickOutside)
 		// Continue handling inputs so that clicking a right button can be handled by other widgets.
 		// This is a little tricky, but this is needed to reopen context menu popups.

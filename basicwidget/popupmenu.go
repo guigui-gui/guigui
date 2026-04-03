@@ -124,6 +124,10 @@ func (p *PopupMenu[T]) setMinWidth(minWidth int) {
 	p.minWidth = minWidth
 }
 
+func (p *PopupMenu[T]) setCloseByClickingOutsideExcludedRect(rect image.Rectangle) {
+	p.popup.popup.Widget().setCloseByClickingOutsideExcludedRect(rect)
+}
+
 func (p *PopupMenu[T]) SetOpen(open bool) {
 	// Reset the hovered item index explicitly (#266).
 	// As the hovered item index is updated at HandlePointingInput,
