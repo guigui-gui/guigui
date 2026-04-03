@@ -101,7 +101,11 @@ func (c *Combobox) updateFilteredItems() {
 			})
 		}
 	}
-	c.popupMenu.SetItems(c.filteredItems)
+	// Don't update the popup with an empty list. This keeps the previous items
+	// visible during the fade-out animation instead of showing a thin empty popup.
+	if len(c.filteredItems) > 0 {
+		c.popupMenu.SetItems(c.filteredItems)
+	}
 }
 
 func (c *Combobox) handleCommit(context *guigui.Context, text string) {
