@@ -35,6 +35,8 @@ type PopupMenu[T comparable] struct {
 	items     []PopupMenuItem[T]
 	listItems []ListItem[T]
 
+	minWidth int
+
 	onItemSelected func(context *guigui.Context, index int)
 }
 
@@ -80,6 +82,7 @@ func (p *PopupMenu[T]) Measure(context *guigui.Context, constraints guigui.Const
 func (p *PopupMenu[T]) measure(context *guigui.Context) image.Point {
 	// List size can dynamically change based on the items. Measure the size without constraints.
 	s := p.list.Widget().Measure(context, guigui.Constraints{})
+	s.X = max(s.X, p.minWidth)
 	s.Y = min(s.Y, 24*UnitSize(context))
 	return s
 }
@@ -111,6 +114,14 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 		}
 	}
 	return r
+}
+
+func (p *PopupMenu[T]) setModal(modal bool) {
+	p.popup.SetModal(modal)
+}
+
+func (p *PopupMenu[T]) setMinWidth(minWidth int) {
+	p.minWidth = minWidth
 }
 
 func (p *PopupMenu[T]) SetOpen(open bool) {

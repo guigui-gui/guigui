@@ -1,0 +1,234 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2026 The Guigui Authors
+
+package basicwidget
+
+import (
+	"image"
+	"strings"
+
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
+	"github.com/guigui-gui/guigui"
+)
+
+var (
+	comboboxEventValueChanged guigui.EventKey = guigui.GenerateEventKey()
+)
+
+// Combobox is a composite widget that combines a [TextInput] with a [PopupMenu].
+// The popup menu shows filtered items based on the current input text.
+// When the user focuses the text input, the popup opens below (or above) the text input.
+// The popup is modeless, so the text input retains focus while the popup is shown.
+// The popup closes when the text input loses focus.
+type Combobox struct {
+	guigui.DefaultWidget
+
+	textInput TextInput
+	popupMenu PopupMenu[string]
+
+	items          []string
+	filteredItems  []PopupMenuItem[string]
+	allowFreeInput bool
+	lastValidValue string
+
+	prevFocused bool
+
+	onTextInputValueChanged func(context *guigui.Context, text string, committed bool)
+	onHandleButtonInput     func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
+	onPopupMenuItemSelected func(context *guigui.Context, index int)
+}
+
+// SetItems sets the list of items for the combobox.
+func (c *Combobox) SetItems(items []string) {
+	c.items = adjustSliceSize(c.items, len(items))
+	copy(c.items, items)
+}
+
+// SetAllowFreeInput sets whether the combobox allows values that are not in the items list.
+// When false, the value is reverted to the last valid value on commit if it does not match any item.
+func (c *Combobox) SetAllowFreeInput(allow bool) {
+	if c.allowFreeInput == allow {
+		return
+	}
+	c.allowFreeInput = allow
+	if !allow {
+		// If the current value is not in the items, clear it.
+		v := c.textInput.Value()
+		if v == "" {
+			return
+		}
+		for _, item := range c.items {
+			if item == v {
+				return
+			}
+		}
+		c.textInput.ForceSetValue("")
+		c.lastValidValue = ""
+	}
+}
+
+// TextInput returns the internal [TextInput] widget for customization.
+func (c *Combobox) TextInput() *TextInput {
+	return &c.textInput
+}
+
+// Value returns the current text value.
+func (c *Combobox) Value() string {
+	return c.textInput.Value()
+}
+
+// SetValue sets the text value.
+func (c *Combobox) SetValue(value string) {
+	c.textInput.SetValue(value)
+	c.lastValidValue = value
+}
+
+// OnValueChanged sets the event handler that is called when the combobox value changes.
+// The handler receives the current text and whether the change is committed.
+func (c *Combobox) OnValueChanged(f func(context *guigui.Context, value string, committed bool)) {
+	guigui.SetEventHandler(c, comboboxEventValueChanged, f)
+}
+
+func (c *Combobox) updateFilteredItems() {
+	input := strings.ToLower(c.textInput.Value())
+	c.filteredItems = c.filteredItems[:0]
+	for _, item := range c.items {
+		if input == "" || strings.Contains(strings.ToLower(item), input) {
+			c.filteredItems = append(c.filteredItems, PopupMenuItem[string]{
+				Text:  item,
+				Value: item,
+			})
+		}
+	}
+	c.popupMenu.SetItems(c.filteredItems)
+}
+
+func (c *Combobox) handleCommit(context *guigui.Context, text string) {
+	if c.allowFreeInput {
+		c.lastValidValue = text
+		guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
+		return
+	}
+
+	// Accept empty text or an exact item match.
+	if text == "" {
+		c.lastValidValue = text
+		guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
+		return
+	}
+	for _, item := range c.items {
+		if item == text {
+			c.lastValidValue = text
+			guigui.DispatchEvent(c, comboboxEventValueChanged, text, true)
+			return
+		}
+	}
+
+	// Revert to the last valid value.
+	c.textInput.ForceSetValue(c.lastValidValue)
+	guigui.DispatchEvent(c, comboboxEventValueChanged, c.lastValidValue, true)
+}
+
+func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddWidget(&c.textInput)
+	adder.AddWidget(&c.popupMenu)
+
+	c.popupMenu.setModal(false)
+	context.DelegateFocus(c, &c.textInput)
+
+	c.updateFilteredItems()
+	if len(c.filteredItems) == 0 && c.popupMenu.IsOpen() {
+		c.popupMenu.SetOpen(false)
+	}
+
+	if c.onTextInputValueChanged == nil {
+		c.onTextInputValueChanged = func(context *guigui.Context, text string, committed bool) {
+			if committed {
+				c.handleCommit(context, text)
+				c.popupMenu.SetOpen(false)
+				return
+			}
+			c.updateFilteredItems()
+			if len(c.filteredItems) == 0 {
+				c.popupMenu.SetOpen(false)
+			} else if !c.popupMenu.IsOpen() && context.IsFocusedOrHasFocusedChild(&c.textInput) {
+				c.popupMenu.SetOpen(true)
+			}
+			guigui.DispatchEvent(c, comboboxEventValueChanged, text, false)
+		}
+	}
+	c.textInput.OnValueChanged(c.onTextInputValueChanged)
+
+	if c.onHandleButtonInput == nil {
+		c.onHandleButtonInput = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+			if c.popupMenu.IsOpen() && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+				c.popupMenu.SetOpen(false)
+				return guigui.HandleInputByWidget(c)
+			}
+			return guigui.HandleInputResult{}
+		}
+	}
+	c.textInput.OnHandleButtonInput(c.onHandleButtonInput)
+
+	if c.onPopupMenuItemSelected == nil {
+		c.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
+			if item, ok := c.popupMenu.ItemByIndex(index); ok {
+				c.textInput.ForceSetValue(item.Text)
+				c.textInput.setSelection(len(item.Text), len(item.Text))
+				c.lastValidValue = item.Text
+				guigui.DispatchEvent(c, comboboxEventValueChanged, item.Text, true)
+			}
+		}
+	}
+	c.popupMenu.OnItemSelected(c.onPopupMenuItemSelected)
+
+	return nil
+}
+
+func (c *Combobox) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	bounds := widgetBounds.Bounds()
+	layouter.LayoutWidget(&c.textInput, bounds)
+
+	// Match the popup width to the text input width.
+	c.popupMenu.setMinWidth(bounds.Dx())
+	popupSize := c.popupMenu.Measure(context, guigui.Constraints{})
+	appBounds := context.AppBounds()
+
+	// Position popup below the text input.
+	popupPos := image.Pt(bounds.Min.X, bounds.Max.Y)
+
+	// If there is not enough room below, position above.
+	if popupPos.Y+popupSize.Y > appBounds.Max.Y {
+		popupPos.Y = bounds.Min.Y - popupSize.Y
+	}
+
+	layouter.LayoutWidget(&c.popupMenu, image.Rectangle{
+		Min: popupPos,
+		Max: popupPos.Add(popupSize),
+	})
+}
+
+func (c *Combobox) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	focused := context.IsFocusedOrHasFocusedChild(&c.textInput)
+
+	if focused && !c.prevFocused {
+		// Focus gained: open popup if there are items.
+		c.updateFilteredItems()
+		if len(c.filteredItems) > 0 {
+			c.popupMenu.SetOpen(true)
+		}
+	}
+	if !focused && c.prevFocused {
+		// Focus lost: close popup.
+		c.popupMenu.SetOpen(false)
+	}
+
+	c.prevFocused = focused
+	return nil
+}
+
+func (c *Combobox) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return c.textInput.Measure(context, constraints)
+}

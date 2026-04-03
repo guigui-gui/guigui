@@ -36,6 +36,7 @@ type Root struct {
 	numberInputs      NumberInputs
 	lists             Lists
 	selects           Selects
+	comboboxes        Comboboxes
 	tables            Tables
 	popups            Popups
 	tooltips          Tooltips
@@ -78,6 +79,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.lists
 	case "selects":
 		return &r.selects
+	case "comboboxes":
+		return &r.comboboxes
 	case "tables":
 		return &r.tables
 	case "popups":

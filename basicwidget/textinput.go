@@ -190,6 +190,10 @@ func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	return nil
 }
 
+func (t *TextInput) setSelection(start, end int) {
+	t.textInput.setSelection(start, end)
+}
+
 func (t *TextInput) setPaddingStart(padding int) {
 	t.textInput.setPaddingStart(padding)
 }
@@ -295,6 +299,10 @@ func (t *textInput) SetEditable(editable bool) {
 	t.readonly = !editable
 	t.text.Text().SetEditable(editable)
 	guigui.RequestRebuild(t)
+}
+
+func (t *textInput) setSelection(start, end int) {
+	t.text.Text().setSelection(start, end, -1, false)
 }
 
 func (t *textInput) setPaddingStart(padding int) {

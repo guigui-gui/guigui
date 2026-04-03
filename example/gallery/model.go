@@ -24,6 +24,7 @@ type Model struct {
 	numberInputs      NumberInputsModel
 	lists             ListsModel
 	selects           SelectsModel
+	comboboxes        ComboboxesModel
 	tables            TablesModel
 	popups            PopupsModel
 }
@@ -73,6 +74,10 @@ func (m *Model) Lists() *ListsModel {
 
 func (m *Model) Selects() *SelectsModel {
 	return &m.selects
+}
+
+func (m *Model) Comboboxes() *ComboboxesModel {
+	return &m.comboboxes
 }
 
 func (m *Model) Tables() *TablesModel {
@@ -548,6 +553,40 @@ func (s *SelectsModel) Enabled() bool {
 
 func (s *SelectsModel) SetEnabled(enabled bool) {
 	s.disabled = !enabled
+}
+
+type ComboboxesModel struct {
+	items    []string
+	disabled bool
+}
+
+func (c *ComboboxesModel) Items() []string {
+	if c.items == nil {
+		c.items = []string{
+			"Apple",
+			"Apricot",
+			"Banana",
+			"Blueberry",
+			"Cherry",
+			"Grape",
+			"Kiwi",
+			"Lemon",
+			"Mango",
+			"Orange",
+			"Peach",
+			"Pineapple",
+			"Strawberry",
+		}
+	}
+	return c.items
+}
+
+func (c *ComboboxesModel) Enabled() bool {
+	return !c.disabled
+}
+
+func (c *ComboboxesModel) SetEnabled(enabled bool) {
+	c.disabled = !enabled
 }
 
 type TableItem struct {

@@ -101,6 +101,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Value: "selects",
 		},
 		{
+			Text:  "Comboboxes",
+			Value: "comboboxes",
+		},
+		{
 			Text:  "Tables",
 			Value: "tables",
 		},
