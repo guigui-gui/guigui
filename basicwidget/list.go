@@ -204,6 +204,22 @@ func (l *List[T]) resetHoveredItemIndex() {
 	l.content.resetHoveredItemIndex()
 }
 
+func (l *List[T]) keyboardHighlightIndex() int {
+	return l.content.keyboardHighlightIndex()
+}
+
+func (l *List[T]) setKeyboardHighlightIndex(index int) {
+	l.content.setKeyboardHighlightIndex(index)
+}
+
+func (l *List[T]) navigateKeyboardHighlight(down bool) {
+	l.content.navigateKeyboardHighlight(down)
+}
+
+func (l *List[T]) selectKeyboardHighlightedItem() bool {
+	return l.content.selectKeyboardHighlightedItem()
+}
+
 func (l *List[T]) IsItemVisible(index int) bool {
 	return l.content.isItemVisible(index)
 }
@@ -1177,6 +1193,64 @@ func (l *listContent[T]) resetHoveredItemIndex() {
 	guigui.RequestRebuild(l)
 }
 
+func (l *listContent[T]) keyboardHighlightIndex() int {
+	return l.keyboardHighlightIndexPlus1 - 1
+}
+
+func (l *listContent[T]) setKeyboardHighlightIndex(index int) {
+	if index < 0 {
+		index = -1
+	}
+	if l.keyboardHighlightIndexPlus1 == index+1 {
+		return
+	}
+	l.keyboardHighlightIndexPlus1 = index + 1
+	l.hoveredItemIndexPlus1 = index + 1
+	l.lastHoveredItemIndexPlus1 = index + 1
+	guigui.RequestRebuild(l)
+}
+
+func (l *listContent[T]) navigateKeyboardHighlight(down bool) {
+	current := l.keyboardHighlightIndexPlus1 - 1
+	if current < 0 {
+		current = l.hoveredItemIndexPlus1 - 1
+	}
+
+	var next int
+	if current < 0 {
+		if down {
+			next = l.nextSelectableVisibleIndex(-1, true)
+		} else {
+			next = l.lastSelectableVisibleIndex()
+		}
+	} else {
+		next = l.nextSelectableVisibleIndex(current, down)
+		if next < 0 {
+			next = current
+		}
+	}
+
+	if next >= 0 {
+		l.keyboardHighlightIndexPlus1 = next + 1
+		l.hoveredItemIndexPlus1 = next + 1
+		l.lastHoveredItemIndexPlus1 = next + 1
+		l.EnsureItemVisibleByIndex(next)
+		guigui.RequestRebuild(l)
+	}
+}
+
+func (l *listContent[T]) selectKeyboardHighlightedItem() bool {
+	idx := l.keyboardHighlightIndexPlus1 - 1
+	if idx < 0 {
+		idx = l.hoveredItemIndexPlus1 - 1
+	}
+	if idx < 0 {
+		return false
+	}
+	l.selectItemByIndex(idx, true)
+	return true
+}
+
 func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
 	if !widgetBounds.IsHitAtCursor() {
 		return -1
@@ -1231,14 +1305,7 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 	up := isKeyRepeating(ebiten.KeyUp)
 	if !down && !up {
 		if l.isHoveringVisible() && inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-			idx := -1
-			if l.keyboardHighlightIndexPlus1 > 0 {
-				idx = l.keyboardHighlightIndexPlus1 - 1
-			} else if l.hoveredItemIndexPlus1 > 0 {
-				idx = l.hoveredItemIndexPlus1 - 1
-			}
-			if idx >= 0 {
-				l.selectItemByIndex(idx, true)
+			if l.selectKeyboardHighlightedItem() {
 				return guigui.HandleInputByWidget(l)
 			}
 		}
@@ -1246,34 +1313,7 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 	}
 
 	if l.isHoveringVisible() {
-		// Menu-style: navigate the keyboard highlight.
-		current := l.keyboardHighlightIndexPlus1 - 1
-		if current < 0 {
-			current = l.hoveredItemIndexPlus1 - 1
-		}
-
-		var next int
-		if current < 0 {
-			// No current highlight; pick the first or last selectable item.
-			if down {
-				next = l.nextSelectableVisibleIndex(-1, true)
-			} else {
-				next = l.lastSelectableVisibleIndex()
-			}
-		} else {
-			next = l.nextSelectableVisibleIndex(current, down)
-			if next < 0 {
-				next = current
-			}
-		}
-
-		if next >= 0 {
-			l.keyboardHighlightIndexPlus1 = next + 1
-			l.hoveredItemIndexPlus1 = next + 1
-			l.lastHoveredItemIndexPlus1 = next + 1
-			l.EnsureItemVisibleByIndex(next)
-			guigui.RequestRebuild(l)
-		}
+		l.navigateKeyboardHighlight(down)
 		return guigui.HandleInputByWidget(l)
 	}
 

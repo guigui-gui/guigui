@@ -108,6 +108,22 @@ func (c *Combobox) updateFilteredItems() {
 	}
 }
 
+func (c *Combobox) highlightClosestCandidate(input string) {
+	if input == "" || len(c.filteredItems) == 0 {
+		c.popupMenu.setKeyboardHighlightIndex(-1)
+		return
+	}
+	// Prefer the first item with a prefix match.
+	var bestIndex int
+	for i, item := range c.filteredItems {
+		if strings.HasPrefix(strings.ToLower(item.Text), input) {
+			bestIndex = i
+			break
+		}
+	}
+	c.popupMenu.setKeyboardHighlightIndex(bestIndex)
+}
+
 func (c *Combobox) handleCommit(context *guigui.Context, text string) {
 	if c.allowFreeInput {
 		c.lastValidValue = text
@@ -152,6 +168,7 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 				return
 			}
 			c.updateFilteredItems()
+			c.highlightClosestCandidate(strings.ToLower(text))
 			if len(c.filteredItems) == 0 {
 				c.popupMenu.SetOpen(false)
 			} else if !c.popupMenu.IsOpen() && context.IsFocusedOrHasFocusedChild(&c.textInput) {
@@ -164,10 +181,33 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 	if c.onHandleButtonInput == nil {
 		c.onHandleButtonInput = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-			if c.popupMenu.IsOpen() && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			if !c.popupMenu.IsOpen() {
+				return guigui.HandleInputResult{}
+			}
+
+			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 				c.popupMenu.SetOpen(false)
 				return guigui.HandleInputByWidget(c)
 			}
+
+			down := isKeyRepeating(ebiten.KeyDown)
+			up := isKeyRepeating(ebiten.KeyUp)
+			if down || up {
+				c.popupMenu.navigateKeyboardHighlight(down)
+				return guigui.HandleInputByWidget(c)
+			}
+
+			if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+				if item, ok := c.popupMenu.ItemByIndex(c.popupMenu.keyboardHighlightIndex()); ok {
+					c.textInput.ForceSetValue(item.Text)
+					c.textInput.setSelection(len(item.Text), len(item.Text))
+					c.lastValidValue = item.Text
+					c.popupMenu.SetOpen(false)
+					guigui.DispatchEvent(c, comboboxEventValueChanged, item.Text, true)
+					return guigui.HandleInputByWidget(c)
+				}
+			}
+
 			return guigui.HandleInputResult{}
 		}
 	}
