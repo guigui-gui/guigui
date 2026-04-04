@@ -7,6 +7,9 @@ import (
 	"image"
 	"image/color"
 
+	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
@@ -66,6 +69,15 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	p.popup.SetCloseByClickingOutside(true)
 
 	return nil
+}
+
+// HandleButtonInput implements [guigui.Widget.HandleButtonInput].
+func (p *PopupMenu[T]) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if p.popup.IsOpen() && inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+		p.popup.SetOpen(false)
+		return guigui.HandleInputByWidget(p)
+	}
+	return guigui.HandleInputResult{}
 }
 
 func (p *PopupMenu[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
