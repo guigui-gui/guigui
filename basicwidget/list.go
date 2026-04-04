@@ -204,20 +204,8 @@ func (l *List[T]) resetHoveredItemIndex() {
 	l.content.resetHoveredItemIndex()
 }
 
-func (l *List[T]) keyboardHighlightIndex() int {
-	return l.content.keyboardHighlightIndex()
-}
-
 func (l *List[T]) setKeyboardHighlightIndex(index int) {
 	l.content.setKeyboardHighlightIndex(index)
-}
-
-func (l *List[T]) navigateKeyboardHighlight(down bool) {
-	l.content.navigateKeyboardHighlight(down)
-}
-
-func (l *List[T]) selectKeyboardHighlightedItem() bool {
-	return l.content.selectKeyboardHighlightedItem()
 }
 
 func (l *List[T]) IsItemVisible(index int) bool {

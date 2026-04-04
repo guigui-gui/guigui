@@ -226,20 +226,8 @@ func (p *PopupMenu[T]) itemTextColor(context *guigui.Context, index int) color.C
 	return p.list.Widget().itemTextColor(context, index)
 }
 
-func (p *PopupMenu[T]) keyboardHighlightIndex() int {
-	return p.list.Widget().keyboardHighlightIndex()
-}
-
 func (p *PopupMenu[T]) setKeyboardHighlightIndex(index int) {
 	p.list.Widget().setKeyboardHighlightIndex(index)
-}
-
-func (p *PopupMenu[T]) navigateKeyboardHighlight(down bool) {
-	p.list.Widget().navigateKeyboardHighlight(down)
-}
-
-func (p *PopupMenu[T]) selectKeyboardHighlightedItem() bool {
-	return p.list.Widget().selectKeyboardHighlightedItem()
 }
 
 func (p *PopupMenu[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {

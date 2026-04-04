@@ -8,9 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/inpututil"
-
 	"github.com/guigui-gui/guigui"
 )
 
@@ -37,7 +34,6 @@ type Combobox struct {
 	prevFocused bool
 
 	onTextInputValueChanged func(context *guigui.Context, text string, committed bool)
-	onHandleButtonInput     func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
 	onPopupMenuItemSelected func(context *guigui.Context, index int)
 }
 
@@ -154,6 +150,7 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 	c.popupMenu.setModal(false)
 	context.DelegateFocus(c, &c.textInput)
+	context.SetButtonInputReceptive(c, c.popupMenu.IsOpen())
 
 	c.updateFilteredItems()
 	if len(c.filteredItems) == 0 && c.popupMenu.IsOpen() {
@@ -178,40 +175,6 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 		}
 	}
 	c.textInput.OnValueChanged(c.onTextInputValueChanged)
-
-	if c.onHandleButtonInput == nil {
-		c.onHandleButtonInput = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-			if !c.popupMenu.IsOpen() {
-				return guigui.HandleInputResult{}
-			}
-
-			if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
-				c.popupMenu.SetOpen(false)
-				return guigui.HandleInputByWidget(c)
-			}
-
-			down := isKeyRepeating(ebiten.KeyDown)
-			up := isKeyRepeating(ebiten.KeyUp)
-			if down || up {
-				c.popupMenu.navigateKeyboardHighlight(down)
-				return guigui.HandleInputByWidget(c)
-			}
-
-			if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-				if item, ok := c.popupMenu.ItemByIndex(c.popupMenu.keyboardHighlightIndex()); ok {
-					c.textInput.ForceSetValue(item.Text)
-					c.textInput.setSelection(len(item.Text), len(item.Text))
-					c.lastValidValue = item.Text
-					c.popupMenu.SetOpen(false)
-					guigui.DispatchEvent(c, comboboxEventValueChanged, item.Text, true)
-					return guigui.HandleInputByWidget(c)
-				}
-			}
-
-			return guigui.HandleInputResult{}
-		}
-	}
-	c.textInput.OnHandleButtonInput(c.onHandleButtonInput)
 
 	if c.onPopupMenuItemSelected == nil {
 		c.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
