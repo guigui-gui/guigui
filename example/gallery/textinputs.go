@@ -16,11 +16,11 @@ type TextInputs struct {
 
 	textInputForm               basicwidget.Form
 	singleLineText              basicwidget.Text
-	singleLineTextInput         guigui.WidgetWithSize[*basicwidget.TextInput]
+	singleLineTextInput         guigui.WidgetWithSize[*textInputContainer]
 	singleLineWithIconText      basicwidget.Text
-	singleLineWithIconTextInput guigui.WidgetWithSize[*basicwidget.TextInput]
+	singleLineWithIconTextInput guigui.WidgetWithSize[*textInputContainer]
 	multilineText               basicwidget.Text
-	multilineTextInput          guigui.WidgetWithSize[*basicwidget.TextInput]
+	multilineTextInput          guigui.WidgetWithSize[*textInputContainer]
 	inlineText                  basicwidget.Text
 	inlineTextInput             guigui.WidgetWithSize[*inlineTextInputContainer]
 
@@ -86,41 +86,44 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	width := 12 * u
 
 	t.singleLineText.SetValue("Single line")
-	t.singleLineTextInput.Widget().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
+	t.singleLineTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		if committed {
 			model.TextInputs().SetSingleLineText(text)
 		}
 	})
-	t.singleLineTextInput.Widget().SetValue(model.TextInputs().SingleLineText())
-	t.singleLineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
-	t.singleLineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
-	t.singleLineTextInput.Widget().SetEditable(model.TextInputs().Editable())
-	t.singleLineTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.singleLineTextInput.Widget().TextInput().SetValue(model.TextInputs().SingleLineText())
+	t.singleLineTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.singleLineTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.singleLineTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.singleLineTextInput.Widget().TextInput().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.singleLineTextInput.Widget().SetContextMenu(true)
 	context.SetEnabled(&t.singleLineTextInput, model.TextInputs().Enabled())
 	t.singleLineTextInput.SetFixedWidth(width)
 
 	t.singleLineWithIconText.SetValue("Single line with icon")
-	t.singleLineWithIconTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
-	t.singleLineWithIconTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
-	t.singleLineWithIconTextInput.Widget().SetEditable(model.TextInputs().Editable())
-	t.singleLineWithIconTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
-	t.singleLineWithIconTextInput.Widget().SetIcon(imgSearch)
+	t.singleLineWithIconTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.singleLineWithIconTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.singleLineWithIconTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.singleLineWithIconTextInput.Widget().TextInput().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.singleLineWithIconTextInput.Widget().TextInput().SetIcon(imgSearch)
+	t.singleLineWithIconTextInput.Widget().SetContextMenu(true)
 	context.SetEnabled(&t.singleLineWithIconTextInput, model.TextInputs().Enabled())
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
 
 	t.multilineText.SetValue("Multiline")
-	t.multilineTextInput.Widget().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
+	t.multilineTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		if committed {
 			model.TextInputs().SetMultilineText(text)
 		}
 	})
-	t.multilineTextInput.Widget().SetValue(model.TextInputs().MultilineText())
-	t.multilineTextInput.Widget().SetMultiline(true)
-	t.multilineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
-	t.multilineTextInput.Widget().SetVerticalAlign(model.TextInputs().VerticalAlign())
-	t.multilineTextInput.Widget().SetAutoWrap(model.TextInputs().AutoWrap())
-	t.multilineTextInput.Widget().SetEditable(model.TextInputs().Editable())
-	t.multilineTextInput.Widget().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.multilineTextInput.Widget().TextInput().SetValue(model.TextInputs().MultilineText())
+	t.multilineTextInput.Widget().TextInput().SetMultiline(true)
+	t.multilineTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.multilineTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.multilineTextInput.Widget().TextInput().SetAutoWrap(model.TextInputs().AutoWrap())
+	t.multilineTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.multilineTextInput.Widget().TextInput().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.multilineTextInput.Widget().SetContextMenu(true)
 	context.SetEnabled(&t.multilineTextInput, model.TextInputs().Enabled())
 	t.multilineTextInput.SetFixedSize(image.Pt(width, 4*u))
 
@@ -281,6 +284,74 @@ func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+
+type textInputContainer struct {
+	guigui.DefaultWidget
+
+	textInput       basicwidget.TextInput
+	contextMenuArea basicwidget.ContextMenuArea[int]
+
+	showContextMenu bool
+}
+
+func (t *textInputContainer) TextInput() *basicwidget.TextInput {
+	return &t.textInput
+}
+
+func (t *textInputContainer) SetContextMenu(show bool) {
+	t.showContextMenu = show
+}
+
+func (t *textInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddWidget(&t.textInput)
+	if t.showContextMenu {
+		adder.AddWidget(&t.contextMenuArea)
+		t.contextMenuArea.PopupMenu().SetItems([]basicwidget.PopupMenuItem[int]{
+			{
+				Text:     "Cut",
+				Value:    0,
+				Disabled: !t.textInput.CanCut(),
+			},
+			{
+				Text:     "Copy",
+				Value:    1,
+				Disabled: !t.textInput.CanCopy(),
+			},
+			{
+				Text:     "Paste",
+				Value:    2,
+				Disabled: !t.textInput.CanPaste(),
+			},
+		})
+		t.contextMenuArea.PopupMenu().OnItemSelected(func(context *guigui.Context, index int) {
+			item, ok := t.contextMenuArea.PopupMenu().ItemByIndex(index)
+			if !ok {
+				return
+			}
+			switch item.Value {
+			case 0:
+				t.textInput.Cut()
+			case 1:
+				t.textInput.Copy()
+			case 2:
+				t.textInput.Paste()
+			}
+		})
+	}
+	return nil
+}
+
+func (t *textInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	b := widgetBounds.Bounds()
+	layouter.LayoutWidget(&t.textInput, b)
+	if t.showContextMenu {
+		layouter.LayoutWidget(&t.contextMenuArea, b)
+	}
+}
+
+func (t *textInputContainer) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return t.textInput.Measure(context, constraints)
 }
 
 type inlineTextInputContainer struct {

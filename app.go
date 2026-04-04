@@ -646,14 +646,14 @@ const (
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 	for i := len(a.layers) - 1; i >= 0; i-- {
 		layer := a.layers[i]
-		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root)); r.IsHandled() {
+		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root) || a.root.widgetState().buttonInputReceptive); r.IsHandled() {
 			return r
 		}
 	}
 	return HandleInputResult{}
 }
 
-func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, ancestorFocused bool) HandleInputResult {
+func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, ancestorInputReceptive bool) HandleInputResult {
 	widgetState := widget.widgetState()
 	if widgetState.isPassthrough() {
 		return HandleInputResult{}
@@ -670,7 +670,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		return HandleInputResult{}
 	}
 
-	if typ == handleInputTypeButton && !a.context.IsFocusedOrHasFocusedChild(widget) && !ancestorFocused {
+	if typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedChild(widget) && !widgetState.buttonInputReceptive {
 		return HandleInputResult{}
 	}
 
@@ -678,7 +678,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 	focused := a.context.IsFocused(widget)
 	for i := len(widgetState.children) - 1; i >= 0; i-- {
 		child := widgetState.children[i]
-		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorFocused || focused); r.IsHandled() {
+		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused || widgetState.buttonInputReceptive); r.IsHandled() {
 			return r
 		}
 	}

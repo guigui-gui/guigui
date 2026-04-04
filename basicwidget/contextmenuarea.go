@@ -15,7 +15,12 @@ import (
 // ContextMenuArea is a standalone widget that shows a popup menu when the user
 // right-clicks inside the area specified by its bounds.
 //
-// ContextMenuArea shows a modal popup that closes when the user clicks outside.
+// ContextMenuArea shows a modeless popup that closes when the user clicks outside.
+// The previously focused widget retains focus while the context menu is open,
+// so that widgets like [TextInput] can continue to show their cursor and selection.
+//
+// Keyboard navigation (Up/Down/Enter/Escape) is supported via [guigui.Context.SetButtonInputReceptive].
+//
 // Use [ContextMenuArea.PopupMenu] to configure the menu items.
 type ContextMenuArea[T comparable] struct {
 	guigui.DefaultWidget
@@ -36,6 +41,8 @@ func (c *ContextMenuArea[T]) Build(context *guigui.Context, adder *guigui.ChildA
 	if c.popupMenu.IsOpen() {
 		adder.AddWidget(&c.popupMenu)
 	}
+	c.popupMenu.setModal(false)
+	context.SetButtonInputReceptive(c, c.popupMenu.IsOpen())
 	return nil
 }
 
@@ -54,7 +61,6 @@ func (c *ContextMenuArea[T]) HandlePointingInput(context *guigui.Context, widget
 		if widgetBounds.IsHitAtCursor() {
 			c.menuPosition = image.Pt(ebiten.CursorPosition())
 			c.popupMenu.SetOpen(true)
-			context.SetFocused(&c.popupMenu, true)
 			return guigui.HandleInputByWidget(c)
 		}
 	}

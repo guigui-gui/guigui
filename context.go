@@ -258,6 +258,28 @@ func (c *Context) IsEnabled(widget Widget) bool {
 	return widget.widgetState().isEnabled()
 }
 
+// SetButtonInputReceptive sets whether the widget receives button input events
+// even when it is not focused. This is useful for modeless popups like context menus,
+// where the popup needs to handle keyboard navigation (Up/Down/Enter/Escape)
+// while another widget retains focus.
+//
+// Unlike focus, this property does not inherit from parent widgets.
+// However, descendants of a button-input-receptive widget also receive button input events.
+func (c *Context) SetButtonInputReceptive(widget Widget, receptive bool) {
+	widgetState := widget.widgetState()
+	if widgetState.buttonInputReceptive == receptive {
+		return
+	}
+	widgetState.buttonInputReceptive = receptive
+	RequestRebuild(widget)
+}
+
+// IsButtonInputReceptive reports whether the widget receives button input events
+// even when it is not focused.
+func (c *Context) IsButtonInputReceptive(widget Widget) bool {
+	return widget.widgetState().buttonInputReceptive
+}
+
 // SetFocused sets or removes the focus on the widget.
 func (c *Context) SetFocused(widget Widget, focused bool) {
 	if focused {

@@ -116,11 +116,12 @@ type widgetState struct {
 	prev          widgetsAndBounds
 	focusDelegate Widget
 
-	hidden       bool
-	disabled     bool
-	passthrough  bool
-	layer        int64
-	transparency float64
+	hidden               bool
+	disabled             bool
+	passthrough          bool
+	buttonInputReceptive bool
+	layer                int64
+	transparency         float64
 
 	// eventHandlers is a collection of event handlers.
 	// eventHandlers is reset whenever the widget is rebuilt.
