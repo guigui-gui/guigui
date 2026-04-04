@@ -90,6 +90,7 @@ func (p *Panel) setScrolBarVisible(visible bool) {
 func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&p.panel)
 	context.SetClipChildren(&p.panel, true)
+	context.DelegateFocus(p, p.panel.content)
 	return nil
 }
 
@@ -203,6 +204,8 @@ func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	p.scrollHBar.setHorizontal(true)
 	p.scrollVBar.setOffsetGetSetter(p)
 	p.scrollVBar.setHorizontal(false)
+
+	context.DelegateFocus(p, p.content)
 
 	return nil
 }
