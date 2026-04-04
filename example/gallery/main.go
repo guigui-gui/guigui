@@ -39,7 +39,7 @@ type Root struct {
 	comboboxes        Comboboxes
 	tables            Tables
 	popups            Popups
-	tooltips          Tooltips
+	tooltips          TooltipAreas
 
 	model Model
 

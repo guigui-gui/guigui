@@ -12,19 +12,18 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
-// Tooltip is a standalone widget that shows a balloon popup when the mouse cursor hovers
-// over the area specified by [Tooltip.SetHoverBounds].
-// The tooltip appears above the hover bounds and has a black background regardless of the color mode.
-// The tooltip automatically disappears when the mouse cursor moves out of the hover bounds.
+// TooltipArea is a standalone widget that shows a balloon popup when the mouse cursor hovers
+// over the area specified by its bounds.
+// The tooltip appears above the bounds and has a black background regardless of the color mode.
+// The tooltip automatically disappears when the mouse cursor moves out of the bounds.
 //
-// Tooltip is a modeless popup: it does not prevent user interactions with other widgets.
-type Tooltip struct {
+// TooltipArea shows a modeless popup: it does not prevent user interactions with other widgets.
+type TooltipArea struct {
 	guigui.DefaultWidget
 
 	popup          Popup
 	tooltipContent tooltipContent
 
-	hoverBounds   image.Rectangle
 	hovering      bool
 	hoverTicks    int
 	toShowTooltip bool
@@ -32,25 +31,19 @@ type Tooltip struct {
 }
 
 // SetContent sets a custom content widget for the tooltip balloon.
-// [Tooltip.SetContent] and [Tooltip.SetText] are exclusive; [Tooltip.SetContent] takes priority.
-func (t *Tooltip) SetContent(widget guigui.Widget) {
+// [TooltipArea.SetContent] and [TooltipArea.SetText] are exclusive; [TooltipArea.SetContent] takes priority.
+func (t *TooltipArea) SetContent(widget guigui.Widget) {
 	t.tooltipContent.content = widget
 }
 
 // SetText sets the tooltip balloon text.
-// [Tooltip.SetContent] and [Tooltip.SetText] are exclusive; [Tooltip.SetContent] takes priority.
-func (t *Tooltip) SetText(text string) {
+// [TooltipArea.SetContent] and [TooltipArea.SetText] are exclusive; [TooltipArea.SetContent] takes priority.
+func (t *TooltipArea) SetText(text string) {
 	t.tooltipContent.textContent = text
 }
 
-// SetHoverBounds sets the area that triggers the tooltip on hover.
-// Typically called during Layout with the bounds of the associated widget.
-func (t *Tooltip) SetHoverBounds(bounds image.Rectangle) {
-	t.hoverBounds = bounds
-}
-
 // Build implements [guigui.Widget.Build].
-func (t *Tooltip) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *TooltipArea) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.popup)
 
 	t.popup.SetContent(&t.tooltipContent)
@@ -67,12 +60,12 @@ func (t *Tooltip) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 }
 
 // Layout implements [guigui.Widget.Layout].
-func (t *Tooltip) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (t *TooltipArea) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	// Measure the tooltip content to position it.
 	tooltipSize := t.tooltipContent.Measure(context, guigui.Constraints{})
 
 	// Position the tooltip above the hover bounds, centered horizontally on the cursor.
-	hb := t.hoverBounds
+	hb := widgetBounds.Bounds()
 	pos := t.showPosition
 	u := UnitSize(context)
 	gap := u / 8
@@ -101,9 +94,9 @@ func (t *Tooltip) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 }
 
 // HandlePointingInput implements [guigui.Widget.HandlePointingInput].
-func (t *Tooltip) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	cursorPos := image.Pt(ebiten.CursorPosition())
-	if cursorPos.In(t.hoverBounds) {
+	if cursorPos.In(widgetBounds.Bounds()) {
 		if !t.hovering {
 			t.hovering = true
 			t.hoverTicks = 0
@@ -125,7 +118,7 @@ func (t *Tooltip) HandlePointingInput(context *guigui.Context, widgetBounds *gui
 }
 
 // Tick implements [guigui.Widget.Tick].
-func (t *Tooltip) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.hovering {
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {
