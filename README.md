@@ -8,6 +8,9 @@
 > [!WARNING]
 > Except for minor changes like typo fixes, we have not yet established a development policy for accepting changes. For new features, please [file an issue](https://github.com/guigui-gui/guigui/issues/new) or make your proposal in [Discussion](https://github.com/guigui-gui/guigui/discussions/13).
 
+> [!NOTE]
+> AI is used in the development of this project, but all changes are reviewed by the committer before committing.
+
  * Pure Go implementation without any use of HTML, CSS, or JavaScript
  * Hi-DPI support for clear visuals on modern displays
  * Built-in internationalization (I18N) support for multiple languages
