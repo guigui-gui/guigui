@@ -259,17 +259,12 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
-		item.text.SetColor(l.ItemTextColor(context, i))
-		item.keyText.SetColor(l.ItemTextColor(context, i))
+		item.text.SetColor(l.itemTextColor(context, i))
+		item.keyText.SetColor(l.itemTextColor(context, i))
 	}
 }
 
-// ItemTextColor returns the text color for the item at the given index.
-// ItemTextColor must not be called in [guigui.Widget.Build] implementations because it depends on the finished widget tree
-// (e.g. focused states of child widgets are available only after the widget tree is built).
-//
-// Deprecated: use [EnvKeyListItemColorType] via [guigui.Context.Env].
-func (l *List[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
+func (l *List[T]) itemTextColor(context *guigui.Context, index int) color.Color {
 	ct := l.content.itemColorType(context, index)
 	if ct == ListItemColorTypeDefault {
 		item := l.listItemWidgets.At(index)

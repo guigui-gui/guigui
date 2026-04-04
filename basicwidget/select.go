@@ -178,15 +178,6 @@ func (s *Select[T]) Measure(context *guigui.Context, constraints guigui.Constrai
 	return s.button.Measure(context, constraints)
 }
 
-// ItemTextColor returns the text color for the item at the given index.
-// ItemTextColor must not be called in [guigui.Widget.Build] implementations because it depends on the finished widget tree
-// (e.g. focused states of child widgets are available only after the widget tree is built).
-//
-// Deprecated: use [EnvKeyListItemColorType] via [guigui.Context.Env].
-func (s *Select[T]) ItemTextColor(context *guigui.Context, index int) color.Color {
-	return s.popupMenu.ItemTextColor(context, index)
-}
-
 func (s *Select[T]) IsPopupOpen() bool {
 	return s.popupMenu.IsOpen()
 }
