@@ -391,8 +391,14 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 		return guigui.HandleInputResult{}
 	}
 
-	if p.showing || p.hiding {
+	if p.showing {
 		return guigui.AbortHandlingInputByWidget(p)
+	}
+
+	// During hiding, allow input to pass through so that other widgets can handle
+	// right-clicks (e.g., to reopen context menus at a new position).
+	if p.hiding {
+		return guigui.HandleInputResult{}
 	}
 
 	if p.tryCloseByClickingOutside(context) {
@@ -442,10 +448,13 @@ func (p *popup) close(context *guigui.Context, reason PopupCloseReason) {
 	p.showing = false
 	p.hiding = true
 	p.openAfterClose = false
+	// Immediately update passthrough so that IsHitAtCursor for lower-layer
+	// widgets reflects the hiding state within the same frame.
+	context.SetPassthrough(p, p.passthrough())
 }
 
 func (p *popup) passthrough() bool {
-	return p.openingCount == 0
+	return p.openingCount == 0 || p.hiding
 }
 
 func (p *popup) canUpdateContent() bool {
@@ -529,6 +538,12 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			}
 		}
 	}
+
+	// Update passthrough to reflect state changes in this Tick
+	// (e.g., p.hiding becoming false when the hiding animation finishes).
+	// The outer Popup.Build only sets passthrough on itself, not on this inner popup,
+	// so without this the passthrough set in close() would never get cleared.
+	context.SetPassthrough(p, p.passthrough())
 
 	rate := p.openingRate()
 	p.blurredBackground.SetOpeningRate(rate)
@@ -702,8 +717,14 @@ func (p *popupTransparentBackground) HandlePointingInput(context *guigui.Context
 		return guigui.HandleInputResult{}
 	}
 
-	if p.popup.showing || p.popup.hiding {
+	if p.popup.showing {
 		return guigui.AbortHandlingInputByWidget(p)
+	}
+
+	// During hiding, allow input to pass through so that other widgets can handle
+	// right-clicks (e.g., to reopen context menus at a new position).
+	if p.popup.hiding {
+		return guigui.HandleInputResult{}
 	}
 
 	if p.popup.tryCloseByClickingOutside(context) {
