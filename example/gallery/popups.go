@@ -143,6 +143,7 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	p.contextMenuPopupClickHereText.OnClicked(func(context *guigui.Context, pt image.Point) {
 		p.contextMenuPopupPosition = pt
 		p.contextMenuPopup.SetOpen(true)
+		context.SetFocused(&p.contextMenuPopup, true)
 	})
 
 	return nil

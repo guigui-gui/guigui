@@ -642,6 +642,9 @@ type listContent[T comparable] struct {
 	hoveredItemIndexPlus1     int
 	lastHoveredItemIndexPlus1 int
 
+	keyboardHighlightIndexPlus1 int
+	lastCursorPosition          image.Point
+
 	indexToJumpPlus1          int
 	indexToEnsureVisiblePlus1 int
 	jumpTick                  int64
@@ -872,7 +875,24 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		itemW -= item.Padding.Start + item.Padding.End
 		contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
 
-		// Skip layout for items outside the visible bounds.
+		// Record item bounds for all items so that itemYFromIndex works for off-screen items.
+		// This is cheap since contentH is already computed above.
+		{
+			itemP := p
+			if l.checkmarkIndexPlus1 > 0 {
+				itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+			}
+			itemP.X += listItemIndentSize(context, item.IndentLevel)
+			itemP.X += item.Padding.Start
+			itemP.Y = l.adjustItemY(context, itemP.Y)
+			itemP.Y += item.Padding.Top
+			l.itemBoundsForLayoutFromIndex[i] = image.Rectangle{
+				Min: itemP,
+				Max: itemP.Add(image.Pt(itemW, contentH)),
+			}
+		}
+
+		// Skip widget layout for items outside the visible bounds.
 		itemTop := p.Y
 		itemBottom := p.Y + contentH + item.Padding.Top + item.Padding.Bottom
 		if itemTop >= vb.Max.Y || itemBottom <= vb.Min.Y {
@@ -1153,11 +1173,12 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 }
 
 func (l *listContent[T]) resetHoveredItemIndex() {
-	if l.hoveredItemIndexPlus1 == 0 && l.lastHoveredItemIndexPlus1 == 0 {
+	if l.hoveredItemIndexPlus1 == 0 && l.lastHoveredItemIndexPlus1 == 0 && l.keyboardHighlightIndexPlus1 == 0 {
 		return
 	}
 	l.hoveredItemIndexPlus1 = 0
 	l.lastHoveredItemIndexPlus1 = 0
+	l.keyboardHighlightIndexPlus1 = 0
 	guigui.RequestRebuild(l)
 }
 
@@ -1178,8 +1199,141 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 	return -1
 }
 
+func (l *listContent[T]) nextSelectableVisibleIndex(from int, forward bool) int {
+	found := from < 0
+	result := -1
+	if forward {
+		for i := range l.visibleItems() {
+			if !found {
+				if i == from {
+					found = true
+				}
+				continue
+			}
+			item, ok := l.abstractList.ItemByIndex(i)
+			if !ok || item.Unselectable {
+				continue
+			}
+			return i
+		}
+	} else {
+		for i := range l.visibleItems() {
+			if i == from {
+				break
+			}
+			item, ok := l.abstractList.ItemByIndex(i)
+			if !ok || item.Unselectable {
+				continue
+			}
+			result = i
+		}
+	}
+	return result
+}
+
+func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	down := isKeyRepeating(ebiten.KeyDown)
+	up := isKeyRepeating(ebiten.KeyUp)
+	if !down && !up {
+		if l.isHoveringVisible() && inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			idx := -1
+			if l.keyboardHighlightIndexPlus1 > 0 {
+				idx = l.keyboardHighlightIndexPlus1 - 1
+			} else if l.hoveredItemIndexPlus1 > 0 {
+				idx = l.hoveredItemIndexPlus1 - 1
+			}
+			if idx >= 0 {
+				l.selectItemByIndex(idx, true)
+				return guigui.HandleInputByWidget(l)
+			}
+		}
+		return guigui.HandleInputResult{}
+	}
+
+	if l.isHoveringVisible() {
+		// Menu-style: navigate the keyboard highlight.
+		current := l.keyboardHighlightIndexPlus1 - 1
+		if current < 0 {
+			current = l.hoveredItemIndexPlus1 - 1
+		}
+
+		var next int
+		if current < 0 {
+			// No current highlight; pick the first or last selectable item.
+			if down {
+				next = l.nextSelectableVisibleIndex(-1, true)
+			} else {
+				next = l.lastSelectableVisibleIndex()
+			}
+		} else {
+			next = l.nextSelectableVisibleIndex(current, down)
+			if next < 0 {
+				next = current
+			}
+		}
+
+		if next >= 0 {
+			l.keyboardHighlightIndexPlus1 = next + 1
+			l.hoveredItemIndexPlus1 = next + 1
+			l.lastHoveredItemIndexPlus1 = next + 1
+			l.EnsureItemVisibleByIndex(next)
+			guigui.RequestRebuild(l)
+		}
+		return guigui.HandleInputByWidget(l)
+	}
+
+	// Normal/Sidebar style: navigate the selection.
+	current := l.abstractList.SelectedItemIndex()
+
+	var next int
+	if current < 0 {
+		if down {
+			next = l.nextSelectableVisibleIndex(-1, true)
+		} else {
+			next = l.lastSelectableVisibleIndex()
+		}
+	} else {
+		next = l.nextSelectableVisibleIndex(current, down)
+		if next < 0 {
+			next = current
+		}
+	}
+
+	if next >= 0 && next != current {
+		l.selectItemByIndex(next, false)
+		l.EnsureItemVisibleByIndex(next)
+		if item, ok := l.abstractList.ItemByIndex(next); ok {
+			context.SetFocused(item.Content, true)
+		}
+	}
+	return guigui.HandleInputByWidget(l)
+}
+
+func (l *listContent[T]) lastSelectableVisibleIndex() int {
+	result := -1
+	for i := range l.visibleItems() {
+		item, ok := l.abstractList.ItemByIndex(i)
+		if !ok || item.Unselectable {
+			continue
+		}
+		result = i
+	}
+	return result
+}
+
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
+	// Reset keyboard highlight when cursor moves.
+	cursorPos := image.Pt(ebiten.CursorPosition())
+	if l.keyboardHighlightIndexPlus1 > 0 && cursorPos != l.lastCursorPosition {
+		l.keyboardHighlightIndexPlus1 = 0
+		guigui.RequestRebuild(l)
+	}
+	l.lastCursorPosition = cursorPos
+
+	// Skip updating the hovered item from cursor while keyboard highlight is active.
+	if l.keyboardHighlightIndexPlus1 == 0 {
+		l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
+	}
 
 	colorMode := context.ColorMode()
 	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
