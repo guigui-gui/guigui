@@ -44,7 +44,9 @@ func (t *TooltipArea) SetText(text string) {
 
 // Build implements [guigui.Widget.Build].
 func (t *TooltipArea) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&t.popup)
+	if t.popup.IsOpen() {
+		adder.AddWidget(&t.popup)
+	}
 
 	t.popup.SetContent(&t.tooltipContent)
 	t.popup.SetModal(false)

@@ -75,7 +75,9 @@ func (s *Select[T]) updatePopupMenuItems() {
 
 func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&s.button)
-	adder.AddWidget(&s.popupMenu)
+	if s.popupMenu.IsOpen() {
+		adder.AddWidget(&s.popupMenu)
+	}
 
 	s.updatePopupMenuItems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {
