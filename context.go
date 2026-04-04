@@ -263,8 +263,10 @@ func (c *Context) IsEnabled(widget Widget) bool {
 // where the popup needs to handle keyboard navigation (Up/Down/Enter/Escape)
 // while another widget retains focus.
 //
-// Unlike focus, this property does not inherit from parent widgets.
-// However, descendants of a button-input-receptive widget also receive button input events.
+// A button-input-receptive widget and all its descendants receive button input
+// events via [Widget.HandleButtonInput]. Unlike focus, ancestors of a
+// button-input-receptive widget do not receive button input events themselves;
+// the framework only traverses through them to reach the receptive widget.
 func (c *Context) SetButtonInputReceptive(widget Widget, receptive bool) {
 	widgetState := widget.widgetState()
 	if widgetState.buttonInputReceptive == receptive {
@@ -281,6 +283,10 @@ func (c *Context) IsButtonInputReceptive(widget Widget) bool {
 }
 
 // SetFocused sets or removes the focus on the widget.
+//
+// When a widget is focused, both the widget and all its ancestors receive
+// button input events via [Widget.HandleButtonInput].
+// Only one widget can be focused at a time.
 func (c *Context) SetFocused(widget Widget, focused bool) {
 	if focused {
 		c.focus(widget)

@@ -260,6 +260,21 @@ func (a *app) setFocusAncestorFlags() {
 	}
 }
 
+func (a *app) setButtonInputReceptiveAncestorFlags() {
+	for _, widget := range a.widgetList {
+		if !widget.widgetState().buttonInputReceptive {
+			continue
+		}
+		for w := widget; w != nil; w = w.widgetState().parent {
+			ws := w.widgetState()
+			if ws.buttonInputReceptiveOrHasReceptiveChild {
+				break
+			}
+			ws.buttonInputReceptiveOrHasReceptiveChild = true
+		}
+	}
+}
+
 // settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
 // determines which phases are required for the next buildAndLayoutWidgets call,
 // accumulates draw regions into regionsToDraw, and resets the region buffers.
@@ -368,6 +383,7 @@ func (a *app) Update() error {
 		}
 	}
 	if a.inputState.isButtonActive() {
+		a.setButtonInputReceptiveAncestorFlags()
 		if r := a.handleInputWidget(handleInputTypeButton); r.widget != nil {
 			if !r.aborted {
 				inputHandledWidget = r.widget
@@ -568,6 +584,7 @@ func (a *app) buildWidgets() error {
 		widgetState.passthroughCacheValid = false
 		widgetState.passthroughCache = false
 		widgetState.focusedOrHasFocusedChild = false
+		widgetState.buttonInputReceptiveOrHasReceptiveChild = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 	}
 
@@ -670,17 +687,22 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		return HandleInputResult{}
 	}
 
-	if typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedChild(widget) && !widgetState.buttonInputReceptive {
-		return HandleInputResult{}
+	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedChild(widget) && !widgetState.buttonInputReceptive
+
+	// Even if this widget is pruned for button input, traverse children if a descendant is receptive.
+	if !prunedForButtonInput || widgetState.buttonInputReceptiveOrHasReceptiveChild {
+		// Iterate the children in the reverse order of rendering.
+		focused := a.context.IsFocused(widget)
+		for i := len(widgetState.children) - 1; i >= 0; i-- {
+			child := widgetState.children[i]
+			if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused || widgetState.buttonInputReceptive); r.IsHandled() {
+				return r
+			}
+		}
 	}
 
-	// Iterate the children in the reverse order of rendering.
-	focused := a.context.IsFocused(widget)
-	for i := len(widgetState.children) - 1; i >= 0; i-- {
-		child := widgetState.children[i]
-		if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused || widgetState.buttonInputReceptive); r.IsHandled() {
-			return r
-		}
+	if prunedForButtonInput {
+		return HandleInputResult{}
 	}
 
 	if layerToHandle != widgetState.actualLayer() {

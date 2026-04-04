@@ -43,9 +43,17 @@ type Widget interface {
 
 	// HandleButtonInput handles keyboard and gamepad button input events for the widget.
 	// widgetBounds provides the widget's position and hit-testing information.
-	// It is invoked when the widget or its ancestor is focused,
-	// or when the widget contains a focused child widget.
 	// It is skipped entirely when no buttons are pressed.
+	//
+	// HandleButtonInput is called when any of the following conditions is met:
+	//   - The widget is focused or has a focused descendant.
+	//   - The widget is button-input-receptive (see [Context.SetButtonInputReceptive]).
+	//   - An ancestor of the widget is focused or button-input-receptive.
+	//
+	// When a widget is only an ancestor of a button-input-receptive widget
+	// (but is not itself focused or receptive), the framework traverses into its
+	// children to reach the receptive widget, but does not call HandleButtonInput
+	// on the ancestor itself.
 	HandleButtonInput(context *Context, widgetBounds *WidgetBounds) HandleInputResult
 
 	// Tick is called every tick to update the widget's state.
