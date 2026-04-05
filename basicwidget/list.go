@@ -1358,6 +1358,16 @@ func (l *listContent[T]) updateCheckmarkColor(context *guigui.Context) {
 }
 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	// Reset dragging and pressing state when the list loses focus.
+	// This prevents accidental drags caused by mouse events leaking through
+	// a popup's closing animation (passthrough mode).
+	if !context.IsFocusedOrHasFocusedChild(l) {
+		l.dragSrcIndexPlus1 = 0
+		l.dragDstIndexPlus1 = 0
+		l.pressStartPlus1 = image.Point{}
+		l.startPressingIndexPlus1 = 0
+	}
+
 	// Reset keyboard highlight when cursor moves.
 	cursorPos := image.Pt(ebiten.CursorPosition())
 	if l.keyboardHighlightIndexPlus1 > 0 && cursorPos != l.lastCursorPosition {
