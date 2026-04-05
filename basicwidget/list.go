@@ -1302,6 +1302,7 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 
 	if l.isHoveringVisible() {
 		l.navigateKeyboardHighlight(down)
+		l.updateCheckmarkColor(context)
 		return guigui.HandleInputByWidget(l)
 	}
 
@@ -1344,6 +1345,18 @@ func (l *listContent[T]) lastSelectableVisibleIndex() int {
 	return result
 }
 
+func (l *listContent[T]) updateCheckmarkColor(context *guigui.Context) {
+	colorMode := context.ColorMode()
+	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
+		colorMode = ebiten.ColorModeDark
+	}
+	checkImg, err := theResourceImages.Get("check", colorMode)
+	if err != nil {
+		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
+	}
+	l.checkmark.SetImage(checkImg)
+}
+
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	// Reset keyboard highlight when cursor moves.
 	cursorPos := image.Pt(ebiten.CursorPosition())
@@ -1358,15 +1371,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		l.hoveredItemIndexPlus1 = l.hoveredItemIndex(context, widgetBounds) + 1
 	}
 
-	colorMode := context.ColorMode()
-	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
-		colorMode = ebiten.ColorModeDark
-	}
-	checkImg, err := theResourceImages.Get("check", colorMode)
-	if err != nil {
-		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
-	}
-	l.checkmark.SetImage(checkImg)
+	l.updateCheckmarkColor(context)
 
 	if l.isHoveringVisible() || l.hasMovableItems() {
 		if l.lastHoveredItemIndexPlus1 != l.hoveredItemIndexPlus1 {

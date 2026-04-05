@@ -79,6 +79,9 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		adder.AddWidget(&s.popupMenu)
 	}
 
+	s.popupMenu.setModal(false)
+	context.SetButtonInputReceptive(s, s.popupMenu.IsOpen())
+
 	s.updatePopupMenuItems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {
 		if content := s.items[index].Content; content != nil {
