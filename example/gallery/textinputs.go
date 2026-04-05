@@ -22,7 +22,7 @@ type TextInputs struct {
 	multilineText               basicwidget.Text
 	multilineTextInput          guigui.WidgetWithSize[*textInputContainer]
 	inlineText                  basicwidget.Text
-	inlineTextInput             guigui.WidgetWithSize[*inlineTextInputContainer]
+	inlineTextInput             guigui.WidgetWithSize[*textInputContainer]
 
 	configForm                      basicwidget.Form
 	horizontalAlignText             basicwidget.Text
@@ -128,10 +128,12 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	t.multilineTextInput.SetFixedSize(image.Pt(width, 4*u))
 
 	t.inlineText.SetValue("Inline")
+	t.inlineTextInput.Widget().SetStyle(basicwidget.TextInputStyleInline)
 	t.inlineTextInput.Widget().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
-	t.inlineTextInput.Widget().textInput.SetVerticalAlign(model.TextInputs().VerticalAlign())
-	t.inlineTextInput.Widget().textInput.SetEditable(model.TextInputs().Editable())
-	t.inlineTextInput.Widget().textInput.SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.inlineTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.inlineTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.inlineTextInput.Widget().TextInput().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.inlineTextInput.Widget().SetContextMenu(true)
 	context.SetEnabled(&t.inlineTextInput, model.TextInputs().Enabled())
 	t.inlineTextInput.SetFixedWidth(width)
 
@@ -292,11 +294,22 @@ type textInputContainer struct {
 	textInput       basicwidget.TextInput
 	contextMenuArea basicwidget.ContextMenuArea[int]
 
+	style           basicwidget.TextInputStyle
+	horizontalAlign basicwidget.HorizontalAlign
 	showContextMenu bool
 }
 
 func (t *textInputContainer) TextInput() *basicwidget.TextInput {
 	return &t.textInput
+}
+
+func (t *textInputContainer) SetStyle(style basicwidget.TextInputStyle) {
+	t.style = style
+}
+
+func (t *textInputContainer) SetHorizontalAlign(align basicwidget.HorizontalAlign) {
+	t.horizontalAlign = align
+	t.textInput.SetHorizontalAlign(align)
 }
 
 func (t *textInputContainer) SetContextMenu(show bool) {
@@ -305,6 +318,7 @@ func (t *textInputContainer) SetContextMenu(show bool) {
 
 func (t *textInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.textInput)
+	t.textInput.SetStyle(t.style)
 	if t.showContextMenu {
 		adder.AddWidget(&t.contextMenuArea)
 		t.contextMenuArea.PopupMenu().SetItems([]basicwidget.PopupMenuItem[int]{
@@ -343,7 +357,27 @@ func (t *textInputContainer) Build(context *guigui.Context, adder *guigui.ChildA
 }
 
 func (t *textInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	b := widgetBounds.Bounds()
+	var b image.Rectangle
+	if t.style == basicwidget.TextInputStyleInline {
+		size := t.textInput.Measure(context, guigui.Constraints{})
+		if size.X > widgetBounds.Bounds().Dx() {
+			size = t.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))
+		}
+		pos := widgetBounds.Bounds().Min
+		switch t.horizontalAlign {
+		case basicwidget.HorizontalAlignStart:
+		case basicwidget.HorizontalAlignCenter:
+			pos.X += (widgetBounds.Bounds().Dx() - size.X) / 2
+		case basicwidget.HorizontalAlignEnd:
+			pos.X += widgetBounds.Bounds().Dx() - size.X
+		}
+		b = image.Rectangle{
+			Min: pos,
+			Max: pos.Add(size),
+		}
+	} else {
+		b = widgetBounds.Bounds()
+	}
 	layouter.LayoutWidget(&t.textInput, b)
 	if t.showContextMenu {
 		layouter.LayoutWidget(&t.contextMenuArea, b)
@@ -351,47 +385,6 @@ func (t *textInputContainer) Layout(context *guigui.Context, widgetBounds *guigu
 }
 
 func (t *textInputContainer) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	t.textInput.SetStyle(t.style)
 	return t.textInput.Measure(context, constraints)
-}
-
-type inlineTextInputContainer struct {
-	guigui.DefaultWidget
-
-	textInput       basicwidget.TextInput
-	horizontalAlign basicwidget.HorizontalAlign
-}
-
-func (c *inlineTextInputContainer) SetHorizontalAlign(align basicwidget.HorizontalAlign) {
-	c.horizontalAlign = align
-	c.textInput.SetHorizontalAlign(align)
-}
-
-func (c *inlineTextInputContainer) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&c.textInput)
-	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
-	return nil
-}
-
-func (c *inlineTextInputContainer) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	size := c.textInput.Measure(context, guigui.Constraints{})
-	if size.X > widgetBounds.Bounds().Dx() {
-		size = c.textInput.Measure(context, guigui.FixedHeightConstraints(widgetBounds.Bounds().Dx()))
-	}
-	pos := widgetBounds.Bounds().Min
-	switch c.horizontalAlign {
-	case basicwidget.HorizontalAlignStart:
-	case basicwidget.HorizontalAlignCenter:
-		pos.X += (widgetBounds.Bounds().Dx() - size.X) / 2
-	case basicwidget.HorizontalAlignEnd:
-		pos.X += widgetBounds.Bounds().Dx() - size.X
-	}
-	layouter.LayoutWidget(&c.textInput, image.Rectangle{
-		Min: pos,
-		Max: pos.Add(size),
-	})
-}
-
-func (c *inlineTextInputContainer) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	c.textInput.SetStyle(basicwidget.TextInputStyleInline)
-	return c.textInput.Measure(context, constraints)
 }
