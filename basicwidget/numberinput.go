@@ -64,6 +64,28 @@ func (n *NumberInput) SetEditable(editable bool) {
 	n.textInput.SetEditable(editable)
 }
 
+// IsError reports whether the number input is in the error state.
+func (n *NumberInput) IsError() bool {
+	return n.textInput.IsError()
+}
+
+// SetError sets whether the number input is in the error state.
+// When the error state is true, the number input border is drawn in a danger color.
+func (n *NumberInput) SetError(hasError bool) {
+	n.textInput.SetError(hasError)
+}
+
+// SupportText returns the support text displayed below the number input.
+func (n *NumberInput) SupportText() string {
+	return n.textInput.SupportText()
+}
+
+// SetSupportText sets the support text displayed below the number input.
+// The support text is shown in a subdued color, or in a danger color when the error state is true.
+func (n *NumberInput) SetSupportText(text string) {
+	n.textInput.SetSupportText(text)
+}
+
 func (n *NumberInput) OnValueChanged(f func(context *guigui.Context, value int, committed bool)) {
 	guigui.SetEventHandler(n, numberInputEventValueChanged, f)
 }

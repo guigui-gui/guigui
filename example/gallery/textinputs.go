@@ -6,6 +6,7 @@ package main
 import (
 	"image"
 	"slices"
+	"unicode/utf8"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -17,6 +18,8 @@ type TextInputs struct {
 	textInputForm               basicwidget.Form
 	singleLineText              basicwidget.Text
 	singleLineTextInput         guigui.WidgetWithSize[*textInputContainer]
+	errorText                   basicwidget.Text
+	errorTextInput              guigui.WidgetWithSize[*textInputContainer]
 	singleLineWithIconText      basicwidget.Text
 	singleLineWithIconTextInput guigui.WidgetWithSize[*textInputContainer]
 	multilineText               basicwidget.Text
@@ -100,6 +103,25 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	context.SetEnabled(&t.singleLineTextInput, model.TextInputs().Enabled())
 	t.singleLineTextInput.SetFixedWidth(width)
 
+	t.errorText.SetValue("With validation")
+	t.errorTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
+		n := utf8.RuneCountInString(text)
+		if n < 3 || n > 5 {
+			t.errorTextInput.Widget().TextInput().SetError(true)
+			t.errorTextInput.Widget().TextInput().SetSupportText("Must be between 3 and 5 characters")
+		} else {
+			t.errorTextInput.Widget().TextInput().SetError(false)
+			t.errorTextInput.Widget().TextInput().SetSupportText("")
+		}
+	})
+	t.errorTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.errorTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.errorTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.errorTextInput.Widget().TextInput().SetCursorBlinking(model.TextInputs().CursorBlinking())
+	t.errorTextInput.Widget().SetContextMenu(true)
+	context.SetEnabled(&t.errorTextInput, model.TextInputs().Enabled())
+	t.errorTextInput.SetFixedWidth(width)
+
 	t.singleLineWithIconText.SetValue("Single line with icon")
 	t.singleLineWithIconTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
 	t.singleLineWithIconTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
@@ -141,6 +163,10 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 		{
 			PrimaryWidget:   &t.singleLineText,
 			SecondaryWidget: &t.singleLineTextInput,
+		},
+		{
+			PrimaryWidget:   &t.errorText,
+			SecondaryWidget: &t.errorTextInput,
 		},
 		{
 			PrimaryWidget:   &t.singleLineWithIconText,

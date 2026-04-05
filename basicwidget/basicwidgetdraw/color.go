@@ -62,6 +62,11 @@ var (
 	borderAccentSecondaryOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.7, 0.2)
 	borderAccentSecondaryOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.85, 0.05)
 	borderAccentSecondaryOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.7, 0.2)
+
+	borderDangerLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorDanger, 0.4, 0.7)
+	borderDangerLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorDanger, 0.4, 0.7)
+	borderDangerDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorDanger, 0.4, 0.7)
+	borderDangerDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorDanger, 0.4, 0.7)
 )
 
 func BorderColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
@@ -136,6 +141,16 @@ func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedR
 	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
 }
 
+func BorderDangerColors(colorMode ebiten.ColorMode) (color.Color, color.Color) {
+	switch colorMode {
+	case ebiten.ColorModeLight:
+		return borderDangerLightColor1, borderDangerLightColor2
+	case ebiten.ColorModeDark:
+		return borderDangerDarkColor1, borderDangerDarkColor2
+	}
+	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+}
+
 var (
 	textEnabledLightColor              = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.1)
 	textEnabledDarkColor               = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.1)
@@ -188,7 +203,7 @@ func TextColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor Semant
 	if semanticColor == SemanticColorBase {
 		return TextColor(colorMode, true)
 	}
-	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.2, 0.9)
+	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.3, 0.8)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {

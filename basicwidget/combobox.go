@@ -69,6 +69,28 @@ func (c *Combobox) TextInput() *TextInput {
 	return &c.textInput
 }
 
+// IsError reports whether the combobox is in the error state.
+func (c *Combobox) IsError() bool {
+	return c.textInput.IsError()
+}
+
+// SetError sets whether the combobox is in the error state.
+// When the error state is true, the combobox border is drawn in a danger color.
+func (c *Combobox) SetError(hasError bool) {
+	c.textInput.SetError(hasError)
+}
+
+// SupportText returns the support text displayed below the combobox.
+func (c *Combobox) SupportText() string {
+	return c.textInput.SupportText()
+}
+
+// SetSupportText sets the support text displayed below the combobox.
+// The support text is shown in a subdued color, or in a danger color when the error state is true.
+func (c *Combobox) SetSupportText(text string) {
+	c.textInput.SetSupportText(text)
+}
+
 // Value returns the current text value.
 func (c *Combobox) Value() string {
 	return c.textInput.Value()

@@ -23,10 +23,13 @@ const (
 type TextInput struct {
 	guigui.DefaultWidget
 
-	textInput textInput
-	focus     textInputFocus
+	textInput   textInput
+	focus       textInputFocus
+	supportText Text
 
-	style TextInputStyle
+	style            TextInputStyle
+	hasError         bool
+	supportTextValue string
 }
 
 // OnValueChanged sets the event handler that is called when the text value changes.
@@ -116,6 +119,37 @@ func (t *TextInput) SetEditable(editable bool) {
 	t.textInput.SetEditable(editable)
 }
 
+// IsError reports whether the text input is in the error state.
+func (t *TextInput) IsError() bool {
+	return t.hasError
+}
+
+// SetError sets whether the text input is in the error state.
+// When the error state is true, the text input border is drawn in a danger color.
+func (t *TextInput) SetError(hasError bool) {
+	if t.hasError == hasError {
+		return
+	}
+	t.hasError = hasError
+	t.textInput.frame.setError(hasError)
+	guigui.RequestRebuild(t)
+}
+
+// SupportText returns the support text displayed below the text input.
+func (t *TextInput) SupportText() string {
+	return t.supportTextValue
+}
+
+// SetSupportText sets the support text displayed below the text input.
+// The support text is shown in a subdued color, or in a danger color when the error state is true.
+func (t *TextInput) SetSupportText(text string) {
+	if t.supportTextValue == text {
+		return
+	}
+	t.supportTextValue = text
+	guigui.RequestRebuild(t)
+}
+
 func (t *TextInput) SetIcon(icon *ebiten.Image) {
 	t.textInput.SetIcon(icon)
 }
@@ -165,24 +199,56 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddWidget(&t.focus)
 	context.SetPassthrough(&t.focus, true)
 	context.DelegateFocus(t, &t.textInput.text)
+
+	if t.supportTextValue != "" {
+		adder.AddWidget(&t.supportText)
+		t.supportText.SetValue(t.supportTextValue)
+		t.supportText.SetScale(0.85)
+		if t.hasError {
+			t.supportText.SetColor(basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), basicwidgetdraw.SemanticColorDanger))
+		} else {
+			t.supportText.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
+		}
+	}
+
 	return nil
 }
 
 func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layouter.LayoutWidget(&t.textInput, widgetBounds.Bounds())
-
 	bounds := widgetBounds.Bounds()
+
+	inputBounds := bounds
+	if t.supportTextValue != "" {
+		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(bounds.Dx()))
+		inputBounds.Max.Y = bounds.Max.Y - supportTextSize.Y - int(2*context.Scale())
+	}
+
+	layouter.LayoutWidget(&t.textInput, inputBounds)
+
 	w := textInputFocusBorderWidth(context)
-	p := bounds.Min.Add(image.Pt(-w, -w))
-	s := bounds.Size().Add(image.Pt(2*w, 2*w))
+	p := inputBounds.Min.Add(image.Pt(-w, -w))
+	s := inputBounds.Size().Add(image.Pt(2*w, 2*w))
 	layouter.LayoutWidget(&t.focus, image.Rectangle{
 		Min: p,
 		Max: p.Add(s),
 	})
+
+	if t.supportTextValue != "" {
+		supportTextBounds := image.Rectangle{
+			Min: image.Pt(inputBounds.Min.X, inputBounds.Max.Y+int(2*context.Scale())),
+			Max: image.Pt(inputBounds.Max.X, bounds.Max.Y),
+		}
+		layouter.LayoutWidget(&t.supportText, supportTextBounds)
+	}
 }
 
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return t.textInput.Measure(context, constraints)
+	s := t.textInput.Measure(context, constraints)
+	if t.supportTextValue != "" {
+		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(s.X))
+		s.Y += supportTextSize.Y + int(2*context.Scale())
+	}
+	return s
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
@@ -511,12 +577,26 @@ func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *gu
 
 type textInputFrame struct {
 	guigui.DefaultWidget
+
+	hasError bool
+}
+
+func (t *textInputFrame) setError(hasError bool) {
+	if t.hasError == hasError {
+		return
+	}
+	t.hasError = hasError
+	guigui.RequestRedraw(t)
 }
 
 func (t *textInputFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
+	if t.hasError {
+		dclr1, dclr2 := basicwidgetdraw.BorderDangerColors(context.ColorMode())
+		basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, dclr1, dclr2, RoundedCornerRadius(context), float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeRegular)
+	}
 }
 
 type textInputText struct {
