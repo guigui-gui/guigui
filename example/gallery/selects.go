@@ -5,6 +5,7 @@ package main
 
 import (
 	"image"
+	"image/color"
 	"slices"
 
 	"github.com/guigui-gui/guigui"
@@ -194,12 +195,13 @@ func (s *selectItem) buildLayout(context *guigui.Context) {
 func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	s.buildLayout(context)
 	s.linearLayout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	var clr color.Color
 	if v, ok := context.Env(s, basicwidget.EnvKeyListItemColorType); ok {
-		ct := v.(basicwidget.ListItemColorType)
-		s.text.SetColor(ct.TextColor(context))
-	} else {
-		s.text.SetColor(nil)
+		if ct, ok := v.(basicwidget.ListItemColorType); ok {
+			clr = ct.TextColor(context)
+		}
 	}
+	s.text.SetColor(clr)
 }
 
 func (s *selectItem) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
