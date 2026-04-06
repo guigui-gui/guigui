@@ -331,6 +331,9 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	b := widgetBounds.Bounds()
 	layouter.LayoutWidget(&n.textInput, b)
+
+	// Use only the input height (excluding support text) for button positioning.
+	inputHeight := n.textInput.measureTextInput(context, guigui.FixedWidthConstraints(b.Dx())).Y
 	layouter.LayoutWidget(&n.upButton, image.Rectangle{
 		Min: image.Point{
 			X: b.Max.X - UnitSize(context)*3/4,
@@ -338,15 +341,18 @@ func (n *NumberInput) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 		},
 		Max: image.Point{
 			X: b.Max.X,
-			Y: b.Min.Y + b.Dy()/2,
+			Y: b.Min.Y + inputHeight/2,
 		},
 	})
 	layouter.LayoutWidget(&n.downButton, image.Rectangle{
 		Min: image.Point{
 			X: b.Max.X - UnitSize(context)*3/4,
-			Y: b.Min.Y + b.Dy()/2,
+			Y: b.Min.Y + inputHeight/2,
 		},
-		Max: b.Max,
+		Max: image.Point{
+			X: b.Max.X,
+			Y: b.Min.Y + inputHeight,
+		},
 	})
 }
 

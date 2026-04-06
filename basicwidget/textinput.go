@@ -243,8 +243,13 @@ func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	}
 }
 
+// measureTextInput returns the size of just the text input area, excluding the support text.
+func (t *TextInput) measureTextInput(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return t.textInput.Measure(context, constraints)
+}
+
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	s := t.textInput.Measure(context, constraints)
+	s := t.measureTextInput(context, constraints)
 	if t.supportTextValue != "" {
 		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(s.X))
 		s.Y += supportTextSize.Y + int(2*context.Scale())
