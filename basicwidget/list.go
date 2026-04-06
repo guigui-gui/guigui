@@ -214,6 +214,13 @@ func (l *List[T]) IsItemAvailable(index int) bool {
 	return l.content.isItemAvailable(index)
 }
 
+// IsItemInViewport reports whether the item at the given index is currently visible in the viewport.
+//
+// IsItemInViewport is available after the layout phase.
+func (l *List[T]) IsItemInViewport(index int) bool {
+	return l.content.isItemInViewport(index)
+}
+
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&l.background1)
 	adder.AddWidget(&l.panel)
@@ -659,6 +666,13 @@ type listContent[T comparable] struct {
 
 	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex []image.Rectangle
+	visibleBounds                image.Rectangle
+
+	// prevFirstViewportItemIndex is the index of the topmost item in the viewport from the previous Layout call.
+	prevFirstViewportItemIndex int
+	// prevFirstViewportItemRelY is the Min.Y of the topmost viewport item relative to item 0's Min.Y
+	// from the previous Layout call.
+	prevFirstViewportItemRelY int
 
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
@@ -767,6 +781,17 @@ func (l *listContent[T]) isItemAvailable(index int) bool {
 	return true
 }
 
+func (l *listContent[T]) isItemInViewport(index int) bool {
+	if index < 0 || index >= len(l.itemBoundsForLayoutFromIndex) {
+		return false
+	}
+	r := l.itemBoundsForLayoutFromIndex[index]
+	if r.Empty() {
+		return false
+	}
+	return r.Max.Y > l.visibleBounds.Min.Y && r.Min.Y < l.visibleBounds.Max.Y
+}
+
 func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.EnvSource) (any, bool) {
 	switch key {
 	case EnvKeyListItemColorType:
@@ -864,10 +889,16 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		l.widgetBoundsForLayout = map[guigui.Widget]image.Rectangle{}
 	}
 
+	// Use the topmost viewport item recorded during the previous Layout as the scroll anchor.
+	prevFirstViewportItemIndex := l.prevFirstViewportItemIndex
+	prevFirstViewportItemRelY := l.prevFirstViewportItemRelY
+
 	l.itemBoundsForLayoutFromIndex = adjustSliceSize(l.itemBoundsForLayoutFromIndex, l.abstractList.ItemCount())
 	clear(l.itemBoundsForLayoutFromIndex)
 
-	vb := widgetBounds.VisibleBounds()
+	l.visibleBounds = widgetBounds.VisibleBounds()
+	l.prevFirstViewportItemIndex = 0
+	foundFirstViewportItem := false
 
 	for i := range l.availableItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
@@ -896,9 +927,15 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		// Skip widget layout for items outside the visible bounds.
 		itemTop := p.Y
 		itemBottom := p.Y + contentH + item.Padding.Top + item.Padding.Bottom
-		if itemTop >= vb.Max.Y || itemBottom <= vb.Min.Y {
+		if itemTop >= l.visibleBounds.Max.Y || itemBottom <= l.visibleBounds.Min.Y {
 			p.Y += contentH + item.Padding.Top + item.Padding.Bottom
 			continue
+		}
+
+		// Record the topmost viewport item for scroll anchoring.
+		if !foundFirstViewportItem {
+			foundFirstViewportItem = true
+			l.prevFirstViewportItemIndex = i
 		}
 
 		if l.checkmarkIndexPlus1 == i+1 {
@@ -963,6 +1000,23 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		l.itemBoundsForLayoutFromIndex[i] = r
 
 		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
+	}
+
+	// Adjust scroll offset to keep the anchor item at the same visual position.
+	if prevFirstViewportItemIndex >= 0 && prevFirstViewportItemIndex < len(l.itemBoundsForLayoutFromIndex) && len(l.itemBoundsForLayoutFromIndex) > 0 {
+		if r := l.itemBoundsForLayoutFromIndex[prevFirstViewportItemIndex]; !r.Empty() && !l.itemBoundsForLayoutFromIndex[0].Empty() {
+			newRelY := r.Min.Y - l.itemBoundsForLayoutFromIndex[0].Min.Y
+			if delta := newRelY - prevFirstViewportItemRelY; delta != 0 {
+				guigui.DispatchEvent(l, listEventScrollDeltaY, float64(-delta))
+			}
+		}
+	}
+
+	// Record the current first viewport item's relative Y for next frame's anchor.
+	if l.prevFirstViewportItemIndex < len(l.itemBoundsForLayoutFromIndex) && len(l.itemBoundsForLayoutFromIndex) > 0 {
+		if r := l.itemBoundsForLayoutFromIndex[l.prevFirstViewportItemIndex]; !r.Empty() && !l.itemBoundsForLayoutFromIndex[0].Empty() {
+			l.prevFirstViewportItemRelY = r.Min.Y - l.itemBoundsForLayoutFromIndex[0].Min.Y
+		}
 	}
 
 	l.widthForCachedHeight = cw

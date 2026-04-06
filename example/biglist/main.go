@@ -80,9 +80,10 @@ func (w *itemWidget) SetHeight(height int) {
 type Root struct {
 	guigui.DefaultWidget
 
-	background      basicwidget.Background
-	list            guigui.WidgetWithSize[*basicwidget.List[int]]
-	randomizeButton basicwidget.Button
+	background                   basicwidget.Background
+	list                         guigui.WidgetWithSize[*basicwidget.List[int]]
+	randomizeButton              basicwidget.Button
+	randomizeAboveViewportButton basicwidget.Button
 
 	itemWidgets guigui.WidgetSlice[*itemWidget]
 	items       []basicwidget.ListItem[int]
@@ -98,16 +99,32 @@ func (r *Root) randomizeHeights() {
 	}
 }
 
+func (r *Root) randomizeHeightsAboveViewport() {
+	for i := range itemCount {
+		if r.list.Widget().IsItemInViewport(i) {
+			break
+		}
+		r.itemHeightScales[i] = 1 + rand.IntN(5)
+	}
+}
+
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
 	adder.AddWidget(&r.list)
 	adder.AddWidget(&r.randomizeButton)
+	adder.AddWidget(&r.randomizeAboveViewportButton)
 
 	u := basicwidget.UnitSize(context)
 
 	r.randomizeButton.SetText("Randomize Heights")
 	r.randomizeButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeights()
+		guigui.RequestRebuild(r)
+	})
+
+	r.randomizeAboveViewportButton.SetText("Randomize Heights Above Viewport")
+	r.randomizeAboveViewportButton.OnUp(func(context *guigui.Context) {
+		r.randomizeHeightsAboveViewport()
 		guigui.RequestRebuild(r)
 	})
 
@@ -144,6 +161,10 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		},
 		guigui.LinearLayoutItem{
 			Widget: &r.randomizeButton,
+			Size:   guigui.FixedSize(u),
+		},
+		guigui.LinearLayoutItem{
+			Widget: &r.randomizeAboveViewportButton,
 			Size:   guigui.FixedSize(u),
 		},
 	)
