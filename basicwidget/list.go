@@ -208,9 +208,10 @@ func (l *List[T]) setKeyboardHighlightIndex(index int) {
 	l.content.setKeyboardHighlightIndex(index)
 }
 
-// IsItemExpanded reports whether the item at the given index is not hidden by a collapsed ancestor.
-func (l *List[T]) IsItemExpanded(index int) bool {
-	return l.content.isItemExpanded(index)
+// IsItemAvailable reports whether the item at the given index is available in the list
+// (i.e., not hidden by a collapsed ancestor).
+func (l *List[T]) IsItemAvailable(index int) bool {
+	return l.content.isItemAvailable(index)
 }
 
 func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -623,7 +624,7 @@ func (a abstractListItem[T]) selectable() bool {
 }
 
 func (a abstractListItem[T]) visible() bool {
-	return a.listContent.isItemExpanded(a.index)
+	return a.listContent.isItemAvailable(a.index)
 }
 
 type listContent[T comparable] struct {
@@ -718,7 +719,7 @@ func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
 	return l.itemBoundsForLayoutFromIndex[index]
 }
 
-func (l *listContent[T]) expandedItems() iter.Seq[int] {
+func (l *listContent[T]) availableItems() iter.Seq[int] {
 	return func(yield func(int) bool) {
 		var lastCollapsedIndentLevel int
 		for i := range l.abstractList.ItemCount() {
@@ -738,7 +739,7 @@ func (l *listContent[T]) expandedItems() iter.Seq[int] {
 	}
 }
 
-func (l *listContent[T]) isItemExpanded(index int) bool {
+func (l *listContent[T]) isItemAvailable(index int) bool {
 	item, ok := l.abstractList.ItemByIndex(index)
 	if !ok {
 		return false
@@ -798,7 +799,7 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 	}
 
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		if l.checkmarkIndexPlus1 == i+1 {
 			adder.AddWidget(&l.checkmark)
@@ -868,7 +869,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 
 	vb := widgetBounds.VisibleBounds()
 
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		itemW := cw - 2*RoundedCornerRadius(context)
 		itemW -= listItemIndentSize(context, item.IndentLevel)
@@ -995,7 +996,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	offsetForCheckmark := listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 
 	var w, h int
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		var constraint guigui.Constraints
 		// If width is 0, there is no constraint.
@@ -1027,7 +1028,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 }
 
 func (l *listContent[T]) hasMovableItems() bool {
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		item, ok := l.abstractList.ItemByIndex(i)
 		if !ok {
 			continue
@@ -1164,7 +1165,7 @@ func (l *listContent[T]) SetStyle(style ListStyle) {
 
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	_, y := ebiten.CursorPosition()
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		if b := l.itemBounds(context, i); y < (b.Min.Y+b.Max.Y)/2 {
 			return i
 		}
@@ -1246,7 +1247,7 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 	}
 	cp := image.Pt(ebiten.CursorPosition())
 	listBounds := widgetBounds.Bounds()
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		bounds := l.itemBounds(context, i)
 		bounds.Min.X = listBounds.Min.X
 		bounds.Max.X = listBounds.Max.X
@@ -1261,7 +1262,7 @@ func (l *listContent[T]) nextSelectableVisibleIndex(from int, forward bool) int 
 	found := from < 0
 	result := -1
 	if forward {
-		for i := range l.expandedItems() {
+		for i := range l.availableItems() {
 			if !found {
 				if i == from {
 					found = true
@@ -1275,7 +1276,7 @@ func (l *listContent[T]) nextSelectableVisibleIndex(from int, forward bool) int 
 			return i
 		}
 	} else {
-		for i := range l.expandedItems() {
+		for i := range l.availableItems() {
 			if i == from {
 				break
 			}
@@ -1336,7 +1337,7 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 
 func (l *listContent[T]) lastSelectableVisibleIndex() int {
 	result := -1
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		item, ok := l.abstractList.ItemByIndex(i)
 		if !ok || item.Unselectable {
 			continue
@@ -1631,7 +1632,7 @@ func (l *listContent[T]) itemYFromIndex(context *guigui.Context, index int) (int
 // itemYFromIndexForMenu is available anytime even before Build is called.
 func (l *listContent[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
 	y := RoundedCornerRadius(context)
-	for i := range l.expandedItems() {
+	for i := range l.availableItems() {
 		if i == index {
 			return y, true
 		}
@@ -1741,7 +1742,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		// Draw item stripes.
 		// TODO: Get indices of items that are visible.
 		var count int
-		for i := range l.content.expandedItems() {
+		for i := range l.content.availableItems() {
 			count++
 			if count%2 == 1 {
 				continue
@@ -1786,7 +1787,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		clear(l.indexToVisibleItemIndex)
 		l.visibleItemIndexToIndex = l.visibleItemIndexToIndex[:0]
 		var count int
-		for index := range l.content.expandedItems() {
+		for index := range l.content.availableItems() {
 			l.indexToVisibleItemIndex[index] = count
 			l.visibleItemIndexToIndex = append(l.visibleItemIndexToIndex, index)
 			count++
@@ -1796,7 +1797,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if clr == nil {
 				continue
 			}
-			if !l.content.isItemExpanded(index) {
+			if !l.content.isItemAvailable(index) {
 				continue
 			}
 			bounds := l.content.itemBounds(context, index)
@@ -1836,7 +1837,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemExpanded(hoveredItemIndex) {
+	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemAvailable(hoveredItemIndex) {
 		clr := l.content.selectedItemBackgroundColor(context, hoveredItemIndex)
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
 		if l.content.style == ListStyleMenu {
