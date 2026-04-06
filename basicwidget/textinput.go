@@ -204,6 +204,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		adder.AddWidget(&t.supportText)
 		t.supportText.SetValue(t.supportTextValue)
 		t.supportText.SetScale(0.85)
+		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
 		if t.hasError {
 			t.supportText.SetColor(basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), basicwidgetdraw.SemanticColorDanger))
 		} else {
