@@ -105,8 +105,9 @@ func (t *Table[T]) CellBounds(rowIndex, colIndex int) image.Rectangle {
 	}
 }
 
-func (t *Table[T]) IsItemVisible(index int) bool {
-	return t.list.IsItemVisible(index)
+// IsItemExpanded reports whether the item at the given index is not hidden by a collapsed ancestor.
+func (t *Table[T]) IsItemExpanded(index int) bool {
+	return t.list.IsItemExpanded(index)
 }
 
 func (t *Table[T]) updateTableRows() {
