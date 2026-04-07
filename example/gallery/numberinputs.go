@@ -103,7 +103,7 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	})
 
 	// Configurations
-	n.editableText.SetValue("Editable (for number inputs)")
+	n.editableText.SetValue("Editable")
 	n.editableToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.NumberInputs().SetEditable(value)
 	})
