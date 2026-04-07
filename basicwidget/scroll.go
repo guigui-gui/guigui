@@ -45,15 +45,25 @@ func scrollBarMaxCount() int {
 }
 
 func scrollThumbOpacity(count int) float64 {
+	const maxOpacity = 0.75
+
 	switch {
 	case scrollBarMaxCount()-scrollBarFadingInTime() <= count:
 		c := count - (scrollBarMaxCount() - scrollBarFadingInTime())
-		return 1 - float64(c)/float64(scrollBarFadingInTime())
+		return (1 - float64(c)/float64(scrollBarFadingInTime())) * maxOpacity
 	case scrollBarFadingOutTime() <= count:
-		return 1
+		return maxOpacity
 	default:
-		return float64(count) / float64(scrollBarFadingOutTime())
+		return float64(count) / float64(scrollBarFadingOutTime()) * maxOpacity
 	}
+}
+
+func scrollWheelSpeed(context *guigui.Context) float64 {
+	return 4 * context.Scale()
+}
+
+func scrollBarAreaSize(context *guigui.Context) int {
+	return UnitSize(context) / 2
 }
 
 func scrollThumbStrokeWidth(context *guigui.Context) float64 {
@@ -131,8 +141,8 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 
 	if wheelX != 0 || wheelY != 0 {
 		offsetX, offsetY := s.offsetGetSetter.scrollOffset()
-		offsetX += wheelX * 4 * context.Scale()
-		offsetY += wheelY * 4 * context.Scale()
+		offsetX += wheelX * scrollWheelSpeed(context)
+		offsetY += wheelY * scrollWheelSpeed(context)
 		s.offsetGetSetter.setScrollOffset(offsetX, offsetY)
 		// TODO: If the actual offset is not changed, this should not return HandleInputByWidget (#204).
 		return guigui.HandleInputByWidget(s)

@@ -73,14 +73,11 @@ func (t ListItemColorType) BackgroundColor(context *guigui.Context) color.Color 
 }
 
 var (
-	listEventItemSelected         guigui.EventKey = guigui.GenerateEventKey()
-	listEventItemsSelected        guigui.EventKey = guigui.GenerateEventKey()
-	listEventItemsMoved           guigui.EventKey = guigui.GenerateEventKey()
-	listEventItemsCanMove         guigui.EventKey = guigui.GenerateEventKey()
-	listEventItemExpanderToggled  guigui.EventKey = guigui.GenerateEventKey()
-	listEventScrollY              guigui.EventKey = guigui.GenerateEventKey()
-	listEventScrollYEnsureVisible guigui.EventKey = guigui.GenerateEventKey()
-	listEventScrollDeltaY         guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemSelected        guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsSelected       guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsMoved          guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemsCanMove        guigui.EventKey = guigui.GenerateEventKey()
+	listEventItemExpanderToggled guigui.EventKey = guigui.GenerateEventKey()
 )
 
 type ListItem[T comparable] struct {
@@ -110,18 +107,12 @@ type List[T comparable] struct {
 	listItemWidgets   guigui.WidgetSlice[*listItemWidget[T]]
 	background1       listBackground1[T]
 	content           listContent[T]
-	panel             Panel
+	panel             listPanel[T]
 	frame             listFrame
 
 	listItemHeightPlus1 int
 	headerHeight        int
 	footerHeight        int
-
-	onScrollY                 func(context *guigui.Context, offsetY float64)
-	onScrollYEnsureVisible    func(context *guigui.Context, offsetYTop, offsetYBottom float64)
-	onScrollDeltaY            func(context *guigui.Context, deltaY float64)
-	scrollOffsetYTopMinus1    float64
-	scrollOffsetYBottomMinus1 float64
 }
 
 func (l *List[T]) SetBackground(widget guigui.Widget) {
@@ -227,31 +218,8 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	adder.AddWidget(&l.frame)
 
 	l.background1.setListContent(&l.content)
-	l.panel.SetContent(&l.content)
-	l.panel.SetContentConstraints(PanelContentConstraintsFixedWidth)
-
-	if l.onScrollY == nil {
-		l.onScrollY = func(context *guigui.Context, offsetY float64) {
-			offsetX, _ := l.panel.scrollOffset()
-			l.panel.SetScrollOffset(offsetX, offsetY)
-		}
-	}
-	guigui.SetEventHandler(&l.content, listEventScrollY, l.onScrollY)
-
-	if l.onScrollYEnsureVisible == nil {
-		l.onScrollYEnsureVisible = func(context *guigui.Context, offsetYTop, offsetYBottom float64) {
-			l.scrollOffsetYTopMinus1 = offsetYTop - 1
-			l.scrollOffsetYBottomMinus1 = offsetYBottom - 1
-		}
-	}
-	guigui.SetEventHandler(&l.content, listEventScrollYEnsureVisible, l.onScrollYEnsureVisible)
-
-	if l.onScrollDeltaY == nil {
-		l.onScrollDeltaY = func(context *guigui.Context, deltaY float64) {
-			l.panel.SetScrollOffsetByDelta(0, deltaY)
-		}
-	}
-	guigui.SetEventHandler(&l.content, listEventScrollDeltaY, l.onScrollDeltaY)
+	l.content.listPanel = &l.panel
+	l.panel.setContent(&l.content)
 
 	for i := range l.listItemWidgets.Len() {
 		item := l.listItemWidgets.At(i)
@@ -409,29 +377,6 @@ func (l *List[T]) Measure(context *guigui.Context, constraints guigui.Constraint
 }
 
 func (l *List[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if l.scrollOffsetYTopMinus1 != 0 || l.scrollOffsetYBottomMinus1 != 0 {
-		// Adjust the bottom first.
-		if l.scrollOffsetYBottomMinus1 != 0 {
-			y := l.scrollOffsetYBottomMinus1 + 1
-			y += float64(widgetBounds.Bounds().Dy())
-			y -= float64(l.headerHeight + l.footerHeight)
-			y -= float64(RoundedCornerRadius(context))
-			if offsetX, offsetY := l.panel.scrollOffset(); y < offsetY {
-				l.panel.SetScrollOffset(offsetX, y)
-			}
-		}
-		// Then adjust the top.
-		if l.scrollOffsetYTopMinus1 != 0 {
-			y := l.scrollOffsetYTopMinus1 + 1
-			y += float64(RoundedCornerRadius(context))
-			// Reget the offset as it may be changed by the above bottom adjustment.
-			if offsetX, offsetY := l.panel.scrollOffset(); y > offsetY {
-				l.panel.SetScrollOffset(offsetX, y)
-			}
-		}
-		l.scrollOffsetYTopMinus1 = 0
-		l.scrollOffsetYBottomMinus1 = 0
-	}
 	return nil
 }
 
@@ -668,11 +613,9 @@ type listContent[T comparable] struct {
 	itemBoundsForLayoutFromIndex []image.Rectangle
 	visibleBounds                image.Rectangle
 
-	// prevFirstViewportItemIndex is the index of the topmost item in the viewport from the previous Layout call.
-	prevFirstViewportItemIndex int
-	// prevFirstViewportItemRelY is the Min.Y of the topmost viewport item relative to item 0's Min.Y
-	// from the previous Layout call.
-	prevFirstViewportItemRelY int
+	// measuredContentHeights caches measured content heights per item index
+	// for the duration of a single Layout call. Cleared at the start of layoutItems.
+	measuredContentHeights map[int]int
 
 	treeItemCollapsedImage *ebiten.Image
 	treeItemExpandedImage  *ebiten.Image
@@ -681,6 +624,24 @@ type listContent[T comparable] struct {
 
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
+
+	// listPanel is a back-reference to the list panel for virtual scrolling.
+	listPanel *listPanel[T]
+}
+
+func (l *listContent[T]) availableItemCount() int {
+	var count int
+	for range l.availableItems() {
+		count++
+	}
+	return count
+}
+
+func (l *listContent[T]) contentWidth() int {
+	if l.contentWidthPlus1 > 0 {
+		return l.contentWidthPlus1 - 1
+	}
+	return 0
 }
 
 func (l *listContent[T]) SetBackground(widget guigui.Widget) {
@@ -880,147 +841,17 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		cw = l.contentWidthPlus1 - 1
 	}
 
-	p := widgetBounds.Bounds().Min
-	p.X += RoundedCornerRadius(context)
-	p.Y += RoundedCornerRadius(context)
-
 	clear(l.widgetBoundsForLayout)
 	if l.widgetBoundsForLayout == nil {
 		l.widgetBoundsForLayout = map[guigui.Widget]image.Rectangle{}
 	}
 
-	// Use the topmost viewport item recorded during the previous Layout as the scroll anchor.
-	prevFirstViewportItemIndex := l.prevFirstViewportItemIndex
-	prevFirstViewportItemRelY := l.prevFirstViewportItemRelY
-
 	l.itemBoundsForLayoutFromIndex = adjustSliceSize(l.itemBoundsForLayoutFromIndex, l.abstractList.ItemCount())
 	clear(l.itemBoundsForLayoutFromIndex)
 
 	l.visibleBounds = widgetBounds.VisibleBounds()
-	l.prevFirstViewportItemIndex = 0
-	foundFirstViewportItem := false
 
-	for i := range l.availableItems() {
-		item, _ := l.abstractList.ItemByIndex(i)
-		itemW := cw - 2*RoundedCornerRadius(context)
-		itemW -= listItemIndentSize(context, item.IndentLevel)
-		itemW -= item.Padding.Start + item.Padding.End
-		contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
-
-		// Record item bounds for all items so that itemYFromIndex works for off-screen items.
-		// This is cheap since contentH is already computed above.
-		{
-			itemP := p
-			if l.checkmarkIndexPlus1 > 0 {
-				itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
-			}
-			itemP.X += listItemIndentSize(context, item.IndentLevel)
-			itemP.X += item.Padding.Start
-			itemP.Y = l.adjustItemY(context, itemP.Y)
-			itemP.Y += item.Padding.Top
-			l.itemBoundsForLayoutFromIndex[i] = image.Rectangle{
-				Min: itemP,
-				Max: itemP.Add(image.Pt(itemW, contentH)),
-			}
-		}
-
-		// Skip widget layout for items outside the visible bounds.
-		itemTop := p.Y
-		itemBottom := p.Y + contentH + item.Padding.Top + item.Padding.Bottom
-		if itemTop >= l.visibleBounds.Max.Y || itemBottom <= l.visibleBounds.Min.Y {
-			p.Y += contentH + item.Padding.Top + item.Padding.Bottom
-			continue
-		}
-
-		// Record the topmost viewport item for scroll anchoring.
-		if !foundFirstViewportItem {
-			foundFirstViewportItem = true
-			l.prevFirstViewportItemIndex = i
-		}
-
-		if l.checkmarkIndexPlus1 == i+1 {
-			imgSize := listItemCheckmarkSize(context)
-			imgP := p
-			imgP.X += listItemIndentSize(context, item.IndentLevel)
-			imgP.X += UnitSize(context) / 4
-			itemH := contentH
-			imgP.Y += (itemH - imgSize) / 2
-			// Adjust the position a bit for better appearance.
-			imgP.Y += UnitSize(context) / 16
-			imgP.Y += item.Padding.Top
-			imgP.Y = l.adjustItemY(context, imgP.Y)
-			l.widgetBoundsForLayout[&l.checkmark] = image.Rectangle{
-				Min: imgP,
-				Max: imgP.Add(image.Pt(imgSize, imgSize)),
-			}
-		}
-
-		if item.IndentLevel > 0 {
-			var img *ebiten.Image
-			var hasChild bool
-			if nextItem, ok := l.abstractList.ItemByIndex(i + 1); ok {
-				hasChild = nextItem.IndentLevel > item.IndentLevel
-			}
-			if hasChild {
-				if item.Collapsed {
-					img = l.treeItemCollapsedImage
-				} else {
-					img = l.treeItemExpandedImage
-				}
-			}
-			l.expanderImages.At(i).SetImage(img)
-			expanderP := p
-			expanderP.X += listItemIndentSize(context, item.IndentLevel) - LineHeight(context)
-			// Adjust the position a bit for better appearance.
-			expanderP.Y += UnitSize(context) / 16
-			expanderP.Y += item.Padding.Top
-			s := image.Pt(
-				LineHeight(context),
-				contentH,
-			)
-			l.widgetBoundsForLayout[l.expanderImages.At(i)] = image.Rectangle{
-				Min: expanderP,
-				Max: expanderP.Add(s),
-			}
-		}
-
-		itemP := p
-		if l.checkmarkIndexPlus1 > 0 {
-			itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
-		}
-		itemP.X += listItemIndentSize(context, item.IndentLevel)
-		itemP.X += item.Padding.Start
-		itemP.Y = l.adjustItemY(context, itemP.Y)
-		itemP.Y += item.Padding.Top
-		r := image.Rectangle{
-			Min: itemP,
-			Max: itemP.Add(image.Pt(itemW, contentH)),
-		}
-		l.widgetBoundsForLayout[item.Content] = r
-		l.itemBoundsForLayoutFromIndex[i] = r
-
-		p.Y += contentH + item.Padding.Top + item.Padding.Bottom
-	}
-
-	// Adjust scroll offset to keep the anchor item at the same visual position.
-	if prevFirstViewportItemIndex >= 0 && prevFirstViewportItemIndex < len(l.itemBoundsForLayoutFromIndex) && len(l.itemBoundsForLayoutFromIndex) > 0 {
-		if r := l.itemBoundsForLayoutFromIndex[prevFirstViewportItemIndex]; !r.Empty() && !l.itemBoundsForLayoutFromIndex[0].Empty() {
-			newRelY := r.Min.Y - l.itemBoundsForLayoutFromIndex[0].Min.Y
-			if delta := newRelY - prevFirstViewportItemRelY; delta != 0 {
-				guigui.DispatchEvent(l, listEventScrollDeltaY, float64(-delta))
-			}
-		}
-	}
-
-	// Record the current first viewport item's relative Y for next frame's anchor.
-	if l.prevFirstViewportItemIndex < len(l.itemBoundsForLayoutFromIndex) && len(l.itemBoundsForLayoutFromIndex) > 0 {
-		if r := l.itemBoundsForLayoutFromIndex[l.prevFirstViewportItemIndex]; !r.Empty() && !l.itemBoundsForLayoutFromIndex[0].Empty() {
-			l.prevFirstViewportItemRelY = r.Min.Y - l.itemBoundsForLayoutFromIndex[0].Min.Y
-		}
-	}
-
-	l.widthForCachedHeight = cw
-	l.cachedHeight = p.Y - widgetBounds.Bounds().Min.Y + RoundedCornerRadius(context)
+	l.layoutItems(context, widgetBounds, layouter, cw)
 
 	if l.customBackground != nil {
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
@@ -1029,6 +860,293 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	for widget, bounds := range l.widgetBoundsForLayout {
 		layouter.LayoutWidget(widget, bounds)
 	}
+}
+
+// layoutItems lays out only items near the viewport using the listPanel's
+// topItemIndex and topItemOffset.
+func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter, cw int) {
+	bounds := widgetBounds.Bounds()
+
+	// Clear the per-Layout content height cache.
+	clear(l.measuredContentHeights)
+
+	// Build a mapping from available-item order to real index.
+	availableIndices := l.appendAvailableIndices(nil)
+	if len(availableIndices) == 0 {
+		return
+	}
+
+	topIdx, topOff := l.listPanel.topItem()
+
+	// Clamp topIdx to valid range.
+	if topIdx >= len(availableIndices) {
+		topIdx = max(0, len(availableIndices)-1)
+		topOff = 0
+	}
+	if topIdx < 0 {
+		topIdx = 0
+		topOff = 0
+	}
+
+	baseX := bounds.Min.X + RoundedCornerRadius(context)
+	viewportTop := bounds.Min.Y
+	viewportBottom := bounds.Max.Y
+	viewportHeight := viewportBottom - viewportTop
+
+	// Normalize topIdx/topOff before layout so items are positioned correctly.
+	l.normalizeTopItem(context, availableIndices, cw, bounds)
+	topIdx, topOff = l.listPanel.topItem()
+
+	// Pre-pass: measure heights from topIdx downward to detect bottom gap.
+	// This is cheap since Measure results are typically cached.
+	{
+		y := RoundedCornerRadius(context) + topOff
+		var reachedEnd bool
+		for ai := topIdx; ai < len(availableIndices); ai++ {
+			if y >= viewportHeight {
+				break
+			}
+			y += l.measureItemHeight(context, availableIndices[ai], cw)
+			if ai == len(availableIndices)-1 {
+				reachedEnd = true
+			}
+		}
+		if reachedEnd {
+			bottomY := y + RoundedCornerRadius(context)
+			if gap := viewportHeight - bottomY; gap > 0 {
+				topOff += gap
+				// Pull topIdx backward if needed.
+				for topOff > 0 && topIdx > 0 {
+					topIdx--
+					topOff -= l.measureItemHeight(context, availableIndices[topIdx], cw)
+				}
+				if topIdx == 0 && topOff > 0 {
+					topOff = 0
+				}
+				l.listPanel.forceSetTopItem(topIdx, topOff)
+			}
+		}
+	}
+
+	// Start Y at the top of the viewport plus the topItemOffset.
+	y := viewportTop + RoundedCornerRadius(context) + topOff
+
+	// Track total measured height for average calculation.
+	var totalMeasuredHeight int
+	var measuredCount int
+
+	// Lay out items downward from topIdx.
+	for ai := topIdx; ai < len(availableIndices); ai++ {
+		if y >= viewportBottom {
+			break
+		}
+		i := availableIndices[ai]
+		itemH := l.layoutItem(context, widgetBounds, i, baseX, y, cw)
+		totalMeasuredHeight += itemH
+		measuredCount++
+		y += itemH
+	}
+
+	// Lay out items upward from topIdx-1 to fill any gap above.
+	y = viewportTop + RoundedCornerRadius(context) + topOff
+	for ai := topIdx - 1; ai >= 0; ai-- {
+		i := availableIndices[ai]
+		itemH := l.measureItemHeight(context, i, cw)
+		totalMeasuredHeight += itemH
+		measuredCount++
+
+		y -= itemH
+		l.layoutItem(context, widgetBounds, i, baseX, y, cw)
+
+		if y <= viewportTop {
+			break
+		}
+	}
+
+	// Report average measured height to listPanel.
+	if measuredCount > 0 {
+		l.listPanel.setEstimatedItemHeight(totalMeasuredHeight / measuredCount)
+	} else {
+		l.listPanel.setEstimatedItemHeight(0)
+	}
+}
+
+// appendAvailableIndices appends the indices of available items to the slice.
+func (l *listContent[T]) appendAvailableIndices(indices []int) []int {
+	for i := range l.availableItems() {
+		indices = append(indices, i)
+	}
+	return indices
+}
+
+// normalizeTopItem adjusts topItemIndex and topItemOffset so that
+// topItemOffset stays within [-itemHeight, 0] by advancing or retreating
+// topItemIndex when items cross boundaries.
+func (l *listContent[T]) normalizeTopItem(context *guigui.Context, availableIndices []int, cw int, bounds image.Rectangle) {
+	if len(availableIndices) == 0 {
+		return
+	}
+
+	topIdx, topOff := l.listPanel.topItem()
+
+	// Move topItemIndex forward when topItemOffset scrolled past an item.
+	for topOff < 0 && topIdx < len(availableIndices)-1 {
+		i := availableIndices[topIdx]
+		itemH := l.measureItemHeight(context, i, cw)
+		if -topOff >= itemH {
+			topOff += itemH
+			topIdx++
+		} else {
+			break
+		}
+	}
+
+	// Move topItemIndex backward when topItemOffset is positive.
+	for topOff > 0 && topIdx > 0 {
+		topIdx--
+		i := availableIndices[topIdx]
+		itemH := l.measureItemHeight(context, i, cw)
+		topOff -= itemH
+	}
+
+	// Clamp: don't allow gap above first item.
+	if topIdx == 0 && topOff > 0 {
+		topOff = 0
+	}
+
+	// Clamp: don't scroll past the last item.
+	if topIdx >= len(availableIndices) {
+		topIdx = len(availableIndices) - 1
+		topOff = 0
+	}
+
+	// Clamp: don't allow negative index.
+	if topIdx < 0 {
+		topIdx = 0
+		topOff = 0
+	}
+
+	l.listPanel.forceSetTopItem(topIdx, topOff)
+}
+
+// measureItemContentHeight returns the content height of an item, caching the
+// result for the duration of the current Layout call.
+func (l *listContent[T]) measureItemContentHeight(context *guigui.Context, index int, cw int) int {
+	if h, ok := l.measuredContentHeights[index]; ok {
+		return h
+	}
+	item, _ := l.abstractList.ItemByIndex(index)
+	itemW := cw - 2*RoundedCornerRadius(context)
+	itemW -= listItemIndentSize(context, item.IndentLevel)
+	itemW -= item.Padding.Start + item.Padding.End
+	contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
+	if l.measuredContentHeights == nil {
+		l.measuredContentHeights = map[int]int{}
+	}
+	l.measuredContentHeights[index] = contentH
+	return contentH
+}
+
+// measureItemHeight returns the total height of an item (content + padding).
+func (l *listContent[T]) measureItemHeight(context *guigui.Context, index int, cw int) int {
+	contentH := l.measureItemContentHeight(context, index, cw)
+	item, _ := l.abstractList.ItemByIndex(index)
+	return contentH + item.Padding.Top + item.Padding.Bottom
+}
+
+// layoutItem lays out a single item at the given position and returns its total height.
+func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int, baseX int, y int, cw int) int {
+	item, _ := l.abstractList.ItemByIndex(index)
+	itemW := cw - 2*RoundedCornerRadius(context)
+	itemW -= listItemIndentSize(context, item.IndentLevel)
+	itemW -= item.Padding.Start + item.Padding.End
+	contentH := l.measureItemContentHeight(context, index, cw)
+	itemH := contentH + item.Padding.Top + item.Padding.Bottom
+
+	p := image.Pt(baseX, y)
+
+	// Record item bounds.
+	{
+		itemP := p
+		if l.checkmarkIndexPlus1 > 0 {
+			itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+		}
+		itemP.X += listItemIndentSize(context, item.IndentLevel)
+		itemP.X += item.Padding.Start
+		itemP.Y = l.adjustItemY(context, itemP.Y)
+		itemP.Y += item.Padding.Top
+		l.itemBoundsForLayoutFromIndex[index] = image.Rectangle{
+			Min: itemP,
+			Max: itemP.Add(image.Pt(itemW, contentH)),
+		}
+	}
+
+	// Skip widget layout for items outside the visible bounds.
+	itemTop := p.Y
+	itemBottom := p.Y + itemH
+	if itemTop >= l.visibleBounds.Max.Y || itemBottom <= l.visibleBounds.Min.Y {
+		return itemH
+	}
+
+	if l.checkmarkIndexPlus1 == index+1 {
+		imgSize := listItemCheckmarkSize(context)
+		imgP := p
+		imgP.X += listItemIndentSize(context, item.IndentLevel)
+		imgP.X += UnitSize(context) / 4
+		imgP.Y += (contentH - imgSize) / 2
+		imgP.Y += UnitSize(context) / 16
+		imgP.Y += item.Padding.Top
+		imgP.Y = l.adjustItemY(context, imgP.Y)
+		l.widgetBoundsForLayout[&l.checkmark] = image.Rectangle{
+			Min: imgP,
+			Max: imgP.Add(image.Pt(imgSize, imgSize)),
+		}
+	}
+
+	if item.IndentLevel > 0 {
+		var img *ebiten.Image
+		var hasChild bool
+		if nextItem, ok := l.abstractList.ItemByIndex(index + 1); ok {
+			hasChild = nextItem.IndentLevel > item.IndentLevel
+		}
+		if hasChild {
+			if item.Collapsed {
+				img = l.treeItemCollapsedImage
+			} else {
+				img = l.treeItemExpandedImage
+			}
+		}
+		l.expanderImages.At(index).SetImage(img)
+		expanderP := p
+		expanderP.X += listItemIndentSize(context, item.IndentLevel) - LineHeight(context)
+		expanderP.Y += UnitSize(context) / 16
+		expanderP.Y += item.Padding.Top
+		s := image.Pt(
+			LineHeight(context),
+			contentH,
+		)
+		l.widgetBoundsForLayout[l.expanderImages.At(index)] = image.Rectangle{
+			Min: expanderP,
+			Max: expanderP.Add(s),
+		}
+	}
+
+	itemP := p
+	if l.checkmarkIndexPlus1 > 0 {
+		itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
+	}
+	itemP.X += listItemIndentSize(context, item.IndentLevel)
+	itemP.X += item.Padding.Start
+	itemP.Y = l.adjustItemY(context, itemP.Y)
+	itemP.Y += item.Padding.Top
+	r := image.Rectangle{
+		Min: itemP,
+		Max: itemP.Add(image.Pt(itemW, contentH)),
+	}
+	l.widgetBoundsForLayout[item.Content] = r
+	l.itemBoundsForLayoutFromIndex[index] = r
+
+	return itemH
 }
 
 func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
@@ -1460,7 +1578,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				dy = float64(lowerY-y) / 4
 			}
 			if dy != 0 {
-				guigui.DispatchEvent(l, listEventScrollDeltaY, dy)
+				l.listPanel.setScrollOffsetByDelta(0, dy)
 			}
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				droppable := true
@@ -1631,23 +1749,80 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 	// This is done in Tick to wait for the list items are updated, or an item cannot be measured correctly.
 	if l.jumpTick > 0 && ebiten.Tick() >= l.jumpTick {
 		if idx := l.indexToJumpPlus1 - 1; idx >= 0 && idx < l.abstractList.ItemCount() {
-			if y, ok := l.itemYFromIndex(context, idx); ok {
-				y -= RoundedCornerRadius(context)
-				guigui.DispatchEvent(l, listEventScrollY, float64(-y))
+			// Convert item index to available-item index.
+			if ai := l.availableIndexForItemIndex(idx); ai >= 0 {
+				l.listPanel.setTopItem(ai, 0)
 			}
 			l.indexToJumpPlus1 = 0
 		}
 		if idx := l.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < l.abstractList.ItemCount() {
-			topY, topOK := l.itemYFromIndex(context, idx)
-			bottomY, bottomOK := l.itemYFromIndex(context, idx+1)
-			if topOK && bottomOK {
-				guigui.DispatchEvent(l, listEventScrollYEnsureVisible, float64(-topY), float64(-bottomY))
-			}
+			l.scrollToEnsureItemVisible(context, widgetBounds, idx)
 			l.indexToEnsureVisiblePlus1 = 0
 		}
 		l.jumpTick = 0
 	}
 	return nil
+}
+
+// availableIndexForItemIndex converts a raw item index to the position in the available items list.
+func (l *listContent[T]) availableIndexForItemIndex(itemIndex int) int {
+	var ai int
+	for i := range l.availableItems() {
+		if i == itemIndex {
+			return ai
+		}
+		ai++
+	}
+	return -1
+}
+
+// scrollToEnsureItemVisible adjusts the listPanel's topItem to make the given item visible.
+func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds, itemIndex int) {
+	ai := l.availableIndexForItemIndex(itemIndex)
+	if ai < 0 {
+		return
+	}
+
+	topIdx, topOff := l.listPanel.topItem()
+
+	if ai < topIdx {
+		// Item is above viewport — scroll up to it.
+		l.listPanel.setTopItem(ai, 0)
+		return
+	}
+
+	if ai == topIdx && topOff < 0 {
+		// Item is partially above viewport — align to top.
+		l.listPanel.setTopItem(ai, 0)
+		return
+	}
+
+	// Check if item is below viewport.
+	// We need to compute the Y position of the item relative to the viewport top.
+	bounds := widgetBounds.Bounds()
+	cw := bounds.Dx()
+	if l.contentWidthPlus1 > 0 {
+		cw = l.contentWidthPlus1 - 1
+	}
+
+	availableIndices := l.appendAvailableIndices(nil)
+	y := topOff + RoundedCornerRadius(context)
+	for aIdx := topIdx; aIdx <= ai && aIdx < len(availableIndices); aIdx++ {
+		h := l.measureItemHeight(context, availableIndices[aIdx], cw)
+		if aIdx == ai {
+			// Check if the bottom of this item is below the viewport.
+			itemBottom := y + h
+			viewportHeight := bounds.Dy()
+			if itemBottom > viewportHeight-RoundedCornerRadius(context) {
+				// Need to scroll down. Set the offset so this item's bottom aligns with viewport bottom.
+				diff := itemBottom - (viewportHeight - RoundedCornerRadius(context))
+				l.listPanel.forceSetTopItem(topIdx, topOff-diff)
+				// normalizeTopItem will fix the indices during the next layout.
+			}
+			return
+		}
+		y += h
+	}
 }
 
 // itemYFromIndex returns the Y position of the item at the given index relative to the top of the List widget.

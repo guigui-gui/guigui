@@ -275,13 +275,13 @@ func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds,
 
 func (p *panel) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-UnitSize(context)/2)
+	bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-scrollBarAreaSize(context))
 	return bounds
 }
 
 func (p *panel) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
-	bounds.Min.X = max(bounds.Min.X, bounds.Max.X-UnitSize(context)/2)
+	bounds.Min.X = max(bounds.Min.X, bounds.Max.X-scrollBarAreaSize(context))
 	return bounds
 }
 
@@ -397,7 +397,7 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 	}
 
-	alpha := scrollThumbOpacity(p.scrollBarCount) * 3 / 4
+	alpha := scrollThumbOpacity(p.scrollBarCount)
 	p.scrollHBar.setAlpha(alpha)
 	p.scrollVBar.setAlpha(alpha)
 
