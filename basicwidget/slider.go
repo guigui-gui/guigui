@@ -10,6 +10,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
+	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
@@ -28,12 +29,15 @@ type Slider struct {
 
 	abstractNumberInput abstractNumberInput
 
+	snapOnly bool
+
 	dragging           bool
 	draggingStartValue big.Int
 	draggingStartX     int
 
 	prevThumbHovered bool
 
+	onStepChanged        func()
 	onValueChanged       func(value int, committed bool)
 	onValueChangedBigInt func(value *big.Int, committed bool)
 	onValueChangedInt64  func(value int64, committed bool)
@@ -152,6 +156,72 @@ func (s *Slider) SetMaximumValueUint64(maximum uint64) {
 	s.abstractNumberInput.SetMaximumValueUint64(maximum)
 }
 
+func (s *Slider) SetStep(step int) {
+	s.abstractNumberInput.SetStep(step)
+}
+
+func (s *Slider) SetStepBigInt(step *big.Int) {
+	s.abstractNumberInput.SetStepBigInt(step)
+}
+
+func (s *Slider) SetStepInt64(step int64) {
+	s.abstractNumberInput.SetStepInt64(step)
+}
+
+func (s *Slider) SetStepUint64(step uint64) {
+	s.abstractNumberInput.SetStepUint64(step)
+}
+
+func (s *Slider) SetSnapOnly(snapOnly bool) {
+	if s.snapOnly == snapOnly {
+		return
+	}
+	s.snapOnly = snapOnly
+	guigui.RequestRebuild(s)
+}
+
+func (s *Slider) hasSnaps() bool {
+	return s.abstractNumberInput.stepSet
+}
+
+func (s *Slider) snapValue(v *big.Int) {
+	if !s.hasSnaps() {
+		return
+	}
+	min := s.abstractNumberInput.MinimumValueBigInt()
+	if min == nil {
+		return
+	}
+	step := &s.abstractNumberInput.step
+
+	// offset = v - min
+	var offset big.Int
+	offset.Sub(v, min)
+
+	// quotient, remainder = offset / step
+	var quotient, remainder big.Int
+	quotient.DivMod(&offset, step, &remainder)
+
+	// Round to nearest: if |remainder| > step/2, round away from zero
+	var halfStep big.Int
+	halfStep.Div(step, big.NewInt(2))
+
+	var absRemainder big.Int
+	absRemainder.Abs(&remainder)
+
+	if absRemainder.Cmp(&halfStep) > 0 {
+		if offset.Sign() >= 0 {
+			quotient.Add(&quotient, big.NewInt(1))
+		} else {
+			quotient.Sub(&quotient, big.NewInt(1))
+		}
+	}
+
+	// snapped = min + quotient * step
+	v.Mul(&quotient, step)
+	v.Add(v, min)
+}
+
 func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if s.onValueChanged == nil {
 		s.onValueChanged = func(value int, committed bool) {
@@ -180,6 +250,13 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		}
 	}
 	s.abstractNumberInput.OnValueChangedUint64(s.onValueChangedUint64)
+
+	if s.onStepChanged == nil {
+		s.onStepChanged = func() {
+			guigui.RequestRebuild(s)
+		}
+	}
+	s.abstractNumberInput.OnStepChanged(s.onStepChanged)
 
 	return nil
 }
@@ -258,6 +335,9 @@ func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	v.Mul(&v, (&big.Int{}).SetInt64(int64(c.X-originX)))
 	v.Div(&v, (&big.Int{}).SetInt64(int64(s.barWidth(context, widgetBounds))))
 	v.Add(&v, originValue)
+	if s.snapOnly {
+		s.snapValue(&v)
+	}
 	changed := v.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(&v, true)
 	if changed {
@@ -280,10 +360,20 @@ func (s *Slider) thumbBounds(context *guigui.Context, widgetBounds *guigui.Widge
 		return image.Rectangle{}
 	}
 	bounds := widgetBounds.Bounds()
+	radius := sliderThumbRadius(context)
+
+	if s.hasSnaps() {
+		w := radius
+		h := 2 * radius
+		x := bounds.Min.X + int(rate*float64(s.barWidth(context, widgetBounds))) + radius - w/2
+		y := bounds.Min.Y + (bounds.Dy()-h)/2
+		return image.Rect(x, y, x+w, y+h)
+	}
+
 	x := bounds.Min.X + int(rate*float64(s.barWidth(context, widgetBounds)))
-	y := bounds.Min.Y + (bounds.Dy()-2*sliderThumbRadius(context))/2
-	w := 2 * sliderThumbRadius(context)
-	h := 2 * sliderThumbRadius(context)
+	y := bounds.Min.Y + (bounds.Dy()-2*radius)/2
+	w := 2 * radius
+	h := 2 * radius
 	return image.Rect(x, y, x+w, y+h)
 }
 
@@ -298,16 +388,17 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	rate := s.abstractNumberInput.Rate()
 
 	b := widgetBounds.Bounds()
-	x0 := b.Min.X + sliderThumbRadius(context)
-	x1 := x0
-	if !math.IsNaN(rate) {
-		x1 += int(float64(s.barWidth(context, widgetBounds)) * float64(rate))
-	}
-	x2 := b.Max.X - sliderThumbRadius(context)
 	strokeWidth := int(5 * context.Scale())
 	r := strokeWidth / 2
-	y0 := (b.Min.Y+b.Max.Y)/2 - r
-	y1 := (b.Min.Y+b.Max.Y)/2 + r
+	barY0 := (b.Min.Y+b.Max.Y)/2 - r
+	barY1 := (b.Min.Y+b.Max.Y)/2 + r
+
+	barX0 := b.Min.X + sliderThumbRadius(context)*3/4
+	barX1 := barX0
+	if !math.IsNaN(rate) {
+		barX1 = b.Min.X + sliderThumbRadius(context) + int(float64(s.barWidth(context, widgetBounds))*float64(rate))
+	}
+	barX2 := b.Max.X - sliderThumbRadius(context)*3/4
 
 	bgColorOn := draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.5)
 	bgColorOff := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
@@ -315,8 +406,8 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		bgColorOn = bgColorOff
 	}
 
-	if x0 < x1 {
-		b := image.Rect(x0, y0, x1, y1)
+	if barX0 < barX1 {
+		b := image.Rect(barX0, barY0, barX1, barY1)
 		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOn, r)
 
 		if !context.IsEnabled(s) {
@@ -325,12 +416,55 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 	}
 
-	if x1 < x2 {
-		b := image.Rect(x1, y0, x2, y1)
+	if barX1 < barX2 {
+		b := image.Rect(barX1, barY0, barX2, barY1)
 		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOff, r)
 
 		borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
 		basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
+	}
+
+	// Draw gauge marks at snap positions.
+	if s.hasSnaps() && s.abstractNumberInput.minSet && s.abstractNumberInput.maxSet {
+		step := &s.abstractNumberInput.step
+		min := &s.abstractNumberInput.min
+		max := &s.abstractNumberInput.max
+
+		barW := s.barWidth(context, widgetBounds)
+		barStartX := b.Min.X + sliderThumbRadius(context)
+		radius := sliderThumbRadius(context)
+		gap := float32(2 * context.Scale())
+
+		barTop := float32(barY0)
+		barBottom := float32(barY1)
+
+		tickColor := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.7)
+		tickWidth := float32(2 * context.Scale())
+		tickHeight := float32(radius) / 2
+
+		var denom big.Int
+		denom.Sub(max, min)
+		if denom.Sign() > 0 {
+			var pos big.Int
+			for pos.Set(min); pos.Cmp(max) <= 0; pos.Add(&pos, step) {
+				var numer big.Int
+				numer.Sub(&pos, min)
+				tickRate, _ := (&big.Rat{}).Quo(
+					(&big.Rat{}).SetInt(&numer),
+					(&big.Rat{}).SetInt(&denom),
+				).Float64()
+
+				tx := float32(barStartX) + float32(float64(barW)*tickRate)
+				vector.StrokeLine(dst,
+					tx, barTop-tickHeight,
+					tx, barTop-gap,
+					tickWidth, tickColor, true)
+				vector.StrokeLine(dst,
+					tx, barBottom+gap,
+					tx, barBottom+tickHeight,
+					tickWidth, tickColor, true)
+			}
+		}
 	}
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
@@ -343,6 +477,9 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 		thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 		r := thumbBounds.Dy() / 2
+		if s.hasSnaps() {
+			r = thumbBounds.Dx() / 2
+		}
 		basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
 		basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeOutset)
 	}

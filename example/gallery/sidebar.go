@@ -93,6 +93,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Value: "numberinputs",
 		},
 		{
+			Text:  "Sliders",
+			Value: "sliders",
+		},
+		{
 			Text:  "Lists",
 			Value: "lists",
 		},

@@ -22,6 +22,7 @@ type Model struct {
 	texts             TextsModel
 	textInputs        TextInputsModel
 	numberInputs      NumberInputsModel
+	sliders           SlidersModel
 	lists             ListsModel
 	selects           SelectsModel
 	comboboxes        ComboboxesModel
@@ -66,6 +67,10 @@ func (m *Model) TextInputs() *TextInputsModel {
 
 func (m *Model) NumberInputs() *NumberInputsModel {
 	return &m.numberInputs
+}
+
+func (m *Model) Sliders() *SlidersModel {
+	return &m.sliders
 }
 
 func (m *Model) Lists() *ListsModel {
@@ -405,6 +410,27 @@ func (n *NumberInputsModel) NumberInputValue3() int {
 
 func (n *NumberInputsModel) SetNumberInputValue3(value int) {
 	n.numberInputValue3 = value
+}
+
+type SlidersModel struct {
+	sliderValue int
+	disabled    bool
+}
+
+func (s *SlidersModel) Enabled() bool {
+	return !s.disabled
+}
+
+func (s *SlidersModel) SetEnabled(enabled bool) {
+	s.disabled = !enabled
+}
+
+func (s *SlidersModel) SliderValue() int {
+	return s.sliderValue
+}
+
+func (s *SlidersModel) SetSliderValue(value int) {
+	s.sliderValue = value
 }
 
 type ListsModel struct {

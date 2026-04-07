@@ -34,6 +34,7 @@ type Root struct {
 	texts             Texts
 	textInputs        TextInputs
 	numberInputs      NumberInputs
+	sliders           Sliders
 	lists             Lists
 	selects           Selects
 	comboboxes        Comboboxes
@@ -75,6 +76,8 @@ func (r *Root) contentWidgeet() guigui.Widget {
 		return &r.textInputs
 	case "numberinputs":
 		return &r.numberInputs
+	case "sliders":
+		return &r.sliders
 	case "lists":
 		return &r.lists
 	case "selects":

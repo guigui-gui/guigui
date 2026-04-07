@@ -15,23 +15,18 @@ import (
 type NumberInputs struct {
 	guigui.DefaultWidget
 
-	numberInputForm       basicwidget.Form
-	numberInput1Text      basicwidget.Text
-	numberInput1          guigui.WidgetWithSize[*basicwidget.NumberInput]
-	numberInput2Text      basicwidget.Text
-	numberInput2          guigui.WidgetWithSize[*basicwidget.NumberInput]
-	numberInput3Text      basicwidget.Text
-	numberInput3          guigui.WidgetWithSize[*basicwidget.NumberInput]
-	sliderText            basicwidget.Text
-	slider                guigui.WidgetWithSize[*basicwidget.Slider]
-	slierWithoutRangeText basicwidget.Text
-	sliderWithoutRange    guigui.WidgetWithSize[*basicwidget.Slider]
-
-	configForm     basicwidget.Form
-	editableText   basicwidget.Text
-	editableToggle basicwidget.Toggle
-	enabledText    basicwidget.Text
-	enabledToggle  basicwidget.Toggle
+	numberInputForm  basicwidget.Form
+	numberInput1Text basicwidget.Text
+	numberInput1     guigui.WidgetWithSize[*basicwidget.NumberInput]
+	numberInput2Text basicwidget.Text
+	numberInput2     guigui.WidgetWithSize[*basicwidget.NumberInput]
+	numberInput3Text basicwidget.Text
+	numberInput3     guigui.WidgetWithSize[*basicwidget.NumberInput]
+	configForm       basicwidget.Form
+	editableText     basicwidget.Text
+	editableToggle   basicwidget.Toggle
+	enabledText      basicwidget.Text
+	enabledToggle    basicwidget.Toggle
 
 	layoutItems []guigui.LinearLayoutItem
 }
@@ -92,20 +87,6 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	context.SetEnabled(&n.numberInput3, model.NumberInputs().Enabled())
 	n.numberInput3.SetFixedWidth(width)
 
-	n.sliderText.SetValue("Slider (Range: [-100, 100])")
-	n.slider.Widget().OnValueChanged(func(context *guigui.Context, value int) {
-		model.NumberInputs().SetNumberInputValue3(value)
-	})
-	n.slider.Widget().SetMinimumValue(-100)
-	n.slider.Widget().SetMaximumValue(100)
-	n.slider.Widget().SetValue(model.NumberInputs().NumberInputValue3())
-	context.SetEnabled(&n.slider, model.NumberInputs().Enabled())
-	n.slider.SetFixedWidth(width)
-
-	n.slierWithoutRangeText.SetValue("Slider w/o range")
-	context.SetEnabled(&n.sliderWithoutRange, model.NumberInputs().Enabled())
-	n.sliderWithoutRange.SetFixedWidth(width)
-
 	n.numberInputForm.SetItems([]basicwidget.FormItem{
 		{
 			PrimaryWidget:   &n.numberInput1Text,
@@ -118,14 +99,6 @@ func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 		{
 			PrimaryWidget:   &n.numberInput3Text,
 			SecondaryWidget: &n.numberInput3,
-		},
-		{
-			PrimaryWidget:   &n.sliderText,
-			SecondaryWidget: &n.slider,
-		},
-		{
-			PrimaryWidget:   &n.slierWithoutRangeText,
-			SecondaryWidget: &n.sliderWithoutRange,
 		},
 	})
 

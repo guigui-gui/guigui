@@ -23,6 +23,7 @@ type abstractNumberInput struct {
 	onValueChangedBigInt func(value *big.Int, committed bool)
 	onValueChangedInt64  func(value int64, committed bool)
 	onValueChangedUint64 func(value uint64, committed bool)
+	onStepChanged        func()
 }
 
 func (a *abstractNumberInput) OnValueChanged(f func(value int, committed bool)) {
@@ -223,29 +224,59 @@ func (a *abstractNumberInput) SetMaximumValueUint64(maximum uint64) {
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
+func (a *abstractNumberInput) OnStepChanged(f func()) {
+	a.onStepChanged = f
+}
+
 func (a *abstractNumberInput) SetStep(step int) {
+	oldSet := a.stepSet
+	oldStep := a.step
 	a.step.SetInt64(int64(step))
 	a.stepSet = true
+	if !oldSet || oldStep.Cmp(&a.step) != 0 {
+		a.dispatchStepChanged()
+	}
 }
 
 func (a *abstractNumberInput) SetStepBigInt(step *big.Int) {
+	oldSet := a.stepSet
+	oldStep := a.step
 	if step == nil {
 		a.step = big.Int{}
 		a.stepSet = false
-		return
+	} else {
+		a.step.Set(step)
+		a.stepSet = true
 	}
-	a.step.Set(step)
-	a.stepSet = true
+	if oldSet != a.stepSet || oldStep.Cmp(&a.step) != 0 {
+		a.dispatchStepChanged()
+	}
 }
 
 func (a *abstractNumberInput) SetStepInt64(step int64) {
+	oldSet := a.stepSet
+	oldStep := a.step
 	a.step.SetInt64(step)
 	a.stepSet = true
+	if !oldSet || oldStep.Cmp(&a.step) != 0 {
+		a.dispatchStepChanged()
+	}
 }
 
 func (a *abstractNumberInput) SetStepUint64(step uint64) {
+	oldSet := a.stepSet
+	oldStep := a.step
 	a.step.SetUint64(step)
 	a.stepSet = true
+	if !oldSet || oldStep.Cmp(&a.step) != 0 {
+		a.dispatchStepChanged()
+	}
+}
+
+func (a *abstractNumberInput) dispatchStepChanged() {
+	if a.onStepChanged != nil {
+		a.onStepChanged()
+	}
 }
 
 func (a *abstractNumberInput) clamp(value *big.Int) {
