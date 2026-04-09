@@ -609,7 +609,6 @@ type listContent[T comparable] struct {
 	widthForCachedHeight      int
 	cachedHeight              int
 
-	widgetBoundsForLayout        map[guigui.Widget]image.Rectangle
 	itemBoundsForLayoutFromIndex []image.Rectangle
 	visibleBounds                image.Rectangle
 
@@ -841,25 +840,17 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		cw = l.contentWidthPlus1 - 1
 	}
 
-	clear(l.widgetBoundsForLayout)
-	if l.widgetBoundsForLayout == nil {
-		l.widgetBoundsForLayout = map[guigui.Widget]image.Rectangle{}
-	}
-
 	l.itemBoundsForLayoutFromIndex = adjustSliceSize(l.itemBoundsForLayoutFromIndex, l.abstractList.ItemCount())
 	clear(l.itemBoundsForLayoutFromIndex)
 
 	l.visibleBounds = widgetBounds.VisibleBounds()
 
-	l.layoutItems(context, widgetBounds, layouter, cw)
-
 	if l.customBackground != nil {
 		layouter.LayoutWidget(l.customBackground, widgetBounds.Bounds())
 	}
 	layouter.LayoutWidget(&l.background2, widgetBounds.Bounds())
-	for widget, bounds := range l.widgetBoundsForLayout {
-		layouter.LayoutWidget(widget, bounds)
-	}
+
+	l.layoutItems(context, widgetBounds, layouter, cw)
 }
 
 // layoutItems lays out only items near the viewport using the listPanel's
@@ -941,7 +932,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 			break
 		}
 		i := availableIndices[ai]
-		itemH := l.layoutItem(context, widgetBounds, i, baseX, y, cw)
+		itemH := l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
 		totalMeasuredHeight += itemH
 		measuredCount++
 		y += itemH
@@ -956,7 +947,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 		measuredCount++
 
 		y -= itemH
-		l.layoutItem(context, widgetBounds, i, baseX, y, cw)
+		l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
 
 		if y <= viewportTop {
 			break
@@ -1055,7 +1046,7 @@ func (l *listContent[T]) measureItemHeight(context *guigui.Context, index int, c
 }
 
 // layoutItem lays out a single item at the given position and returns its total height.
-func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigui.WidgetBounds, index int, baseX int, y int, cw int) int {
+func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter, index int, baseX int, y int, cw int) int {
 	item, _ := l.abstractList.ItemByIndex(index)
 	itemW := cw - 2*RoundedCornerRadius(context)
 	itemW -= listItemIndentSize(context, item.IndentLevel)
@@ -1097,10 +1088,10 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		imgP.Y += UnitSize(context) / 16
 		imgP.Y += item.Padding.Top
 		imgP.Y = l.adjustItemY(context, imgP.Y)
-		l.widgetBoundsForLayout[&l.checkmark] = image.Rectangle{
+		layouter.LayoutWidget(&l.checkmark, image.Rectangle{
 			Min: imgP,
 			Max: imgP.Add(image.Pt(imgSize, imgSize)),
-		}
+		})
 	}
 
 	if item.IndentLevel > 0 {
@@ -1125,10 +1116,10 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 			LineHeight(context),
 			contentH,
 		)
-		l.widgetBoundsForLayout[l.expanderImages.At(index)] = image.Rectangle{
+		layouter.LayoutWidget(l.expanderImages.At(index), image.Rectangle{
 			Min: expanderP,
 			Max: expanderP.Add(s),
-		}
+		})
 	}
 
 	itemP := p
@@ -1143,7 +1134,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		Min: itemP,
 		Max: itemP.Add(image.Pt(itemW, contentH)),
 	}
-	l.widgetBoundsForLayout[item.Content] = r
+	layouter.LayoutWidget(item.Content, r)
 	l.itemBoundsForLayoutFromIndex[index] = r
 
 	return itemH
