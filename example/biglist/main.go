@@ -186,7 +186,7 @@ func main() {
 	r.randomizeHeights()
 
 	op := &guigui.RunOptions{
-		Title:         "Big List (1000 items, dynamic heights)",
+		Title:         "Big List",
 		WindowMinSize: image.Pt(400, 300),
 		WindowSize:    image.Pt(600, 600),
 		RunGameOptions: &ebiten.RunGameOptions{
