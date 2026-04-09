@@ -612,6 +612,10 @@ type listContent[T comparable] struct {
 	itemBoundsForLayoutFromIndex []image.Rectangle
 	visibleBounds                image.Rectangle
 
+	// tmpAvailableIndices is a scratch buffer reused by appendAvailableIndices
+	// callers to avoid allocation on each Build/Layout/Tick call.
+	tmpAvailableIndices []int
+
 	// measuredContentHeights caches measured content heights per item index
 	// for the duration of a single Layout call. Cleared at the start of layoutItems.
 	measuredContentHeights map[int]int
@@ -784,7 +788,57 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		}
 	}
 
-	for i := range l.availableItems() {
+	// Only add items around the top item, extending downward and upward until
+	// the accumulated height in each direction reaches the app bounds height.
+	// The actual viewport size is unknown during the Build phase, so the app
+	// bounds height is used as a safe upper bound. Iterating upward is also
+	// necessary for the transient case where the top item is at or near the
+	// end of the list (e.g., while scrolling to the bottom), in which case the
+	// items above the top item must still be added to the widget tree.
+	// Item heights are measured with default constraints so each item widget
+	// determines its size freely.
+	l.tmpAvailableIndices = l.appendAvailableIndices(l.tmpAvailableIndices[:0])
+	availableIndices := l.tmpAvailableIndices
+	topIdx, _ := l.listPanel.topItem()
+	if topIdx < 0 {
+		topIdx = 0
+	}
+	if topIdx > len(availableIndices) {
+		topIdx = len(availableIndices)
+	}
+	appBoundsHeight := context.AppBounds().Dy()
+
+	// Find the end of the downward range [topIdx, hi).
+	hi := topIdx
+	var downH int
+	for ai := topIdx; ai < len(availableIndices); ai++ {
+		i := availableIndices[ai]
+		item, _ := l.abstractList.ItemByIndex(i)
+		h := item.Content.Measure(context, guigui.Constraints{}).Y
+		downH += h + item.Padding.Top + item.Padding.Bottom
+		hi = ai + 1
+		if downH >= appBoundsHeight {
+			break
+		}
+	}
+
+	// Find the start of the upward range [lo, topIdx).
+	lo := topIdx
+	var upH int
+	for ai := topIdx - 1; ai >= 0; ai-- {
+		i := availableIndices[ai]
+		item, _ := l.abstractList.ItemByIndex(i)
+		h := item.Content.Measure(context, guigui.Constraints{}).Y
+		upH += h + item.Padding.Top + item.Padding.Bottom
+		lo = ai
+		if upH >= appBoundsHeight {
+			break
+		}
+	}
+
+	// Add the items in forward order so the child order matches the visual order.
+	for ai := lo; ai < hi; ai++ {
+		i := availableIndices[ai]
 		item, _ := l.abstractList.ItemByIndex(i)
 		if l.checkmarkIndexPlus1 == i+1 {
 			adder.AddWidget(&l.checkmark)
@@ -862,7 +916,8 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	clear(l.measuredContentHeights)
 
 	// Build a mapping from available-item order to real index.
-	availableIndices := l.appendAvailableIndices(nil)
+	l.tmpAvailableIndices = l.appendAvailableIndices(l.tmpAvailableIndices[:0])
+	availableIndices := l.tmpAvailableIndices
 	if len(availableIndices) == 0 {
 		return
 	}
@@ -1796,7 +1851,8 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 		cw = l.contentWidthPlus1 - 1
 	}
 
-	availableIndices := l.appendAvailableIndices(nil)
+	l.tmpAvailableIndices = l.appendAvailableIndices(l.tmpAvailableIndices[:0])
+	availableIndices := l.tmpAvailableIndices
 	y := topOff + RoundedCornerRadius(context)
 	for aIdx := topIdx; aIdx <= ai && aIdx < len(availableIndices); aIdx++ {
 		h := l.measureItemHeight(context, availableIndices[aIdx], cw)
