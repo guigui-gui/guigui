@@ -430,6 +430,21 @@ func (c *Context) SetPassthrough(widget Widget, passthrough bool) {
 }
 
 func (c *Context) bringToFrontLayer(widget Widget) {
+	// If the focused widget is not a descendant of the widget being brought to front,
+	// lose the focus.
+	if fw := c.app.focusedWidget; fw != nil {
+		var found bool
+		for w := fw; w != nil; w = w.widgetState().parent {
+			if areWidgetsSame(w, widget) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			c.app.focusWidget(nil)
+		}
+	}
+
 	widgetState := widget.widgetState()
 	// If the widget is already in the front layer, do nothing.
 	if widgetState.layer != 0 && widgetState.layer == c.frontLayer {
