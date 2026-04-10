@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -397,7 +396,14 @@ func (p *listPanel[T]) thumbBounds(context *guigui.Context, widgetBounds *guigui
 			// The last item is visible — thumb should be at the bottom.
 			rate = 1
 		} else {
-			rate = float64(p.topItemIndex) / maxIndex
+			// Include topItemOffset so the thumb moves smoothly between items.
+			// topItemOffset is typically <= 0; negating it gives the fraction scrolled into the current item.
+			topItemH := p.content.measureAvailableItemHeight(context, p.topItemIndex)
+			if topItemH <= 0 {
+				topItemH = p.estimatedItemHeight
+			}
+			fractionalIndex := float64(p.topItemIndex) + float64(-p.topItemOffset)/float64(topItemH)
+			rate = fractionalIndex / maxIndex
 			rate = min(max(rate, 0), 1)
 		}
 		y0 := float64(bounds.Min.Y) + padding + rate*(float64(bounds.Dy())-2*padding-barHeight)
@@ -429,6 +435,7 @@ type listVScrollBar[T comparable] struct {
 	dragging              bool
 	draggingStartPosition int
 	draggingStartIndex    int
+	draggingStartOffset   int
 	onceDraw              bool
 }
 
@@ -477,7 +484,7 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 	if !s.dragging && widgetBounds.IsHitAtCursor() && inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
 		x, y := ebiten.CursorPosition()
 		tb := s.thumbBounds
-		topIdx, _ := s.panel.topItem()
+		topIdx, topOff := s.panel.topItem()
 
 		// Check the cross-axis: cursor must be on the scroll bar's side.
 		if x >= tb.Min.X || x >= bounds.Min.X {
@@ -486,6 +493,7 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 				s.dragging = true
 				s.draggingStartPosition = y
 				s.draggingStartIndex = topIdx
+				s.draggingStartOffset = topOff
 				return guigui.HandleInputByWidget(s)
 			}
 			// Clicked on track — jump by page.
@@ -518,9 +526,13 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 			}
 			indexPerPixel := maxIndex / trackHeight
 			deltaItems := float64(dy) * indexPerPixel
-			newIdx := s.draggingStartIndex + int(math.Round(deltaItems))
-			newIdx = max(0, min(totalCount-1, newIdx))
-			s.panel.forceSetTopItem(newIdx, 0)
+			// Use fractional position to compute both index and sub-item offset.
+			startFraction := float64(s.draggingStartIndex) + float64(-s.draggingStartOffset)/float64(s.panel.estimatedItemHeight)
+			newFraction := startFraction + deltaItems
+			newFraction = min(max(newFraction, 0), float64(totalCount-1))
+			newIdx := int(newFraction)
+			newOffset := -int((newFraction - float64(newIdx)) * float64(s.panel.estimatedItemHeight))
+			s.panel.forceSetTopItem(newIdx, newOffset)
 			guigui.RequestRebuild(s.panel)
 		}
 		return guigui.HandleInputByWidget(s)

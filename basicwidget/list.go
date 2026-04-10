@@ -640,6 +640,19 @@ func (l *listContent[T]) availableItemCount() int {
 	return count
 }
 
+// measureAvailableItemHeight returns the height of the item at the given
+// available-item index, or 0 if the index is out of range.
+func (l *listContent[T]) measureAvailableItemHeight(context *guigui.Context, availableIndex int) int {
+	var idx int
+	for i := range l.availableItems() {
+		if idx == availableIndex {
+			return l.measureItemHeight(context, i, l.contentWidth())
+		}
+		idx++
+	}
+	return 0
+}
+
 func (l *listContent[T]) contentWidth() int {
 	if l.contentWidthPlus1 > 0 {
 		return l.contentWidthPlus1 - 1
