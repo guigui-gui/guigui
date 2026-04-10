@@ -527,11 +527,22 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 			indexPerPixel := maxIndex / trackHeight
 			deltaItems := float64(dy) * indexPerPixel
 			// Use fractional position to compute both index and sub-item offset.
-			startFraction := float64(s.draggingStartIndex) + float64(-s.draggingStartOffset)/float64(s.panel.estimatedItemHeight)
+			// Use the actual height of the start item (matching thumbBounds) so
+			// the start fraction agrees with the thumb position on screen.
+			startItemH := s.panel.content.measureAvailableItemHeight(context, s.draggingStartIndex)
+			if startItemH <= 0 {
+				startItemH = s.panel.estimatedItemHeight
+			}
+			startFraction := float64(s.draggingStartIndex) + float64(-s.draggingStartOffset)/float64(startItemH)
 			newFraction := startFraction + deltaItems
 			newFraction = min(max(newFraction, 0), float64(totalCount-1))
 			newIdx := int(newFraction)
-			newOffset := -int((newFraction - float64(newIdx)) * float64(s.panel.estimatedItemHeight))
+			// Use the actual height of the target item for the sub-item offset.
+			newItemH := s.panel.content.measureAvailableItemHeight(context, newIdx)
+			if newItemH <= 0 {
+				newItemH = s.panel.estimatedItemHeight
+			}
+			newOffset := -int((newFraction - float64(newIdx)) * float64(newItemH))
 			s.panel.forceSetTopItem(newIdx, newOffset)
 			guigui.RequestRebuild(s.panel)
 		}
