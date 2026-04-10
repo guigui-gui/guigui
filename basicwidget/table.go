@@ -340,8 +340,15 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 func (t *tableRowWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	t.ensureTexts()
 
+	if len(t.table.columnWidthsInPixels) == 0 {
+		return image.Pt(0, LineHeight(context))
+	}
+
 	var w, h int
 	for i, cell := range t.row.Cells {
+		if i >= len(t.table.columnWidthsInPixels) {
+			break
+		}
 		var s image.Point
 		if cell.Content != nil {
 			// TODO: t.columnWidthsInPixels should not be accessed here.
@@ -407,6 +414,9 @@ func (t *tableHeader[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	pt.X += int(offsetX)
 	pt.X += RoundedCornerRadius(context)
 	for i := range t.columnTexts.Len() {
+		if i >= len(t.table.columnWidthsInPixels) {
+			break
+		}
 		textMin := pt.Add(image.Pt(UnitSize(context)/4, 0))
 		width := t.table.columnWidthsInPixels[i] - UnitSize(context)/2
 		textBounds := image.Rectangle{
