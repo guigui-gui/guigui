@@ -289,13 +289,16 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 			offsetX, offsetY := s.offsetGetSetter.scrollOffset()
 
 			cs := widgetBounds.Bounds().Size()
+			padding := scrollThumbPadding(context)
 			barWidth, barHeight := scrollThumbSize(context, widgetBounds, s.contentSize)
 			if s.horizontal && s.dragging && barWidth > 0 && s.contentSize.X-cs.X > 0 {
-				offsetPerPixel := float64(s.contentSize.X-cs.X) / (float64(cs.X) - barWidth)
+				trackWidth := float64(cs.X) - 2*padding - barWidth
+				offsetPerPixel := float64(s.contentSize.X-cs.X) / trackWidth
 				offsetX = s.draggingStartOffset + float64(-dx)*offsetPerPixel
 			}
 			if !s.horizontal && s.dragging && barHeight > 0 && s.contentSize.Y-cs.Y > 0 {
-				offsetPerPixel := float64(s.contentSize.Y-cs.Y) / (float64(cs.Y) - barHeight)
+				trackHeight := float64(cs.Y) - 2*padding - barHeight
+				offsetPerPixel := float64(s.contentSize.Y-cs.Y) / trackHeight
 				offsetY = s.draggingStartOffset + float64(-dy)*offsetPerPixel
 			}
 			s.offsetGetSetter.setScrollOffset(offsetX, offsetY)

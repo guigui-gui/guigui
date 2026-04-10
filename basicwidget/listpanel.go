@@ -509,10 +509,14 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 		_, y := ebiten.CursorPosition()
 		dy := y - s.draggingStartPosition
 		if dy != 0 && trackHeight > 0 {
-			// Map pixel drag to item index. Use totalCount-1 as the range
-			// so dragging to the bottom always reaches the last item.
-			// The bottom-gap fix in layoutItems will correct any overshoot.
-			indexPerPixel := float64(totalCount-1) / trackHeight
+			// Map pixel drag to item index. Use the same maxIndex as
+			// thumbBounds so that the thumb tracks the cursor 1:1.
+			viewportItems := float64(bounds.Dy()) / float64(s.panel.estimatedItemHeight)
+			maxIndex := float64(totalCount) - viewportItems
+			if maxIndex < 1 {
+				maxIndex = 1
+			}
+			indexPerPixel := maxIndex / trackHeight
 			deltaItems := float64(dy) * indexPerPixel
 			newIdx := s.draggingStartIndex + int(math.Round(deltaItems))
 			newIdx = max(0, min(totalCount-1, newIdx))
