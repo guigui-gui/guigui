@@ -1396,8 +1396,17 @@ func (l *listContent[T]) SetStyle(style ListStyle) {
 
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	_, y := ebiten.CursorPosition()
+	var nonEmptyBoundsFound bool
 	for i := range l.availableItems() {
-		if b := l.itemBounds(context, i); y < (b.Min.Y+b.Max.Y)/2 {
+		b := l.itemBounds(context, i)
+		if b.Empty() {
+			if !nonEmptyBoundsFound {
+				continue
+			}
+			return i + 1
+		}
+		nonEmptyBoundsFound = true
+		if y < (b.Min.Y+b.Max.Y)/2 {
 			return i
 		}
 	}
