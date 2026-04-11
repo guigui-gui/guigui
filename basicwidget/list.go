@@ -1096,7 +1096,7 @@ func (l *listContent[T]) measureItemContentHeight(context *guigui.Context, index
 	}
 	item, _ := l.abstractList.ItemByIndex(index)
 	itemW := cw - 2*RoundedCornerRadius(context)
-	itemW -= listItemIndentSize(context, item.IndentLevel)
+	itemW -= ListItemIndentSize(context, item.IndentLevel)
 	itemW -= item.Padding.Start + item.Padding.End
 	contentH := item.Content.Measure(context, guigui.FixedWidthConstraints(itemW)).Y
 	if l.measuredContentHeights == nil {
@@ -1117,7 +1117,7 @@ func (l *listContent[T]) measureItemHeight(context *guigui.Context, index int, c
 func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter, index int, baseX int, y int, cw int) int {
 	item, _ := l.abstractList.ItemByIndex(index)
 	itemW := cw - 2*RoundedCornerRadius(context)
-	itemW -= listItemIndentSize(context, item.IndentLevel)
+	itemW -= ListItemIndentSize(context, item.IndentLevel)
 	itemW -= item.Padding.Start + item.Padding.End
 	contentH := l.measureItemContentHeight(context, index, cw)
 	itemH := contentH + item.Padding.Top + item.Padding.Bottom
@@ -1130,7 +1130,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		if l.checkmarkIndexPlus1 > 0 {
 			itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 		}
-		itemP.X += listItemIndentSize(context, item.IndentLevel)
+		itemP.X += ListItemIndentSize(context, item.IndentLevel)
 		itemP.X += item.Padding.Start
 		itemP.Y = l.adjustItemY(context, itemP.Y)
 		itemP.Y += item.Padding.Top
@@ -1150,7 +1150,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 	if l.checkmarkIndexPlus1 == index+1 {
 		imgSize := listItemCheckmarkSize(context)
 		imgP := p
-		imgP.X += listItemIndentSize(context, item.IndentLevel)
+		imgP.X += ListItemIndentSize(context, item.IndentLevel)
 		imgP.X += UnitSize(context) / 4
 		imgP.Y += (contentH - imgSize) / 2
 		imgP.Y += UnitSize(context) / 16
@@ -1177,7 +1177,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		}
 		l.expanderImages.At(index).SetImage(img)
 		expanderP := p
-		expanderP.X += listItemIndentSize(context, item.IndentLevel) - LineHeight(context)
+		expanderP.X += ListItemIndentSize(context, item.IndentLevel) - LineHeight(context)
 		expanderP.Y += UnitSize(context) / 16
 		expanderP.Y += item.Padding.Top
 		s := image.Pt(
@@ -1194,7 +1194,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 	if l.checkmarkIndexPlus1 > 0 {
 		itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 	}
-	itemP.X += listItemIndentSize(context, item.IndentLevel)
+	itemP.X += ListItemIndentSize(context, item.IndentLevel)
 	itemP.X += item.Padding.Start
 	itemP.Y = l.adjustItemY(context, itemP.Y)
 	itemP.Y += item.Padding.Top
@@ -1237,12 +1237,12 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 			if hasCheckmark {
 				itemW -= offsetForCheckmark
 			}
-			itemW -= listItemIndentSize(context, item.IndentLevel)
+			itemW -= ListItemIndentSize(context, item.IndentLevel)
 			itemW -= item.Padding.Start + item.Padding.End
 			constraint = guigui.FixedWidthConstraints(itemW)
 		}
 		s := item.Content.Measure(context, constraint)
-		w = max(w, s.X+listItemIndentSize(context, item.IndentLevel)+item.Padding.Start+item.Padding.End)
+		w = max(w, s.X+ListItemIndentSize(context, item.IndentLevel)+item.Padding.Start+item.Padding.End)
 		h += s.Y + item.Padding.Top + item.Padding.Bottom
 	}
 	w += 2 * RoundedCornerRadius(context)
@@ -2018,7 +2018,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			bounds := l.content.itemBounds(context, i)
 			// Reset the X position to ignore indentation.
 			item, _ := l.content.abstractList.ItemByIndex(i)
-			bounds.Min.X -= listItemIndentSize(context, item.IndentLevel)
+			bounds.Min.X -= ListItemIndentSize(context, item.IndentLevel)
 			if bounds.Min.Y > vb.Max.Y {
 				break
 			}
@@ -2281,7 +2281,7 @@ func listItemTextAndImagePadding(context *guigui.Context) int {
 	return UnitSize(context) / 8
 }
 
-func listItemIndentSize(context *guigui.Context, level int) int {
+func ListItemIndentSize(context *guigui.Context, level int) int {
 	if level == 0 {
 		return 0
 	}
