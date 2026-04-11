@@ -1403,7 +1403,7 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 			if !nonEmptyBoundsFound {
 				continue
 			}
-			return i + 1
+			return i
 		}
 		nonEmptyBoundsFound = true
 		if y < (b.Min.Y+b.Max.Y)/2 {
