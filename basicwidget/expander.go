@@ -52,7 +52,9 @@ func (e *Expander) SetContentWidget(w guigui.Widget) {
 	guigui.RequestRebuild(e)
 }
 
-func expanderMaxCount() int {
+// expandCollapseMaxCount returns the number of ticks for an expand/collapse animation.
+// This is shared between Expander and List.
+func expandCollapseMaxCount() int {
 	return ebiten.TPS() / 20
 }
 
@@ -63,7 +65,7 @@ func (e *Expander) SetExpanded(expanded bool) {
 	e.expanded = expanded
 	e.header.setExpanded(e.expanded)
 	if e.onceRendered {
-		e.count = expanderMaxCount() - e.count
+		e.count = expandCollapseMaxCount() - e.count
 	}
 	guigui.DispatchEvent(e, expanderEventExpansionChanged, e.expanded)
 	guigui.RequestRebuild(e)
@@ -84,7 +86,7 @@ func (e *Expander) animationRate() float64 {
 		}
 		return 0
 	}
-	rate := 1 - float64(e.count)/float64(expanderMaxCount())
+	rate := 1 - float64(e.count)/float64(expandCollapseMaxCount())
 	if !e.expanded {
 		rate = 1 - rate
 	}

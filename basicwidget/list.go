@@ -625,6 +625,18 @@ type listContent[T comparable] struct {
 
 	widgetToIndex map[guigui.Widget]int
 
+	// expandAnimatingIndexPlus1 is the 1-based index of the item currently animating (0 = none).
+	expandAnimatingIndexPlus1 int
+	// expandAnimatingChildrenEnd is the exclusive end index of the animating item's children range.
+	// Children are items at indices [expandAnimatingIndexPlus1, expandAnimatingChildrenEnd).
+	expandAnimatingChildrenEnd int
+	// expandAnimatingCount is the remaining animation ticks.
+	expandAnimatingCount int
+	// prevCollapsed stores the previous Collapsed state keyed by item Value, to detect changes in SetItems.
+	prevCollapsed map[T]bool
+	// onceRendered prevents animation on the very first render.
+	onceRendered bool
+
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
 
@@ -718,7 +730,9 @@ func (l *listContent[T]) availableItems() iter.Seq[int] {
 			if lastCollapsedIndentLevel > 0 && item.IndentLevel > lastCollapsedIndentLevel {
 				continue
 			}
-			if item.Collapsed {
+			// During animation, treat the animating item as expanded.
+			collapsed := item.Collapsed && !(l.isExpandAnimating() && i == l.expandAnimatingIndexPlus1-1)
+			if collapsed {
 				lastCollapsedIndentLevel = item.IndentLevel
 			} else {
 				lastCollapsedIndentLevel = 0
@@ -898,6 +912,7 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -956,6 +971,15 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	l.normalizeTopItem(context, availableIndices, cw, bounds)
 	topIdx, topOff = l.listPanel.topItem()
 
+	animRate := l.expandAnimationRate()
+
+	// TODO: Currently, each animating child's Y advance is scaled individually by the animation rate.
+	// Ideally, children of the animating node would be treated as a single chunk (like Expander does),
+	// where the chunk is laid out at full size and clipped at the animated height boundary.
+	// This could be done with a two-pass approach: first lay out all children at full positions,
+	// then clip and remove items outside the animated region. However, the current per-child scaling
+	// is simpler and avoids the clipping complexity.
+
 	// Pre-pass: measure heights from topIdx downward to detect bottom gap.
 	// This is cheap since Measure results are typically cached.
 	{
@@ -965,7 +989,12 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 			if y >= viewportHeight {
 				break
 			}
-			y += l.measureItemHeight(context, availableIndices[ai], cw)
+			h := l.measureItemHeight(context, availableIndices[ai], cw)
+			if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(availableIndices[ai]) {
+				y += int(float64(h) * animRate)
+			} else {
+				y += h
+			}
 			if ai == len(availableIndices)-1 {
 				reachedEnd = true
 			}
@@ -1003,7 +1032,11 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 		itemH := l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
 		totalMeasuredHeight += itemH
 		measuredCount++
-		y += itemH
+		if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
+			y += int(float64(itemH) * animRate)
+		} else {
+			y += itemH
+		}
 	}
 
 	// Lay out items upward from topIdx-1 to fill any gap above.
@@ -1014,7 +1047,11 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 		totalMeasuredHeight += itemH
 		measuredCount++
 
-		y -= itemH
+		if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
+			y -= int(float64(itemH) * animRate)
+		} else {
+			y -= itemH
+		}
 		l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
 
 		if y <= viewportTop {
@@ -1227,6 +1264,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	offsetForCheckmark := listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 
 	var w, h int
+	var animatingChildrenH int
 	for i := range l.availableItems() {
 		item, _ := l.abstractList.ItemByIndex(i)
 		var constraint guigui.Constraints
@@ -1243,7 +1281,15 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 		}
 		s := item.Content.Measure(context, constraint)
 		w = max(w, s.X+ListItemIndentSize(context, item.IndentLevel)+item.Padding.Start+item.Padding.End)
-		h += s.Y + item.Padding.Top + item.Padding.Bottom
+		itemH := s.Y + item.Padding.Top + item.Padding.Bottom
+		if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
+			animatingChildrenH += itemH
+		} else {
+			h += itemH
+		}
+	}
+	if l.isExpandAnimating() && animatingChildrenH > 0 {
+		h += int(float64(animatingChildrenH) * l.expandAnimationRate())
 	}
 	w += 2 * RoundedCornerRadius(context)
 	h += 2 * RoundedCornerRadius(context)
@@ -1252,8 +1298,11 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	}
 	if width > 0 {
 		w = width
-		l.widthForCachedHeight = width
-		l.cachedHeight = h
+		// Don't cache height during animation since it changes every tick.
+		if !l.isExpandAnimating() {
+			l.widthForCachedHeight = width
+			l.cachedHeight = h
+		}
 	}
 	return image.Pt(w, h)
 }
@@ -1292,9 +1341,66 @@ func (l *listContent[T]) AppendSelectedItemIndices(indices []int) []int {
 }
 
 func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
+	// Detect collapse state changes and start animation.
+	if l.onceRendered && l.prevCollapsed != nil {
+		for i, item := range items {
+			prev, ok := l.prevCollapsed[item.Value]
+			if ok && prev != item.Collapsed {
+				l.expandAnimatingIndexPlus1 = i + 1
+				l.expandAnimatingCount = expandCollapseMaxCount() - l.expandAnimatingCount
+				// Compute children range: all items after i with indent > item's indent,
+				// stopping at the first item with indent <= item's indent.
+				l.expandAnimatingChildrenEnd = len(items)
+				for j := i + 1; j < len(items); j++ {
+					if items[j].IndentLevel <= item.IndentLevel {
+						l.expandAnimatingChildrenEnd = j
+						break
+					}
+				}
+				break
+			}
+		}
+	}
+
+	// Rebuild prevCollapsed from new items.
+	if l.prevCollapsed == nil {
+		l.prevCollapsed = make(map[T]bool, len(items))
+	}
+	clear(l.prevCollapsed)
+	for _, item := range items {
+		l.prevCollapsed[item.Value] = item.Collapsed
+	}
+
 	l.abstractList.SetItems(items)
 	// Invalidate the cached height so that Measure recalculates with the new items.
 	l.widthForCachedHeight = 0
+}
+
+func (l *listContent[T]) isExpandAnimating() bool {
+	return l.expandAnimatingCount > 0
+}
+
+func (l *listContent[T]) expandAnimationRate() float64 {
+	if !l.isExpandAnimating() {
+		return 1
+	}
+	idx := l.expandAnimatingIndexPlus1 - 1
+	item, ok := l.abstractList.ItemByIndex(idx)
+	if !ok {
+		return 1
+	}
+	rate := 1 - float64(l.expandAnimatingCount)/float64(expandCollapseMaxCount())
+	if item.Collapsed {
+		// Collapsing: rate goes from 1 to 0.
+		rate = 1 - rate
+	}
+	return rate
+}
+
+// isChildOfExpandAnimatingItem reports whether the item at index is a child
+// of the currently animating item, using the precomputed children range.
+func (l *listContent[T]) isChildOfExpandAnimatingItem(index int) bool {
+	return index > l.expandAnimatingIndexPlus1-1 && index < l.expandAnimatingChildrenEnd
 }
 
 func (l *listContent[T]) SelectItemByIndex(index int) {
@@ -1829,7 +1935,22 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 		}
 		l.jumpTick = 0
 	}
+
+	// Advance expand/collapse animation.
+	if l.expandAnimatingCount > 0 {
+		l.expandAnimatingCount--
+		if l.expandAnimatingCount == 0 {
+			l.expandAnimatingIndexPlus1 = 0
+			l.expandAnimatingChildrenEnd = 0
+		}
+		guigui.RequestRebuild(l)
+	}
+
 	return nil
+}
+
+func (l *listContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	l.onceRendered = true
 }
 
 // availableIndexForItemIndex converts a raw item index to the position in the available items list.
