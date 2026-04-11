@@ -8,6 +8,7 @@ import (
 	"image"
 	"image/color"
 	"iter"
+	"maps"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -579,6 +580,11 @@ func (a abstractListItem[T]) visible() bool {
 	return a.listContent.isItemAvailable(a.index)
 }
 
+type collapsedEntry struct {
+	collapsed  bool
+	generation uint64
+}
+
 type listContent[T comparable] struct {
 	guigui.DefaultWidget
 
@@ -633,7 +639,8 @@ type listContent[T comparable] struct {
 	// expandAnimatingCount is the remaining animation ticks.
 	expandAnimatingCount int
 	// prevCollapsed stores the previous Collapsed state keyed by item Value, to detect changes in SetItems.
-	prevCollapsed map[T]bool
+	prevCollapsed           map[T]collapsedEntry
+	prevCollapsedGeneration uint64
 	// onceRendered prevents animation on the very first render.
 	onceRendered bool
 
@@ -1341,35 +1348,40 @@ func (l *listContent[T]) AppendSelectedItemIndices(indices []int) []int {
 }
 
 func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
+	l.prevCollapsedGeneration++
+	gen := l.prevCollapsedGeneration
+
+	if l.prevCollapsed == nil {
+		l.prevCollapsed = make(map[T]collapsedEntry, len(items))
+	}
+
 	// Detect collapse state changes and start animation.
-	if l.onceRendered && l.prevCollapsed != nil {
-		for i, item := range items {
-			prev, ok := l.prevCollapsed[item.Value]
-			if ok && prev != item.Collapsed {
-				l.expandAnimatingIndexPlus1 = i + 1
-				l.expandAnimatingCount = expandCollapseMaxCount() - l.expandAnimatingCount
-				// Compute children range: all items after i with indent > item's indent,
-				// stopping at the first item with indent <= item's indent.
-				l.expandAnimatingChildrenEnd = len(items)
-				for j := i + 1; j < len(items); j++ {
-					if items[j].IndentLevel <= item.IndentLevel {
-						l.expandAnimatingChildrenEnd = j
-						break
-					}
+	// Also update each entry's generation to mark it as current.
+	for i, item := range items {
+		prev, ok := l.prevCollapsed[item.Value]
+		if l.onceRendered && ok && prev.collapsed != item.Collapsed {
+			l.expandAnimatingIndexPlus1 = i + 1
+			l.expandAnimatingCount = expandCollapseMaxCount() - l.expandAnimatingCount
+			// Compute children range: all items after i with indent > item's indent,
+			// stopping at the first item with indent <= item's indent.
+			l.expandAnimatingChildrenEnd = len(items)
+			for j := i + 1; j < len(items); j++ {
+				if items[j].IndentLevel <= item.IndentLevel {
+					l.expandAnimatingChildrenEnd = j
+					break
 				}
-				break
 			}
+		}
+		l.prevCollapsed[item.Value] = collapsedEntry{
+			collapsed:  item.Collapsed,
+			generation: gen,
 		}
 	}
 
-	// Rebuild prevCollapsed from new items.
-	if l.prevCollapsed == nil {
-		l.prevCollapsed = make(map[T]bool, len(items))
-	}
-	clear(l.prevCollapsed)
-	for _, item := range items {
-		l.prevCollapsed[item.Value] = item.Collapsed
-	}
+	// Remove stale entries from prevCollapsed.
+	maps.DeleteFunc(l.prevCollapsed, func(_ T, e collapsedEntry) bool {
+		return e.generation != gen
+	})
 
 	l.abstractList.SetItems(items)
 	// Invalidate the cached height so that Measure recalculates with the new items.
