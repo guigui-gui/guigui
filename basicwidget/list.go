@@ -1885,36 +1885,6 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 	}
 }
 
-// itemYFromIndex returns the Y position of the item at the given index relative to the top of the List widget.
-// itemYFromIndex returns the same value whatever the List position is.
-//
-// itemYFromIndex is available after Build is called, so do not use this from a parent widget.
-func (l *listContent[T]) itemYFromIndex(context *guigui.Context, index int) (int, bool) {
-	if index < 0 || index > len(l.itemBoundsForLayoutFromIndex) || len(l.itemBoundsForLayoutFromIndex) == 0 {
-		return 0, false
-	}
-
-	baseY := l.itemBoundsForLayoutFromIndex[0].Min.Y
-	head := RoundedCornerRadius(context)
-
-	var itemRelY int
-	if index == len(l.itemBoundsForLayoutFromIndex) {
-		itemRelY = l.itemBoundsForLayoutFromIndex[index-1].Max.Y - baseY
-		var padding guigui.Padding
-		if item, ok := l.abstractList.ItemByIndex(index - 1); ok {
-			padding = item.Padding
-		}
-		return itemRelY + head + padding.Bottom, true
-	}
-
-	itemRelY = l.itemBoundsForLayoutFromIndex[index].Min.Y - baseY
-	var padding guigui.Padding
-	if item, ok := l.abstractList.ItemByIndex(index); ok {
-		padding = item.Padding
-	}
-	return itemRelY + head - padding.Top, true
-}
-
 // itemYFromIndexForMenu returns the Y position of the item at the given index relative to the top of the List widget.
 // itemYFromIndexForMenu returns the same value whatever the List position is.
 //
@@ -2158,7 +2128,11 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	}
 
 	// Draw a dragging guideline.
-	if l.content.dragDstIndexPlus1 > 0 {
+	// Compute the guideline Y directly from item bounds in screen coordinates.
+	// Using itemYFromIndex would be incorrect when scrolled because it relies on
+	// itemBoundsForLayoutFromIndex[0] as a baseline, which is zeroed when item 0
+	// is scrolled off-screen.
+	if dstIdx := l.content.dragDstIndexPlus1 - 1; dstIdx >= 0 {
 		p := widgetBounds.Bounds().Min
 		x0 := float32(p.X) + float32(RoundedCornerRadius(context))
 		cw := widgetBounds.Bounds().Dx()
@@ -2167,9 +2141,23 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		}
 		x1 := x0 + float32(cw)
 		x1 -= 2 * float32(RoundedCornerRadius(context))
-		y := float32(p.Y)
-		if itemY, ok := l.content.itemYFromIndex(context, l.content.dragDstIndexPlus1-1); ok {
-			y += float32(itemY)
+
+		adjustY := l.content.adjustItemY(context, 0)
+		var y float32
+		var ok bool
+		if dstIdx < len(l.content.itemBoundsForLayoutFromIndex) {
+			if item, itemOk := l.content.abstractList.ItemByIndex(dstIdx); itemOk {
+				y = float32(l.content.itemBoundsForLayoutFromIndex[dstIdx].Min.Y - item.Padding.Top - adjustY)
+				ok = true
+			}
+		} else {
+			// This is needed especially when dragging to the end of the list, where dstIdx can be equal to the item count.
+			if item, itemOk := l.content.abstractList.ItemByIndex(dstIdx - 1); itemOk {
+				y = float32(l.content.itemBoundsForLayoutFromIndex[dstIdx-1].Max.Y + item.Padding.Bottom - adjustY)
+				ok = true
+			}
+		}
+		if ok {
 			vector.StrokeLine(dst, x0, y, x1, y, 2*float32(context.Scale()), draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.5), false)
 		}
 	}
