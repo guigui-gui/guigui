@@ -662,8 +662,10 @@ type listContent[T comparable] struct {
 
 func (l *listContent[T]) availableItemCount() int {
 	var count int
-	for range l.availableItems() {
-		count++
+	for i := range l.abstractList.ItemCount() {
+		if l.isItemAvailable(i) {
+			count++
+		}
 	}
 	return count
 }
