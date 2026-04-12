@@ -11,10 +11,12 @@ import (
 )
 
 var (
-	clipboardWriteCh    = make(chan []byte, 1)
-	cachedClipboardData atomic.Value
+	clipboardWriteCh      = make(chan []byte, 1)
+	cachedClipboardData   atomic.Value
 	errClipboardWriteBusy = errors.New("clipboard write busy")
 )
+
+const clipboardWriteTimeout = 100 * time.Millisecond
 
 func init() {
 	go func() {
@@ -54,11 +56,16 @@ func ReadAll() ([]byte, error) {
 func WriteAll(bs []byte) error {
 	v := make([]byte, len(bs))
 	copy(v, bs)
+
+	timer := time.NewTimer(clipboardWriteTimeout)
+	defer timer.Stop()
+
 	select {
 	case clipboardWriteCh <- v:
-	default:
+	case <-timer.C:
 		return errClipboardWriteBusy
 	}
+
 	cachedClipboardData.Store(v)
 	return nil
 }
