@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/ebitengine/purego v0.11.0-alpha.1
 	github.com/go-text/typesetting v0.3.5-0.20260328164731-48df487c1500
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260411194815-2534f1e3964a
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.10.0.20260411200057-1b60b342c218
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.10.0
