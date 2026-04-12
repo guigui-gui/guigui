@@ -4,6 +4,7 @@
 package clipboard
 
 import (
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -12,6 +13,7 @@ import (
 var (
 	clipboardWriteCh    = make(chan []byte, 1)
 	cachedClipboardData atomic.Value
+	errClipboardWriteBusy = errors.New("clipboard write busy")
 )
 
 func init() {
@@ -52,7 +54,11 @@ func ReadAll() ([]byte, error) {
 func WriteAll(bs []byte) error {
 	v := make([]byte, len(bs))
 	copy(v, bs)
-	clipboardWriteCh <- v
+	select {
+	case clipboardWriteCh <- v:
+	default:
+		return errClipboardWriteBusy
+	}
 	cachedClipboardData.Store(v)
 	return nil
 }
