@@ -565,6 +565,7 @@ type abstractListItem[T comparable] struct {
 	Collapsed    bool
 
 	index       int
+	available   bool
 	listContent *listContent[T]
 }
 
@@ -756,27 +757,7 @@ func (l *listContent[T]) isItemAvailable(index int) bool {
 	if !ok {
 		return false
 	}
-	indent := item.IndentLevel
-	for {
-		if indent == 0 {
-			break
-		}
-		index--
-		if index < 0 {
-			break
-		}
-		item, ok := l.abstractList.ItemByIndex(index)
-		if !ok {
-			continue
-		}
-		if item.IndentLevel < indent {
-			if item.Collapsed {
-				return false
-			}
-			indent = item.IndentLevel
-		}
-	}
-	return true
+	return item.available
 }
 
 func (l *listContent[T]) isItemInViewport(index int) bool {
@@ -1357,6 +1338,8 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 
 	// Detect collapse state changes and start animation.
 	// Also update each entry's generation to mark it as current.
+	// Also precompute item availability based on collapsed ancestors.
+	var lastCollapsedIndentLevel int
 	for i, item := range items {
 		prev, ok := l.prevCollapsed[item.Value]
 		if l.onceRendered && ok && prev.collapsed != item.Collapsed {
@@ -1375,6 +1358,17 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 		l.prevCollapsed[item.Value] = collapsedEntry{
 			collapsed:  item.Collapsed,
 			generation: gen,
+		}
+
+		if lastCollapsedIndentLevel > 0 && item.IndentLevel > lastCollapsedIndentLevel {
+			items[i].available = false
+		} else {
+			items[i].available = true
+			if item.Collapsed {
+				lastCollapsedIndentLevel = item.IndentLevel
+			} else {
+				lastCollapsedIndentLevel = 0
+			}
 		}
 	}
 
