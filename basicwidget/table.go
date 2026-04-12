@@ -265,7 +265,7 @@ func (t *tableRowWidget[T]) ensureTexts() {
 		}
 		txt := t.texts.At(i)
 		txt.SetValue(cell.Text)
-		txt.SetColor(cell.TextColor)
+		// Color is adjusted at Layout.
 		txt.SetHorizontalAlign(cell.TextHorizontalAlign)
 		txt.SetVerticalAlign(cell.TextVerticalAlign)
 		txt.SetBold(cell.TextBold)
@@ -326,13 +326,14 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 		ct := v.(ListItemColorType)
 		clr := ct.TextColor(context)
 		for i, cell := range t.row.Cells {
-			if cell.Content != nil || cell.TextColor != nil {
-				continue
-			}
 			if i >= t.texts.Len() {
 				break
 			}
-			t.texts.At(i).SetColor(clr)
+			if cell.TextColor != nil {
+				t.texts.At(i).SetColor(cell.TextColor)
+			} else {
+				t.texts.At(i).SetColor(clr)
+			}
 		}
 	}
 }
