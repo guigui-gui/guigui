@@ -25,6 +25,8 @@ import (
 // can query their color type without needing to know their index.
 //
 // This value is available after the build phase (e.g., during the layout phase).
+//
+// [guigui.Context.Env] with this key might return (nil, false) when the item is out of the viewport.
 var EnvKeyListItemColorType guigui.EnvKey = guigui.GenerateEnvKey()
 
 type ListStyle int
@@ -794,17 +796,6 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	adder.AddWidget(&l.background2)
 	l.expanderImages.SetLen(l.abstractList.ItemCount())
 
-	// Build a widget-to-index map for O(1) lookup in Env.
-	if l.widgetToIndex == nil {
-		l.widgetToIndex = map[guigui.Widget]int{}
-	}
-	clear(l.widgetToIndex)
-	for i := range l.abstractList.ItemCount() {
-		if item, ok := l.abstractList.ItemByIndex(i); ok {
-			l.widgetToIndex[item.Content] = i
-		}
-	}
-
 	// Only add items around the top item, extending downward and upward until
 	// the accumulated height in each direction reaches the app bounds height.
 	// The actual viewport size is unknown during the Build phase, so the app
@@ -901,6 +892,17 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	l.treeItemExpandedImage, err = theResourceImages.Get("keyboard_arrow_down", context.ColorMode())
 	if err != nil {
 		return err
+	}
+
+	// Build a widget-to-index map for O(1) lookup in Env.
+	if l.widgetToIndex == nil {
+		l.widgetToIndex = map[guigui.Widget]int{}
+	}
+	clear(l.widgetToIndex)
+	for ai := lo; ai < hi; ai++ {
+		if item, ok := l.abstractList.ItemByIndex(ai); ok {
+			l.widgetToIndex[item.Content] = ai
+		}
 	}
 
 	return nil
