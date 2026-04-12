@@ -904,8 +904,9 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	}
 	clear(l.widgetToIndex)
 	for ai := lo; ai < hi; ai++ {
-		if item, ok := l.abstractList.ItemByIndex(ai); ok {
-			l.widgetToIndex[item.Content] = ai
+		i := availableIndices[ai]
+		if item, ok := l.abstractList.ItemByIndex(i); ok {
+			l.widgetToIndex[item.Content] = i
 		}
 	}
 
