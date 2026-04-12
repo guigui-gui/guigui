@@ -627,6 +627,10 @@ type listContent[T comparable] struct {
 	// callers to avoid allocation on each Build/Layout/Tick call.
 	tmpAvailableIndices []int
 
+	// tmpSelectedIndices is a scratch buffer reused by AppendSelectedItemIndices
+	// callers to avoid allocation each frame.
+	tmpSelectedIndices []int
+
 	// measuredContentHeights caches measured content heights per item index
 	// for the duration of a single Layout call. Cleared at the start of layoutItems.
 	measuredContentHeights map[int]int
@@ -762,6 +766,24 @@ func (l *listContent[T]) isItemAvailable(index int) bool {
 		return false
 	}
 	return item.available
+}
+
+func (l *listContent[T]) prevAvailableItem(index int) (int, bool) {
+	for i := index - 1; i >= 0; i-- {
+		if l.isItemAvailable(i) {
+			return i, true
+		}
+	}
+	return 0, false
+}
+
+func (l *listContent[T]) nextAvailableItem(index int) (int, bool) {
+	for i := index + 1; i < l.abstractList.ItemCount(); i++ {
+		if l.isItemAvailable(i) {
+			return i, true
+		}
+	}
+	return 0, false
 }
 
 func (l *listContent[T]) isItemInViewport(index int) bool {
@@ -1766,9 +1788,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			}
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				droppable := true
-				indices := l.abstractList.AppendSelectedItemIndices(nil)
-				if len(indices) > 0 {
-					if result, handled := guigui.DispatchEvent(l, listEventItemsCanMove, indices[0], len(indices), i); handled {
+				l.tmpSelectedIndices = l.abstractList.AppendSelectedItemIndices(l.tmpSelectedIndices[:0])
+				if len(l.tmpSelectedIndices) > 0 {
+					if result, handled := guigui.DispatchEvent(l, listEventItemsCanMove, l.tmpSelectedIndices[0], len(l.tmpSelectedIndices), i); handled {
 						droppable = result[0].(bool)
 					}
 				}
@@ -1783,9 +1805,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.AbortHandlingInputByWidget(l)
 		}
 		if l.dragDstIndexPlus1 > 0 {
-			indices := l.abstractList.AppendSelectedItemIndices(nil)
-			if len(indices) > 0 {
-				from, count, to := indices[0], len(indices), l.dragDstIndexPlus1-1
+			l.tmpSelectedIndices = l.abstractList.AppendSelectedItemIndices(l.tmpSelectedIndices[:0])
+			if len(l.tmpSelectedIndices) > 0 {
+				from, count, to := l.tmpSelectedIndices[0], len(l.tmpSelectedIndices), l.dragDstIndexPlus1-1
 				canMove := true
 				if result, handled := guigui.DispatchEvent(l, listEventItemsCanMove, from, count, to); handled {
 					canMove = result[0].(bool)
@@ -1883,23 +1905,23 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if !l.abstractList.IsSelectedItemIndex(index) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
-			indices := l.abstractList.AppendSelectedItemIndices(nil)
-			if len(indices) == 0 {
+			l.tmpSelectedIndices = l.abstractList.AppendSelectedItemIndices(l.tmpSelectedIndices[:0])
+			if len(l.tmpSelectedIndices) == 0 {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
-			for _, index := range indices {
+			for _, index := range l.tmpSelectedIndices {
 				item, _ := l.abstractList.ItemByIndex(index)
 				if !item.Movable {
 					return guigui.AbortHandlingInputByWidget(l)
 				}
 			}
 			if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
-				itemBoundsMin := l.itemBounds(context, indices[0])
-				itemBoundsMax := l.itemBounds(context, indices[len(indices)-1])
+				itemBoundsMin := l.itemBounds(context, l.tmpSelectedIndices[0])
+				itemBoundsMax := l.itemBounds(context, l.tmpSelectedIndices[len(l.tmpSelectedIndices)-1])
 				minY := min((itemBoundsMin.Min.Y+start.Y)/2, (itemBoundsMin.Min.Y+itemBoundsMin.Max.Y)/2)
 				maxY := max((itemBoundsMax.Max.Y+start.Y)/2, (itemBoundsMax.Min.Y+itemBoundsMax.Max.Y)/2)
 				if c.Y < minY || c.Y >= maxY {
-					l.dragSrcIndexPlus1 = indices[0] + 1
+					l.dragSrcIndexPlus1 = l.tmpSelectedIndices[0] + 1
 					return guigui.HandleInputByWidget(l)
 				}
 			}
@@ -2165,8 +2187,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 type listBackground2[T comparable] struct {
 	guigui.DefaultWidget
 
-	indexToVisibleItemIndex map[int]int
-	visibleItemIndexToIndex []int
+	tmpItemIndices []int
 
 	content *listContent[T]
 }
@@ -2180,18 +2201,8 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	// Draw the selected item background.
 	if !l.content.isHoveringVisible() {
-		if l.indexToVisibleItemIndex == nil {
-			l.indexToVisibleItemIndex = map[int]int{}
-		}
-		clear(l.indexToVisibleItemIndex)
-		l.visibleItemIndexToIndex = l.visibleItemIndexToIndex[:0]
-		var count int
-		for index := range l.content.availableItems() {
-			l.indexToVisibleItemIndex[index] = count
-			l.visibleItemIndexToIndex = append(l.visibleItemIndexToIndex, index)
-			count++
-		}
-		for _, index := range l.content.AppendSelectedItemIndices(nil) {
+		l.tmpItemIndices = l.content.AppendSelectedItemIndices(l.tmpItemIndices[:0])
+		for _, index := range l.tmpItemIndices {
 			clr := l.content.selectedItemBackgroundColor(context, index)
 			if clr == nil {
 				continue
@@ -2206,10 +2217,8 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if bounds.Overlaps(vb) {
 				item, _ := l.content.ItemByIndex(index)
 				var corners basicwidgetdraw.Corners
-				vi := l.indexToVisibleItemIndex[index]
-				// If prev visible item is adjacent to this item, don't draw the top corner.
-				if item.Padding.Top == 0 && vi-1 >= 0 && vi-1 < len(l.visibleItemIndexToIndex) {
-					prevIndex := l.visibleItemIndexToIndex[vi-1]
+				// If prev available item is adjacent to this item, don't draw the top corner.
+				if prevIndex, ok := l.content.prevAvailableItem(index); ok && item.Padding.Top == 0 {
 					if prevItem, ok := l.content.ItemByIndex(prevIndex); ok && prevItem.Padding.Bottom == 0 {
 						if l.content.IsSelectedItemIndex(prevIndex) {
 							corners.TopStart = prevItem.IndentLevel <= item.IndentLevel &&
@@ -2218,9 +2227,8 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 						}
 					}
 				}
-				// If next visible item is adjacent to this item, don't draw the bottom corner.
-				if item.Padding.Bottom == 0 && vi+1 >= 0 && vi+1 < len(l.visibleItemIndexToIndex) {
-					nextIndex := l.visibleItemIndexToIndex[vi+1]
+				// If next available item is adjacent to this item, don't draw the bottom corner.
+				if nextIndex, ok := l.content.nextAvailableItem(index); ok && item.Padding.Bottom == 0 {
 					if nextItem, ok := l.content.ItemByIndex(nextIndex); ok && nextItem.Padding.Top == 0 {
 						if l.content.IsSelectedItemIndex(nextIndex) {
 							corners.BottomStart = nextItem.IndentLevel <= item.IndentLevel &&
