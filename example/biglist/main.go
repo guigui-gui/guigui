@@ -17,7 +17,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
-const itemCount = 10000
+const itemCount = 100000
 
 type itemWidget struct {
 	guigui.DefaultWidget
@@ -119,31 +119,39 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.randomizeButton.SetText("Randomize Heights")
 	r.randomizeButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeights()
+		// Clear the items so that they will be recreated with new heights in the next Build.
+		r.items = slices.Delete(r.items, 0, len(r.items))
 		guigui.RequestRebuild(r)
 	})
 
 	r.randomizeAboveViewportButton.SetText("Randomize Heights Above Viewport")
 	r.randomizeAboveViewportButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeightsAboveViewport()
+		// Clear the items so that they will be recreated with new heights in the next Build.
+		r.items = slices.Delete(r.items, 0, len(r.items))
 		guigui.RequestRebuild(r)
 	})
 
 	r.itemWidgets.SetLen(itemCount)
-	r.items = slices.Delete(r.items, 0, len(r.items))
-	for i := range itemCount {
-		scale := r.itemHeightScales[i]
-		if scale == 0 {
-			scale = 1
+
+	// In usual cases, List.SetItems should be called every Build for simplicity.
+	// However, this might be a bottleneck when the number of items is huge, so only call it when necessary in this example.
+	if len(r.items) == 0 {
+		for i := range itemCount {
+			scale := r.itemHeightScales[i]
+			if scale == 0 {
+				scale = 1
+			}
+			w := r.itemWidgets.At(i)
+			w.SetValue(fmt.Sprintf("Item %d", i+1))
+			w.SetHeight(u * scale)
+			r.items = append(r.items, basicwidget.ListItem[int]{
+				Content: w,
+				Value:   i,
+			})
 		}
-		w := r.itemWidgets.At(i)
-		w.SetValue(fmt.Sprintf("Item %d", i+1))
-		w.SetHeight(u * scale)
-		r.items = append(r.items, basicwidget.ListItem[int]{
-			Content: w,
-			Value:   i,
-		})
+		r.list.Widget().SetItems(r.items)
 	}
-	r.list.Widget().SetItems(r.items)
 	r.list.Widget().SetStripeVisible(true)
 
 	return nil
