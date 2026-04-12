@@ -1637,35 +1637,18 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 }
 
 func (l *listContent[T]) nextSelectableVisibleIndex(from int, forward bool) int {
-	found := from < 0
-	result := -1
 	if forward {
-		for i := range l.availableItems() {
-			if !found {
-				if i == from {
-					found = true
-				}
-				continue
-			}
-			item, ok := l.abstractList.ItemByIndex(i)
-			if !ok || item.Unselectable {
-				continue
-			}
-			return i
+		idx, ok := l.nextAvailableItem(from)
+		if !ok {
+			return -1
 		}
-	} else {
-		for i := range l.availableItems() {
-			if i == from {
-				break
-			}
-			item, ok := l.abstractList.ItemByIndex(i)
-			if !ok || item.Unselectable {
-				continue
-			}
-			result = i
-		}
+		return idx
 	}
-	return result
+	idx, ok := l.prevAvailableItem(from)
+	if !ok {
+		return -1
+	}
+	return idx
 }
 
 func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
