@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"iter"
 	"maps"
 	"slices"
 
@@ -674,7 +673,10 @@ func (l *listContent[T]) availableItemCount() int {
 // available-item index, or 0 if the index is out of range.
 func (l *listContent[T]) measureAvailableItemHeight(context *guigui.Context, availableIndex int) int {
 	var idx int
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		if idx == availableIndex {
 			return l.measureItemHeight(context, i, l.contentWidth())
 		}
@@ -738,28 +740,6 @@ func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
 		return image.Rectangle{}
 	}
 	return l.itemBoundsForLayoutFromIndex[index]
-}
-
-func (l *listContent[T]) availableItems() iter.Seq[int] {
-	return func(yield func(int) bool) {
-		var lastCollapsedIndentLevel int
-		for i := range l.abstractList.ItemCount() {
-			item, _ := l.abstractList.ItemByIndex(i)
-			if lastCollapsedIndentLevel > 0 && item.IndentLevel > lastCollapsedIndentLevel {
-				continue
-			}
-			// During animation, treat the animating item as expanded.
-			collapsed := item.Collapsed && !(l.isExpandAnimating() && i == l.expandAnimatingIndexPlus1-1)
-			if collapsed {
-				lastCollapsedIndentLevel = item.IndentLevel
-			} else {
-				lastCollapsedIndentLevel = 0
-			}
-			if !yield(i) {
-				return
-			}
-		}
-	}
 }
 
 func (l *listContent[T]) isItemAvailable(index int) bool {
@@ -1085,7 +1065,10 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 
 // appendAvailableIndices appends the indices of available items to the slice.
 func (l *listContent[T]) appendAvailableIndices(indices []int) []int {
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		indices = append(indices, i)
 	}
 	return indices
@@ -1281,7 +1264,10 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 
 	var w, h int
 	var animatingChildrenH int
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		item, _ := l.abstractList.ItemByIndex(i)
 		var constraint guigui.Constraints
 		// If width is 0, there is no constraint.
@@ -1324,7 +1310,10 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 }
 
 func (l *listContent[T]) hasMovableItems() bool {
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		item, ok := l.abstractList.ItemByIndex(i)
 		if !ok {
 			continue
@@ -1537,7 +1526,10 @@ func (l *listContent[T]) SetStyle(style ListStyle) {
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 	_, y := ebiten.CursorPosition()
 	var nonEmptyBoundsFound bool
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		b := l.itemBounds(context, i)
 		if b.Empty() {
 			if !nonEmptyBoundsFound {
@@ -1627,7 +1619,10 @@ func (l *listContent[T]) hoveredItemIndex(context *guigui.Context, widgetBounds 
 	}
 	cp := image.Pt(ebiten.CursorPosition())
 	listBounds := widgetBounds.Bounds()
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		bounds := l.itemBounds(context, i)
 		bounds.Min.X = listBounds.Min.X
 		bounds.Max.X = listBounds.Max.X
@@ -1700,7 +1695,10 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 
 func (l *listContent[T]) lastSelectableVisibleIndex() int {
 	result := -1
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		item, ok := l.abstractList.ItemByIndex(i)
 		if !ok || item.Unselectable {
 			continue
@@ -1973,7 +1971,10 @@ func (l *listContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 // availableIndexForItemIndex converts a raw item index to the position in the available items list.
 func (l *listContent[T]) availableIndexForItemIndex(itemIndex int) int {
 	var ai int
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		if i == itemIndex {
 			return ai
 		}
@@ -2038,7 +2039,10 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 // itemYFromIndexForMenu is available anytime even before Build is called.
 func (l *listContent[T]) itemYFromIndexForMenu(context *guigui.Context, index int) (int, bool) {
 	y := RoundedCornerRadius(context)
-	for i := range l.availableItems() {
+	for i := range l.abstractList.ItemCount() {
+		if !l.isItemAvailable(i) {
+			continue
+		}
 		if i == index {
 			return y, true
 		}
@@ -2148,7 +2152,10 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 		// Draw item stripes.
 		// TODO: Get indices of items that are visible.
 		var count int
-		for i := range l.content.availableItems() {
+		for i := range l.content.abstractList.ItemCount() {
+			if !l.content.isItemAvailable(i) {
+				continue
+			}
 			count++
 			if count%2 == 1 {
 				continue
