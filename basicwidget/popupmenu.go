@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 var (
@@ -215,15 +214,6 @@ func (p *PopupMenu[T]) SelectItemByIndex(index int) {
 
 func (p *PopupMenu[T]) SelectItemByValue(value T) {
 	p.list.Widget().SelectItemByValue(value)
-}
-
-func (p *PopupMenu[T]) itemTextColor(context *guigui.Context, index int) color.Color {
-	// If the popup menu is closed, the item content might be used in other places like a select list button.
-	// Use the default text color in that case.
-	if !p.IsOpen() {
-		return basicwidgetdraw.TextColor(context.ColorMode(), true)
-	}
-	return p.list.Widget().itemTextColor(context, index)
 }
 
 func (p *PopupMenu[T]) setKeyboardHighlightIndex(index int) {

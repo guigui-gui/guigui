@@ -238,23 +238,6 @@ func (l *List[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	layouter.LayoutWidget(&l.background1, widgetBounds.Bounds())
 	layouter.LayoutWidget(&l.panel, bounds)
 	layouter.LayoutWidget(&l.frame, widgetBounds.Bounds())
-
-	for i := range l.listItemWidgets.Len() {
-		item := l.listItemWidgets.At(i)
-		item.text.SetColor(l.itemTextColor(context, i))
-		item.keyText.SetColor(l.itemTextColor(context, i))
-	}
-}
-
-func (l *List[T]) itemTextColor(context *guigui.Context, index int) color.Color {
-	ct := l.content.itemColorType(context, index)
-	if ct == ListItemColorTypeDefault {
-		item := l.listItemWidgets.At(index)
-		if clr := item.textColor(); clr != nil {
-			return clr
-		}
-	}
-	return ct.TextColor(context)
 }
 
 func (l *List[T]) SelectedItemCount() int {
@@ -521,7 +504,26 @@ func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 	if widgetBounds.VisibleBounds().Empty() && l.item.Content == nil {
 		return
 	}
+
 	l.ensureLayout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+
+	// Set text colors based on the item's color type.
+	var clr color.Color
+	if v, ok := context.Env(l, EnvKeyListItemColorType); ok {
+		if ct, ok := v.(ListItemColorType); ok {
+			if ct == ListItemColorTypeDefault {
+				if c := l.textColor(); c != nil {
+					clr = c
+				} else {
+					clr = ct.TextColor(context)
+				}
+			} else {
+				clr = ct.TextColor(context)
+			}
+		}
+	}
+	l.text.SetColor(clr)
+	l.keyText.SetColor(clr)
 }
 
 func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
