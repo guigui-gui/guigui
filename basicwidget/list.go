@@ -1379,7 +1379,13 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 		}
 
 		if lastCollapsedIndentLevel > 0 && item.IndentLevel > lastCollapsedIndentLevel {
-			items[i].available = false
+			// During a collapse animation, treat children of the animating item as available
+			// so they remain visible and can animate out.
+			if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
+				items[i].available = true
+			} else {
+				items[i].available = false
+			}
 		} else {
 			items[i].available = true
 			if item.Collapsed {
