@@ -54,12 +54,9 @@ func WriteAll(bs []byte) error {
 	v := make([]byte, len(bs))
 	copy(v, bs)
 
-	timer := time.NewTimer(100 * time.Millisecond)
-	defer timer.Stop()
-
 	select {
 	case clipboardWriteCh <- v:
-	case <-timer.C:
+	case <-time.After(100 * time.Millisecond):
 		return errors.New("clipboard: timeout")
 	}
 
