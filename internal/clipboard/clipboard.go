@@ -28,6 +28,7 @@ func init() {
 					slog.Error("failed to write clipboard", "error", err)
 					continue
 				}
+				cachedClipboardData.Store(text)
 			}
 		}
 	}()
@@ -74,6 +75,5 @@ func WriteAll(bs []byte) error {
 		return errors.New("clipboard: timeout")
 	}
 
-	cachedClipboardData.Store(v)
 	return nil
 }
