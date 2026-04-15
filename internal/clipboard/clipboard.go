@@ -16,8 +16,6 @@ var (
 	errClipboardWriteTimeout = errors.New("clipboard write timed out")
 )
 
-const clipboardWriteTimeout = 100 * time.Millisecond
-
 func init() {
 	go func() {
 		t := time.NewTicker(time.Second)
@@ -57,7 +55,7 @@ func WriteAll(bs []byte) error {
 	v := make([]byte, len(bs))
 	copy(v, bs)
 
-	timer := time.NewTimer(clipboardWriteTimeout)
+	timer := time.NewTimer(100 * time.Millisecond)
 	defer timer.Stop()
 
 	select {
