@@ -24,13 +24,27 @@ func init() {
 			case <-t.C:
 				readToCache()
 			case text := <-clipboardWriteCh:
-				if err := writeAll(text); err != nil {
+				if err := writeWithTimeout(text, 100*time.Millisecond); err != nil {
 					slog.Error("failed to write clipboard", "error", err)
 					continue
 				}
 			}
 		}
 	}()
+}
+
+func writeWithTimeout(text []byte, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for {
+		if err := writeAll(text); err != nil {
+			if time.Now().After(deadline) {
+				return err
+			}
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+		return nil
+	}
 }
 
 func readToCache() {
