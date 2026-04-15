@@ -38,7 +38,7 @@ func writeWithTimeout(text []byte, timeout time.Duration) error {
 	for {
 		if err := writeAll(text); err != nil {
 			if time.Now().After(deadline) {
-				return err
+				return errors.New("clipboard: timeout")
 			}
 			time.Sleep(10 * time.Millisecond)
 			continue
