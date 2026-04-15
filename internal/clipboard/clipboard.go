@@ -11,9 +11,8 @@ import (
 )
 
 var (
-	clipboardWriteCh         = make(chan []byte, 1)
-	cachedClipboardData      atomic.Value
-	errClipboardWriteTimeout = errors.New("clipboard write timed out")
+	clipboardWriteCh    = make(chan []byte, 1)
+	cachedClipboardData atomic.Value
 )
 
 func init() {
@@ -61,7 +60,7 @@ func WriteAll(bs []byte) error {
 	select {
 	case clipboardWriteCh <- v:
 	case <-timer.C:
-		return errClipboardWriteTimeout
+		return errors.New("clipboard: timeout")
 	}
 
 	cachedClipboardData.Store(v)
