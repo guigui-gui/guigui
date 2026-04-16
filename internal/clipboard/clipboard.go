@@ -4,6 +4,7 @@
 package clipboard
 
 import (
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
@@ -52,7 +53,11 @@ func ReadAll() ([]byte, error) {
 func WriteAll(bs []byte) error {
 	v := make([]byte, len(bs))
 	copy(v, bs)
-	clipboardWriteCh <- v
+	select {
+	case clipboardWriteCh <- v:
+	case <-time.After(100 * time.Millisecond):
+		return errors.New("clipboard: timeout")
+	}
 	cachedClipboardData.Store(v)
 	return nil
 }
