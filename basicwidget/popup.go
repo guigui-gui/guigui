@@ -195,6 +195,8 @@ type popupBuildKey struct {
 	openingCount      int
 	showing           bool
 	hiding            bool
+	toOpen            bool
+	toClose           bool
 	backgroundDark    bool
 	backgroundBlurred bool
 	modeless          bool
@@ -211,6 +213,8 @@ func (p *popup) BuildKey() any {
 		openingCount:      p.openingCount,
 		showing:           p.showing,
 		hiding:            p.hiding,
+		toOpen:            p.toOpen,
+		toClose:           p.toClose,
 		backgroundDark:    p.backgroundDark,
 		backgroundBlurred: p.backgroundBlurred,
 		modeless:          p.modeless,
@@ -432,16 +436,12 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 }
 
 func (p *popup) SetOpen(open bool) {
-	changed := open != p.IsOpen()
 	if open {
 		p.toOpen = true
 		p.toClose = false
 	} else {
 		p.toOpen = false
 		p.toClose = true
-	}
-	if changed {
-		guigui.RequestRebuild(p)
 	}
 }
 

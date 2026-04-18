@@ -62,6 +62,20 @@ type listPanel[T comparable] struct {
 	lastWheelY float64
 }
 
+type listPanelBuildKey struct {
+	topItemIndex  int
+	topItemOffset int
+	offsetX       float64
+}
+
+func (p *listPanel[T]) BuildKey() any {
+	return listPanelBuildKey{
+		topItemIndex:  p.topItemIndex,
+		topItemOffset: p.topItemOffset,
+		offsetX:       p.offsetX,
+	}
+}
+
 func (p *listPanel[T]) setContent(content *listContent[T]) {
 	p.content = content
 }
@@ -333,11 +347,9 @@ func (p *listPanel[T]) applyPendingScrollOffsetInTick() bool {
 
 	p.applyPendingScrollOffset()
 
-	changed := p.offsetX != oldOffsetX || p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
-	if changed {
-		guigui.RequestRebuild(p)
-	}
-	return changed
+	// topItemIndex/topItemOffset/offsetX are in listPanelBuildKey, so the rebuild
+	// that re-invokes Layout is triggered automatically.
+	return p.offsetX != oldOffsetX || p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
 }
 
 // vThumbHeight returns the vertical thumb height.
@@ -544,7 +556,6 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 			}
 			newOffset := -int((newFraction - float64(newIdx)) * float64(newItemH))
 			s.panel.forceSetTopItem(newIdx, newOffset)
-			guigui.RequestRebuild(s.panel)
 		}
 		return guigui.HandleInputByWidget(s)
 	}

@@ -4,9 +4,11 @@
 package basicwidget
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"slices"
+	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -31,6 +33,16 @@ type RadioButtonGroup[T comparable] struct {
 
 	indexPlus1 int
 	values     []T
+
+	// valuesString is a content fingerprint of values, refreshed only when
+	// [RadioButtonGroup.SetValues] actually changes the slice. Included in
+	// [RadioButtonGroup.BuildKey] so the group rebuilds automatically on
+	// value changes without an explicit [guigui.RequestRebuild] call.
+	valuesString string
+}
+
+func (r *RadioButtonGroup[T]) BuildKey() any {
+	return r.valuesString
 }
 
 func (r *RadioButtonGroup[T]) SelectedIndex() int {
@@ -77,7 +89,14 @@ func (r *RadioButtonGroup[T]) SetValues(values []T) {
 	for i := range r.buttons.Len() {
 		r.buttons.At(i).setGroupAndIndex(r, i)
 	}
-	guigui.RequestRebuild(r)
+	var sb strings.Builder
+	for i, v := range r.values {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		fmt.Fprintf(&sb, "%v", v)
+	}
+	r.valuesString = sb.String()
 }
 
 // RadioButton returns the radio button at the specified index.

@@ -128,6 +128,14 @@ type Text struct {
 	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
 
+	// cachedTextValue and cachedLocalesString are comparable fingerprints of the
+	// text content (which lives inside t.field) and t.locales respectively. They
+	// are refreshed at the few mutation sites that currently change text or
+	// locales, and included in [Text.BuildKey] so that explicit
+	// [guigui.RequestRebuild] calls are not needed for those mutations.
+	cachedTextValue     string
+	cachedLocalesString string
+
 	drawOptions textutil.DrawOptions
 
 	prevStart              int
@@ -196,6 +204,8 @@ type textBuildKey struct {
 	selectionStart         int
 	selectionEnd           int
 	fieldFocused           bool
+	textValue              string
+	localesString          string
 }
 
 func (t *Text) BuildKey() any {
@@ -227,6 +237,8 @@ func (t *Text) BuildKey() any {
 		selectionStart:         selStart,
 		selectionEnd:           selEnd,
 		fieldFocused:           t.field.IsFocused(),
+		textValue:              t.cachedTextValue,
+		localesString:          t.cachedLocalesString,
 	}
 }
 
@@ -334,7 +346,7 @@ func (t *Text) Value() string {
 	if t.nextTextSet {
 		return t.nextText
 	}
-	return t.stringValue()
+	return t.cachedTextValue
 }
 
 // HasValue reports whether the text has a non-empty value.
@@ -387,7 +399,7 @@ func (t *Text) CommitWithCurrentInputValue() {
 	t.nextText = ""
 	t.nextTextSet = false
 	// Fire the event even if the text is not changed.
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.cachedTextValue, true)
 }
 
 func (t *Text) selectAll() {
@@ -439,10 +451,10 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		return
 	}
 	t.field.ReplaceText(text, start, end)
-	guigui.RequestRebuild(t)
 
 	t.resetCachedTextSize()
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+	t.cachedTextValue = t.stringValue()
+	guigui.DispatchEvent(t, textEventValueChanged, t.cachedTextValue, false)
 
 	t.nextText = ""
 	t.nextTextSet = false
@@ -476,11 +488,11 @@ func (t *Text) setText(text string, selectAll bool) bool {
 			t.field.SetSelection(start, end)
 		}
 		t.resetCachedTextSize()
-		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+		t.cachedTextValue = t.stringValue()
+		guigui.DispatchEvent(t, textEventValueChanged, t.cachedTextValue, false)
 	} else {
 		t.field.SetSelection(0, len(text))
 	}
-	guigui.RequestRebuild(t)
 
 	// Do not adjust scroll.
 	t.prevStart = start
@@ -498,7 +510,14 @@ func (t *Text) SetLocales(locales []language.Tag) {
 	}
 
 	t.locales = append([]language.Tag(nil), locales...)
-	guigui.RequestRebuild(t)
+	var sb strings.Builder
+	for i, tag := range t.locales {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(tag.String())
+	}
+	t.cachedLocalesString = sb.String()
 }
 
 func (t *Text) SetBold(bold bool) {
@@ -765,7 +784,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 	case 2:
 		t.dragging = true
-		start, end := textutil.FindWordBoundaries(t.stringValue(), idx)
+		start, end := textutil.FindWordBoundaries(t.cachedTextValue, idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
 		t.setSelection(start, end, -1, false)
@@ -783,7 +802,7 @@ func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string 
 	if showComposition {
 		return t.stringValueForRendering()
 	}
-	return t.stringValue()
+	return t.cachedTextValue
 }
 
 func (t *Text) selectionToDraw(context *guigui.Context) (start, end int, ok bool) {
@@ -861,10 +880,10 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			processed = t.field.Handled()
 		}
 		if processed {
-			guigui.RequestRebuild(t)
+			t.cachedTextValue = t.stringValue()
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
-			guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+			guigui.DispatchEvent(t, textEventValueChanged, t.cachedTextValue, false)
 			return guigui.HandleInputByWidget(t)
 		}
 
@@ -890,7 +909,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if start != end {
 				t.replaceTextAtSelection("")
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.cachedTextValue, start)
 				t.replaceTextAt("", pos, start)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -901,14 +920,14 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if start != end {
 				t.replaceTextAtSelection("")
 			} else if isDarwin() && end < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := textutil.NextPositionOnGraphemes(t.cachedTextValue, end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if _, end := t.field.Selection(); end < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := textutil.NextPositionOnGraphemes(t.cachedTextValue, end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -953,17 +972,17 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == end {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), end)
+				pos := textutil.PrevPositionOnGraphemes(t.cachedTextValue, end)
 				t.setSelection(start, pos, pos, true)
 			} else {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.cachedTextValue, start)
 				t.setSelection(pos, end, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(start, start, -1, true)
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := textutil.PrevPositionOnGraphemes(t.cachedTextValue, start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
@@ -973,17 +992,17 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == start {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
+				pos := textutil.NextPositionOnGraphemes(t.cachedTextValue, start)
 				t.setSelection(pos, end, pos, true)
 			} else {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := textutil.NextPositionOnGraphemes(t.cachedTextValue, end)
 				t.setSelection(start, pos, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(end, end, -1, true)
 			} else if start < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
+				pos := textutil.NextPositionOnGraphemes(t.cachedTextValue, start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
@@ -1099,7 +1118,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) commit() {
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
+	guigui.DispatchEvent(t, textEventValueChanged, t.cachedTextValue, true)
 	t.nextText = ""
 	t.nextTextSet = false
 }
@@ -1498,7 +1517,7 @@ func (t *Text) Undo() bool {
 	}
 	t.field.Undo()
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
+	t.cachedTextValue = t.stringValue()
 	return true
 }
 
@@ -1508,7 +1527,7 @@ func (t *Text) Redo() bool {
 	}
 	t.field.Redo()
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
+	t.cachedTextValue = t.stringValue()
 	return true
 }
 

@@ -133,8 +133,18 @@ func (p *panel) SetContent(widget guigui.Widget) {
 	p.content = widget
 }
 
+type panelBuildKey struct {
+	style   PanelStyle
+	offsetX float64
+	offsetY float64
+}
+
 func (p *panel) BuildKey() any {
-	return p.style
+	return panelBuildKey{
+		style:   p.style,
+		offsetX: p.offsetX,
+		offsetY: p.offsetY,
+	}
 }
 
 func (p *panel) SetStyle(typ PanelStyle) {
@@ -373,8 +383,8 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
 		if p.offsetX != oldOffsetX || p.offsetY != oldOffsetY {
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
-			// Rebuilding the widget tree is needed to invoke this panel's Layout (#298).
-			guigui.RequestRebuild(p)
+			// offsetX/offsetY are in panelBuildKey, so the rebuild that re-invokes
+			// Layout (see #298) is triggered automatically.
 		}
 		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
 			shouldShowBar = true
