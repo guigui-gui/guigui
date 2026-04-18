@@ -132,13 +132,6 @@ type Text struct {
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.BuildKey] so locale changes trigger automatic rebuilds without an
 	// explicit [guigui.RequestRebuild] call.
-	//
-	// The text content is intentionally not tracked in [Text.BuildKey]:
-	// [textinput.Field] can be mutated by Ebitengine's HookOnBeforeUpdate
-	// without going through any guigui hook, so a cache tied to our mutation
-	// sites goes stale, and calling stringValue() from BuildKey would allocate
-	// on every settle. Instead, mutation sites call [guigui.RequestRebuild]
-	// explicitly.
 	cachedLocalesString string
 
 	drawOptions textutil.DrawOptions
@@ -213,6 +206,13 @@ type textBuildKey struct {
 }
 
 func (t *Text) BuildKey() any {
+	// The text content is intentionally not tracked in [Text.BuildKey]:
+	// [textinput.Field] can be mutated by Ebitengine's HookOnBeforeUpdate
+	// without going through any guigui hook, so a cache tied to our mutation
+	// sites goes stale, and calling stringValue() from BuildKey would allocate
+	// on every settle. Instead, mutation sites call [guigui.RequestRebuild]
+	// explicitly.
+
 	var c color.RGBA64
 	hasColor := t.color != nil
 	if hasColor {
