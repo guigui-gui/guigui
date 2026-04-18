@@ -37,7 +37,6 @@ type Slider struct {
 
 	prevThumbHovered bool
 
-	onStepChanged        func()
 	onValueChanged       func(value int, committed bool)
 	onValueChangedBigInt func(value *big.Int, committed bool)
 	onValueChangedInt64  func(value int64, committed bool)
@@ -85,35 +84,19 @@ func (s *Slider) ValueUint64() uint64 {
 }
 
 func (s *Slider) SetValue(value int) {
-	changed := value != s.abstractNumberInput.Value()
 	s.abstractNumberInput.SetValue(value, true)
-	if changed {
-		guigui.RequestRebuild(s)
-	}
 }
 
 func (s *Slider) SetValueBigInt(value *big.Int) {
-	changed := value.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(value, true)
-	if changed {
-		guigui.RequestRebuild(s)
-	}
 }
 
 func (s *Slider) SetValueInt64(value int64) {
-	changed := value != s.abstractNumberInput.ValueInt64()
 	s.abstractNumberInput.SetValueInt64(value, true)
-	if changed {
-		guigui.RequestRebuild(s)
-	}
 }
 
 func (s *Slider) SetValueUint64(value uint64) {
-	changed := value != s.abstractNumberInput.ValueUint64()
 	s.abstractNumberInput.SetValueUint64(value, true)
-	if changed {
-		guigui.RequestRebuild(s)
-	}
 }
 
 func (s *Slider) MinimumValueBigInt() *big.Int {
@@ -173,6 +156,7 @@ func (s *Slider) SetStepUint64(step uint64) {
 }
 
 type sliderBuildKey struct {
+	numberInput      abstractNumberInputBuildKey
 	snapOnly         bool
 	dragging         bool
 	prevThumbHovered bool
@@ -180,6 +164,7 @@ type sliderBuildKey struct {
 
 func (s *Slider) BuildKey() any {
 	return sliderBuildKey{
+		numberInput:      s.abstractNumberInput.buildKey(),
 		snapOnly:         s.snapOnly,
 		dragging:         s.dragging,
 		prevThumbHovered: s.prevThumbHovered,
@@ -261,13 +246,6 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	}
 	s.abstractNumberInput.OnValueChangedUint64(s.onValueChangedUint64)
 
-	if s.onStepChanged == nil {
-		s.onStepChanged = func() {
-			guigui.RequestRebuild(s)
-		}
-	}
-	s.abstractNumberInput.OnStepChanged(s.onStepChanged)
-
 	return nil
 }
 
@@ -341,11 +319,7 @@ func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	if s.snapOnly {
 		s.snapValue(&v)
 	}
-	changed := v.Cmp(s.abstractNumberInput.ValueBigInt()) != 0
 	s.abstractNumberInput.SetValueBigInt(&v, true)
-	if changed {
-		guigui.RequestRebuild(s)
-	}
 }
 
 func (s *Slider) barWidth(context *guigui.Context, widgetBounds *guigui.WidgetBounds) int {
