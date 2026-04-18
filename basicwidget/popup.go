@@ -506,14 +506,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	p.toClose = false
 
 	if p.showing {
-		if p.animateOnFading {
-			// An animated popup always requires relayout.
-			guigui.RequestRebuild(p)
-		}
-		if p.openingCount == 0 {
-			// When starting to show a popup, rebulding the wiget tree is required.
-			guigui.RequestRebuild(p)
-		}
+		// openingCount/showing/hiding are in BuildKey, so the rebuild for animation
+		// progression and show/hide transitions is triggered automatically.
 		if p.openingCount < popupMaxOpeningCount() {
 			if p.style == popupStyleMenu {
 				p.openingCount += popupFastCount
@@ -532,10 +526,6 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		}
 	}
 	if p.hiding {
-		if p.animateOnFading {
-			// An animated popup always requires relayout.
-			guigui.RequestRebuild(p)
-		}
 		if 0 < p.openingCount {
 			if p.closeReason == PopupCloseReasonReopen || p.style == popupStyleMenu {
 				p.openingCount -= popupFastCount
@@ -546,8 +536,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == 0 {
-			// When finishing to hide a popup, rebulding the wiget tree is required.
-			guigui.RequestRebuild(p)
+			// hiding/openingCount are in BuildKey, so the finish-of-hide rebuild
+			// is triggered automatically.
 			p.hiding = false
 			guigui.DispatchEvent(p, popupEventClose, p.closeReason)
 			p.closeReason = PopupCloseReasonNone
@@ -841,12 +831,12 @@ func (p *popupShadow) SetOpeningRate(rate float64) {
 	guigui.RequestRedraw(p)
 }
 
+func (p *popupShadow) BuildKey() any {
+	return p.contentBounds
+}
+
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
-	if p.contentBounds == bounds {
-		return
-	}
 	p.contentBounds = bounds
-	guigui.RequestRebuild(p)
 }
 
 func (p *popupShadow) setStyle(style popupStyle) {

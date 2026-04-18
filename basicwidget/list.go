@@ -388,13 +388,26 @@ type listItemWidget[T comparable] struct {
 	wrapperLayoutItems []guigui.LinearLayoutItem
 }
 
+type listItemWidgetBuildKey[T comparable] struct {
+	item        ListItem[T]
+	heightPlus1 int
+	style       ListStyle
+}
+
+func (l *listItemWidget[T]) BuildKey() any {
+	return listItemWidgetBuildKey[T]{
+		item:        l.item,
+		heightPlus1: l.heightPlus1,
+		style:       l.style,
+	}
+}
+
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
 	if l.item == listItem {
 		return
 	}
 	l.item = listItem
 	l.resetLayout()
-	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setHeight(height int) {
@@ -403,7 +416,6 @@ func (l *listItemWidget[T]) setHeight(height int) {
 	}
 	l.heightPlus1 = height + 1
 	l.resetLayout()
-	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setStyle(style ListStyle) {
@@ -412,15 +424,10 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	}
 	l.style = style
 	l.resetLayout()
-	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) setText(text string) {
-	if l.item.Text == text {
-		return
-	}
 	l.item.Text = text
-	guigui.RequestRebuild(l)
 }
 
 func (l *listItemWidget[T]) textColor() color.Color {
@@ -724,23 +731,41 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
 }
 
+type listContentBuildKey struct {
+	style                       ListStyle
+	checkmarkIndexPlus1         int
+	contentWidthPlus1           int
+	hoveredItemIndexPlus1       int
+	lastHoveredItemIndexPlus1   int
+	keyboardHighlightIndexPlus1 int
+	expandAnimatingIndexPlus1   int
+	expandAnimatingChildrenEnd  int
+	expandAnimatingCount        int
+}
+
+func (l *listContent[T]) BuildKey() any {
+	return listContentBuildKey{
+		style:                       l.style,
+		checkmarkIndexPlus1:         l.checkmarkIndexPlus1,
+		contentWidthPlus1:           l.contentWidthPlus1,
+		hoveredItemIndexPlus1:       l.hoveredItemIndexPlus1,
+		lastHoveredItemIndexPlus1:   l.lastHoveredItemIndexPlus1,
+		keyboardHighlightIndexPlus1: l.keyboardHighlightIndexPlus1,
+		expandAnimatingIndexPlus1:   l.expandAnimatingIndexPlus1,
+		expandAnimatingChildrenEnd:  l.expandAnimatingChildrenEnd,
+		expandAnimatingCount:        l.expandAnimatingCount,
+	}
+}
+
 func (l *listContent[T]) SetCheckmarkIndex(index int) {
 	if index < 0 {
 		index = -1
 	}
-	if l.checkmarkIndexPlus1 == index+1 {
-		return
-	}
 	l.checkmarkIndexPlus1 = index + 1
-	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) SetContentWidth(width int) {
-	if l.contentWidthPlus1 == width+1 {
-		return
-	}
 	l.contentWidthPlus1 = width + 1
-	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) ItemBounds(index int) image.Rectangle {
@@ -1531,11 +1556,7 @@ func (l *listContent[T]) Style() ListStyle {
 }
 
 func (l *listContent[T]) SetStyle(style ListStyle) {
-	if l.style == style {
-		return
-	}
 	l.style = style
-	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
@@ -1561,13 +1582,9 @@ func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
 }
 
 func (l *listContent[T]) resetHoveredItemIndex() {
-	if l.hoveredItemIndexPlus1 == 0 && l.lastHoveredItemIndexPlus1 == 0 && l.keyboardHighlightIndexPlus1 == 0 {
-		return
-	}
 	l.hoveredItemIndexPlus1 = 0
 	l.lastHoveredItemIndexPlus1 = 0
 	l.keyboardHighlightIndexPlus1 = 0
-	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) keyboardHighlightIndex() int {
@@ -1578,13 +1595,9 @@ func (l *listContent[T]) setKeyboardHighlightIndex(index int) {
 	if index < 0 {
 		index = -1
 	}
-	if l.keyboardHighlightIndexPlus1 == index+1 {
-		return
-	}
 	l.keyboardHighlightIndexPlus1 = index + 1
 	l.hoveredItemIndexPlus1 = index + 1
 	l.lastHoveredItemIndexPlus1 = index + 1
-	guigui.RequestRebuild(l)
 }
 
 func (l *listContent[T]) navigateKeyboardHighlight(down bool) {
@@ -1612,7 +1625,6 @@ func (l *listContent[T]) navigateKeyboardHighlight(down bool) {
 		l.hoveredItemIndexPlus1 = next + 1
 		l.lastHoveredItemIndexPlus1 = next + 1
 		l.EnsureItemVisibleByIndex(next)
-		guigui.RequestRebuild(l)
 	}
 }
 
@@ -1750,7 +1762,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	cursorPos := image.Pt(ebiten.CursorPosition())
 	if l.keyboardHighlightIndexPlus1 > 0 && cursorPos != l.lastCursorPosition {
 		l.keyboardHighlightIndexPlus1 = 0
-		guigui.RequestRebuild(l)
 	}
 	l.lastCursorPosition = cursorPos
 
@@ -1762,10 +1773,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	l.updateCheckmarkColor(context)
 
 	if l.isHoveringVisible() || l.hasMovableItems() {
-		if l.lastHoveredItemIndexPlus1 != l.hoveredItemIndexPlus1 {
-			l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
-			guigui.RequestRebuild(l)
-		}
+		l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
 	}
 
 	// Process dragging.
@@ -1973,7 +1981,6 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 			l.expandAnimatingIndexPlus1 = 0
 			l.expandAnimatingChildrenEnd = 0
 		}
-		guigui.RequestRebuild(l)
 	}
 
 	return nil
@@ -2326,28 +2333,30 @@ type listFrame struct {
 	style        ListStyle
 }
 
-func (l *listFrame) SetHeaderHeight(height int) {
-	if l.headerHeight == height {
-		return
+type listFrameBuildKey struct {
+	headerHeight int
+	footerHeight int
+	style        ListStyle
+}
+
+func (l *listFrame) BuildKey() any {
+	return listFrameBuildKey{
+		headerHeight: l.headerHeight,
+		footerHeight: l.footerHeight,
+		style:        l.style,
 	}
+}
+
+func (l *listFrame) SetHeaderHeight(height int) {
 	l.headerHeight = height
-	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) SetFooterHeight(height int) {
-	if l.footerHeight == height {
-		return
-	}
 	l.footerHeight = height
-	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) SetStyle(style ListStyle) {
-	if l.style == style {
-		return
-	}
 	l.style = style
-	guigui.RequestRebuild(l)
 }
 
 func (l *listFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {

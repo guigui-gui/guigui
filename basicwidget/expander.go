@@ -37,19 +37,11 @@ func (e *Expander) OnExpansionChanged(callback func(context *guigui.Context, exp
 }
 
 func (e *Expander) SetHeaderWidget(w guigui.Widget) {
-	if e.headerWidget == w {
-		return
-	}
 	e.headerWidget = w
-	guigui.RequestRebuild(e)
 }
 
 func (e *Expander) SetContentWidget(w guigui.Widget) {
-	if e.contentWidget == w {
-		return
-	}
 	e.contentWidget = w
-	guigui.RequestRebuild(e)
 }
 
 // expandCollapseMaxCount returns the number of ticks for an expand/collapse animation.
@@ -59,14 +51,18 @@ func expandCollapseMaxCount() int {
 }
 
 type expanderBuildKey struct {
-	expanded bool
-	count    int
+	expanded      bool
+	count         int
+	headerWidget  guigui.Widget
+	contentWidget guigui.Widget
 }
 
 func (e *Expander) BuildKey() any {
 	return expanderBuildKey{
-		expanded: e.expanded,
-		count:    e.count,
+		expanded:      e.expanded,
+		count:         e.count,
+		headerWidget:  e.headerWidget,
+		contentWidget: e.contentWidget,
 	}
 }
 
@@ -189,8 +185,16 @@ func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
 	guigui.SetEventHandler(e, expanderHeaderEventDown, callback)
 }
 
+type expanderHeaderBuildKey struct {
+	expanded bool
+	widget   guigui.Widget
+}
+
 func (e *expanderHeader) BuildKey() any {
-	return e.expanded
+	return expanderHeaderBuildKey{
+		expanded: e.expanded,
+		widget:   e.widget,
+	}
 }
 
 func (e *expanderHeader) setExpanded(expanded bool) {
@@ -198,11 +202,7 @@ func (e *expanderHeader) setExpanded(expanded bool) {
 }
 
 func (e *expanderHeader) setWidget(w guigui.Widget) {
-	if e.widget == w {
-		return
-	}
 	e.widget = w
-	guigui.RequestRebuild(e)
 }
 
 func (e *expanderHeader) Build(context *guigui.Context, adder *guigui.ChildAdder) error {

@@ -193,6 +193,9 @@ type textBuildKey struct {
 	keepTailingSpace       bool
 	ellipsisString         string
 	paddingForScrollOffset guigui.Padding
+	selectionStart         int
+	selectionEnd           int
+	fieldFocused           bool
 }
 
 func (t *Text) BuildKey() any {
@@ -202,6 +205,7 @@ func (t *Text) BuildKey() any {
 		r, g, b, a := t.color.RGBA()
 		c = color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
 	}
+	selStart, selEnd := t.field.Selection()
 	return textBuildKey{
 		hAlign:                 t.hAlign,
 		vAlign:                 t.vAlign,
@@ -220,6 +224,9 @@ func (t *Text) BuildKey() any {
 		keepTailingSpace:       t.keepTailingSpace,
 		ellipsisString:         t.ellipsisString,
 		paddingForScrollOffset: t.paddingForScrollOffset,
+		selectionStart:         selStart,
+		selectionEnd:           selEnd,
+		fieldFocused:           t.field.IsFocused(),
 	}
 }
 
@@ -405,7 +412,6 @@ func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) b
 		return false
 	}
 	t.field.SetSelection(start, end)
-	guigui.RequestRebuild(t)
 
 	if !adjustScroll {
 		t.prevStart = start
@@ -716,7 +722,6 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 	if !context.IsFocused(t) {
 		if t.field.IsFocused() {
 			t.field.Blur()
-			guigui.RequestRebuild(t)
 		}
 		return guigui.HandleInputResult{}
 	}
