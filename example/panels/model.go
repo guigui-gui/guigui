@@ -22,37 +22,46 @@ func panelMaxClosingCount() int {
 	return ebiten.TPS() / 10
 }
 
-func (m *Model) Tick() bool {
-	var updated bool
+type modelBuildKey struct {
+	leftClosingCount  int
+	rightClosingCount int
+}
+
+// buildKey returns a comparable snapshot of the model state that affects
+// the widget tree's layout (panel widths). Callers embed this in their
+// own BuildKey to trigger rebuilds when the panel animation advances.
+func (m *Model) buildKey() modelBuildKey {
+	return modelBuildKey{
+		leftClosingCount:  m.leftClosingCount,
+		rightClosingCount: m.rightClosingCount,
+	}
+}
+
+func (m *Model) Tick() {
 	if m.leftOpening && m.leftClosingCount > 0 {
 		m.leftClosingCount--
 		if m.leftClosingCount == 0 {
 			m.leftOpening = false
 		}
-		updated = true
 	}
 	if m.leftClosing && m.leftClosingCount < panelMaxClosingCount() {
 		m.leftClosingCount++
 		if m.leftClosingCount == panelMaxClosingCount() {
 			m.leftClosing = false
 		}
-		updated = true
 	}
 	if m.rightOpening && m.rightClosingCount > 0 {
 		m.rightClosingCount--
 		if m.rightClosingCount == 0 {
 			m.rightOpening = false
 		}
-		updated = true
 	}
 	if m.rightClosing && m.rightClosingCount < panelMaxClosingCount() {
 		m.rightClosingCount++
 		if m.rightClosingCount == panelMaxClosingCount() {
 			m.rightClosing = false
 		}
-		updated = true
 	}
-	return updated
 }
 
 func (m *Model) DefaultPanelWidth(context *guigui.Context) int {

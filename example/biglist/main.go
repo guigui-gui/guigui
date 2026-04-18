@@ -65,16 +65,16 @@ func (w *itemWidget) Measure(context *guigui.Context, constraints guigui.Constra
 	return s
 }
 
+func (w *itemWidget) BuildKey() any {
+	return w.height
+}
+
 func (w *itemWidget) SetValue(text string) {
 	w.text.SetValue(text)
 }
 
 func (w *itemWidget) SetHeight(height int) {
-	if w.height == height {
-		return
-	}
 	w.height = height
-	guigui.RequestRebuild(w)
 }
 
 type Root struct {
@@ -91,6 +91,13 @@ type Root struct {
 	itemHeightScales [itemCount]int
 
 	layoutItems []guigui.LinearLayoutItem
+}
+
+func (r *Root) BuildKey() any {
+	// Build conditionally repopulates r.items when the slice is empty, so
+	// tracking its length is enough to trigger a rebuild when the Randomize
+	// handlers clear it.
+	return len(r.items)
 }
 
 func (r *Root) randomizeHeights() {
@@ -120,16 +127,14 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.randomizeButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeights()
 		// Clear the items so that they will be recreated with new heights in the next Build.
+		// BuildKey covers len(r.items), so clearing triggers a rebuild automatically.
 		r.items = slices.Delete(r.items, 0, len(r.items))
-		guigui.RequestRebuild(r)
 	})
 
 	r.randomizeAboveViewportButton.SetText("Randomize Heights Above Viewport")
 	r.randomizeAboveViewportButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeightsAboveViewport()
-		// Clear the items so that they will be recreated with new heights in the next Build.
 		r.items = slices.Delete(r.items, 0, len(r.items))
-		guigui.RequestRebuild(r)
 	})
 
 	r.itemWidgets.SetLen(itemCount)
