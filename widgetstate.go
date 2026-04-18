@@ -151,6 +151,8 @@ type widgetState struct {
 	rebuildRequestedAt    string
 	redrawReasonOnRebuild requestRedrawReason
 
+	buildKey any
+
 	redrawRequested   bool
 	redrawRequestedAt string
 

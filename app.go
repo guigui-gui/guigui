@@ -281,6 +281,10 @@ func (a *app) setButtonInputReceptiveAncestorFlags() {
 // It performs a single pass over the widget list to collect both redraw requests
 // and event-dispatched widgets.
 func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
+	// Detect [Widget.BuildKey] changes since the last [Widget.Build] and flag rebuilds accordingly.
+	// This lets widgets skip explicit [RequestRebuild] calls for state they expose via [Widget.BuildKey].
+	a.checkBuildKeys()
+
 	// Single pass: collect redraw requests and find the first event-dispatched widget.
 	// Skip the entire loop when no widget has set any dirty flag.
 	var dispatchedWidget Widget
@@ -604,7 +608,30 @@ func (a *app) buildWidgets() error {
 		return err
 	}
 
+	// Capture [Widget.BuildKey] snapshots so subsequent phases can detect state changes
+	// that would otherwise require an explicit [RequestRebuild] call.
+	for _, widget := range a.widgetList {
+		ws := widget.widgetState()
+		ws.buildKey = widget.BuildKey()
+	}
+
 	return nil
+}
+
+// checkBuildKeys compares each widget's current [Widget.BuildKey] against the snapshot
+// captured after the last [Widget.Build]. If the key has changed, it requests a rebuild.
+// The snapshot is not refreshed here; it is only refreshed when [Widget.Build] runs again.
+func (a *app) checkBuildKeys() {
+	for _, widget := range a.widgetList {
+		ws := widget.widgetState()
+		if ws.rebuildRequested {
+			continue
+		}
+		if widget.BuildKey() == ws.buildKey {
+			continue
+		}
+		a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)
+	}
 }
 
 func (a *app) layoutWidgets() {

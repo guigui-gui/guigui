@@ -175,6 +175,46 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 	guigui.SetEventHandler(t, textEventScrollDelta, f)
 }
 
+type textBuildKey struct {
+	hAlign        HorizontalAlign
+	vAlign        VerticalAlign
+	color         color.RGBA64
+	hasColor      bool
+	semanticColor basicwidgetdraw.SemanticColor
+	transparent   float64
+	scaleMinus1   float64
+	bold          bool
+	tabular       bool
+	tabWidth      float64
+	editable      bool
+	multiline     bool
+	autoWrap      bool
+}
+
+func (t *Text) BuildKey() any {
+	var c color.RGBA64
+	hasColor := t.color != nil
+	if hasColor {
+		r, g, b, a := t.color.RGBA()
+		c = color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
+	}
+	return textBuildKey{
+		hAlign:        t.hAlign,
+		vAlign:        t.vAlign,
+		color:         c,
+		hasColor:      hasColor,
+		semanticColor: t.semanticColor,
+		transparent:   t.transparent,
+		scaleMinus1:   t.scaleMinus1,
+		bold:          t.bold,
+		tabular:       t.tabular,
+		tabWidth:      t.tabWidth,
+		editable:      t.editable,
+		multiline:     t.multiline,
+		autoWrap:      t.autoWrap,
+	}
+}
+
 func (t *Text) resetCachedTextSize() {
 	clear(t.cachedTextSizes[:])
 	t.cachedDefaultTabWidth = 0
@@ -449,21 +489,11 @@ func (t *Text) SetLocales(locales []language.Tag) {
 }
 
 func (t *Text) SetBold(bold bool) {
-	if t.bold == bold {
-		return
-	}
-
 	t.bold = bold
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetTabular(tabular bool) {
-	if t.tabular == tabular {
-		return
-	}
-
 	t.tabular = tabular
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {
@@ -472,7 +502,6 @@ func (t *Text) SetTabWidth(tabWidth float64) {
 	}
 	t.tabWidth = tabWidth
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) actualTabWidth(context *guigui.Context) float64 {
@@ -492,12 +521,7 @@ func (t *Text) scale() float64 {
 }
 
 func (t *Text) SetScale(scale float64) {
-	if t.scaleMinus1 == scale-1 {
-		return
-	}
-
 	t.scaleMinus1 = scale - 1
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) HorizontalAlign() HorizontalAlign {
@@ -505,12 +529,7 @@ func (t *Text) HorizontalAlign() HorizontalAlign {
 }
 
 func (t *Text) SetHorizontalAlign(align HorizontalAlign) {
-	if t.hAlign == align {
-		return
-	}
-
 	t.hAlign = align
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) VerticalAlign() VerticalAlign {
@@ -518,38 +537,19 @@ func (t *Text) VerticalAlign() VerticalAlign {
 }
 
 func (t *Text) SetVerticalAlign(align VerticalAlign) {
-	if t.vAlign == align {
-		return
-	}
-
 	t.vAlign = align
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetColor(color color.Color) {
-	if draw.EqualColor(t.color, color) {
-		return
-	}
-
 	t.color = color
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	if t.semanticColor == semanticColor {
-		return
-	}
 	t.semanticColor = semanticColor
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetOpacity(opacity float64) {
-	if 1-t.transparent == opacity {
-		return
-	}
-
 	t.transparent = 1 - opacity
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) IsEditable() bool {
@@ -567,7 +567,6 @@ func (t *Text) SetEditable(editable bool) {
 		t.selectionShiftIndexPlus1 = 0
 	}
 	t.editable = editable
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) IsMultiline() bool {
@@ -575,21 +574,11 @@ func (t *Text) IsMultiline() bool {
 }
 
 func (t *Text) SetMultiline(multiline bool) {
-	if t.multiline == multiline {
-		return
-	}
-
 	t.multiline = multiline
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) SetAutoWrap(autoWrap bool) {
-	if t.autoWrap == autoWrap {
-		return
-	}
-
 	t.autoWrap = autoWrap
-	guigui.RequestRebuild(t)
 }
 
 // SetCursorBlinking sets whether the cursor blinks.
