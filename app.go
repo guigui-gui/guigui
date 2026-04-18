@@ -141,6 +141,14 @@ type app struct {
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
+	// buildKeyCheckPending is true when widget state may have changed since the last
+	// [app.checkBuildKeys] run. It is set by widget phases (Build, Layout, Tick, HandleInput)
+	// and [Context] setters that affect state tracked in [Widget.BuildKey] or internalBuildKey.
+	// When false, [app.checkBuildKeys] short-circuits without iterating widgetList.
+	// Input handling is counted as a phase — whether a handler actually mutated state is
+	// not detectable, so every input handler call is conservatively treated as dirtying.
+	buildKeyCheckPending bool
+
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
 }
@@ -570,6 +578,7 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 
 func (a *app) buildWidgets() error {
 	a.buildCount++
+	a.buildKeyCheckPending = true
 
 	a.root.widgetState().builtAt = a.buildCount
 
@@ -623,7 +632,14 @@ func (a *app) buildWidgets() error {
 // checkBuildKeys compares each widget's current [Widget.BuildKey] against the snapshot
 // captured after the last [Widget.Build]. If the key has changed, it requests a rebuild.
 // The snapshot is not refreshed here; it is only refreshed when [Widget.Build] runs again.
+//
+// The check is gated on buildKeyCheckPending: if no widget phase or [Context] setter has
+// run since the last call, no BuildKey could have changed and the iteration is skipped.
 func (a *app) checkBuildKeys() {
+	if !a.buildKeyCheckPending {
+		return
+	}
+	a.buildKeyCheckPending = false
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
 		if ws.rebuildRequested {
@@ -641,6 +657,7 @@ func (a *app) checkBuildKeys() {
 }
 
 func (a *app) layoutWidgets() {
+	a.buildKeyCheckPending = true
 	clear(a.visitedLayers)
 	if a.visitedLayers == nil {
 		a.visitedLayers = map[int64]struct{}{}
@@ -744,6 +761,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 
 	bounds := widgetBoundsFromWidget(&a.context, widget)
 
+	a.buildKeyCheckPending = true
 	switch typ {
 	case handleInputTypePointing:
 		return widget.HandlePointingInput(&a.context, bounds)
@@ -793,6 +811,7 @@ func (a *app) tickWidgets() error {
 		if !ws.hasCustomTickChecked {
 			a.context.resetDefaultTickMethodCalled()
 		}
+		a.buildKeyCheckPending = true
 		if err := widget.Tick(&a.context, bounds); err != nil {
 			return err
 		}
