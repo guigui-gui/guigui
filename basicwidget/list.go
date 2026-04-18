@@ -732,6 +732,7 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 }
 
 type listContentBuildKey struct {
+	abstractList                abstractListBuildKey
 	style                       ListStyle
 	checkmarkIndexPlus1         int
 	contentWidthPlus1           int
@@ -745,6 +746,7 @@ type listContentBuildKey struct {
 
 func (l *listContent[T]) BuildKey() any {
 	return listContentBuildKey{
+		abstractList:                l.abstractList.buildKey(),
 		style:                       l.style,
 		checkmarkIndexPlus1:         l.checkmarkIndexPlus1,
 		contentWidthPlus1:           l.contentWidthPlus1,
@@ -1471,45 +1473,31 @@ func (l *listContent[T]) SelectItemByIndex(index int) {
 }
 
 func (l *listContent[T]) SelectItemsByIndices(indices []int) {
-	if l.abstractList.SelectItemsByIndices(indices, false) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.SelectItemsByIndices(indices, false)
 }
 
 func (l *listContent[T]) SelectAllItems() {
-	if l.abstractList.SelectAllItems(false) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.SelectAllItems(false)
 }
 
 func (l *listContent[T]) selectItemByIndex(index int, forceFireEvents bool) {
-	if l.abstractList.SelectItemByIndex(index, forceFireEvents) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.SelectItemByIndex(index, forceFireEvents)
 }
 
 func (l *listContent[T]) extendItemSelectionByIndex(index int, forceFireEvents bool) {
-	if l.abstractList.ExtendItemSelectionByIndex(index, forceFireEvents) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.ExtendItemSelectionByIndex(index, forceFireEvents)
 }
 
 func (l *listContent[T]) toggleItemSelectionByIndex(index int, forceFireEvents bool) {
-	if l.abstractList.ToggleItemSelectionByIndex(index, forceFireEvents) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.ToggleItemSelectionByIndex(index, forceFireEvents)
 }
 
 func (l *listContent[T]) SelectItemByValue(value T) {
-	if l.abstractList.SelectItemByValue(value, false) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.SelectItemByValue(value, false)
 }
 
 func (l *listContent[T]) SelectItemsByValues(values []T) {
-	if l.abstractList.SelectItemsByValues(values, false) {
-		guigui.RequestRebuild(l)
-	}
+	l.abstractList.SelectItemsByValues(values, false)
 }
 
 func (l *listContent[T]) JumpToItemByIndex(index int) {
@@ -1905,9 +1893,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if !l.abstractList.IsSelectedItemIndex(index) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
-			if l.abstractList.SelectGroupAt(index, false) {
-				guigui.RequestRebuild(l)
-			}
+			l.abstractList.SelectGroupAt(index, false)
 			if !l.abstractList.IsSelectedItemIndex(index) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}

@@ -59,8 +59,16 @@ type SegmentedControl[T comparable] struct {
 	onButtonDowns []func(context *guigui.Context)
 }
 
+type segmentedControlBuildKey struct {
+	abstractList abstractListBuildKey
+	direction    SegmentedControlDirection
+}
+
 func (s *SegmentedControl[T]) BuildKey() any {
-	return s.direction
+	return segmentedControlBuildKey{
+		abstractList: s.abstractList.buildKey(),
+		direction:    s.direction,
+	}
 }
 
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {
@@ -96,27 +104,19 @@ func (s *SegmentedControl[T]) ItemByIndex(index int) (SegmentedControlItem[T], b
 }
 
 func (s *SegmentedControl[T]) SelectItemByIndex(index int) {
-	if s.abstractList.SelectItemByIndex(index, false) {
-		guigui.RequestRebuild(s)
-	}
+	s.abstractList.SelectItemByIndex(index, false)
 }
 
 func (s *SegmentedControl[T]) SelectItemByValue(value T) {
-	if s.abstractList.SelectItemByValue(value, false) {
-		guigui.RequestRebuild(s)
-	}
+	s.abstractList.SelectItemByValue(value, false)
 }
 
 func (s *SegmentedControl[T]) SelectItemsByIndices(indices []int) {
-	if s.abstractList.SelectItemsByIndices(indices, false) {
-		guigui.RequestRebuild(s)
-	}
+	s.abstractList.SelectItemsByIndices(indices, false)
 }
 
 func (s *SegmentedControl[T]) SelectItemsByValues(values []T) {
-	if s.abstractList.SelectItemsByValues(values, false) {
-		guigui.RequestRebuild(s)
-	}
+	s.abstractList.SelectItemsByValues(values, false)
 }
 
 func (s *SegmentedControl[T]) SelectedItemCount() int {
@@ -200,9 +200,7 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		if s.onButtonDowns[i] == nil {
 			s.onButtonDowns[i] = func(context *guigui.Context) {
 				if s.abstractList.MultiSelection() {
-					if s.abstractList.ToggleItemSelectionByIndex(i, false) {
-						guigui.RequestRebuild(s)
-					}
+					s.abstractList.ToggleItemSelectionByIndex(i, false)
 				} else {
 					s.SelectItemByIndex(i)
 				}

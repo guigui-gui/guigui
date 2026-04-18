@@ -7,6 +7,8 @@ import (
 	"maps"
 	"math"
 	"slices"
+	"strconv"
+	"strings"
 )
 
 func fastFirstIndex(indices map[int]struct{}) int {
@@ -38,6 +40,42 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 
 	anchorIndex          int
 	lastExtendIndexPlus1 int
+
+	// selectionString is a comparable fingerprint of the selected-indices set,
+	// refreshed only when [abstractList.selectItemsByIndices] actually changes
+	// the selection. Callers include it in their [Widget.BuildKey] so selection
+	// changes trigger automatic rebuilds without explicit [guigui.RequestRebuild]
+	// calls — and without the false positives a bump counter would produce.
+	selectionString string
+}
+
+type abstractListBuildKey struct {
+	selection string
+}
+
+func (a *abstractList[Value, Item]) buildKey() abstractListBuildKey {
+	return abstractListBuildKey{
+		selection: a.selectionString,
+	}
+}
+
+// refreshSelectionString encodes the current selectedIndices as a sorted,
+// comma-separated decimal string. Called only at the points where the
+// selection is actually mutated.
+func (a *abstractList[Value, Item]) refreshSelectionString() {
+	a.tmpIndexSlice = a.tmpIndexSlice[:0]
+	for idx := range a.selectedIndices {
+		a.tmpIndexSlice = append(a.tmpIndexSlice, idx)
+	}
+	slices.Sort(a.tmpIndexSlice)
+	var sb strings.Builder
+	for i, idx := range a.tmpIndexSlice {
+		if i > 0 {
+			sb.WriteByte(',')
+		}
+		sb.WriteString(strconv.Itoa(idx))
+	}
+	a.selectionString = sb.String()
 }
 
 func (a *abstractList[Value, Item]) isItemIndexSelectable(index int) bool {
@@ -95,21 +133,23 @@ func (a *abstractList[Value, Item]) ItemByIndex(index int) (Item, bool) {
 	return a.items[index], true
 }
 
-func (a *abstractList[Value, Item]) SelectItemByIndex(index int, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectItemByIndex(index int, forceFireEvents bool) {
 	if index < 0 || index >= len(a.items) {
-		return a.SelectItemsByIndices(nil, forceFireEvents)
+		a.SelectItemsByIndices(nil, forceFireEvents)
+		return
 	}
 	a.tmpIndexSlice = append(a.tmpIndexSlice[:0], index)
-	return a.SelectItemsByIndices(a.tmpIndexSlice, forceFireEvents)
+	a.SelectItemsByIndices(a.tmpIndexSlice, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) ExtendItemSelectionByIndex(index int, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) ExtendItemSelectionByIndex(index int, forceFireEvents bool) {
 	if index < 0 || index >= len(a.items) {
-		return false
+		return
 	}
 
 	if !a.multiSelection {
-		return a.SelectItemByIndex(index, forceFireEvents)
+		a.SelectItemByIndex(index, forceFireEvents)
+		return
 	}
 
 	newIndices := maps.Clone(a.selectedIndices)
@@ -142,19 +182,20 @@ func (a *abstractList[Value, Item]) ExtendItemSelectionByIndex(index int, forceF
 
 	a.lastExtendIndexPlus1 = index + 1
 
-	return a.selectItemsByIndices(newIndices, 0, false, forceFireEvents)
+	a.selectItemsByIndices(newIndices, 0, false, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceFireEvents bool) {
 	if index < 0 || index >= len(a.items) {
-		return false
+		return
 	}
 
 	// If the item is already selected, deselect it.
 	if _, ok := a.selectedIndices[index]; ok {
 		m := maps.Clone(a.selectedIndices)
 		delete(m, index)
-		return a.selectItemsByIndices(m, fastFirstIndex(m), true, forceFireEvents)
+		a.selectItemsByIndices(m, fastFirstIndex(m), true, forceFireEvents)
+		return
 	}
 
 	// If the item is not selected, select it.
@@ -164,16 +205,17 @@ func (a *abstractList[Value, Item]) ToggleItemSelectionByIndex(index int, forceF
 			m = map[int]struct{}{}
 		}
 		m[index] = struct{}{}
-		return a.selectItemsByIndices(m, index, true, forceFireEvents)
+		a.selectItemsByIndices(m, index, true, forceFireEvents)
+		return
 	}
 
 	// In single selection mode, replace the selection.
-	return a.selectItemsByIndices(map[int]struct{}{
+	a.selectItemsByIndices(map[int]struct{}{
 		index: {},
 	}, index, true, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFireEvents bool) {
 	clear(a.tmpIndexMap)
 	newAnchor := math.MaxInt
 	if len(indices) > 0 {
@@ -191,10 +233,10 @@ func (a *abstractList[Value, Item]) SelectItemsByIndices(indices []int, forceFir
 	if newAnchor == math.MaxInt {
 		newAnchor = 0
 	}
-	return a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
+	a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) SelectAllItems(forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectAllItems(forceFireEvents bool) {
 	clear(a.tmpIndexMap)
 	if a.tmpIndexMap == nil {
 		a.tmpIndexMap = make(map[int]struct{}, len(a.items))
@@ -210,10 +252,10 @@ func (a *abstractList[Value, Item]) SelectAllItems(forceFireEvents bool) bool {
 	if newAnchor == math.MaxInt {
 		newAnchor = 0
 	}
-	return a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
+	a.selectItemsByIndices(a.tmpIndexMap, newAnchor, true, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{}, newAnchorCandidate int, updateAnchor bool, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{}, newAnchorCandidate int, updateAnchor bool, forceFireEvents bool) {
 	// maps.DeleteFunc changes the indices directly.
 	// It is caller's responsibility to make a copy if needed.
 	maps.DeleteFunc(indices, func(idx int, _ struct{}) bool {
@@ -249,7 +291,7 @@ func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{
 				a.onItemSelected(fastFirstIndex(indices))
 			}
 		}
-		return false
+		return
 	}
 
 	oldFirstIndex := a.SelectedItemIndex()
@@ -272,24 +314,24 @@ func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{
 			a.onItemSelected(newFirstIndex)
 		}
 	}
-	return true
+	a.refreshSelectionString()
 }
 
-func (a *abstractList[Value, Item]) SelectItemByValue(value Value, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectItemByValue(value Value, forceFireEvents bool) {
 	idx := slices.IndexFunc(a.items, func(item Item) bool {
 		return item.value() == value
 	})
-	return a.SelectItemByIndex(idx, forceFireEvents)
+	a.SelectItemByIndex(idx, forceFireEvents)
 }
 
-func (a *abstractList[Value, Item]) SelectItemsByValues(values []Value, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectItemsByValues(values []Value, forceFireEvents bool) {
 	a.tmpIndexSlice = a.tmpIndexSlice[:0]
 	for i, item := range a.items {
 		if slices.Contains(values, item.value()) {
 			a.tmpIndexSlice = append(a.tmpIndexSlice, i)
 		}
 	}
-	return a.SelectItemsByIndices(a.tmpIndexSlice, forceFireEvents)
+	a.SelectItemsByIndices(a.tmpIndexSlice, forceFireEvents)
 }
 
 func (a *abstractList[Value, Item]) SelectedItemCount() int {
@@ -350,17 +392,20 @@ func (a *abstractList[Value, Item]) AppendSelectedItemIndices(indices []int) []i
 // If index is not selected, select it and deselect all other items.
 // If index is selected, keep it. And if the index is in a group, select all items in the group and deselect all other items.
 // A group is a contiguous range of selected visible items.
-func (a *abstractList[Value, Item]) SelectGroupAt(index int, forceFireEvents bool) bool {
+func (a *abstractList[Value, Item]) SelectGroupAt(index int, forceFireEvents bool) {
 	if !a.multiSelection {
-		return a.SelectItemByIndex(index, forceFireEvents)
+		a.SelectItemByIndex(index, forceFireEvents)
+		return
 	}
 
 	if index < 0 || index >= len(a.items) {
-		return a.SelectItemsByIndices(nil, forceFireEvents)
+		a.SelectItemsByIndices(nil, forceFireEvents)
+		return
 	}
 
 	if _, ok := a.selectedIndices[index]; !ok {
-		return a.SelectItemByIndex(index, forceFireEvents)
+		a.SelectItemByIndex(index, forceFireEvents)
+		return
 	}
 
 	// Use tmpIndexMap to collect group indices.
@@ -392,5 +437,5 @@ func (a *abstractList[Value, Item]) SelectGroupAt(index int, forceFireEvents boo
 		a.tmpIndexMap[i] = struct{}{}
 	}
 
-	return a.selectItemsByIndices(a.tmpIndexMap, index, true, forceFireEvents)
+	a.selectItemsByIndices(a.tmpIndexMap, index, true, forceFireEvents)
 }
