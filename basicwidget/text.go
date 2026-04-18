@@ -17,6 +17,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/zeebo/xxh3"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
@@ -128,6 +129,11 @@ type Text struct {
 	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
 
+	// contentHasher is a reusable xxh3 streaming hasher used by [Text.BuildKey]
+	// to fingerprint the current field contents without allocating a string.
+	// Lazily initialized.
+	contentHasher xxh3.Hasher128
+
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.BuildKey] so locale changes trigger automatic rebuilds without an
@@ -203,16 +209,22 @@ type textBuildKey struct {
 	selectionEnd           int
 	fieldFocused           bool
 	localesString          string
+	contentHash            xxh3.Uint128
+}
+
+// contentHashForBuildKey streams the current field contents (including the
+// active IME composition, matching what [Text.Draw] and [Text.Measure] see)
+// through a reusable xxh3 hasher and returns a 128-bit fingerprint. This
+// lets [Text.BuildKey] catch every mutation the displayed text depends on —
+// including Ebitengine's HookOnBeforeUpdate path — without allocating a
+// string.
+func (t *Text) contentHashForBuildKey() xxh3.Uint128 {
+	t.contentHasher.Reset()
+	_ = t.field.WriteTextForRendering(&t.contentHasher)
+	return t.contentHasher.Sum128()
 }
 
 func (t *Text) BuildKey() any {
-	// The text content is intentionally not tracked in [Text.BuildKey]:
-	// [textinput.Field] can be mutated by Ebitengine's HookOnBeforeUpdate
-	// without going through any guigui hook, so a cache tied to our mutation
-	// sites goes stale, and calling stringValue() from BuildKey would allocate
-	// on every settle. Instead, mutation sites call [guigui.RequestRebuild]
-	// explicitly.
-
 	var c color.RGBA64
 	hasColor := t.color != nil
 	if hasColor {
@@ -242,6 +254,7 @@ func (t *Text) BuildKey() any {
 		selectionEnd:           selEnd,
 		fieldFocused:           t.field.IsFocused(),
 		localesString:          t.cachedLocalesString,
+		contentHash:            t.contentHashForBuildKey(),
 	}
 }
 
@@ -454,7 +467,6 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		return
 	}
 	t.field.ReplaceText(text, start, end)
-	guigui.RequestRebuild(t)
 
 	t.resetCachedTextSize()
 	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
@@ -495,7 +507,6 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	} else {
 		t.field.SetSelection(0, len(text))
 	}
-	guigui.RequestRebuild(t)
 
 	// Do not adjust scroll.
 	t.prevStart = start
@@ -883,7 +894,6 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			processed = t.field.Handled()
 		}
 		if processed {
-			guigui.RequestRebuild(t)
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
 			guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
@@ -1520,7 +1530,6 @@ func (t *Text) Undo() bool {
 	}
 	t.field.Undo()
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
 	return true
 }
 
@@ -1530,7 +1539,6 @@ func (t *Text) Redo() bool {
 	}
 	t.field.Redo()
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
 	return true
 }
 
