@@ -609,10 +609,12 @@ func (a *app) buildWidgets() error {
 	}
 
 	// Capture [Widget.BuildKey] snapshots so subsequent phases can detect state changes
-	// that would otherwise require an explicit [RequestRebuild] call.
+	// that would otherwise require an explicit [RequestRebuild] call. Also snapshot the
+	// framework-owned widgetState fields mutated via [Context] setters.
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		ws.buildKey = widget.BuildKey()
+		ws.capturedBuildKey = widget.BuildKey()
+		ws.capturedInternalKey = ws.internalBuildKey()
 	}
 
 	return nil
@@ -627,7 +629,11 @@ func (a *app) checkBuildKeys() {
 		if ws.rebuildRequested {
 			continue
 		}
-		if widget.BuildKey() == ws.buildKey {
+		if ws.internalBuildKey() != ws.capturedInternalKey {
+			a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)
+			continue
+		}
+		if widget.BuildKey() == ws.capturedBuildKey {
 			continue
 		}
 		a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)

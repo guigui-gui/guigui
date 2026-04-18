@@ -226,7 +226,6 @@ func (c *Context) SetVisible(widget Widget, visible bool) {
 		w.widgetState().visibleCache = false
 		return nil
 	})
-	RequestRebuild(widget)
 }
 
 // IsVisible reports whether the widget is visible.
@@ -250,7 +249,6 @@ func (c *Context) SetEnabled(widget Widget, enabled bool) {
 		w.widgetState().enabledCache = false
 		return nil
 	})
-	RequestRebuild(widget)
 }
 
 // IsEnabled reports whether the widget is enabled.
@@ -268,12 +266,7 @@ func (c *Context) IsEnabled(widget Widget) bool {
 // button-input-receptive widget do not receive button input events themselves;
 // the framework only traverses through them to reach the receptive widget.
 func (c *Context) SetButtonInputReceptive(widget Widget, receptive bool) {
-	widgetState := widget.widgetState()
-	if widgetState.buttonInputReceptive == receptive {
-		return
-	}
-	widgetState.buttonInputReceptive = receptive
-	RequestRebuild(widget)
+	widget.widgetState().buttonInputReceptive = receptive
 }
 
 // IsButtonInputReceptive reports whether the widget receives button input events
@@ -373,12 +366,7 @@ func (c *Context) Opacity(widget Widget) float64 {
 // The value is clamped to the range [0, 1].
 func (c *Context) SetOpacity(widget Widget, opacity float64) {
 	opacity = min(max(opacity, 0), 1)
-	widgetState := widget.widgetState()
-	if widgetState.transparency == 1-opacity {
-		return
-	}
-	widgetState.transparency = 1 - opacity
-	RequestRebuild(widget)
+	widget.widgetState().transparency = 1 - opacity
 }
 
 // EnvSource provides information about the origin of an [Context.Env] call.
@@ -426,7 +414,6 @@ func (c *Context) SetPassthrough(widget Widget, passthrough bool) {
 		w.widgetState().passthroughCache = false
 		return nil
 	})
-	RequestRebuild(widget)
 }
 
 func (c *Context) bringToFrontLayer(widget Widget) {
@@ -442,7 +429,6 @@ func (c *Context) bringToFrontLayer(widget Widget) {
 		w.widgetState().actualLayerPlus1Cache = 0
 		return nil
 	})
-	RequestRebuild(widget)
 }
 
 func (c *Context) visibleBounds(state *widgetState) image.Rectangle {
