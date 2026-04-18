@@ -176,19 +176,23 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 }
 
 type textBuildKey struct {
-	hAlign        HorizontalAlign
-	vAlign        VerticalAlign
-	color         color.RGBA64
-	hasColor      bool
-	semanticColor basicwidgetdraw.SemanticColor
-	transparent   float64
-	scaleMinus1   float64
-	bold          bool
-	tabular       bool
-	tabWidth      float64
-	editable      bool
-	multiline     bool
-	autoWrap      bool
+	hAlign                 HorizontalAlign
+	vAlign                 VerticalAlign
+	color                  color.RGBA64
+	hasColor               bool
+	semanticColor          basicwidgetdraw.SemanticColor
+	transparent            float64
+	scaleMinus1            float64
+	bold                   bool
+	tabular                bool
+	tabWidth               float64
+	selectable             bool
+	editable               bool
+	multiline              bool
+	autoWrap               bool
+	keepTailingSpace       bool
+	ellipsisString         string
+	paddingForScrollOffset guigui.Padding
 }
 
 func (t *Text) BuildKey() any {
@@ -199,19 +203,23 @@ func (t *Text) BuildKey() any {
 		c = color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
 	}
 	return textBuildKey{
-		hAlign:        t.hAlign,
-		vAlign:        t.vAlign,
-		color:         c,
-		hasColor:      hasColor,
-		semanticColor: t.semanticColor,
-		transparent:   t.transparent,
-		scaleMinus1:   t.scaleMinus1,
-		bold:          t.bold,
-		tabular:       t.tabular,
-		tabWidth:      t.tabWidth,
-		editable:      t.editable,
-		multiline:     t.multiline,
-		autoWrap:      t.autoWrap,
+		hAlign:                 t.hAlign,
+		vAlign:                 t.vAlign,
+		color:                  c,
+		hasColor:               hasColor,
+		semanticColor:          t.semanticColor,
+		transparent:            t.transparent,
+		scaleMinus1:            t.scaleMinus1,
+		bold:                   t.bold,
+		tabular:                t.tabular,
+		tabWidth:               t.tabWidth,
+		selectable:             t.selectable,
+		editable:               t.editable,
+		multiline:              t.multiline,
+		autoWrap:               t.autoWrap,
+		keepTailingSpace:       t.keepTailingSpace,
+		ellipsisString:         t.ellipsisString,
+		paddingForScrollOffset: t.paddingForScrollOffset,
 	}
 }
 
@@ -283,7 +291,6 @@ func (t *Text) SetSelectable(selectable bool) {
 	if !t.selectable {
 		t.setSelection(0, 0, -1, false)
 	}
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) isEqualToStringValue(text string) bool {
@@ -600,16 +607,10 @@ func (t *Text) SetEllipsisString(str string) {
 
 	t.ellipsisString = str
 	t.resetCachedTextSize()
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) setKeepTailingSpace(keep bool) {
-	if t.keepTailingSpace == keep {
-		return
-	}
-
 	t.keepTailingSpace = keep
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
@@ -1343,11 +1344,7 @@ func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.Widget
 }
 
 func (t *Text) setPaddingForScrollOffset(padding guigui.Padding) {
-	if t.paddingForScrollOffset == padding {
-		return
-	}
 	t.paddingForScrollOffset = padding
-	guigui.RequestRebuild(t)
 }
 
 func (t *Text) adjustScrollOffset(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (dx, dy float64) {

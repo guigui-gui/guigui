@@ -85,12 +85,32 @@ func (b *Button) setPairedButton(pair *Button) {
 	b.pairedButton = pair
 }
 
-func (b *Button) setPressed(pressed bool) {
-	if b.pressed == pressed {
-		return
+type buttonBuildKey struct {
+	pressed       bool
+	keepPressed   bool
+	prevPressed   bool
+	textBold      bool
+	iconAlign     IconAlign
+	typ           ButtonType
+	semanticColor basicwidgetdraw.SemanticColor
+	sharpCorners  Corners
+}
+
+func (b *Button) BuildKey() any {
+	return buttonBuildKey{
+		pressed:       b.pressed,
+		keepPressed:   b.keepPressed,
+		prevPressed:   b.prevPressed,
+		textBold:      b.textBold,
+		iconAlign:     b.iconAlign,
+		typ:           b.typ,
+		semanticColor: b.semanticColor,
+		sharpCorners:  b.sharpCorners,
 	}
+}
+
+func (b *Button) setPressed(pressed bool) {
 	b.pressed = pressed
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetContent(content guigui.Widget) {
@@ -102,11 +122,7 @@ func (b *Button) SetText(text string) {
 }
 
 func (b *Button) SetTextBold(bold bool) {
-	if b.textBold == bold {
-		return
-	}
 	b.textBold = bold
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetIcon(icon *ebiten.Image) {
@@ -114,27 +130,15 @@ func (b *Button) SetIcon(icon *ebiten.Image) {
 }
 
 func (b *Button) SetIconAlign(align IconAlign) {
-	if b.iconAlign == align {
-		return
-	}
 	b.iconAlign = align
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetType(typ ButtonType) {
-	if b.typ == typ {
-		return
-	}
 	b.typ = typ
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	if b.semanticColor == semanticColor {
-		return
-	}
 	b.semanticColor = semanticColor
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) setKeepPressed(keep bool) {
@@ -147,7 +151,6 @@ func (b *Button) setKeepPressed(keep bool) {
 	if !keep && b.keepPressedClickable {
 		b.pressed = false
 	}
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) setKeepPressedClickable(clickable bool) {
@@ -155,11 +158,7 @@ func (b *Button) setKeepPressedClickable(clickable bool) {
 }
 
 func (b *Button) SetSharpCorners(sharpCorners Corners) {
-	if b.sharpCorners == sharpCorners {
-		return
-	}
 	b.sharpCorners = sharpCorners
-	guigui.RequestRebuild(b)
 }
 
 func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -334,10 +333,7 @@ func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints
 }
 
 func (b *Button) checkPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
-	if hovered := b.isPressed(context, widgetBounds); b.prevPressed != hovered {
-		b.prevPressed = hovered
-		guigui.RequestRebuild(b)
-	}
+	b.prevPressed = b.isPressed(context, widgetBounds)
 }
 
 func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -365,7 +361,6 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 			}
 			b.setPressed(false)
 			guigui.DispatchEvent(b, buttonEventUp)
-			guigui.RequestRebuild(b)
 			justPressedOrReleased = true
 		}
 		if justPressedOrReleased {

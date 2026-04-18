@@ -104,20 +104,24 @@ type scrollWheel struct {
 	lastWheelY      float64
 }
 
-func (s *scrollWheel) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {
-	if s.offsetGetSetter == offsetGetSetter {
-		return
+type scrollWheelBuildKey struct {
+	offsetGetSetter scrollOffsetGetSetter
+	contentSize     image.Point
+}
+
+func (s *scrollWheel) BuildKey() any {
+	return scrollWheelBuildKey{
+		offsetGetSetter: s.offsetGetSetter,
+		contentSize:     s.contentSize,
 	}
+}
+
+func (s *scrollWheel) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {
 	s.offsetGetSetter = offsetGetSetter
-	guigui.RequestRebuild(s)
 }
 
 func (s *scrollWheel) setContentSize(size image.Point) {
-	if s.contentSize == size {
-		return
-	}
 	s.contentSize = size
-	guigui.RequestRebuild(s)
 }
 
 func (s *scrollWheel) isScrolling() bool {
@@ -166,20 +170,26 @@ type scrollBar struct {
 	onceDraw              bool
 }
 
-func (s *scrollBar) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {
-	if s.offsetGetSetter == offsetGetSetter {
-		return
+type scrollBarBuildKey struct {
+	offsetGetSetter scrollOffsetGetSetter
+	horizontal      bool
+	contentSize     image.Point
+}
+
+func (s *scrollBar) BuildKey() any {
+	return scrollBarBuildKey{
+		offsetGetSetter: s.offsetGetSetter,
+		horizontal:      s.horizontal,
+		contentSize:     s.contentSize,
 	}
+}
+
+func (s *scrollBar) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {
 	s.offsetGetSetter = offsetGetSetter
-	guigui.RequestRebuild(s)
 }
 
 func (s *scrollBar) setHorizontal(horizontal bool) {
-	if s.horizontal == horizontal {
-		return
-	}
 	s.horizontal = horizontal
-	guigui.RequestRebuild(s)
 }
 
 func (s *scrollBar) setThumbBounds(bounds image.Rectangle) {
@@ -191,11 +201,7 @@ func (s *scrollBar) setThumbBounds(bounds image.Rectangle) {
 }
 
 func (s *scrollBar) setContentSize(size image.Point) {
-	if s.contentSize == size {
-		return
-	}
 	s.contentSize = size
-	guigui.RequestRebuild(s)
 }
 
 func (s *scrollBar) setAlpha(alpha float64) {

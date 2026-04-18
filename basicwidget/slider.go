@@ -172,12 +172,22 @@ func (s *Slider) SetStepUint64(step uint64) {
 	s.abstractNumberInput.SetStepUint64(step)
 }
 
-func (s *Slider) SetSnapOnly(snapOnly bool) {
-	if s.snapOnly == snapOnly {
-		return
+type sliderBuildKey struct {
+	snapOnly         bool
+	dragging         bool
+	prevThumbHovered bool
+}
+
+func (s *Slider) BuildKey() any {
+	return sliderBuildKey{
+		snapOnly:         s.snapOnly,
+		dragging:         s.dragging,
+		prevThumbHovered: s.prevThumbHovered,
 	}
+}
+
+func (s *Slider) SetSnapOnly(snapOnly bool) {
 	s.snapOnly = snapOnly
-	guigui.RequestRebuild(s)
 }
 
 func (s *Slider) hasSnaps() bool {
@@ -262,10 +272,7 @@ func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 }
 
 func (s *Slider) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if hovered := s.isThumbHovered(context, widgetBounds); s.prevThumbHovered != hovered {
-		s.prevThumbHovered = hovered
-		guigui.RequestRebuild(s)
-	}
+	s.prevThumbHovered = s.isThumbHovered(context, widgetBounds)
 	return nil
 }
 
@@ -285,14 +292,10 @@ func (s *Slider) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 		x, _ := ebiten.CursorPosition()
 		s.draggingStartX = x
 		s.draggingStartValue.Set(s.abstractNumberInput.ValueBigInt())
-		guigui.RequestRebuild(s)
 		return guigui.HandleInputByWidget(s)
 	}
 
 	if !context.IsEnabled(s) || !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if s.dragging {
-			guigui.RequestRebuild(s)
-		}
 		s.dragging = false
 		s.draggingStartX = 0
 		s.draggingStartValue = big.Int{}

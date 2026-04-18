@@ -119,13 +119,16 @@ func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds 
 	return guigui.HandleInputResult{}
 }
 
+func (t *TooltipArea) BuildKey() any {
+	return t.toShowTooltip
+}
+
 // Tick implements [guigui.Widget.Tick].
 func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.hovering {
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {
 			t.toShowTooltip = true
-			guigui.RequestRebuild(t)
 		}
 	}
 	return nil

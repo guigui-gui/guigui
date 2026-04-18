@@ -38,6 +38,10 @@ func (t *Toggle) Value() bool {
 	return t.value
 }
 
+func (t *Toggle) BuildKey() any {
+	return t.value
+}
+
 func (t *Toggle) SetValue(value bool) {
 	if t.value == value {
 		return
@@ -47,8 +51,6 @@ func (t *Toggle) SetValue(value bool) {
 	if t.onceRendered {
 		t.count = toggleMaxCount() - t.count
 	}
-	guigui.RequestRebuild(t)
-
 	guigui.DispatchEvent(t, toggleEventValueChanged, value)
 }
 

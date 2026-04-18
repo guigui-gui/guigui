@@ -106,13 +106,26 @@ func (t *TextInput) IsEditable() bool {
 	return t.textInput.IsEditable()
 }
 
+type textInputBuildKey struct {
+	style            TextInputStyle
+	hasError         bool
+	supportTextValue string
+}
+
+func (t *TextInput) BuildKey() any {
+	return textInputBuildKey{
+		style:            t.style,
+		hasError:         t.hasError,
+		supportTextValue: t.supportTextValue,
+	}
+}
+
 func (t *TextInput) SetStyle(style TextInputStyle) {
 	if t.style == style {
 		return
 	}
 	t.style = style
 	t.textInput.SetStyle(style)
-	guigui.RequestRebuild(t)
 }
 
 func (t *TextInput) SetEditable(editable bool) {
@@ -132,7 +145,6 @@ func (t *TextInput) SetError(hasError bool) {
 	}
 	t.hasError = hasError
 	t.textInput.frame.setError(hasError)
-	guigui.RequestRebuild(t)
 }
 
 // SupportText returns the support text displayed below the text input.
@@ -143,11 +155,7 @@ func (t *TextInput) SupportText() string {
 // SetSupportText sets the support text displayed below the text input.
 // The support text is shown in a subdued color, or in a danger color when the error state is true.
 func (t *TextInput) SetSupportText(text string) {
-	if t.supportTextValue == text {
-		return
-	}
 	t.supportTextValue = text
-	guigui.RequestRebuild(t)
 }
 
 func (t *TextInput) SetIcon(icon *ebiten.Image) {
@@ -356,12 +364,24 @@ func (t *textInput) IsEditable() bool {
 	return !t.readonly
 }
 
-func (t *textInput) SetStyle(style TextInputStyle) {
-	if t.style == style {
-		return
+type textInputInnerBuildKey struct {
+	style        TextInputStyle
+	readonly     bool
+	paddingStart int
+	paddingEnd   int
+}
+
+func (t *textInput) BuildKey() any {
+	return textInputInnerBuildKey{
+		style:        t.style,
+		readonly:     t.readonly,
+		paddingStart: t.paddingStart,
+		paddingEnd:   t.paddingEnd,
 	}
+}
+
+func (t *textInput) SetStyle(style TextInputStyle) {
 	t.style = style
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) SetEditable(editable bool) {
@@ -370,7 +390,6 @@ func (t *textInput) SetEditable(editable bool) {
 	}
 	t.readonly = !editable
 	t.text.Text().SetEditable(editable)
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) setSelection(start, end int) {
@@ -378,19 +397,11 @@ func (t *textInput) setSelection(start, end int) {
 }
 
 func (t *textInput) setPaddingStart(padding int) {
-	if t.paddingStart == padding {
-		return
-	}
 	t.paddingStart = padding
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) setPaddingEnd(padding int) {
-	if t.paddingEnd == padding {
-		return
-	}
 	t.paddingEnd = padding
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInput) SetIcon(icon *ebiten.Image) {
@@ -619,12 +630,20 @@ func (t *textInputText) setEditable(editable bool) {
 	t.text.Widget().SetEditable(editable)
 }
 
-func (t *textInputText) setContainerBounds(bounds image.Rectangle) {
-	if t.containerBounds == bounds {
-		return
+type textInputTextBuildKey struct {
+	containerBounds image.Rectangle
+	padding         guigui.Padding
+}
+
+func (t *textInputText) BuildKey() any {
+	return textInputTextBuildKey{
+		containerBounds: t.containerBounds,
+		padding:         t.padding,
 	}
+}
+
+func (t *textInputText) setContainerBounds(bounds image.Rectangle) {
 	t.containerBounds = bounds
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInputText) setPadding(padding guigui.Padding) {
@@ -633,7 +652,6 @@ func (t *textInputText) setPadding(padding guigui.Padding) {
 	}
 	t.padding = padding
 	t.text.Widget().setPaddingForScrollOffset(padding)
-	guigui.RequestRebuild(t)
 }
 
 func (t *textInputText) Text() *Text {

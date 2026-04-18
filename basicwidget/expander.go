@@ -58,6 +58,18 @@ func expandCollapseMaxCount() int {
 	return ebiten.TPS() / 20
 }
 
+type expanderBuildKey struct {
+	expanded bool
+	count    int
+}
+
+func (e *Expander) BuildKey() any {
+	return expanderBuildKey{
+		expanded: e.expanded,
+		count:    e.count,
+	}
+}
+
 func (e *Expander) SetExpanded(expanded bool) {
 	if e.expanded == expanded {
 		return
@@ -68,7 +80,6 @@ func (e *Expander) SetExpanded(expanded bool) {
 		e.count = expandCollapseMaxCount() - e.count
 	}
 	guigui.DispatchEvent(e, expanderEventExpansionChanged, e.expanded)
-	guigui.RequestRebuild(e)
 }
 
 func (e *Expander) isContentVisible() bool {
@@ -153,7 +164,6 @@ func (e *Expander) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	if e.count > 0 {
 		e.count--
 		guigui.RequestRedraw(e)
-		guigui.RequestRebuild(e)
 	}
 	return nil
 }
@@ -179,12 +189,12 @@ func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
 	guigui.SetEventHandler(e, expanderHeaderEventDown, callback)
 }
 
+func (e *expanderHeader) BuildKey() any {
+	return e.expanded
+}
+
 func (e *expanderHeader) setExpanded(expanded bool) {
-	if e.expanded == expanded {
-		return
-	}
 	e.expanded = expanded
-	guigui.RequestRebuild(e)
 }
 
 func (e *expanderHeader) setWidget(w guigui.Widget) {

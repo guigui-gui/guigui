@@ -59,12 +59,12 @@ type SegmentedControl[T comparable] struct {
 	onButtonDowns []func(context *guigui.Context)
 }
 
+func (s *SegmentedControl[T]) BuildKey() any {
+	return s.direction
+}
+
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {
-	if s.direction == direction {
-		return
-	}
 	s.direction = direction
-	guigui.RequestRebuild(s)
 }
 
 func (s *SegmentedControl[T]) SetMultiSelection(multi bool) {

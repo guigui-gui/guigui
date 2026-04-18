@@ -133,12 +133,12 @@ func (p *panel) SetContent(widget guigui.Widget) {
 	p.content = widget
 }
 
+func (p *panel) BuildKey() any {
+	return p.style
+}
+
 func (p *panel) SetStyle(typ PanelStyle) {
-	if p.style == typ {
-		return
-	}
 	p.style = typ
-	guigui.RequestRebuild(p)
 }
 
 func (p *panel) SetContentConstraints(c PanelContentConstraints) {
@@ -453,20 +453,24 @@ type panelBorder struct {
 	autoBorder bool
 }
 
-func (b *panelBorder) setBorders(borders PanelBorders) {
-	if b.borders == borders {
-		return
+type panelBorderBuildKey struct {
+	borders    PanelBorders
+	autoBorder bool
+}
+
+func (b *panelBorder) BuildKey() any {
+	return panelBorderBuildKey{
+		borders:    b.borders,
+		autoBorder: b.autoBorder,
 	}
+}
+
+func (b *panelBorder) setBorders(borders PanelBorders) {
 	b.borders = borders
-	guigui.RequestRebuild(b)
 }
 
 func (b *panelBorder) SetAutoBorder(auto bool) {
-	if b.autoBorder == auto {
-		return
-	}
 	b.autoBorder = auto
-	guigui.RequestRebuild(b)
 }
 
 func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

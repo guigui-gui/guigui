@@ -23,12 +23,12 @@ type roundedCornerWidget[T guigui.Widget] struct {
 	disabled bool
 }
 
+func (r *roundedCornerWidget[T]) BuildKey() any {
+	return r.disabled
+}
+
 func (r *roundedCornerWidget[T]) SetCornderRouneded(rounded bool) {
-	if r.disabled == !rounded {
-		return
-	}
 	r.disabled = !rounded
-	guigui.RequestRebuild(r)
 }
 
 func (r *roundedCornerWidget[T]) needsToRenderCorners(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {

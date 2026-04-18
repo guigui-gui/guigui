@@ -118,11 +118,7 @@ func (p *Popup) SetAnimated(animateOnFading bool) {
 }
 
 func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
-	if p.popup.Widget().backgroundBounds == bounds {
-		return
-	}
 	p.popup.Widget().backgroundBounds = bounds
-	guigui.RequestRebuild(p)
 }
 
 func (p *Popup) SetBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
@@ -192,6 +188,38 @@ type popup struct {
 	drawerEdge                         DrawerEdge
 }
 
+type popupBuildKey struct {
+	style             popupStyle
+	backgroundBounds  image.Rectangle
+	contentBounds     image.Rectangle
+	openingCount      int
+	showing           bool
+	hiding            bool
+	backgroundDark    bool
+	backgroundBlurred bool
+	modeless          bool
+	animateOnFading   bool
+	drawerEdge        DrawerEdge
+	contentPosition   image.Point
+}
+
+func (p *popup) BuildKey() any {
+	return popupBuildKey{
+		style:             p.style,
+		backgroundBounds:  p.backgroundBounds,
+		contentBounds:     p.contentBounds,
+		openingCount:      p.openingCount,
+		showing:           p.showing,
+		hiding:            p.hiding,
+		backgroundDark:    p.backgroundDark,
+		backgroundBlurred: p.backgroundBlurred,
+		modeless:          p.modeless,
+		animateOnFading:   p.animateOnFading,
+		drawerEdge:        p.drawerEdge,
+		contentPosition:   p.contentPosition,
+	}
+}
+
 func (p *popup) setStyle(style popupStyle) {
 	if p.style == style {
 		return
@@ -199,7 +227,6 @@ func (p *popup) setStyle(style popupStyle) {
 	p.style = style
 	p.contentAndFrame.Widget().setStyle(style)
 	p.shadow.setStyle(style)
-	guigui.RequestRebuild(p)
 }
 
 func (p *popup) IsOpen() bool {
@@ -219,11 +246,7 @@ func (p *popup) openingRate() float64 {
 }
 
 func (p *popup) setContentBounds(bounds image.Rectangle) {
-	if p.contentBounds == bounds {
-		return
-	}
 	p.contentBounds = bounds
-	guigui.RequestRebuild(p)
 }
 
 func (p *popup) actualContentBounds(context *guigui.Context, bgBounds image.Rectangle) image.Rectangle {

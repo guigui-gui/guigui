@@ -135,12 +135,22 @@ func (l *List[T]) SetMultiSelection(multi bool) {
 	l.content.abstractList.SetMultiSelection(multi)
 }
 
-func (l *List[T]) SetItemHeight(height int) {
-	if l.listItemHeightPlus1 == height+1 {
-		return
+type listBuildKey struct {
+	listItemHeightPlus1 int
+	headerHeight        int
+	footerHeight        int
+}
+
+func (l *List[T]) BuildKey() any {
+	return listBuildKey{
+		listItemHeightPlus1: l.listItemHeightPlus1,
+		headerHeight:        l.headerHeight,
+		footerHeight:        l.footerHeight,
 	}
+}
+
+func (l *List[T]) SetItemHeight(height int) {
 	l.listItemHeightPlus1 = height + 1
-	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) OnItemSelected(f func(context *guigui.Context, index int)) {
@@ -173,7 +183,6 @@ func (l *List[T]) SetHeaderHeight(height int) {
 	}
 	l.headerHeight = height
 	l.frame.SetHeaderHeight(height)
-	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) SetFooterHeight(height int) {
@@ -182,7 +191,6 @@ func (l *List[T]) SetFooterHeight(height int) {
 	}
 	l.footerHeight = height
 	l.frame.SetFooterHeight(height)
-	guigui.RequestRebuild(l)
 }
 
 func (l *List[T]) ItemBounds(index int) image.Rectangle {

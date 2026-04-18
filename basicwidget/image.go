@@ -58,10 +58,10 @@ func (i *Image) HasImage() bool {
 	return i.image != nil
 }
 
+func (i *Image) BuildKey() any {
+	return i.image
+}
+
 func (i *Image) SetImage(image *ebiten.Image) {
-	if i.image == image {
-		return
-	}
 	i.image = image
-	guigui.RequestRebuild(i)
 }

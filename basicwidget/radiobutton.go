@@ -45,9 +45,6 @@ func (r *RadioButtonGroup[T]) SelectItemByIndex(index int) {
 		return
 	}
 	r.indexPlus1 = index + 1
-	for i := range r.buttons.Len() {
-		guigui.RequestRebuild(r.buttons.At(i))
-	}
 	guigui.DispatchEvent(r, radioButtonGroupEventItemSelected, r.indexPlus1-1)
 }
 
@@ -99,6 +96,18 @@ type RadioButton[T comparable] struct {
 
 	pressed     bool
 	prevHovered bool
+}
+
+type radioButtonBuildKey struct {
+	selected bool
+}
+
+func (r *RadioButton[T]) BuildKey() any {
+	var selected bool
+	if r.group != nil {
+		selected = r.group.SelectedIndex() == r.index
+	}
+	return radioButtonBuildKey{selected: selected}
 }
 
 func (r *RadioButton[T]) setGroupAndIndex(group *RadioButtonGroup[T], index int) {
