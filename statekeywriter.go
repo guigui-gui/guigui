@@ -128,7 +128,7 @@ func (w *StateKeyWriter) WriteFloat64(v float64) {
 // WriteString writes a string into the writer. The length is included so that
 // concatenations hash distinctly (e.g. "ab"+"cd" vs "abc"+"d").
 func (w *StateKeyWriter) WriteString(s string) {
-	w.WriteUint64(uint64(len(s)))
+	w.WriteInt(len(s))
 	_, _ = io.WriteString(&w.h, s)
 }
 
