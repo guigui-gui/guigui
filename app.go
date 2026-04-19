@@ -15,6 +15,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
@@ -148,7 +149,7 @@ type app struct {
 	// popped in widgetsAndBounds.equals when a widget's currentBounds3D is nil,
 	// so a churning set of widgets (e.g. list items scrolled in and out) does not
 	// reallocate a fresh backing array every time.
-	bounds3DsPool [][]widgetStateAndBounds
+	bounds3DsPool sync.Pool
 
 	// hasDirtyWidgets is true when any widget has rebuildRequested, redrawRequested, or eventDispatched set.
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
@@ -603,14 +604,11 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 // or nil if the pool is empty. The returned slice has length 0 but may have
 // non-zero capacity.
 func (a *app) getBounds3Ds() []widgetStateAndBounds {
-	n := len(a.bounds3DsPool)
-	if n == 0 {
+	p, ok := a.bounds3DsPool.Get().(*[]widgetStateAndBounds)
+	if !ok {
 		return nil
 	}
-	s := a.bounds3DsPool[n-1]
-	a.bounds3DsPool[n-1] = nil
-	a.bounds3DsPool = a.bounds3DsPool[:n-1]
-	return s
+	return *p
 }
 
 // putBounds3Ds returns a widgetStateAndBounds slice to the pool for reuse. The
@@ -621,7 +619,8 @@ func (a *app) putBounds3Ds(s []widgetStateAndBounds) {
 		return
 	}
 	clear(s[:cap(s)])
-	a.bounds3DsPool = append(a.bounds3DsPool, s[:0])
+	s = s[:0]
+	a.bounds3DsPool.Put(&s)
 }
 
 func (a *app) buildWidgets() error {
