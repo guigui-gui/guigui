@@ -12,6 +12,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
@@ -131,8 +132,13 @@ type Text struct {
 
 	// contentHasher is a reusable xxh3 streaming hasher used by [Text.BuildKey]
 	// to fingerprint the current field contents without allocating a string.
-	// Lazily initialized.
 	contentHasher xxh3.Hasher128
+
+	// contentHashCache memoizes the most recently computed hash, keyed by
+	// [textinput.Field.ChangedAt]. While the field has not been mutated, repeated
+	// [Text.BuildKey] calls return the cached value without re-hashing.
+	contentHashCache    xxh3.Uint128
+	contentHashCachedAt time.Time
 
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
@@ -212,16 +218,19 @@ type textBuildKey struct {
 	contentHash            xxh3.Uint128
 }
 
-// contentHashForBuildKey streams the current field contents (including the
-// active IME composition, matching what [Text.Draw] and [Text.Measure] see)
-// through a reusable xxh3 hasher and returns a 128-bit fingerprint. This
-// lets [Text.BuildKey] catch every mutation the displayed text depends on —
-// including Ebitengine's HookOnBeforeUpdate path — without allocating a
-// string.
+// contentHashForBuildKey returns a 128-bit fingerprint of the current field
+// contents, including the active IME composition (matching what [Text.Draw]
+// and [Text.Measure] see).
 func (t *Text) contentHashForBuildKey() xxh3.Uint128 {
+	changedAt := t.field.ChangedAt()
+	if changedAt.Equal(t.contentHashCachedAt) {
+		return t.contentHashCache
+	}
 	t.contentHasher.Reset()
 	_ = t.field.WriteTextForRendering(&t.contentHasher)
-	return t.contentHasher.Sum128()
+	t.contentHashCache = t.contentHasher.Sum128()
+	t.contentHashCachedAt = changedAt
+	return t.contentHashCache
 }
 
 func (t *Text) BuildKey() any {
