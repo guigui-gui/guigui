@@ -96,7 +96,7 @@ func (w *widgetsAndBounds) equals(context *Context, currentWidgets []Widget) boo
 func (w *widgetsAndBounds) commitCurrent() {
 	// Swap to reuse the old bounds3Ds backing array for the next equals() call.
 	w.bounds3Ds, w.currentBounds3D = w.currentBounds3D, w.bounds3Ds
-	w.currentBounds3D = w.currentBounds3D[:0]
+	w.currentBounds3D = slices.Delete(w.currentBounds3D, 0, len(w.currentBounds3D))
 }
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {
