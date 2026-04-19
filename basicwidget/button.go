@@ -85,28 +85,18 @@ func (b *Button) setPairedButton(pair *Button) {
 	b.pairedButton = pair
 }
 
-type buttonBuildKey struct {
-	pressed       bool
-	keepPressed   bool
-	prevPressed   bool
-	textBold      bool
-	iconAlign     IconAlign
-	typ           ButtonType
-	semanticColor basicwidgetdraw.SemanticColor
-	sharpCorners  Corners
-}
-
-func (b *Button) BuildKey() any {
-	return buttonBuildKey{
-		pressed:       b.pressed,
-		keepPressed:   b.keepPressed,
-		prevPressed:   b.prevPressed,
-		textBold:      b.textBold,
-		iconAlign:     b.iconAlign,
-		typ:           b.typ,
-		semanticColor: b.semanticColor,
-		sharpCorners:  b.sharpCorners,
-	}
+func (b *Button) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteBool(b.pressed)
+	h.WriteBool(b.keepPressed)
+	h.WriteBool(b.prevPressed)
+	h.WriteBool(b.textBold)
+	h.WriteUint64(uint64(b.iconAlign))
+	h.WriteUint64(uint64(b.typ))
+	h.WriteUint64(uint64(b.semanticColor))
+	h.WriteBool(b.sharpCorners.TopStart)
+	h.WriteBool(b.sharpCorners.TopEnd)
+	h.WriteBool(b.sharpCorners.BottomStart)
+	h.WriteBool(b.sharpCorners.BottomEnd)
 }
 
 func (b *Button) setPressed(pressed bool) {

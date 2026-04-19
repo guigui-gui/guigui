@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/guigui-gui/guigui"
 )
 
 func fastFirstIndex(indices map[int]struct{}) int {
@@ -49,14 +51,8 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 	selectionString string
 }
 
-type abstractListBuildKey struct {
-	selection string
-}
-
-func (a *abstractList[Value, Item]) buildKey() abstractListBuildKey {
-	return abstractListBuildKey{
-		selection: a.selectionString,
-	}
+func (a *abstractList[Value, Item]) writeBuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteString(a.selectionString)
 }
 
 // refreshSelectionString encodes the current selectedIndices as a sorted,

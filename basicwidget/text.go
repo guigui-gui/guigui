@@ -193,31 +193,6 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 	guigui.SetEventHandler(t, textEventScrollDelta, f)
 }
 
-type textBuildKey struct {
-	hAlign                 HorizontalAlign
-	vAlign                 VerticalAlign
-	color                  color.RGBA64
-	hasColor               bool
-	semanticColor          basicwidgetdraw.SemanticColor
-	transparent            float64
-	scaleMinus1            float64
-	bold                   bool
-	tabular                bool
-	tabWidth               float64
-	selectable             bool
-	editable               bool
-	multiline              bool
-	autoWrap               bool
-	keepTailingSpace       bool
-	ellipsisString         string
-	paddingForScrollOffset guigui.Padding
-	selectionStart         int
-	selectionEnd           int
-	fieldFocused           bool
-	localesString          string
-	contentHash            xxh3.Uint128
-}
-
 // contentHashForBuildKey returns a 128-bit fingerprint of the current field
 // contents, including the active IME composition (matching what [Text.Draw]
 // and [Text.Measure] see).
@@ -233,38 +208,36 @@ func (t *Text) contentHashForBuildKey() xxh3.Uint128 {
 	return t.contentHashCache
 }
 
-func (t *Text) BuildKey() any {
-	var c color.RGBA64
+func (t *Text) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteUint64(uint64(t.hAlign))
+	h.WriteUint64(uint64(t.vAlign))
 	hasColor := t.color != nil
+	h.WriteBool(hasColor)
 	if hasColor {
 		r, g, b, a := t.color.RGBA()
-		c = color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)}
+		writeRGBA64(h, color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)})
 	}
+	h.WriteUint64(uint64(t.semanticColor))
+	h.WriteFloat64(t.transparent)
+	h.WriteFloat64(t.scaleMinus1)
+	h.WriteBool(t.bold)
+	h.WriteBool(t.tabular)
+	h.WriteFloat64(t.tabWidth)
+	h.WriteBool(t.selectable)
+	h.WriteBool(t.editable)
+	h.WriteBool(t.multiline)
+	h.WriteBool(t.autoWrap)
+	h.WriteBool(t.keepTailingSpace)
+	h.WriteString(t.ellipsisString)
+	writePadding(h, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
-	return textBuildKey{
-		hAlign:                 t.hAlign,
-		vAlign:                 t.vAlign,
-		color:                  c,
-		hasColor:               hasColor,
-		semanticColor:          t.semanticColor,
-		transparent:            t.transparent,
-		scaleMinus1:            t.scaleMinus1,
-		bold:                   t.bold,
-		tabular:                t.tabular,
-		tabWidth:               t.tabWidth,
-		selectable:             t.selectable,
-		editable:               t.editable,
-		multiline:              t.multiline,
-		autoWrap:               t.autoWrap,
-		keepTailingSpace:       t.keepTailingSpace,
-		ellipsisString:         t.ellipsisString,
-		paddingForScrollOffset: t.paddingForScrollOffset,
-		selectionStart:         selStart,
-		selectionEnd:           selEnd,
-		fieldFocused:           t.field.IsFocused(),
-		localesString:          t.cachedLocalesString,
-		contentHash:            t.contentHashForBuildKey(),
-	}
+	h.WriteInt(selStart)
+	h.WriteInt(selEnd)
+	h.WriteBool(t.field.IsFocused())
+	h.WriteString(t.cachedLocalesString)
+	ch := t.contentHashForBuildKey()
+	h.WriteUint64(ch.Lo)
+	h.WriteUint64(ch.Hi)
 }
 
 func (t *Text) resetCachedTextSize() {

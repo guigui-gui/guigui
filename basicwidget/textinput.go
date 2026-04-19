@@ -106,18 +106,10 @@ func (t *TextInput) IsEditable() bool {
 	return t.textInput.IsEditable()
 }
 
-type textInputBuildKey struct {
-	style            TextInputStyle
-	hasError         bool
-	supportTextValue string
-}
-
-func (t *TextInput) BuildKey() any {
-	return textInputBuildKey{
-		style:            t.style,
-		hasError:         t.hasError,
-		supportTextValue: t.supportTextValue,
-	}
+func (t *TextInput) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteUint64(uint64(t.style))
+	h.WriteBool(t.hasError)
+	h.WriteString(t.supportTextValue)
 }
 
 func (t *TextInput) SetStyle(style TextInputStyle) {
@@ -364,20 +356,11 @@ func (t *textInput) IsEditable() bool {
 	return !t.readonly
 }
 
-type textInputInnerBuildKey struct {
-	style        TextInputStyle
-	readonly     bool
-	paddingStart int
-	paddingEnd   int
-}
-
-func (t *textInput) BuildKey() any {
-	return textInputInnerBuildKey{
-		style:        t.style,
-		readonly:     t.readonly,
-		paddingStart: t.paddingStart,
-		paddingEnd:   t.paddingEnd,
-	}
+func (t *textInput) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteUint64(uint64(t.style))
+	h.WriteBool(t.readonly)
+	h.WriteInt64(int64(t.paddingStart))
+	h.WriteInt64(int64(t.paddingEnd))
 }
 
 func (t *textInput) SetStyle(style TextInputStyle) {
@@ -630,16 +613,9 @@ func (t *textInputText) setEditable(editable bool) {
 	t.text.Widget().SetEditable(editable)
 }
 
-type textInputTextBuildKey struct {
-	containerBounds image.Rectangle
-	padding         guigui.Padding
-}
-
-func (t *textInputText) BuildKey() any {
-	return textInputTextBuildKey{
-		containerBounds: t.containerBounds,
-		padding:         t.padding,
-	}
+func (t *textInputText) BuildKey(h *guigui.BuildKeyHasher) {
+	writeRectangle(h, t.containerBounds)
+	writePadding(h, t.padding)
 }
 
 func (t *textInputText) setContainerBounds(bounds image.Rectangle) {

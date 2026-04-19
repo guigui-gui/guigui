@@ -65,8 +65,8 @@ func (w *itemWidget) Measure(context *guigui.Context, constraints guigui.Constra
 	return s
 }
 
-func (w *itemWidget) BuildKey() any {
-	return w.height
+func (w *itemWidget) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteInt(w.height)
 }
 
 func (w *itemWidget) SetValue(text string) {
@@ -93,11 +93,11 @@ type Root struct {
 	layoutItems []guigui.LinearLayoutItem
 }
 
-func (r *Root) BuildKey() any {
+func (r *Root) BuildKey(h *guigui.BuildKeyHasher) {
 	// Build conditionally repopulates r.items when the slice is empty, so
 	// tracking its length is enough to trigger a rebuild when the Randomize
 	// handlers clear it.
-	return len(r.items)
+	h.WriteInt(len(r.items))
 }
 
 func (r *Root) randomizeHeights() {

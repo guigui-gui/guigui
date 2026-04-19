@@ -62,18 +62,10 @@ type listPanel[T comparable] struct {
 	lastWheelY float64
 }
 
-type listPanelBuildKey struct {
-	topItemIndex  int
-	topItemOffset int
-	offsetX       float64
-}
-
-func (p *listPanel[T]) BuildKey() any {
-	return listPanelBuildKey{
-		topItemIndex:  p.topItemIndex,
-		topItemOffset: p.topItemOffset,
-		offsetX:       p.offsetX,
-	}
+func (p *listPanel[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteInt64(int64(p.topItemIndex))
+	h.WriteInt64(int64(p.topItemOffset))
+	h.WriteFloat64(p.offsetX)
 }
 
 func (p *listPanel[T]) setContent(content *listContent[T]) {

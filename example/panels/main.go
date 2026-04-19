@@ -100,8 +100,8 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}).LayoutWidgets(context, bounds, layouter)
 }
 
-func (r *Root) BuildKey() any {
-	return r.model.buildKey()
+func (r *Root) BuildKey(h *guigui.BuildKeyHasher) {
+	r.model.writeBuildKey(h)
 }
 
 func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {

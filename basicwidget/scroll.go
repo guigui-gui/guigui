@@ -104,16 +104,8 @@ type scrollWheel struct {
 	lastWheelY      float64
 }
 
-type scrollWheelBuildKey struct {
-	offsetGetSetter scrollOffsetGetSetter
-	contentSize     image.Point
-}
-
-func (s *scrollWheel) BuildKey() any {
-	return scrollWheelBuildKey{
-		offsetGetSetter: s.offsetGetSetter,
-		contentSize:     s.contentSize,
-	}
+func (s *scrollWheel) BuildKey(h *guigui.BuildKeyHasher) {
+	writePoint(h, s.contentSize)
 }
 
 func (s *scrollWheel) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {
@@ -170,18 +162,9 @@ type scrollBar struct {
 	onceDraw              bool
 }
 
-type scrollBarBuildKey struct {
-	offsetGetSetter scrollOffsetGetSetter
-	horizontal      bool
-	contentSize     image.Point
-}
-
-func (s *scrollBar) BuildKey() any {
-	return scrollBarBuildKey{
-		offsetGetSetter: s.offsetGetSetter,
-		horizontal:      s.horizontal,
-		contentSize:     s.contentSize,
-	}
+func (s *scrollBar) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteBool(s.horizontal)
+	writePoint(h, s.contentSize)
 }
 
 func (s *scrollBar) setOffsetGetSetter(offsetGetSetter scrollOffsetGetSetter) {

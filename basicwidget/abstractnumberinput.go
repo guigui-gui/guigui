@@ -7,6 +7,8 @@ import (
 	"math"
 	"math/big"
 	"strings"
+
+	"github.com/guigui-gui/guigui"
 )
 
 type abstractNumberInput struct {
@@ -18,9 +20,9 @@ type abstractNumberInput struct {
 	step    big.Int
 	stepSet bool
 
-	// Cached base-10 string representations for [abstractNumberInput.buildKey].
+	// Cached base-10 string representations for [abstractNumberInput.writeBuildKey].
 	// These are refreshed only when the corresponding big.Int is actually changed,
-	// so [abstractNumberInput.buildKey] can return a comparable snapshot without
+	// so [abstractNumberInput.writeBuildKey] can feed the hasher without
 	// re-stringifying on every call.
 	//
 	// An empty string means "not set": for value it is equivalent to the zero-value
@@ -38,20 +40,11 @@ type abstractNumberInput struct {
 	onValueChangedUint64 func(value uint64, committed bool)
 }
 
-type abstractNumberInputBuildKey struct {
-	value string
-	min   string
-	max   string
-	step  string
-}
-
-func (a *abstractNumberInput) buildKey() abstractNumberInputBuildKey {
-	return abstractNumberInputBuildKey{
-		value: a.valueString,
-		min:   a.minString,
-		max:   a.maxString,
-		step:  a.stepString,
-	}
+func (a *abstractNumberInput) writeBuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteString(a.valueString)
+	h.WriteString(a.minString)
+	h.WriteString(a.maxString)
+	h.WriteString(a.stepString)
 }
 
 func (a *abstractNumberInput) OnValueChanged(f func(value int, committed bool)) {

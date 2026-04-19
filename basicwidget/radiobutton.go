@@ -41,8 +41,8 @@ type RadioButtonGroup[T comparable] struct {
 	valuesString string
 }
 
-func (r *RadioButtonGroup[T]) BuildKey() any {
-	return r.valuesString
+func (r *RadioButtonGroup[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteString(r.valuesString)
 }
 
 func (r *RadioButtonGroup[T]) SelectedIndex() int {
@@ -117,16 +117,12 @@ type RadioButton[T comparable] struct {
 	prevHovered bool
 }
 
-type radioButtonBuildKey struct {
-	selected bool
-}
-
-func (r *RadioButton[T]) BuildKey() any {
+func (r *RadioButton[T]) BuildKey(h *guigui.BuildKeyHasher) {
 	var selected bool
 	if r.group != nil {
 		selected = r.group.SelectedIndex() == r.index
 	}
-	return radioButtonBuildKey{selected: selected}
+	h.WriteBool(selected)
 }
 
 func (r *RadioButton[T]) setGroupAndIndex(group *RadioButtonGroup[T], index int) {

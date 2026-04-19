@@ -102,6 +102,24 @@ func (l *ListItem[T]) selectable() bool {
 	return !l.Header && !l.Unselectable && !l.Border && !l.Disabled
 }
 
+// writeBuildKey writes the item's state into h. [Value T] is formatted via
+// [fmt.Fprintf] since T is only constrained to [comparable].
+func (l *ListItem[T]) writeBuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteString(l.Text)
+	writeColor(h, l.TextColor)
+	h.WriteBool(l.Header)
+	h.WriteWidget(l.Content)
+	h.WriteString(l.KeyText)
+	h.WriteBool(l.Unselectable)
+	h.WriteBool(l.Border)
+	h.WriteBool(l.Disabled)
+	h.WriteBool(l.Movable)
+	fmt.Fprintf(h, "%v", l.Value)
+	h.WriteInt(l.IndentLevel)
+	writePadding(h, l.Padding)
+	h.WriteBool(l.Collapsed)
+}
+
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
@@ -135,18 +153,10 @@ func (l *List[T]) SetMultiSelection(multi bool) {
 	l.content.abstractList.SetMultiSelection(multi)
 }
 
-type listBuildKey struct {
-	listItemHeightPlus1 int
-	headerHeight        int
-	footerHeight        int
-}
-
-func (l *List[T]) BuildKey() any {
-	return listBuildKey{
-		listItemHeightPlus1: l.listItemHeightPlus1,
-		headerHeight:        l.headerHeight,
-		footerHeight:        l.footerHeight,
-	}
+func (l *List[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteInt64(int64(l.listItemHeightPlus1))
+	h.WriteInt64(int64(l.headerHeight))
+	h.WriteInt64(int64(l.footerHeight))
 }
 
 func (l *List[T]) SetItemHeight(height int) {
@@ -388,18 +398,10 @@ type listItemWidget[T comparable] struct {
 	wrapperLayoutItems []guigui.LinearLayoutItem
 }
 
-type listItemWidgetBuildKey[T comparable] struct {
-	item        ListItem[T]
-	heightPlus1 int
-	style       ListStyle
-}
-
-func (l *listItemWidget[T]) BuildKey() any {
-	return listItemWidgetBuildKey[T]{
-		item:        l.item,
-		heightPlus1: l.heightPlus1,
-		style:       l.style,
-	}
+func (l *listItemWidget[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	l.item.writeBuildKey(h)
+	h.WriteInt(l.heightPlus1)
+	h.WriteUint64(uint64(l.style))
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
@@ -731,32 +733,17 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
 }
 
-type listContentBuildKey struct {
-	abstractList                abstractListBuildKey
-	style                       ListStyle
-	checkmarkIndexPlus1         int
-	contentWidthPlus1           int
-	hoveredItemIndexPlus1       int
-	lastHoveredItemIndexPlus1   int
-	keyboardHighlightIndexPlus1 int
-	expandAnimatingIndexPlus1   int
-	expandAnimatingChildrenEnd  int
-	expandAnimatingCount        int
-}
-
-func (l *listContent[T]) BuildKey() any {
-	return listContentBuildKey{
-		abstractList:                l.abstractList.buildKey(),
-		style:                       l.style,
-		checkmarkIndexPlus1:         l.checkmarkIndexPlus1,
-		contentWidthPlus1:           l.contentWidthPlus1,
-		hoveredItemIndexPlus1:       l.hoveredItemIndexPlus1,
-		lastHoveredItemIndexPlus1:   l.lastHoveredItemIndexPlus1,
-		keyboardHighlightIndexPlus1: l.keyboardHighlightIndexPlus1,
-		expandAnimatingIndexPlus1:   l.expandAnimatingIndexPlus1,
-		expandAnimatingChildrenEnd:  l.expandAnimatingChildrenEnd,
-		expandAnimatingCount:        l.expandAnimatingCount,
-	}
+func (l *listContent[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	l.abstractList.writeBuildKey(h)
+	h.WriteUint64(uint64(l.style))
+	h.WriteInt(l.checkmarkIndexPlus1)
+	h.WriteInt(l.contentWidthPlus1)
+	h.WriteInt(l.hoveredItemIndexPlus1)
+	h.WriteInt(l.lastHoveredItemIndexPlus1)
+	h.WriteInt(l.keyboardHighlightIndexPlus1)
+	h.WriteInt(l.expandAnimatingIndexPlus1)
+	h.WriteInt(l.expandAnimatingChildrenEnd)
+	h.WriteInt(l.expandAnimatingCount)
 }
 
 func (l *listContent[T]) SetCheckmarkIndex(index int) {
@@ -2319,18 +2306,10 @@ type listFrame struct {
 	style        ListStyle
 }
 
-type listFrameBuildKey struct {
-	headerHeight int
-	footerHeight int
-	style        ListStyle
-}
-
-func (l *listFrame) BuildKey() any {
-	return listFrameBuildKey{
-		headerHeight: l.headerHeight,
-		footerHeight: l.footerHeight,
-		style:        l.style,
-	}
+func (l *listFrame) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteInt(l.headerHeight)
+	h.WriteInt(l.footerHeight)
+	h.WriteUint64(uint64(l.style))
 }
 
 func (l *listFrame) SetHeaderHeight(height int) {

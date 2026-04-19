@@ -133,18 +133,10 @@ func (p *panel) SetContent(widget guigui.Widget) {
 	p.content = widget
 }
 
-type panelBuildKey struct {
-	style   PanelStyle
-	offsetX float64
-	offsetY float64
-}
-
-func (p *panel) BuildKey() any {
-	return panelBuildKey{
-		style:   p.style,
-		offsetX: p.offsetX,
-		offsetY: p.offsetY,
-	}
+func (p *panel) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteUint64(uint64(p.style))
+	h.WriteFloat64(p.offsetX)
+	h.WriteFloat64(p.offsetY)
 }
 
 func (p *panel) SetStyle(typ PanelStyle) {
@@ -463,16 +455,12 @@ type panelBorder struct {
 	autoBorder bool
 }
 
-type panelBorderBuildKey struct {
-	borders    PanelBorders
-	autoBorder bool
-}
-
-func (b *panelBorder) BuildKey() any {
-	return panelBorderBuildKey{
-		borders:    b.borders,
-		autoBorder: b.autoBorder,
-	}
+func (b *panelBorder) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteBool(b.borders.Start)
+	h.WriteBool(b.borders.Top)
+	h.WriteBool(b.borders.End)
+	h.WriteBool(b.borders.Bottom)
+	h.WriteBool(b.autoBorder)
 }
 
 func (b *panelBorder) setBorders(borders PanelBorders) {

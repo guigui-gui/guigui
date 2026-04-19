@@ -59,16 +59,9 @@ type SegmentedControl[T comparable] struct {
 	onButtonDowns []func(context *guigui.Context)
 }
 
-type segmentedControlBuildKey struct {
-	abstractList abstractListBuildKey
-	direction    SegmentedControlDirection
-}
-
-func (s *SegmentedControl[T]) BuildKey() any {
-	return segmentedControlBuildKey{
-		abstractList: s.abstractList.buildKey(),
-		direction:    s.direction,
-	}
+func (s *SegmentedControl[T]) BuildKey(h *guigui.BuildKeyHasher) {
+	s.abstractList.writeBuildKey(h)
+	h.WriteUint64(uint64(s.direction))
 }
 
 func (s *SegmentedControl[T]) SetDirection(direction SegmentedControlDirection) {

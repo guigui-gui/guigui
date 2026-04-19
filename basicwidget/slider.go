@@ -155,20 +155,11 @@ func (s *Slider) SetStepUint64(step uint64) {
 	s.abstractNumberInput.SetStepUint64(step)
 }
 
-type sliderBuildKey struct {
-	numberInput      abstractNumberInputBuildKey
-	snapOnly         bool
-	dragging         bool
-	prevThumbHovered bool
-}
-
-func (s *Slider) BuildKey() any {
-	return sliderBuildKey{
-		numberInput:      s.abstractNumberInput.buildKey(),
-		snapOnly:         s.snapOnly,
-		dragging:         s.dragging,
-		prevThumbHovered: s.prevThumbHovered,
-	}
+func (s *Slider) BuildKey(h *guigui.BuildKeyHasher) {
+	s.abstractNumberInput.writeBuildKey(h)
+	h.WriteBool(s.snapOnly)
+	h.WriteBool(s.dragging)
+	h.WriteBool(s.prevThumbHovered)
 }
 
 func (s *Slider) SetSnapOnly(snapOnly bool) {

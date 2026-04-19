@@ -37,8 +37,8 @@ func (c *Checkbox) Value() bool {
 	return c.value
 }
 
-func (c *Checkbox) BuildKey() any {
-	return c.value
+func (c *Checkbox) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteBool(c.value)
 }
 
 func (c *Checkbox) SetValue(value bool) {

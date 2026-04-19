@@ -18,6 +18,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+	"github.com/zeebo/xxh3"
 )
 
 type debugMode struct {
@@ -149,8 +150,18 @@ type app struct {
 	// not detectable, so every input handler call is conservatively treated as dirtying.
 	buildKeyCheckPending bool
 
+	buildKeyHasher BuildKeyHasher
+
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
+}
+
+// widgetBuildKey runs widget.BuildKey into the shared hasher and returns the
+// resulting 128-bit hash. The hasher is reset before the call.
+func (a *app) widgetBuildKey(widget Widget) xxh3.Uint128 {
+	a.buildKeyHasher.reset()
+	widget.BuildKey(&a.buildKeyHasher)
+	return a.buildKeyHasher.sum128()
 }
 
 var theApp app
@@ -622,7 +633,7 @@ func (a *app) buildWidgets() error {
 	// framework-owned widgetState fields mutated via [Context] setters.
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		ws.capturedBuildKey = widget.BuildKey()
+		ws.capturedBuildKey = a.widgetBuildKey(widget)
 		ws.capturedInternalKey = ws.internalBuildKey()
 	}
 
@@ -649,7 +660,7 @@ func (a *app) checkBuildKeys() {
 			a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)
 			continue
 		}
-		if widget.BuildKey() == ws.capturedBuildKey {
+		if a.widgetBuildKey(widget) == ws.capturedBuildKey {
 			continue
 		}
 		a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)

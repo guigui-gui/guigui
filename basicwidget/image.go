@@ -6,6 +6,7 @@ package basicwidget
 import (
 	"image"
 	"math"
+	"unsafe"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -58,8 +59,8 @@ func (i *Image) HasImage() bool {
 	return i.image != nil
 }
 
-func (i *Image) BuildKey() any {
-	return i.image
+func (i *Image) BuildKey(h *guigui.BuildKeyHasher) {
+	h.WriteUint64(uint64(uintptr(unsafe.Pointer(i.image))))
 }
 
 func (i *Image) SetImage(image *ebiten.Image) {

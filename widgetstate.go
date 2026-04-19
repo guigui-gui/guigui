@@ -12,6 +12,7 @@ import (
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/zeebo/xxh3"
 )
 
 type bounds3D struct {
@@ -151,7 +152,7 @@ type widgetState struct {
 	rebuildRequestedAt    string
 	redrawReasonOnRebuild requestRedrawReason
 
-	capturedBuildKey    any
+	capturedBuildKey    xxh3.Uint128
 	capturedInternalKey widgetInternalBuildKey
 
 	redrawRequested   bool
