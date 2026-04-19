@@ -138,6 +138,18 @@ type app struct {
 	// It is used to avoid re-traversing the tree for passes that don't modify the tree structure.
 	widgetList []Widget
 
+	// prevWidgetList is the previous frame's widgetList, retained across builds
+	// so the tree-exit sweep in buildWidgets can find widgets that were in tree
+	// last frame but are not this frame and reclaim their widgetsAndBounds slices.
+	prevWidgetList []Widget
+
+	// bounds3DsPool is a free-list of backing arrays for widgetsAndBounds.bounds3Ds
+	// and currentBounds3D. Slices are pushed in when a widget leaves the tree and
+	// popped in widgetsAndBounds.equals when a widget's currentBounds3D is nil,
+	// so a churning set of widgets (e.g. list items scrolled in and out) does not
+	// reallocate a fresh backing array every time.
+	bounds3DsPool [][]widgetStateAndBounds
+
 	// hasDirtyWidgets is true when any widget has rebuildRequested, redrawRequested, or eventDispatched set.
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
@@ -587,6 +599,31 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 	return layoutChanged, nil
 }
 
+// getBounds3Ds returns a reclaimed widgetStateAndBounds slice from the pool,
+// or nil if the pool is empty. The returned slice has length 0 but may have
+// non-zero capacity.
+func (a *app) getBounds3Ds() []widgetStateAndBounds {
+	n := len(a.bounds3DsPool)
+	if n == 0 {
+		return nil
+	}
+	s := a.bounds3DsPool[n-1]
+	a.bounds3DsPool[n-1] = nil
+	a.bounds3DsPool = a.bounds3DsPool[:n-1]
+	return s
+}
+
+// putBounds3Ds returns a widgetStateAndBounds slice to the pool for reuse. The
+// slice's backing array is cleared so it does not keep widgetState values alive
+// while sitting in the pool.
+func (a *app) putBounds3Ds(s []widgetStateAndBounds) {
+	if cap(s) == 0 {
+		return
+	}
+	clear(s[:cap(s)])
+	a.bounds3DsPool = append(a.bounds3DsPool, s[:0])
+}
+
 func (a *app) buildWidgets() error {
 	a.buildCount++
 	a.stateKeyCheckPending = true
@@ -612,8 +649,13 @@ func (a *app) buildWidgets() error {
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 	}
 
-	var adder ChildAdder
+	// Swap widgetList and prevWidgetList so last frame's list is retained for the
+	// tree-exit sweep below, and reuse prevWidgetList's backing array as this
+	// frame's (empty) widgetList.
+	a.prevWidgetList, a.widgetList = a.widgetList, a.prevWidgetList
 	a.widgetList = slices.Delete(a.widgetList, 0, len(a.widgetList))
+
+	var adder ChildAdder
 	if err := traverseWidget(a.root, func(widget Widget) error {
 		widgetState := widget.widgetState()
 		widgetState.children = slices.Delete(widgetState.children, 0, len(widgetState.children))
@@ -626,6 +668,20 @@ func (a *app) buildWidgets() error {
 		return nil
 	}); err != nil {
 		return err
+	}
+
+	// Reclaim widgetsAndBounds backing arrays from widgets that were in the tree
+	// last frame but are not this frame, so an incoming widget can pick them up
+	// from bounds3DsPool instead of allocating.
+	for _, widget := range a.prevWidgetList {
+		ws := widget.widgetState()
+		if ws.builtAt == a.buildCount {
+			continue
+		}
+		a.putBounds3Ds(ws.prev.bounds3Ds)
+		a.putBounds3Ds(ws.prev.currentBounds3D)
+		ws.prev.bounds3Ds = nil
+		ws.prev.currentBounds3D = nil
 	}
 
 	// Capture [Widget.WriteStateKey] snapshots so subsequent phases can detect state changes
