@@ -62,10 +62,10 @@ type listPanel[T comparable] struct {
 	lastWheelY float64
 }
 
-func (p *listPanel[T]) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteInt64(int64(p.topItemIndex))
-	h.WriteInt64(int64(p.topItemOffset))
-	h.WriteFloat64(p.offsetX)
+func (p *listPanel[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteInt64(int64(p.topItemIndex))
+	w.WriteInt64(int64(p.topItemOffset))
+	w.WriteFloat64(p.offsetX)
 }
 
 func (p *listPanel[T]) setContent(content *listContent[T]) {
@@ -339,8 +339,8 @@ func (p *listPanel[T]) applyPendingScrollOffsetInTick() bool {
 
 	p.applyPendingScrollOffset()
 
-	// topItemIndex/topItemOffset/offsetX are in listPanelBuildKey, so the rebuild
-	// that re-invokes Layout is triggered automatically.
+	// topItemIndex/topItemOffset/offsetX are in the listPanel's WriteStateKey,
+	// so the rebuild that re-invokes Layout is triggered automatically.
 	return p.offsetX != oldOffsetX || p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
 }
 

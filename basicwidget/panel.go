@@ -133,10 +133,10 @@ func (p *panel) SetContent(widget guigui.Widget) {
 	p.content = widget
 }
 
-func (p *panel) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteUint64(uint64(p.style))
-	h.WriteFloat64(p.offsetX)
-	h.WriteFloat64(p.offsetY)
+func (p *panel) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteUint64(uint64(p.style))
+	w.WriteFloat64(p.offsetX)
+	w.WriteFloat64(p.offsetY)
 }
 
 func (p *panel) SetStyle(typ PanelStyle) {
@@ -375,8 +375,8 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
 		if p.offsetX != oldOffsetX || p.offsetY != oldOffsetY {
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
-			// offsetX/offsetY are in panelBuildKey, so the rebuild that re-invokes
-			// Layout (see #298) is triggered automatically.
+			// offsetX/offsetY are in the panel's WriteStateKey, so the rebuild
+			// that re-invokes Layout (see #298) is triggered automatically.
 		}
 		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
 			shouldShowBar = true
@@ -455,12 +455,12 @@ type panelBorder struct {
 	autoBorder bool
 }
 
-func (b *panelBorder) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(b.borders.Start)
-	h.WriteBool(b.borders.Top)
-	h.WriteBool(b.borders.End)
-	h.WriteBool(b.borders.Bottom)
-	h.WriteBool(b.autoBorder)
+func (b *panelBorder) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(b.borders.Start)
+	w.WriteBool(b.borders.Top)
+	w.WriteBool(b.borders.End)
+	w.WriteBool(b.borders.Bottom)
+	w.WriteBool(b.autoBorder)
 }
 
 func (b *panelBorder) setBorders(borders PanelBorders) {

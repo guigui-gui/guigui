@@ -188,21 +188,21 @@ type popup struct {
 	drawerEdge                         DrawerEdge
 }
 
-func (p *popup) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteUint64(uint64(p.style))
-	writeRectangle(h, p.backgroundBounds)
-	writeRectangle(h, p.contentBounds)
-	h.WriteInt64(int64(p.openingCount))
-	h.WriteBool(p.showing)
-	h.WriteBool(p.hiding)
-	h.WriteBool(p.toOpen)
-	h.WriteBool(p.toClose)
-	h.WriteBool(p.backgroundDark)
-	h.WriteBool(p.backgroundBlurred)
-	h.WriteBool(p.modeless)
-	h.WriteBool(p.animateOnFading)
-	h.WriteUint64(uint64(p.drawerEdge))
-	writePoint(h, p.contentPosition)
+func (p *popup) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteUint64(uint64(p.style))
+	writeRectangle(w, p.backgroundBounds)
+	writeRectangle(w, p.contentBounds)
+	w.WriteInt64(int64(p.openingCount))
+	w.WriteBool(p.showing)
+	w.WriteBool(p.hiding)
+	w.WriteBool(p.toOpen)
+	w.WriteBool(p.toClose)
+	w.WriteBool(p.backgroundDark)
+	w.WriteBool(p.backgroundBlurred)
+	w.WriteBool(p.modeless)
+	w.WriteBool(p.animateOnFading)
+	w.WriteUint64(uint64(p.drawerEdge))
+	writePoint(w, p.contentPosition)
 }
 
 func (p *popup) setStyle(style popupStyle) {
@@ -487,8 +487,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	p.toClose = false
 
 	if p.showing {
-		// openingCount/showing/hiding are in BuildKey, so the rebuild for animation
-		// progression and show/hide transitions is triggered automatically.
+		// openingCount/showing/hiding are in WriteStateKey, so the rebuild for
+		// animation progression and show/hide transitions is triggered automatically.
 		if p.openingCount < popupMaxOpeningCount() {
 			if p.style == popupStyleMenu {
 				p.openingCount += popupFastCount
@@ -517,8 +517,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			guigui.RequestRedraw(p)
 		}
 		if p.openingCount == 0 {
-			// hiding/openingCount are in BuildKey, so the finish-of-hide rebuild
-			// is triggered automatically.
+			// hiding/openingCount are in WriteStateKey, so the finish-of-hide
+			// rebuild is triggered automatically.
 			p.hiding = false
 			guigui.DispatchEvent(p, popupEventClose, p.closeReason)
 			p.closeReason = PopupCloseReasonNone
@@ -812,8 +812,8 @@ func (p *popupShadow) SetOpeningRate(rate float64) {
 	guigui.RequestRedraw(p)
 }
 
-func (p *popupShadow) BuildKey(h *guigui.BuildKeyHasher) {
-	writeRectangle(h, p.contentBounds)
+func (p *popupShadow) WriteStateKey(w *guigui.StateKeyWriter) {
+	writeRectangle(w, p.contentBounds)
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {

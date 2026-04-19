@@ -20,9 +20,9 @@ type abstractNumberInput struct {
 	step    big.Int
 	stepSet bool
 
-	// Cached base-10 string representations for [abstractNumberInput.writeBuildKey].
+	// Cached base-10 string representations for [abstractNumberInput.writeStateKey].
 	// These are refreshed only when the corresponding big.Int is actually changed,
-	// so [abstractNumberInput.writeBuildKey] can feed the hasher without
+	// so [abstractNumberInput.writeStateKey] can feed the writer without
 	// re-stringifying on every call.
 	//
 	// An empty string means "not set": for value it is equivalent to the zero-value
@@ -40,11 +40,11 @@ type abstractNumberInput struct {
 	onValueChangedUint64 func(value uint64, committed bool)
 }
 
-func (a *abstractNumberInput) writeBuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteString(a.valueString)
-	h.WriteString(a.minString)
-	h.WriteString(a.maxString)
-	h.WriteString(a.stepString)
+func (a *abstractNumberInput) writeStateKey(w *guigui.StateKeyWriter) {
+	w.WriteString(a.valueString)
+	w.WriteString(a.minString)
+	w.WriteString(a.maxString)
+	w.WriteString(a.stepString)
 }
 
 func (a *abstractNumberInput) OnValueChanged(f func(value int, committed bool)) {

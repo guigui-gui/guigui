@@ -74,15 +74,16 @@ type Widget interface {
 	// The constraints may specify fixed width and/or height that the widget should respect.
 	Measure(context *Context, constraints Constraints) image.Point
 
-	// BuildKey writes a summary of the widget state relevant to rebuilding the tree
-	// into h. The framework hashes the summary after each [Widget.Build] and compares
-	// it at later checkpoints (after input handling and [Widget.Tick]); when the hash
-	// changes, the framework requests a rebuild automatically, so simple setters do
-	// not need to call [RequestRebuild] for fields included here.
+	// WriteStateKey writes a summary of the widget state relevant to rebuilding
+	// and rendering the tree into w. The framework hashes the summary after each
+	// [Widget.Build] and compares it at later checkpoints (after input handling
+	// and [Widget.Tick]); when the hash changes, the framework requests a rebuild
+	// automatically, so simple setters do not need to call [RequestRebuild] for
+	// fields included here.
 	//
 	// Write nothing to opt out; widgets that opt out must continue to call
 	// [RequestRebuild] explicitly for state that warrants a rebuild.
-	BuildKey(h *BuildKeyHasher)
+	WriteStateKey(w *StateKeyWriter)
 
 	copyCheck()
 	widgetState() *widgetState

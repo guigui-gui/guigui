@@ -85,18 +85,18 @@ func (b *Button) setPairedButton(pair *Button) {
 	b.pairedButton = pair
 }
 
-func (b *Button) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(b.pressed)
-	h.WriteBool(b.keepPressed)
-	h.WriteBool(b.prevPressed)
-	h.WriteBool(b.textBold)
-	h.WriteUint64(uint64(b.iconAlign))
-	h.WriteUint64(uint64(b.typ))
-	h.WriteUint64(uint64(b.semanticColor))
-	h.WriteBool(b.sharpCorners.TopStart)
-	h.WriteBool(b.sharpCorners.TopEnd)
-	h.WriteBool(b.sharpCorners.BottomStart)
-	h.WriteBool(b.sharpCorners.BottomEnd)
+func (b *Button) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(b.pressed)
+	w.WriteBool(b.keepPressed)
+	w.WriteBool(b.prevPressed)
+	w.WriteBool(b.textBold)
+	w.WriteUint64(uint64(b.iconAlign))
+	w.WriteUint64(uint64(b.typ))
+	w.WriteUint64(uint64(b.semanticColor))
+	w.WriteBool(b.sharpCorners.TopStart)
+	w.WriteBool(b.sharpCorners.TopEnd)
+	w.WriteBool(b.sharpCorners.BottomStart)
+	w.WriteBool(b.sharpCorners.BottomEnd)
 }
 
 func (b *Button) setPressed(pressed bool) {

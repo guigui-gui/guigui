@@ -155,11 +155,11 @@ func (s *Slider) SetStepUint64(step uint64) {
 	s.abstractNumberInput.SetStepUint64(step)
 }
 
-func (s *Slider) BuildKey(h *guigui.BuildKeyHasher) {
-	s.abstractNumberInput.writeBuildKey(h)
-	h.WriteBool(s.snapOnly)
-	h.WriteBool(s.dragging)
-	h.WriteBool(s.prevThumbHovered)
+func (s *Slider) WriteStateKey(w *guigui.StateKeyWriter) {
+	s.abstractNumberInput.writeStateKey(w)
+	w.WriteBool(s.snapOnly)
+	w.WriteBool(s.dragging)
+	w.WriteBool(s.prevThumbHovered)
 }
 
 func (s *Slider) SetSnapOnly(snapOnly bool) {

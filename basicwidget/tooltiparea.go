@@ -119,8 +119,8 @@ func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds 
 	return guigui.HandleInputResult{}
 }
 
-func (t *TooltipArea) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(t.toShowTooltip)
+func (t *TooltipArea) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(t.toShowTooltip)
 }
 
 // Tick implements [guigui.Widget.Tick].

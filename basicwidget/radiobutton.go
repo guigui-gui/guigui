@@ -36,13 +36,13 @@ type RadioButtonGroup[T comparable] struct {
 
 	// valuesString is a content fingerprint of values, refreshed only when
 	// [RadioButtonGroup.SetValues] actually changes the slice. Included in
-	// [RadioButtonGroup.BuildKey] so the group rebuilds automatically on
+	// [RadioButtonGroup.WriteStateKey] so the group rebuilds automatically on
 	// value changes without an explicit [guigui.RequestRebuild] call.
 	valuesString string
 }
 
-func (r *RadioButtonGroup[T]) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteString(r.valuesString)
+func (r *RadioButtonGroup[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteString(r.valuesString)
 }
 
 func (r *RadioButtonGroup[T]) SelectedIndex() int {
@@ -117,12 +117,12 @@ type RadioButton[T comparable] struct {
 	prevHovered bool
 }
 
-func (r *RadioButton[T]) BuildKey(h *guigui.BuildKeyHasher) {
+func (r *RadioButton[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	var selected bool
 	if r.group != nil {
 		selected = r.group.SelectedIndex() == r.index
 	}
-	h.WriteBool(selected)
+	w.WriteBool(selected)
 }
 
 func (r *RadioButton[T]) setGroupAndIndex(group *RadioButtonGroup[T], index int) {

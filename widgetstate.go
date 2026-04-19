@@ -152,8 +152,8 @@ type widgetState struct {
 	rebuildRequestedAt    string
 	redrawReasonOnRebuild requestRedrawReason
 
-	capturedBuildKey    xxh3.Uint128
-	capturedInternalKey widgetInternalBuildKey
+	capturedStateKey         xxh3.Uint128
+	capturedInternalStateKey widgetInternalStateKey
 
 	redrawRequested   bool
 	redrawRequestedAt string
@@ -177,12 +177,12 @@ type eventHandler struct {
 	handler any
 }
 
-// widgetInternalBuildKey captures the framework-owned widgetState fields that are
+// widgetInternalStateKey captures the framework-owned widgetState fields that are
 // mutated via [Context] setters such as [Context.SetVisible], [Context.SetEnabled],
 // [Context.SetOpacity], [Context.SetPassthrough], [Context.SetButtonInputReceptive],
 // and bringToFrontLayer. The app snapshots it after each [Widget.Build] and compares
 // it at settle time so those setters do not need to call [RequestRebuild] themselves.
-type widgetInternalBuildKey struct {
+type widgetInternalStateKey struct {
 	hidden               bool
 	disabled             bool
 	passthrough          bool
@@ -191,8 +191,8 @@ type widgetInternalBuildKey struct {
 	transparency         float64
 }
 
-func (w *widgetState) internalBuildKey() widgetInternalBuildKey {
-	return widgetInternalBuildKey{
+func (w *widgetState) internalStateKey() widgetInternalStateKey {
+	return widgetInternalStateKey{
 		hidden:               w.hidden,
 		disabled:             w.disabled,
 		passthrough:          w.passthrough,

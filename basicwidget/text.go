@@ -130,20 +130,20 @@ type Text struct {
 	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
 
-	// contentHasher is a reusable xxh3 streaming hasher used by [Text.BuildKey]
+	// contentHasher is a reusable xxh3 streaming hasher used by [Text.WriteStateKey]
 	// to fingerprint the current field contents without allocating a string.
 	contentHasher xxh3.Hasher128
 
 	// contentHashCache memoizes the most recently computed hash, keyed by
 	// [textinput.Field.ChangedAt]. While the field has not been mutated, repeated
-	// [Text.BuildKey] calls return the cached value without re-hashing.
+	// [Text.WriteStateKey] calls return the cached value without re-hashing.
 	contentHashCache    xxh3.Uint128
 	contentHashCachedAt time.Time
 
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
-	// [Text.BuildKey] so locale changes trigger automatic rebuilds without an
-	// explicit [guigui.RequestRebuild] call.
+	// [Text.WriteStateKey] so locale changes trigger automatic rebuilds without
+	// an explicit [guigui.RequestRebuild] call.
 	cachedLocalesString string
 
 	drawOptions textutil.DrawOptions
@@ -193,10 +193,10 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 	guigui.SetEventHandler(t, textEventScrollDelta, f)
 }
 
-// contentHashForBuildKey returns a 128-bit fingerprint of the current field
+// contentHashForStateKey returns a 128-bit fingerprint of the current field
 // contents, including the active IME composition (matching what [Text.Draw]
 // and [Text.Measure] see).
-func (t *Text) contentHashForBuildKey() xxh3.Uint128 {
+func (t *Text) contentHashForStateKey() xxh3.Uint128 {
 	changedAt := t.field.ChangedAt()
 	if changedAt.Equal(t.contentHashCachedAt) {
 		return t.contentHashCache
@@ -208,36 +208,36 @@ func (t *Text) contentHashForBuildKey() xxh3.Uint128 {
 	return t.contentHashCache
 }
 
-func (t *Text) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteUint64(uint64(t.hAlign))
-	h.WriteUint64(uint64(t.vAlign))
+func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteUint64(uint64(t.hAlign))
+	w.WriteUint64(uint64(t.vAlign))
 	hasColor := t.color != nil
-	h.WriteBool(hasColor)
+	w.WriteBool(hasColor)
 	if hasColor {
 		r, g, b, a := t.color.RGBA()
-		writeRGBA64(h, color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)})
+		writeRGBA64(w, color.RGBA64{R: uint16(r), G: uint16(g), B: uint16(b), A: uint16(a)})
 	}
-	h.WriteUint64(uint64(t.semanticColor))
-	h.WriteFloat64(t.transparent)
-	h.WriteFloat64(t.scaleMinus1)
-	h.WriteBool(t.bold)
-	h.WriteBool(t.tabular)
-	h.WriteFloat64(t.tabWidth)
-	h.WriteBool(t.selectable)
-	h.WriteBool(t.editable)
-	h.WriteBool(t.multiline)
-	h.WriteBool(t.autoWrap)
-	h.WriteBool(t.keepTailingSpace)
-	h.WriteString(t.ellipsisString)
-	writePadding(h, t.paddingForScrollOffset)
+	w.WriteUint64(uint64(t.semanticColor))
+	w.WriteFloat64(t.transparent)
+	w.WriteFloat64(t.scaleMinus1)
+	w.WriteBool(t.bold)
+	w.WriteBool(t.tabular)
+	w.WriteFloat64(t.tabWidth)
+	w.WriteBool(t.selectable)
+	w.WriteBool(t.editable)
+	w.WriteBool(t.multiline)
+	w.WriteBool(t.autoWrap)
+	w.WriteBool(t.keepTailingSpace)
+	w.WriteString(t.ellipsisString)
+	writePadding(w, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
-	h.WriteInt(selStart)
-	h.WriteInt(selEnd)
-	h.WriteBool(t.field.IsFocused())
-	h.WriteString(t.cachedLocalesString)
-	ch := t.contentHashForBuildKey()
-	h.WriteUint64(ch.Lo)
-	h.WriteUint64(ch.Hi)
+	w.WriteInt(selStart)
+	w.WriteInt(selEnd)
+	w.WriteBool(t.field.IsFocused())
+	w.WriteString(t.cachedLocalesString)
+	ch := t.contentHashForStateKey()
+	w.WriteUint64(ch.Lo)
+	w.WriteUint64(ch.Hi)
 }
 
 func (t *Text) resetCachedTextSize() {

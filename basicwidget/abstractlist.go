@@ -45,14 +45,14 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 
 	// selectionString is a comparable fingerprint of the selected-indices set,
 	// refreshed only when [abstractList.selectItemsByIndices] actually changes
-	// the selection. Callers include it in their [Widget.BuildKey] so selection
+	// the selection. Callers include it in their [Widget.WriteStateKey] so selection
 	// changes trigger automatic rebuilds without explicit [guigui.RequestRebuild]
 	// calls — and without the false positives a bump counter would produce.
 	selectionString string
 }
 
-func (a *abstractList[Value, Item]) writeBuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteString(a.selectionString)
+func (a *abstractList[Value, Item]) writeStateKey(w *guigui.StateKeyWriter) {
+	w.WriteString(a.selectionString)
 }
 
 // refreshSelectionString encodes the current selectedIndices as a sorted,

@@ -65,8 +65,8 @@ func (w *itemWidget) Measure(context *guigui.Context, constraints guigui.Constra
 	return s
 }
 
-func (w *itemWidget) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteInt(w.height)
+func (w *itemWidget) WriteStateKey(sw *guigui.StateKeyWriter) {
+	sw.WriteInt(w.height)
 }
 
 func (w *itemWidget) SetValue(text string) {
@@ -93,11 +93,11 @@ type Root struct {
 	layoutItems []guigui.LinearLayoutItem
 }
 
-func (r *Root) BuildKey(h *guigui.BuildKeyHasher) {
+func (r *Root) WriteStateKey(w *guigui.StateKeyWriter) {
 	// Build conditionally repopulates r.items when the slice is empty, so
 	// tracking its length is enough to trigger a rebuild when the Randomize
 	// handlers clear it.
-	h.WriteInt(len(r.items))
+	w.WriteInt(len(r.items))
 }
 
 func (r *Root) randomizeHeights() {
@@ -127,7 +127,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.randomizeButton.OnUp(func(context *guigui.Context) {
 		r.randomizeHeights()
 		// Clear the items so that they will be recreated with new heights in the next Build.
-		// BuildKey covers len(r.items), so clearing triggers a rebuild automatically.
+		// WriteStateKey covers len(r.items), so clearing triggers a rebuild automatically.
 		r.items = slices.Delete(r.items, 0, len(r.items))
 	})
 

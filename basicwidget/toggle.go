@@ -38,8 +38,8 @@ func (t *Toggle) Value() bool {
 	return t.value
 }
 
-func (t *Toggle) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(t.value)
+func (t *Toggle) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(t.value)
 }
 
 func (t *Toggle) SetValue(value bool) {

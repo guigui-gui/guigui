@@ -59,8 +59,8 @@ func (i *Image) HasImage() bool {
 	return i.image != nil
 }
 
-func (i *Image) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteUint64(uint64(uintptr(unsafe.Pointer(i.image))))
+func (i *Image) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteUint64(uint64(uintptr(unsafe.Pointer(i.image))))
 }
 
 func (i *Image) SetImage(image *ebiten.Image) {

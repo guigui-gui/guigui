@@ -142,26 +142,26 @@ type app struct {
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
-	// buildKeyCheckPending is true when widget state may have changed since the last
-	// [app.checkBuildKeys] run. It is set by widget phases (Build, Layout, Tick, HandleInput)
-	// and [Context] setters that affect state tracked in [Widget.BuildKey] or internalBuildKey.
-	// When false, [app.checkBuildKeys] short-circuits without iterating widgetList.
+	// stateKeyCheckPending is true when widget state may have changed since the last
+	// [app.checkStateKeys] run. It is set by widget phases (Build, Layout, Tick, HandleInput)
+	// and [Context] setters that affect state tracked in [Widget.WriteStateKey] or internalStateKey.
+	// When false, [app.checkStateKeys] short-circuits without iterating widgetList.
 	// Input handling is counted as a phase — whether a handler actually mutated state is
 	// not detectable, so every input handler call is conservatively treated as dirtying.
-	buildKeyCheckPending bool
+	stateKeyCheckPending bool
 
-	buildKeyHasher BuildKeyHasher
+	stateKeyWriter StateKeyWriter
 
 	offscreen   *ebiten.Image
 	debugScreen *ebiten.Image
 }
 
-// widgetBuildKey runs widget.BuildKey into the shared hasher and returns the
-// resulting 128-bit hash. The hasher is reset before the call.
-func (a *app) widgetBuildKey(widget Widget) xxh3.Uint128 {
-	a.buildKeyHasher.reset()
-	widget.BuildKey(&a.buildKeyHasher)
-	return a.buildKeyHasher.sum128()
+// widgetStateKey runs widget.WriteStateKey into the shared writer and returns
+// the resulting 128-bit hash. The writer is reset before the call.
+func (a *app) widgetStateKey(widget Widget) xxh3.Uint128 {
+	a.stateKeyWriter.reset()
+	widget.WriteStateKey(&a.stateKeyWriter)
+	return a.stateKeyWriter.sum128()
 }
 
 var theApp app
@@ -300,9 +300,9 @@ func (a *app) setButtonInputReceptiveAncestorFlags() {
 // It performs a single pass over the widget list to collect both redraw requests
 // and event-dispatched widgets.
 func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
-	// Detect [Widget.BuildKey] changes since the last [Widget.Build] and flag rebuilds accordingly.
-	// This lets widgets skip explicit [RequestRebuild] calls for state they expose via [Widget.BuildKey].
-	a.checkBuildKeys()
+	// Detect [Widget.WriteStateKey] changes since the last [Widget.Build] and flag rebuilds accordingly.
+	// This lets widgets skip explicit [RequestRebuild] calls for state they expose via [Widget.WriteStateKey].
+	a.checkStateKeys()
 
 	// Single pass: collect redraw requests and find the first event-dispatched widget.
 	// Skip the entire loop when no widget has set any dirty flag.
@@ -589,7 +589,7 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 
 func (a *app) buildWidgets() error {
 	a.buildCount++
-	a.buildKeyCheckPending = true
+	a.stateKeyCheckPending = true
 
 	a.root.widgetState().builtAt = a.buildCount
 
@@ -628,7 +628,7 @@ func (a *app) buildWidgets() error {
 		return err
 	}
 
-	// Capture [Widget.BuildKey] snapshots so subsequent phases can detect state changes
+	// Capture [Widget.WriteStateKey] snapshots so subsequent phases can detect state changes
 	// that would otherwise require an explicit [RequestRebuild] call. Also snapshot the
 	// framework-owned widgetState fields mutated via [Context] setters.
 	//
@@ -639,47 +639,47 @@ func (a *app) buildWidgets() error {
 	// because its region would not be in regionsToDraw.
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		newBuildKey := a.widgetBuildKey(widget)
-		newInternalKey := ws.internalBuildKey()
-		if newBuildKey != ws.capturedBuildKey || newInternalKey != ws.capturedInternalKey {
+		newStateKey := a.widgetStateKey(widget)
+		newInternalStateKey := ws.internalStateKey()
+		if newStateKey != ws.capturedStateKey || newInternalStateKey != ws.capturedInternalStateKey {
 			requestRedraw(ws)
 		}
-		ws.capturedBuildKey = newBuildKey
-		ws.capturedInternalKey = newInternalKey
+		ws.capturedStateKey = newStateKey
+		ws.capturedInternalStateKey = newInternalStateKey
 	}
 
 	return nil
 }
 
-// checkBuildKeys compares each widget's current [Widget.BuildKey] against the snapshot
+// checkStateKeys compares each widget's current [Widget.WriteStateKey] against the snapshot
 // captured after the last [Widget.Build]. If the key has changed, it requests a rebuild.
 // The snapshot is not refreshed here; it is only refreshed when [Widget.Build] runs again.
 //
-// The check is gated on buildKeyCheckPending: if no widget phase or [Context] setter has
-// run since the last call, no BuildKey could have changed and the iteration is skipped.
-func (a *app) checkBuildKeys() {
-	if !a.buildKeyCheckPending {
+// The check is gated on stateKeyCheckPending: if no widget phase or [Context] setter has
+// run since the last call, no state key could have changed and the iteration is skipped.
+func (a *app) checkStateKeys() {
+	if !a.stateKeyCheckPending {
 		return
 	}
-	a.buildKeyCheckPending = false
+	a.stateKeyCheckPending = false
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
 		if ws.rebuildRequested {
 			continue
 		}
-		if ws.internalBuildKey() != ws.capturedInternalKey {
-			a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)
+		if ws.internalStateKey() != ws.capturedInternalStateKey {
+			a.requestRebuild(ws, requestRedrawReasonStateKeyChanged)
 			continue
 		}
-		if a.widgetBuildKey(widget) == ws.capturedBuildKey {
+		if a.widgetStateKey(widget) == ws.capturedStateKey {
 			continue
 		}
-		a.requestRebuild(ws, requestRedrawReasonBuildKeyChanged)
+		a.requestRebuild(ws, requestRedrawReasonStateKeyChanged)
 	}
 }
 
 func (a *app) layoutWidgets() {
-	a.buildKeyCheckPending = true
+	a.stateKeyCheckPending = true
 	clear(a.visitedLayers)
 	if a.visitedLayers == nil {
 		a.visitedLayers = map[int64]struct{}{}
@@ -783,7 +783,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 
 	bounds := widgetBoundsFromWidget(&a.context, widget)
 
-	a.buildKeyCheckPending = true
+	a.stateKeyCheckPending = true
 	switch typ {
 	case handleInputTypePointing:
 		return widget.HandlePointingInput(&a.context, bounds)
@@ -833,7 +833,7 @@ func (a *app) tickWidgets() error {
 		if !ws.hasCustomTickChecked {
 			a.context.resetDefaultTickMethodCalled()
 		}
-		a.buildKeyCheckPending = true
+		a.stateKeyCheckPending = true
 		if err := widget.Tick(&a.context, bounds); err != nil {
 			return err
 		}

@@ -23,8 +23,8 @@ type roundedCornerWidget[T guigui.Widget] struct {
 	disabled bool
 }
 
-func (r *roundedCornerWidget[T]) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(r.disabled)
+func (r *roundedCornerWidget[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(r.disabled)
 }
 
 func (r *roundedCornerWidget[T]) SetCornderRouneded(rounded bool) {

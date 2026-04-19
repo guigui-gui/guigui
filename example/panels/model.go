@@ -22,12 +22,12 @@ func panelMaxClosingCount() int {
 	return ebiten.TPS() / 10
 }
 
-// writeBuildKey writes the model state that affects the widget tree's
-// layout (panel widths) into h. Callers invoke this from their own BuildKey
-// to trigger rebuilds when the panel animation advances.
-func (m *Model) writeBuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteInt(m.leftClosingCount)
-	h.WriteInt(m.rightClosingCount)
+// writeStateKey writes the model state that affects the widget tree's
+// layout (panel widths) into w. Callers invoke this from their own
+// WriteStateKey to trigger rebuilds when the panel animation advances.
+func (m *Model) writeStateKey(w *guigui.StateKeyWriter) {
+	w.WriteInt(m.leftClosingCount)
+	w.WriteInt(m.rightClosingCount)
 }
 
 func (m *Model) Tick() {

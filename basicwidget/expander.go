@@ -50,11 +50,11 @@ func expandCollapseMaxCount() int {
 	return ebiten.TPS() / 20
 }
 
-func (e *Expander) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(e.expanded)
-	h.WriteInt(e.count)
-	h.WriteWidget(e.headerWidget)
-	h.WriteWidget(e.contentWidget)
+func (e *Expander) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(e.expanded)
+	w.WriteInt(e.count)
+	w.WriteWidget(e.headerWidget)
+	w.WriteWidget(e.contentWidget)
 }
 
 func (e *Expander) SetExpanded(expanded bool) {
@@ -176,9 +176,9 @@ func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
 	guigui.SetEventHandler(e, expanderHeaderEventDown, callback)
 }
 
-func (e *expanderHeader) BuildKey(h *guigui.BuildKeyHasher) {
-	h.WriteBool(e.expanded)
-	h.WriteWidget(e.widget)
+func (e *expanderHeader) WriteStateKey(w *guigui.StateKeyWriter) {
+	w.WriteBool(e.expanded)
+	w.WriteWidget(e.widget)
 }
 
 func (e *expanderHeader) setExpanded(expanded bool) {
