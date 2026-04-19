@@ -631,10 +631,21 @@ func (a *app) buildWidgets() error {
 	// Capture [Widget.BuildKey] snapshots so subsequent phases can detect state changes
 	// that would otherwise require an explicit [RequestRebuild] call. Also snapshot the
 	// framework-owned widgetState fields mutated via [Context] setters.
+	//
+	// If the key differs from the previous snapshot, the widget's state was mutated
+	// during this build cycle — typically by an ancestor's [Widget.Build] calling a
+	// setter on a descendant. Request a redraw so the Draw pass picks up the new
+	// state; without this, the widget would be Build-updated but never Draw-updated
+	// because its region would not be in regionsToDraw.
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		ws.capturedBuildKey = a.widgetBuildKey(widget)
-		ws.capturedInternalKey = ws.internalBuildKey()
+		newBuildKey := a.widgetBuildKey(widget)
+		newInternalKey := ws.internalBuildKey()
+		if newBuildKey != ws.capturedBuildKey || newInternalKey != ws.capturedInternalKey {
+			requestRedraw(ws)
+		}
+		ws.capturedBuildKey = newBuildKey
+		ws.capturedInternalKey = newInternalKey
 	}
 
 	return nil
