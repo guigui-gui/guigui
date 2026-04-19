@@ -114,7 +114,7 @@ func (l *ListItem[T]) writeBuildKey(h *guigui.BuildKeyHasher) {
 	h.WriteBool(l.Border)
 	h.WriteBool(l.Disabled)
 	h.WriteBool(l.Movable)
-	fmt.Fprintf(h, "%v", l.Value)
+	_, _ = fmt.Fprintf(h, "%v", l.Value)
 	h.WriteInt(l.IndentLevel)
 	writePadding(h, l.Padding)
 	h.WriteBool(l.Collapsed)
