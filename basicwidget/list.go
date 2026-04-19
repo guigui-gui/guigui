@@ -102,8 +102,7 @@ func (l *ListItem[T]) selectable() bool {
 	return !l.Header && !l.Unselectable && !l.Border && !l.Disabled
 }
 
-// writeStateKey writes the item's state into w. [Value T] is formatted via
-// [fmt.Fprintf] since T is only constrained to [comparable].
+// writeStateKey writes the item's state into w.
 func (l *ListItem[T]) writeStateKey(w *guigui.StateKeyWriter) {
 	w.WriteString(l.Text)
 	writeColor(w, l.TextColor)
@@ -114,10 +113,12 @@ func (l *ListItem[T]) writeStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(l.Border)
 	w.WriteBool(l.Disabled)
 	w.WriteBool(l.Movable)
-	_, _ = fmt.Fprintf(w, "%v", l.Value)
 	w.WriteInt(l.IndentLevel)
 	writePadding(w, l.Padding)
 	w.WriteBool(l.Collapsed)
+
+	// Value is not written because it's opaque and only used for
+	// identifying the item, so it does not affect the widget state.
 }
 
 type List[T comparable] struct {
