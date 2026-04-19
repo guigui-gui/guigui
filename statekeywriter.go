@@ -5,6 +5,7 @@ package guigui
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"math"
 	"unsafe"
@@ -34,8 +35,14 @@ func (w *StateKeyWriter) sum128() xxh3.Uint128 {
 }
 
 // Write implements [io.Writer].
+//
+// Write never returns a non-nil error.
 func (w *StateKeyWriter) Write(p []byte) (int, error) {
-	return w.h.Write(p)
+	n, err := w.h.Write(p)
+	if err != nil {
+		panic(fmt.Sprintf("guigui: xxh3.Hasher.Write must not fail: %v", err))
+	}
+	return n, nil
 }
 
 // WriteBool writes a bool into the writer.
