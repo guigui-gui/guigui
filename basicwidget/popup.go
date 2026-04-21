@@ -417,13 +417,17 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 }
 
 func (p *popup) SetOpen(open bool) {
-	if open {
-		p.toOpen = true
-		p.toClose = false
-	} else {
-		p.toOpen = false
-		p.toClose = true
+	toOpen := open
+	toClose := !open
+	if p.toOpen == toOpen && p.toClose == toClose {
+		return
 	}
+	p.toOpen = toOpen
+	p.toClose = toClose
+	// A closed popup is typically gated out of its parent's Build, so the
+	// state-key-based auto-rebuild doesn't fire when it's not in the tree.
+	// RequestRebuild falls back to rebuilding the root in that case.
+	guigui.RequestRebuild(p)
 }
 
 func (p *popup) setCloseReason(reason PopupCloseReason) {
