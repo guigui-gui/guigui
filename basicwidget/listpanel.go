@@ -59,6 +59,7 @@ type listPanel[T comparable] struct {
 	estimatedItemHeight int
 
 	// Scroll wheel state for bar visibility.
+	lastWheelX float64
 	lastWheelY float64
 }
 
@@ -165,6 +166,7 @@ func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds
 	// Handle scroll wheel.
 	if widgetBounds.IsHitAtCursor() {
 		wheelX, wheelY := adjustedWheel()
+		p.lastWheelX = wheelX
 		p.lastWheelY = wheelY
 		if wheelX != 0 || wheelY != 0 {
 			dx := wheelX * scrollWheelSpeed(context)
@@ -173,6 +175,7 @@ func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds
 			return guigui.HandleInputByWidget(p)
 		}
 	} else {
+		p.lastWheelX = 0
 		p.lastWheelY = 0
 	}
 
@@ -257,7 +260,7 @@ func (p *listPanel[T]) verticalBarBounds(context *guigui.Context, widgetBounds *
 }
 
 func (p *listPanel[T]) isScrolling() bool {
-	return p.lastWheelY != 0
+	return p.lastWheelX != 0 || p.lastWheelY != 0
 }
 
 func (p *listPanel[T]) isBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
@@ -298,9 +301,10 @@ func (p *listPanel[T]) startShowingBarsIfNeeded(context *guigui.Context, widgetB
 
 func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowBar := p.isBarVisible(context, widgetBounds)
-	// lastWheelY is a one-tick signal: HandlePointingInput only runs on ticks
+	// lastWheelX/Y are a one-tick signal: HandlePointingInput only runs on ticks
 	// with pointing activity, so without this reset a stopped wheel would keep
 	// isScrolling() true until the cursor next moves.
+	p.lastWheelX = 0
 	p.lastWheelY = 0
 
 	if p.applyPendingScrollOffsetInTick() {

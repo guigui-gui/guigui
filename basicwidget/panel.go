@@ -369,6 +369,11 @@ func (p *panel) applyPendingScrollOffset() bool {
 
 func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowBar := p.isBarVisible(context, widgetBounds)
+	// lastWheelX/Y are a one-tick signal: HandlePointingInput only runs on ticks
+	// with pointing activity, so without this reset a stopped wheel would keep
+	// isScrolling() true until the cursor next moves.
+	p.scrollWheel.lastWheelX = 0
+	p.scrollWheel.lastWheelY = 0
 
 	oldOffsetX, oldOffsetY := p.offsetX, p.offsetY
 	if p.applyPendingScrollOffset() {
