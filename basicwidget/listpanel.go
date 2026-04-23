@@ -298,6 +298,10 @@ func (p *listPanel[T]) startShowingBarsIfNeeded(context *guigui.Context, widgetB
 
 func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowBar := p.isBarVisible(context, widgetBounds)
+	// lastWheelY is a one-tick signal: HandlePointingInput only runs on ticks
+	// with pointing activity, so without this reset a stopped wheel would keep
+	// isScrolling() true until the cursor next moves.
+	p.lastWheelY = 0
 
 	if p.applyPendingScrollOffsetInTick() {
 		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
