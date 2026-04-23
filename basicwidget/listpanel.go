@@ -52,7 +52,8 @@ type listPanel[T comparable] struct {
 	nextTopItemIndex   int
 	nextTopItemOffset  int
 
-	scrollBarCount int
+	scrollHBarCount int
+	scrollVBarCount int
 
 	// estimatedItemHeight is the average item height computed during the most
 	// recent layout, used to estimate scroll bar thumb size and viewport item count.
@@ -259,86 +260,110 @@ func (p *listPanel[T]) verticalBarBounds(context *guigui.Context, widgetBounds *
 	return bounds
 }
 
-func (p *listPanel[T]) isScrolling() bool {
-	return p.lastWheelX != 0 || p.lastWheelY != 0
+func (p *listPanel[T]) isScrollingX() bool {
+	return p.lastWheelX != 0
 }
 
-func (p *listPanel[T]) isBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	if p.isScrolling() {
+func (p *listPanel[T]) isScrollingY() bool {
+	return p.lastWheelY != 0
+}
+
+func (p *listPanel[T]) isHBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if p.isScrollingX() {
 		return true
 	}
-	if p.scrollHBar.isDragging() || p.scrollVBar.isDragging() {
+	if p.scrollHBar.isDragging() {
 		return true
 	}
 	if !widgetBounds.IsHitAtCursor() {
 		return false
 	}
 	pt := image.Pt(ebiten.CursorPosition())
-	if pt.In(p.horizontalBarBounds(context, widgetBounds)) {
-		return true
-	}
-	if pt.In(p.verticalBarBounds(context, widgetBounds)) {
-		return true
-	}
-	return false
+	return pt.In(p.horizontalBarBounds(context, widgetBounds))
 }
 
-func (p *listPanel[T]) startShowingBarsIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
-	if hb, vb := p.thumbBounds(context, widgetBounds); hb.Empty() && vb.Empty() {
+func (p *listPanel[T]) isVBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	if p.isScrollingY() {
+		return true
+	}
+	if p.scrollVBar.isDragging() {
+		return true
+	}
+	if !widgetBounds.IsHitAtCursor() {
+		return false
+	}
+	pt := image.Pt(ebiten.CursorPosition())
+	return pt.In(p.verticalBarBounds(context, widgetBounds))
+}
+
+func (p *listPanel[T]) startShowingHBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	if hb, _ := p.thumbBounds(context, widgetBounds); hb.Empty() {
 		return
 	}
+	p.scrollHBarCount = startShowingBarCount(p.scrollHBarCount)
+}
 
-	switch {
-	case p.scrollBarCount >= scrollBarMaxCount()-scrollBarFadingInTime():
-	case p.scrollBarCount >= scrollBarFadingOutTime():
-		p.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
-	case p.scrollBarCount > 0:
-		p.scrollBarCount = scrollBarMaxCount() - scrollBarFadingInTime()
-	default:
-		p.scrollBarCount = scrollBarMaxCount()
+func (p *listPanel[T]) startShowingVBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	if _, vb := p.thumbBounds(context, widgetBounds); vb.Empty() {
+		return
 	}
+	p.scrollVBarCount = startShowingBarCount(p.scrollVBarCount)
 }
 
 func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	shouldShowBar := p.isBarVisible(context, widgetBounds)
+	shouldShowHBar := p.isHBarVisible(context, widgetBounds)
+	shouldShowVBar := p.isVBarVisible(context, widgetBounds)
 	// lastWheelX/Y are a one-tick signal: HandlePointingInput only runs on ticks
 	// with pointing activity, so without this reset a stopped wheel would keep
-	// isScrolling() true until the cursor next moves.
+	// isScrollingX/Y() true until the cursor next moves.
 	p.lastWheelX = 0
 	p.lastWheelY = 0
 
-	if p.applyPendingScrollOffsetInTick() {
-		if p.scrollHBar.isOnceDrawn() || p.scrollVBar.isOnceDrawn() {
-			shouldShowBar = true
-		}
+	hChanged, vChanged := p.applyPendingScrollOffsetInTick()
+	if hChanged && p.scrollHBar.isOnceDrawn() {
+		shouldShowHBar = true
+	}
+	if vChanged && p.scrollVBar.isOnceDrawn() {
+		shouldShowVBar = true
 	}
 
-	oldOpacity := scrollThumbOpacity(p.scrollBarCount)
-	if shouldShowBar {
-		p.startShowingBarsIfNeeded(context, widgetBounds)
+	oldHOpacity := scrollThumbOpacity(p.scrollHBarCount)
+	oldVOpacity := scrollThumbOpacity(p.scrollVBarCount)
+	if shouldShowHBar {
+		p.startShowingHBarIfNeeded(context, widgetBounds)
 	}
-	newOpacity := scrollThumbOpacity(p.scrollBarCount)
+	if shouldShowVBar {
+		p.startShowingVBarIfNeeded(context, widgetBounds)
+	}
+	newHOpacity := scrollThumbOpacity(p.scrollHBarCount)
+	newVOpacity := scrollThumbOpacity(p.scrollVBarCount)
 
-	if newOpacity != oldOpacity {
+	if newHOpacity != oldHOpacity || newVOpacity != oldVOpacity {
 		guigui.RequestRedraw(p)
 	}
 
-	if p.scrollBarCount > 0 {
-		if !shouldShowBar || p.scrollBarCount != scrollBarMaxCount()-scrollBarFadingInTime() {
-			p.scrollBarCount--
+	if p.scrollHBarCount > 0 {
+		if !shouldShowHBar || p.scrollHBarCount != scrollBarMaxCount()-scrollBarFadingInTime() {
+			p.scrollHBarCount--
+		}
+	}
+	if p.scrollVBarCount > 0 {
+		if !shouldShowVBar || p.scrollVBarCount != scrollBarMaxCount()-scrollBarFadingInTime() {
+			p.scrollVBarCount--
 		}
 	}
 
-	alpha := scrollThumbOpacity(p.scrollBarCount)
-	p.scrollHBar.setAlpha(alpha)
-	p.scrollVBar.setAlpha(alpha)
+	p.scrollHBar.setAlpha(scrollThumbOpacity(p.scrollHBarCount))
+	p.scrollVBar.setAlpha(scrollThumbOpacity(p.scrollVBarCount))
 
 	return nil
 }
 
-func (p *listPanel[T]) applyPendingScrollOffsetInTick() bool {
+// applyPendingScrollOffsetInTick applies pending offsets and reports whether
+// the horizontal and vertical positions changed, respectively.
+func (p *listPanel[T]) applyPendingScrollOffsetInTick() (bool, bool) {
 	if !p.nextOffsetXSet && !p.nextTopItemSet {
-		return false
+		return false, false
 	}
 
 	oldOffsetX := p.offsetX
@@ -349,7 +374,9 @@ func (p *listPanel[T]) applyPendingScrollOffsetInTick() bool {
 
 	// topItemIndex/topItemOffset/offsetX are in the listPanel's WriteStateKey,
 	// so the rebuild that re-invokes Layout is triggered automatically.
-	return p.offsetX != oldOffsetX || p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
+	hChanged := p.offsetX != oldOffsetX
+	vChanged := p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
+	return hChanged, vChanged
 }
 
 // vThumbHeight returns the vertical thumb height.

@@ -58,6 +58,25 @@ func scrollThumbOpacity(count int) float64 {
 	}
 }
 
+// startShowingBarCount advances count to indicate the bar should be shown.
+// It preserves an in-progress fade-in and cancels a fade-out.
+func startShowingBarCount(count int) int {
+	switch {
+	case count >= scrollBarMaxCount()-scrollBarFadingInTime():
+		// Already fading in — do not interrupt.
+		return count
+	case count >= scrollBarFadingOutTime():
+		// Fully shown — pin to the start of the shown plateau.
+		return scrollBarMaxCount() - scrollBarFadingInTime()
+	case count > 0:
+		// Fading out — snap back to the shown plateau.
+		return scrollBarMaxCount() - scrollBarFadingInTime()
+	default:
+		// Hidden — start a full fade-in.
+		return scrollBarMaxCount()
+	}
+}
+
 func scrollWheelSpeed(context *guigui.Context) float64 {
 	return 4 * context.Scale()
 }
@@ -116,8 +135,12 @@ func (s *scrollWheel) setContentSize(size image.Point) {
 	s.contentSize = size
 }
 
-func (s *scrollWheel) isScrolling() bool {
-	return s.lastWheelX != 0 || s.lastWheelY != 0
+func (s *scrollWheel) isScrollingX() bool {
+	return s.lastWheelX != 0
+}
+
+func (s *scrollWheel) isScrollingY() bool {
+	return s.lastWheelY != 0
 }
 
 func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
