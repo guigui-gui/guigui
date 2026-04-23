@@ -170,42 +170,22 @@ func (s *Slider) hasSnaps() bool {
 	return s.abstractNumberInput.stepSet
 }
 
-func (s *Slider) snapValue(v *big.Int) {
-	if !s.hasSnaps() {
+// roundDivBigInt sets z = round(x / y) with half-away-from-zero rounding.
+func roundDivBigInt(z, x, y *big.Int) {
+	var rem big.Int
+	z.QuoRem(x, y, &rem)
+	var twoAbsRem, absY big.Int
+	twoAbsRem.Abs(&rem)
+	twoAbsRem.Lsh(&twoAbsRem, 1)
+	absY.Abs(y)
+	if twoAbsRem.Cmp(&absY) < 0 {
 		return
 	}
-	min := s.abstractNumberInput.MinimumValueBigInt()
-	if min == nil {
-		return
+	if x.Sign()*y.Sign() >= 0 {
+		z.Add(z, big.NewInt(1))
+	} else {
+		z.Sub(z, big.NewInt(1))
 	}
-	step := &s.abstractNumberInput.step
-
-	// offset = v - min
-	var offset big.Int
-	offset.Sub(v, min)
-
-	// quotient, remainder = offset / step
-	var quotient, remainder big.Int
-	quotient.DivMod(&offset, step, &remainder)
-
-	// Round to nearest: if |remainder| > step/2, round away from zero
-	var halfStep big.Int
-	halfStep.Div(step, big.NewInt(2))
-
-	var absRemainder big.Int
-	absRemainder.Abs(&remainder)
-
-	if absRemainder.Cmp(&halfStep) > 0 {
-		if offset.Sign() >= 0 {
-			quotient.Add(&quotient, big.NewInt(1))
-		} else {
-			quotient.Sub(&quotient, big.NewInt(1))
-		}
-	}
-
-	// snapped = min + quotient * step
-	v.Mul(&quotient, step)
-	v.Add(v, min)
 }
 
 func (s *Slider) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -301,14 +281,37 @@ func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		return
 	}
 
+	barWidth := int64(s.barWidth(context, widgetBounds))
+	if barWidth <= 0 {
+		return
+	}
 	c := image.Pt(ebiten.CursorPosition())
+
 	var v big.Int
-	v.Sub(max, min)
-	v.Mul(&v, (&big.Int{}).SetInt64(int64(c.X-originX)))
-	v.Div(&v, (&big.Int{}).SetInt64(int64(s.barWidth(context, widgetBounds))))
-	v.Add(&v, originValue)
-	if s.snapOnly {
-		s.snapValue(&v)
+	if s.snapOnly && s.hasSnaps() && s.abstractNumberInput.step.Sign() > 0 {
+		// Pick the snap whose tick is nearest to the cursor. Floor-dividing the
+		// continuous value shrinks the last snap's click zone to one pixel.
+		step := &s.abstractNumberInput.step
+		var num, tmp big.Int
+		num.Sub(max, min)
+		num.Mul(&num, big.NewInt(int64(c.X-originX)))
+		tmp.Sub(originValue, min)
+		tmp.Mul(&tmp, big.NewInt(barWidth))
+		num.Add(&num, &tmp)
+
+		var den big.Int
+		den.Mul(big.NewInt(barWidth), step)
+
+		var snapIndex big.Int
+		roundDivBigInt(&snapIndex, &num, &den)
+
+		v.Mul(&snapIndex, step)
+		v.Add(&v, min)
+	} else {
+		v.Sub(max, min)
+		v.Mul(&v, big.NewInt(int64(c.X-originX)))
+		v.Div(&v, big.NewInt(barWidth))
+		v.Add(&v, originValue)
 	}
 	s.abstractNumberInput.SetValueBigInt(&v, true)
 }
