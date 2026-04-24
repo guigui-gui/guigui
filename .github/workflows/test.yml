@@ -40,8 +40,13 @@ jobs:
       run: |
         go list ./... | grep -v -x -F -f .github/workflows/govetblock_darwin.txt | xargs go vet -v
 
-    - name: Vet (Not macOS)
-      if: runner.os != 'macOS'
+    - name: Vet (Windows)
+      if: runner.os == 'Windows'
+      run: |
+        go list ./... | grep -v -x -F -f .github/workflows/govetblock_windows.txt | xargs go vet -v
+
+    - name: Vet (other OS)
+      if: runner.os != 'macOS' && runner.os != 'Windows'
       run: |
         go vet -v ./...
 
