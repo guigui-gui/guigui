@@ -124,13 +124,6 @@ func (n *NumberInput) ValueUint64() uint64 {
 
 func (n *NumberInput) SetValueBigInt(value *big.Int) {
 	n.abstractNumberInput.SetValueBigInt(value, true)
-	/*if n.nextValue != nil && n.nextValue.Cmp(value) == 0 {
-		return
-	}
-	if n.nextValue == nil {
-		n.nextValue = &big.Int{}
-	}
-	n.nextValue.Set(value)*/
 }
 
 func (n *NumberInput) SetValue(value int) {
