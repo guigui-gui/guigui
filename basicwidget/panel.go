@@ -150,6 +150,8 @@ type panel struct {
 
 	ensureVisibleRect image.Rectangle
 	ensureVisibleTick int64
+
+	onceDraw bool
 }
 
 func (p *panel) OnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
@@ -190,6 +192,10 @@ func (p *panel) scrollOffset() (float64, float64) {
 // SetScrollOffsetByDelta animates the offset by adding dx and dy to the current
 // animation target (or the current offset if no animation is in flight).
 func (p *panel) SetScrollOffsetByDelta(dx, dy float64) {
+	if !p.onceDraw {
+		p.forceSetScrollOffsetByDelta(dx, dy)
+		return
+	}
 	baseX, baseY := p.offsetX, p.offsetY
 	if p.animCount > 0 {
 		baseX, baseY = p.animTargetX, p.animTargetY
@@ -199,6 +205,10 @@ func (p *panel) SetScrollOffsetByDelta(dx, dy float64) {
 
 // SetScrollOffset animates the offset to (x, y).
 func (p *panel) SetScrollOffset(x, y float64) {
+	if !p.onceDraw {
+		p.forceSetScrollOffset(x, y)
+		return
+	}
 	if p.animCount > 0 && p.animTargetX == x && p.animTargetY == y {
 		return
 	}
@@ -357,6 +367,7 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 }
 
 func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	p.onceDraw = true
 	switch p.style {
 	case PanelStyleSide:
 		dst.Fill(basicwidgetdraw.BackgroundSecondaryColor(context.ColorMode()))

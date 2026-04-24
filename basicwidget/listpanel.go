@@ -73,6 +73,8 @@ type listPanel[T comparable] struct {
 	// Scroll wheel state for bar visibility.
 	lastWheelX float64
 	lastWheelY float64
+
+	onceDraw bool
 }
 
 func (p *listPanel[T]) WriteStateKey(w *guigui.StateKeyWriter) {
@@ -135,14 +137,13 @@ func (p *listPanel[T]) forceSetScrollOffsetByDelta(dx, dy float64) {
 
 // setTopItem animates the vertical scroll position toward the given
 // available-item index and offset. Falls back to an instant set when
-// no item-height estimate is available yet.
+// no item-height estimate is available yet, or before the first Draw.
 func (p *listPanel[T]) setTopItem(index, offset int) {
 	estH := p.vAnimEstH
 	if estH <= 0 {
 		estH = p.estimatedItemHeight
 	}
-	if estH <= 0 {
-		// No height estimate available — set instantly via the pending path.
+	if estH <= 0 || !p.onceDraw {
 		p.vAnimCount = 0
 		p.nextTopItemSet = true
 		p.nextTopItemIsDelta = false
@@ -249,6 +250,10 @@ func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds
 	}
 
 	return guigui.HandleInputResult{}
+}
+
+func (p *listPanel[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	p.onceDraw = true
 }
 
 func (p *listPanel[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
