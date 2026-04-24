@@ -667,8 +667,8 @@ type listContent[T comparable] struct {
 	// prevCollapsed stores the previous Collapsed state keyed by item Value, to detect changes in SetItems.
 	prevCollapsed           map[T]collapsedEntry
 	prevCollapsedGeneration uint64
-	// onceRendered prevents animation on the very first render.
-	onceRendered bool
+	// onceDraw prevents animation on the very first render.
+	onceDraw bool
 
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
@@ -1383,7 +1383,7 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 	var lastCollapsedIndentLevel int
 	for i, item := range items {
 		prev, ok := l.prevCollapsed[item.Value]
-		if l.onceRendered && ok && prev.collapsed != item.Collapsed {
+		if l.onceDraw && ok && prev.collapsed != item.Collapsed {
 			l.expandAnimatingIndexPlus1 = i + 1
 			l.expandAnimatingCount = expandCollapseMaxCount() - l.expandAnimatingCount
 			// Compute children range: all items after i with indent > item's indent,
@@ -1961,7 +1961,7 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 }
 
 func (l *listContent[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	l.onceRendered = true
+	l.onceDraw = true
 }
 
 // availableIndexForItemIndex converts a raw item index to the position in the available items list.

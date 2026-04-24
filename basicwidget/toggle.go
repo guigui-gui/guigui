@@ -22,10 +22,10 @@ var (
 type Toggle struct {
 	guigui.DefaultWidget
 
-	pressed      bool
-	value        bool
-	onceRendered bool
-	prevHovered  bool
+	pressed     bool
+	value       bool
+	onceDraw    bool
+	prevHovered bool
 
 	count int
 }
@@ -48,7 +48,7 @@ func (t *Toggle) SetValue(value bool) {
 	}
 
 	t.value = value
-	if t.onceRendered {
+	if t.onceDraw {
 		t.count = toggleMaxCount() - t.count
 	}
 	guigui.DispatchEvent(t, toggleEventValueChanged, value)
@@ -158,7 +158,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	defer dstSub.Recycle()
 	basicwidgetdraw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
 
-	t.onceRendered = true
+	t.onceDraw = true
 }
 
 func (t *Toggle) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {

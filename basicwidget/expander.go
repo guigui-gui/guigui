@@ -24,9 +24,9 @@ type Expander struct {
 	headerWidget  guigui.Widget
 	contentWidget guigui.Widget
 
-	expanded     bool
-	onceRendered bool
-	count        int
+	expanded bool
+	onceDraw bool
+	count    int
 
 	layoutItems []guigui.LinearLayoutItem
 	onDown      func(context *guigui.Context)
@@ -63,7 +63,7 @@ func (e *Expander) SetExpanded(expanded bool) {
 	}
 	e.expanded = expanded
 	e.header.setExpanded(e.expanded)
-	if e.onceRendered {
+	if e.onceDraw {
 		e.count = expandCollapseMaxCount() - e.count
 	}
 	guigui.DispatchEvent(e, expanderEventExpansionChanged, e.expanded)
@@ -156,7 +156,7 @@ func (e *Expander) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 }
 
 func (e *Expander) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	e.onceRendered = true
+	e.onceDraw = true
 }
 
 type expanderHeader struct {
