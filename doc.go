@@ -10,9 +10,9 @@
 //
 // The framework guarantees the following about a few of the widget methods:
 //
-//   - [Widget.Build] constructs the child widget tree. When Build is called, the widget's own
-//     bounds are not determined yet (so [WidgetBounds] is not passed as an argument), and the
-//     child tree is not determined yet either.
+//   - [Widget.Build] constructs the child widget tree. When Build is called, neither the widget's
+//     own bounds nor its parent's bounds are determined yet (so [WidgetBounds] is not passed as
+//     an argument), and the child tree is not determined yet either.
 //   - [Widget.Layout] positions and sizes children. When Layout is called, the widget's own bounds
 //     and its parent's bounds are determined, but its children's bounds are not yet determined.
 //   - [Widget.Tick] is invoked at the application's TPS (60 times per second by default,
