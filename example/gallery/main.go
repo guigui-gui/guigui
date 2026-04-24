@@ -56,7 +56,7 @@ func (r *Root) Env(context *guigui.Context, key guigui.EnvKey, source *guigui.En
 	}
 }
 
-func (r *Root) contentWidgeet() guigui.Widget {
+func (r *Root) contentWidget() guigui.Widget {
 	switch r.model.Mode() {
 	case "settings":
 		return &r.settings
@@ -97,7 +97,7 @@ func (r *Root) contentWidgeet() guigui.Widget {
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
 	adder.AddWidget(&r.sidebar)
-	if content := r.contentWidgeet(); content != nil {
+	if content := r.contentWidget(); content != nil {
 		adder.AddWidget(content)
 	}
 	return nil
@@ -112,7 +112,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			Size:   guigui.FixedSize(8 * basicwidget.UnitSize(context)),
 		},
 		guigui.LinearLayoutItem{
-			Widget: r.contentWidgeet(),
+			Widget: r.contentWidget(),
 			Size:   guigui.FlexibleSize(1),
 		},
 	)
