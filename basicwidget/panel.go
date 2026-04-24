@@ -199,17 +199,17 @@ func (p *panel) SetScrollOffsetByDelta(dx, dy float64) {
 
 // SetScrollOffset animates the offset to (x, y).
 func (p *panel) SetScrollOffset(x, y float64) {
-	// An animated setter supersedes any pending instant change.
-	p.nextOffsetSet = false
-	p.isNextOffsetDelta = false
-	p.nextOffsetX = 0
-	p.nextOffsetY = 0
 	if p.animCount > 0 && p.animTargetX == x && p.animTargetY == y {
 		return
 	}
 	if p.animCount <= 0 && p.offsetX == x && p.offsetY == y {
 		return
 	}
+	// Animation supersedes any pending instant change.
+	p.nextOffsetSet = false
+	p.isNextOffsetDelta = false
+	p.nextOffsetX = 0
+	p.nextOffsetY = 0
 	p.animStartX = p.offsetX
 	p.animStartY = p.offsetY
 	p.animTargetX = x
