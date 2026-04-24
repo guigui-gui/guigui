@@ -434,7 +434,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	if t.onTextScrollDelta == nil {
 		t.onTextScrollDelta = func(context *guigui.Context, deltaX, deltaY float64) {
-			t.panel.SetScrollOffsetByDelta(deltaX, deltaY)
+			t.panel.ForceSetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
 	t.text.Text().onScrollDelta(t.onTextScrollDelta)

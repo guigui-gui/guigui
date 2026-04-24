@@ -1031,7 +1031,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 				if topIdx == 0 && topOff > 0 {
 					topOff = 0
 				}
-				l.listPanel.forceSetTopItem(topIdx, topOff)
+				l.listPanel.forceSetTopItem(topIdx, topOff, false)
 			}
 		}
 	}
@@ -1145,7 +1145,7 @@ func (l *listContent[T]) normalizeTopItem(context *guigui.Context, availableIndi
 		topOff = 0
 	}
 
-	l.listPanel.forceSetTopItem(topIdx, topOff)
+	l.listPanel.forceSetTopItem(topIdx, topOff, false)
 }
 
 // measureItemContentHeight returns the content height of an item, caching the
@@ -1766,7 +1766,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				dy = float64(lowerY-y) / 4
 			}
 			if dy != 0 {
-				l.listPanel.setScrollOffsetByDelta(0, dy)
+				l.listPanel.forceSetScrollOffsetByDelta(0, dy)
 			}
 			if i := l.calcDropDstIndex(context); l.dragDstIndexPlus1-1 != i {
 				droppable := true
@@ -2020,7 +2020,7 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 			if itemBottom > viewportHeight-RoundedCornerRadius(context) {
 				// Need to scroll down. Set the offset so this item's bottom aligns with viewport bottom.
 				diff := itemBottom - (viewportHeight - RoundedCornerRadius(context))
-				l.listPanel.forceSetTopItem(topIdx, topOff-diff)
+				l.listPanel.setTopItem(topIdx, topOff-diff)
 				// normalizeTopItem will fix the indices during the next layout.
 			}
 			return

@@ -83,6 +83,14 @@ func (p *Panel) SetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
 	p.panel.SetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
+func (p *Panel) ForceSetScrollOffset(offsetX, offsetY float64) {
+	p.panel.forceSetScrollOffset(offsetX, offsetY)
+}
+
+func (p *Panel) ForceSetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) {
+	p.panel.forceSetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
+}
+
 func (p *Panel) setScrolBarVisible(visible bool) {
 	p.panel.setScrolVisible(visible)
 }
@@ -115,12 +123,19 @@ type panel struct {
 	contentConstraints PanelContentConstraints
 	scrollHidden       bool
 
-	offsetX             float64
-	offsetY             float64
-	nextOffsetSet       bool
-	isNextOffsetDelta   bool
-	nextOffsetX         float64
-	nextOffsetY         float64
+	offsetX           float64
+	offsetY           float64
+	nextOffsetSet     bool
+	isNextOffsetDelta bool
+	nextOffsetX       float64
+	nextOffsetY       float64
+	animStartX        float64
+	animStartY        float64
+	animTargetX       float64
+	animTargetY       float64
+	// animCount counts down from scrollAnimMaxCount() at animation start to 0.
+	// A positive value indicates an animation is in flight.
+	animCount           int
 	scrollHBarCount     int
 	scrollVBarCount     int
 	contentSizeAtLayout image.Point
@@ -161,20 +176,49 @@ func (p *panel) scrollOffset() (float64, float64) {
 	return p.offsetX, p.offsetY
 }
 
-// SetScrollOffsetByDelta sets the offset by adding dx and dy to the current offset.
+// SetScrollOffsetByDelta animates the offset by adding dx and dy to the current
+// animation target (or the current offset if no animation is in flight).
 func (p *panel) SetScrollOffsetByDelta(dx, dy float64) {
+	baseX, baseY := p.offsetX, p.offsetY
+	if p.animCount > 0 {
+		baseX, baseY = p.animTargetX, p.animTargetY
+	}
+	p.SetScrollOffset(baseX+dx, baseY+dy)
+}
+
+// SetScrollOffset animates the offset to (x, y).
+func (p *panel) SetScrollOffset(x, y float64) {
+	// An animated setter supersedes any pending instant change.
+	p.nextOffsetSet = false
+	p.isNextOffsetDelta = false
+	p.nextOffsetX = 0
+	p.nextOffsetY = 0
+	if p.animCount > 0 && p.animTargetX == x && p.animTargetY == y {
+		return
+	}
+	if p.animCount <= 0 && p.offsetX == x && p.offsetY == y {
+		return
+	}
+	p.animStartX = p.offsetX
+	p.animStartY = p.offsetY
+	p.animTargetX = x
+	p.animTargetY = y
+	p.animCount = scrollAnimMaxCount()
+}
+
+// forceSetScrollOffsetByDelta sets the offset by adding dx and dy to the
+// current offset immediately, without animation.
+func (p *panel) forceSetScrollOffsetByDelta(dx, dy float64) {
+	p.animCount = 0
 	p.nextOffsetSet = true
 	p.isNextOffsetDelta = true
 	p.nextOffsetX = dx
 	p.nextOffsetY = dy
 }
 
-// SetScrollOffset sets the offset to (x, y).
-func (p *panel) SetScrollOffset(x, y float64) {
-	p.setScrollOffset(x, y)
-}
-
-func (p *panel) setScrollOffset(x, y float64) {
+// forceSetScrollOffset sets the offset to (x, y) immediately, without animation.
+func (p *panel) forceSetScrollOffset(x, y float64) {
+	p.animCount = 0
 	if p.offsetX == x && p.offsetY == y {
 		return
 	}
@@ -371,6 +415,25 @@ func (p *panel) applyPendingScrollOffset() bool {
 	return true
 }
 
+// advanceScrollAnimation advances the scroll animation by one tick, updating
+// offsetX/Y. Returns true if offsetX/Y was modified.
+func (p *panel) advanceScrollAnimation() bool {
+	if p.animCount <= 0 {
+		return false
+	}
+	p.animCount--
+	if p.animCount <= 0 {
+		p.offsetX = p.animTargetX
+		p.offsetY = p.animTargetY
+		return true
+	}
+	max := scrollAnimMaxCount()
+	t := easeOutQuad(float64(max-p.animCount) / float64(max))
+	p.offsetX = p.animStartX + (p.animTargetX-p.animStartX)*t
+	p.offsetY = p.animStartY + (p.animTargetY-p.animStartY)*t
+	return true
+}
+
 func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowHBar := p.isHBarVisible(context, widgetBounds)
 	shouldShowVBar := p.isVBarVisible(context, widgetBounds)
@@ -381,7 +444,11 @@ func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 	p.scrollWheel.lastWheelY = 0
 
 	oldOffsetX, oldOffsetY := p.offsetX, p.offsetY
-	if p.applyPendingScrollOffset() {
+	offsetChanged := p.applyPendingScrollOffset()
+	if p.advanceScrollAnimation() {
+		offsetChanged = true
+	}
+	if offsetChanged {
 		p.offsetX, p.offsetY = p.adjustOffset(context, widgetBounds, p.offsetX, p.offsetY)
 		if p.offsetX != oldOffsetX || p.offsetY != oldOffsetY {
 			guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)

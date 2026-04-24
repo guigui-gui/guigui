@@ -52,6 +52,17 @@ type listPanel[T comparable] struct {
 	nextTopItemIndex   int
 	nextTopItemOffset  int
 
+	// Vertical scroll animation state. Interpolates in virtual pixel space
+	// using vAnimEstH (a snapshot of estimatedItemHeight at animation start).
+	// vAnimCount counts down from scrollAnimMaxCount() to 0; a positive value
+	// indicates an animation is in flight.
+	vAnimStartIndex   int
+	vAnimStartOffset  int
+	vAnimTargetIndex  int
+	vAnimTargetOffset int
+	vAnimEstH         int
+	vAnimCount        int
+
 	scrollHBarCount int
 	scrollVBarCount int
 
@@ -80,9 +91,8 @@ func (p *listPanel[T]) scrollOffset() (float64, float64) {
 	return p.offsetX, 0
 }
 
-// setScrollOffset is called by the horizontal scroll bar.
-// Only horizontal offset is meaningful here.
-func (p *listPanel[T]) setScrollOffset(x, _ float64) {
+// forceSetScrollOffsetX sets the horizontal scroll offset.
+func (p *listPanel[T]) forceSetScrollOffsetX(x float64) {
 	if p.offsetX == x {
 		return
 	}
@@ -91,9 +101,17 @@ func (p *listPanel[T]) setScrollOffset(x, _ float64) {
 	p.nextOffsetX = x
 }
 
-// setScrollOffsetByDelta adjusts the horizontal offset by dx
-// and the vertical position by dy pixels.
-func (p *listPanel[T]) setScrollOffsetByDelta(dx, dy float64) {
+// forceSetScrollOffset satisfies [scrollOffsetGetSetter], used by the horizontal
+// scroll bar. Y is ignored because vertical scroll is item-based, not
+// pixel-based (see [listPanel.forceSetTopItem] / [listPanel.setTopItem]).
+func (p *listPanel[T]) forceSetScrollOffset(x, _ float64) {
+	p.forceSetScrollOffsetX(x)
+}
+
+// forceSetScrollOffsetByDelta adjusts the horizontal offset by dx and the
+// vertical position by dy pixels, without animation. Direct user input (wheel)
+// cancels any in-flight vertical animation.
+func (p *listPanel[T]) forceSetScrollOffsetByDelta(dx, dy float64) {
 	if dx != 0 {
 		if p.nextOffsetXSet && p.nextOffsetXIsDelta {
 			p.nextOffsetX += dx
@@ -104,6 +122,7 @@ func (p *listPanel[T]) setScrollOffsetByDelta(dx, dy float64) {
 		}
 	}
 	if dy != 0 {
+		p.vAnimCount = 0
 		if p.nextTopItemSet && p.nextTopItemIsDelta {
 			p.nextDeltaY += dy
 		} else {
@@ -114,12 +133,41 @@ func (p *listPanel[T]) setScrollOffsetByDelta(dx, dy float64) {
 	}
 }
 
-// setTopItem sets the vertical scroll position directly by available-item index and offset.
+// setTopItem animates the vertical scroll position toward the given
+// available-item index and offset. Falls back to an instant set when
+// no item-height estimate is available yet.
 func (p *listPanel[T]) setTopItem(index, offset int) {
-	p.nextTopItemSet = true
+	estH := p.vAnimEstH
+	if estH <= 0 {
+		estH = p.estimatedItemHeight
+	}
+	if estH <= 0 {
+		// No height estimate available — set instantly via the pending path.
+		p.vAnimCount = 0
+		p.nextTopItemSet = true
+		p.nextTopItemIsDelta = false
+		p.nextTopItemIndex = index
+		p.nextTopItemOffset = offset
+		return
+	}
+	if p.vAnimCount > 0 && index == p.vAnimTargetIndex && offset == p.vAnimTargetOffset {
+		return
+	}
+	if p.vAnimCount <= 0 && index == p.topItemIndex && offset == p.topItemOffset {
+		return
+	}
+	// Animation supersedes any pending instant change.
+	p.nextTopItemSet = false
 	p.nextTopItemIsDelta = false
-	p.nextTopItemIndex = index
-	p.nextTopItemOffset = offset
+	p.nextDeltaY = 0
+	p.nextTopItemIndex = 0
+	p.nextTopItemOffset = 0
+	p.vAnimStartIndex = p.topItemIndex
+	p.vAnimStartOffset = p.topItemOffset
+	p.vAnimTargetIndex = index
+	p.vAnimTargetOffset = offset
+	p.vAnimEstH = estH
+	p.vAnimCount = scrollAnimMaxCount()
 }
 
 // topItem returns the current vertical scroll state.
@@ -127,9 +175,22 @@ func (p *listPanel[T]) topItem() (int, int) {
 	return p.topItemIndex, p.topItemOffset
 }
 
-// forceSetTopItem writes the top item position directly, bypassing and clearing
-// any pending vertical offset. Used by layout code that has already measured items.
-func (p *listPanel[T]) forceSetTopItem(index, offset int) {
+// forceSetTopItem writes the top item position directly.
+//
+// When cancelAnimation is true, any pending vertical change and in-flight
+// animation are cleared. Used by direct/user input (e.g. scroll-bar drag)
+// that should supersede the animation.
+//
+// When cancelAnimation is false, the animation is preserved. This is layout
+// bookkeeping — normalization derives canonical (index, offset) from real
+// item heights so that readers like the scroll bar thumb see a consistent
+// position, and that derivation must not cancel the animation target. Callers
+// must ensure no pending vertical change is queued (verified by the assert).
+// In practice Layout runs applyPendingScrollOffset before child layout.
+func (p *listPanel[T]) forceSetTopItem(index, offset int, cancelAnimation bool) {
+	if !cancelAnimation && p.nextTopItemSet {
+		panic("basicwidget: forceSetTopItem(cancelAnimation=false) called with a pending vertical change; callers must run applyPendingScrollOffset first")
+	}
 	p.topItemIndex = index
 	p.topItemOffset = offset
 	p.nextTopItemSet = false
@@ -137,6 +198,9 @@ func (p *listPanel[T]) forceSetTopItem(index, offset int) {
 	p.nextDeltaY = 0
 	p.nextTopItemIndex = 0
 	p.nextTopItemOffset = 0
+	if cancelAnimation {
+		p.vAnimCount = 0
+	}
 }
 
 // setEstimatedItemHeight records the estimated item height, used to
@@ -172,7 +236,7 @@ func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds
 		if wheelX != 0 || wheelY != 0 {
 			dx := wheelX * scrollWheelSpeed(context)
 			dy := wheelY * scrollWheelSpeed(context)
-			p.setScrollOffsetByDelta(dx, dy)
+			p.forceSetScrollOffsetByDelta(dx, dy)
 			return guigui.HandleInputByWidget(p)
 		}
 	} else {
@@ -320,6 +384,9 @@ func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widget
 	p.lastWheelY = 0
 
 	hChanged, vChanged := p.applyPendingScrollOffsetInTick()
+	if p.advanceScrollAnimation() {
+		vChanged = true
+	}
 	if hChanged && p.scrollHBar.isOnceDrawn() {
 		shouldShowHBar = true
 	}
@@ -357,6 +424,36 @@ func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widget
 	p.scrollVBar.setAlpha(scrollThumbOpacity(p.scrollVBarCount))
 
 	return nil
+}
+
+// advanceScrollAnimation advances the vertical scroll animation by one tick,
+// updating topItemIndex/topItemOffset. Returns true if those values changed.
+// Intermediate positions are computed in a virtual pixel space derived from the
+// item-height estimate captured at animation start; the final tick snaps to
+// the exact target.
+func (p *listPanel[T]) advanceScrollAnimation() bool {
+	if p.vAnimCount <= 0 {
+		return false
+	}
+	p.vAnimCount--
+	if p.vAnimCount <= 0 {
+		p.topItemIndex = p.vAnimTargetIndex
+		p.topItemOffset = p.vAnimTargetOffset
+		return true
+	}
+	max := scrollAnimMaxCount()
+	startScroll := p.vAnimStartIndex*p.vAnimEstH - p.vAnimStartOffset
+	targetScroll := p.vAnimTargetIndex*p.vAnimEstH - p.vAnimTargetOffset
+	t := easeOutQuad(float64(max-p.vAnimCount) / float64(max))
+	scroll := float64(startScroll) + (float64(targetScroll)-float64(startScroll))*t
+	idx := int(scroll) / p.vAnimEstH
+	if idx < 0 {
+		idx = 0
+	}
+	off := idx*p.vAnimEstH - int(scroll)
+	p.topItemIndex = idx
+	p.topItemOffset = off
+	return true
 }
 
 // applyPendingScrollOffsetInTick applies pending offsets and reports whether
@@ -582,7 +679,7 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 				newItemH = s.panel.estimatedItemHeight
 			}
 			newOffset := -int((newFraction - float64(newIdx)) * float64(newItemH))
-			s.panel.forceSetTopItem(newIdx, newOffset)
+			s.panel.forceSetTopItem(newIdx, newOffset, true)
 		}
 		return guigui.HandleInputByWidget(s)
 	}

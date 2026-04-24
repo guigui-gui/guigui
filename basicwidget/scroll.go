@@ -44,6 +44,12 @@ func scrollBarMaxCount() int {
 	return scrollBarFadingInTime() + scrollBarShowingTime() + scrollBarFadingOutTime()
 }
 
+// scrollAnimMaxCount returns the duration in ticks of the scroll-offset
+// animation triggered by API calls like SetScrollOffset and setTopItem.
+func scrollAnimMaxCount() int {
+	return ebiten.TPS() / 10
+}
+
 func scrollThumbOpacity(count int) float64 {
 	const maxOpacity = 0.75
 
@@ -111,7 +117,7 @@ func scrollThumbSize(context *guigui.Context, widgetBounds *guigui.WidgetBounds,
 
 type scrollOffsetGetSetter interface {
 	scrollOffset() (float64, float64)
-	setScrollOffset(x, y float64)
+	forceSetScrollOffset(x, y float64)
 }
 
 type scrollWheel struct {
@@ -162,7 +168,7 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 		offsetX, offsetY := s.offsetGetSetter.scrollOffset()
 		offsetX += wheelX * scrollWheelSpeed(context)
 		offsetY += wheelY * scrollWheelSpeed(context)
-		s.offsetGetSetter.setScrollOffset(offsetX, offsetY)
+		s.offsetGetSetter.forceSetScrollOffset(offsetX, offsetY)
 		// TODO: If the actual offset is not changed, this should not return HandleInputByWidget (#204).
 		return guigui.HandleInputByWidget(s)
 	}
@@ -270,9 +276,9 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 						offset -= float64(pageSize)
 					}
 					if s.horizontal {
-						s.offsetGetSetter.setScrollOffset(offset, offsetY)
+						s.offsetGetSetter.forceSetScrollOffset(offset, offsetY)
 					} else {
-						s.offsetGetSetter.setScrollOffset(offsetX, offset)
+						s.offsetGetSetter.forceSetScrollOffset(offsetX, offset)
 					}
 					return guigui.HandleInputByWidget(s)
 				}
@@ -313,7 +319,7 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 				offsetPerPixel := float64(s.contentSize.Y-cs.Y) / trackHeight
 				offsetY = s.draggingStartOffset + float64(-dy)*offsetPerPixel
 			}
-			s.offsetGetSetter.setScrollOffset(offsetX, offsetY)
+			s.offsetGetSetter.forceSetScrollOffset(offsetX, offsetY)
 		}
 		return guigui.HandleInputByWidget(s)
 	}
