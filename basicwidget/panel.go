@@ -91,6 +91,14 @@ func (p *Panel) ForceSetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) 
 	p.panel.forceSetScrollOffsetByDelta(offsetXDelta, offsetYDelta)
 }
 
+// EnsureRectangleVisible ensures the given rectangle, in content-local coordinates,
+// is visible in the viewport by scrolling if necessary.
+// If the rectangle is larger than the viewport, its top-left corner is aligned with
+// the top-left of the viewport.
+func (p *Panel) EnsureRectangleVisible(rect image.Rectangle) {
+	p.panel.EnsureRectangleVisible(rect)
+}
+
 func (p *Panel) setScrolBarVisible(visible bool) {
 	p.panel.setScrolVisible(visible)
 }
@@ -139,6 +147,9 @@ type panel struct {
 	scrollHBarCount     int
 	scrollVBarCount     int
 	contentSizeAtLayout image.Point
+
+	ensureVisibleRect image.Rectangle
+	ensureVisibleTick int64
 }
 
 func (p *panel) OnScroll(callback func(context *guigui.Context, offsetX, offsetY float64)) {
@@ -230,6 +241,32 @@ func (p *panel) forceSetScrollOffset(x, y float64) {
 
 func (p *panel) setScrolVisible(visible bool) {
 	p.scrollHidden = !visible
+}
+
+func (p *panel) EnsureRectangleVisible(rect image.Rectangle) {
+	p.ensureVisibleRect = rect
+	p.ensureVisibleTick = ebiten.Tick() + 1
+}
+
+func (p *panel) applyEnsureRectangleVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	bounds := widgetBounds.Bounds()
+	w := float64(bounds.Dx())
+	h := float64(bounds.Dy())
+	r := p.ensureVisibleRect
+
+	newX, newY := p.offsetX, p.offsetY
+	if p.animCount > 0 {
+		newX, newY = p.animTargetX, p.animTargetY
+	}
+
+	// Scroll to show the far edge if it is past the viewport, then fall back to the
+	// near edge so that when the rectangle is larger than the viewport the near edge
+	// wins.
+	newX = max(min(newX, w-float64(r.Max.X)), -float64(r.Min.X))
+	newY = max(min(newY, h-float64(r.Max.Y)), -float64(r.Min.Y))
+
+	newX, newY = p.adjustOffset(context, widgetBounds, newX, newY)
+	p.SetScrollOffset(newX, newY)
 }
 
 func (p *panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -435,6 +472,13 @@ func (p *panel) advanceScrollAnimation() bool {
 }
 
 func (p *panel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Apply a deferred EnsureRectangleVisible request. Waiting a tick ensures the
+	// content has been measured so contentSizeAtLayout and the viewport are current.
+	if p.ensureVisibleTick > 0 && ebiten.Tick() >= p.ensureVisibleTick {
+		p.applyEnsureRectangleVisible(context, widgetBounds)
+		p.ensureVisibleTick = 0
+	}
+
 	shouldShowHBar := p.isHBarVisible(context, widgetBounds)
 	shouldShowVBar := p.isVBarVisible(context, widgetBounds)
 	// lastWheelX/Y are a one-tick signal: HandlePointingInput only runs on ticks
