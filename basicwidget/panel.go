@@ -202,7 +202,13 @@ func (p *panel) SetScrollOffset(x, y float64) {
 	if p.animCount > 0 && p.animTargetX == x && p.animTargetY == y {
 		return
 	}
-	if p.animCount <= 0 && p.offsetX == x && p.offsetY == y {
+	if p.offsetX == x && p.offsetY == y {
+		// The caller is asking to scroll to the current offset. If an animation
+		// is in flight, don't restart it toward its own mid-flight position —
+		// that would freeze the scroll. Observers of OnScroll that echo the
+		// offset back through SetScrollOffset would otherwise form a feedback
+		// loop. Callers that truly want to stop an animation at the current
+		// offset should use ForceSetScrollOffset.
 		return
 	}
 	// Animation supersedes any pending instant change.

@@ -153,7 +153,11 @@ func (p *listPanel[T]) setTopItem(index, offset int) {
 	if p.vAnimCount > 0 && index == p.vAnimTargetIndex && offset == p.vAnimTargetOffset {
 		return
 	}
-	if p.vAnimCount <= 0 && index == p.topItemIndex && offset == p.topItemOffset {
+	if index == p.topItemIndex && offset == p.topItemOffset {
+		// The caller is asking to scroll to the current top item. If an
+		// animation is in flight, don't restart it toward its own mid-flight
+		// position — that would freeze the scroll. Mirrors the guard in
+		// panel.SetScrollOffset; see the comment there.
 		return
 	}
 	// Animation supersedes any pending instant change.
