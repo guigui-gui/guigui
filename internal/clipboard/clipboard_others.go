@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Guigui Authors
 
-//go:build !darwin && !js && !windows
+//go:build !darwin && !js && !windows && (!unix || android)
 
 package clipboard
 
