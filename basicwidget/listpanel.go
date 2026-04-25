@@ -52,15 +52,20 @@ type listPanel[T comparable] struct {
 	nextTopItemIndex   int
 	nextTopItemOffset  int
 
-	// Vertical scroll animation state. Interpolates in virtual pixel space
-	// using vAnimEstH (a snapshot of estimatedItemHeight at animation start).
+	// Vertical scroll animation state. The animation interpolates a pixel
+	// delta (vAnimDelta) over scrollAnimMaxCount() ticks using easeOutQuad,
+	// applying the eased increment to topItemOffset on each tick. topItemIndex
+	// is left untouched during the animation; normalizeTopItem advances it
+	// between ticks using real measured heights, which keeps the visible
+	// scroll smooth when items have heterogeneous heights. The final tick
+	// snaps (topItemIndex, topItemOffset) to (vAnimTargetIndex, vAnimTargetOffset)
+	// to ensure an exact landing position.
 	// vAnimCount counts down from scrollAnimMaxCount() to 0; a positive value
 	// indicates an animation is in flight.
-	vAnimStartIndex   int
-	vAnimStartOffset  int
 	vAnimTargetIndex  int
 	vAnimTargetOffset int
-	vAnimEstH         int
+	vAnimDelta        int
+	vAnimAppliedDelta int
 	vAnimCount        int
 
 	scrollHBarCount int
@@ -139,10 +144,7 @@ func (p *listPanel[T]) forceSetScrollOffsetByDelta(dx, dy float64) {
 // available-item index and offset. Falls back to an instant set when
 // no item-height estimate is available yet, or before the first Draw.
 func (p *listPanel[T]) setTopItem(index, offset int) {
-	estH := p.vAnimEstH
-	if estH <= 0 {
-		estH = p.estimatedItemHeight
-	}
+	estH := p.estimatedItemHeight
 	if estH <= 0 || !p.onceDraw {
 		p.vAnimCount = 0
 		p.nextTopItemSet = true
@@ -161,17 +163,24 @@ func (p *listPanel[T]) setTopItem(index, offset int) {
 		// panel.SetScrollOffset; see the comment there.
 		return
 	}
+	// Compute the total pixel delta from current to target.
+	// When index == p.topItemIndex (the typical case for arrow-key navigation
+	// scrolling within a page), estH cancels and the delta equals
+	// p.topItemOffset - offset exactly, regardless of the height estimate.
+	// For cross-index animations, the delta uses estH and may be approximate;
+	// the final-tick snap to (vAnimTargetIndex, vAnimTargetOffset) corrects it.
+	currentScroll := p.topItemIndex*estH - p.topItemOffset
+	targetScroll := index*estH - offset
 	// Animation supersedes any pending instant change.
 	p.nextTopItemSet = false
 	p.nextTopItemIsDelta = false
 	p.nextDeltaY = 0
 	p.nextTopItemIndex = 0
 	p.nextTopItemOffset = 0
-	p.vAnimStartIndex = p.topItemIndex
-	p.vAnimStartOffset = p.topItemOffset
 	p.vAnimTargetIndex = index
 	p.vAnimTargetOffset = offset
-	p.vAnimEstH = estH
+	p.vAnimDelta = targetScroll - currentScroll
+	p.vAnimAppliedDelta = 0
 	p.vAnimCount = scrollAnimMaxCount()
 }
 
@@ -435,11 +444,15 @@ func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widget
 	return nil
 }
 
-// advanceScrollAnimation advances the vertical scroll animation by one tick,
-// updating topItemIndex/topItemOffset. Returns true if those values changed.
-// Intermediate positions are computed in a virtual pixel space derived from the
-// item-height estimate captured at animation start; the final tick snaps to
-// the exact target.
+// advanceScrollAnimation advances the vertical scroll animation by one tick.
+// Each tick applies the eased increment of vAnimDelta to topItemOffset only;
+// topItemIndex is updated by normalizeTopItem between ticks using real measured
+// heights. This avoids visual jumps when items have heterogeneous heights — a
+// virtual-pixel-space interpolation can otherwise step topItemIndex on a tick
+// where the actual item heights say it should not yet have advanced (or vice
+// versa), producing a backward jump in the rendered position. The final tick
+// snaps (topItemIndex, topItemOffset) to the exact target so any approximation
+// in vAnimDelta (cross-index animations using estH) lands cleanly.
 func (p *listPanel[T]) advanceScrollAnimation() bool {
 	if p.vAnimCount <= 0 {
 		return false
@@ -451,17 +464,13 @@ func (p *listPanel[T]) advanceScrollAnimation() bool {
 		return true
 	}
 	max := scrollAnimMaxCount()
-	startScroll := p.vAnimStartIndex*p.vAnimEstH - p.vAnimStartOffset
-	targetScroll := p.vAnimTargetIndex*p.vAnimEstH - p.vAnimTargetOffset
 	t := easeOutQuad(float64(max-p.vAnimCount) / float64(max))
-	scroll := float64(startScroll) + (float64(targetScroll)-float64(startScroll))*t
-	idx := int(scroll) / p.vAnimEstH
-	if idx < 0 {
-		idx = 0
-	}
-	off := idx*p.vAnimEstH - int(scroll)
-	p.topItemIndex = idx
-	p.topItemOffset = off
+	// Track the cumulative integer delta so float→int truncation doesn't
+	// accumulate across ticks.
+	desired := int(float64(p.vAnimDelta) * t)
+	delta := desired - p.vAnimAppliedDelta
+	p.vAnimAppliedDelta = desired
+	p.topItemOffset -= delta
 	return true
 }
 
