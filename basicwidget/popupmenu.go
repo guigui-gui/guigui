@@ -26,6 +26,7 @@ type PopupMenuItem[T comparable] struct {
 	Unselectable bool
 	Border       bool
 	Disabled     bool
+	Checked      bool
 	Value        T
 }
 
@@ -50,8 +51,16 @@ func (p *PopupMenu[T]) OnClose(f func(context *guigui.Context, reason PopupClose
 	p.popup.OnClose(f)
 }
 
-func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
-	p.list.Widget().SetCheckmarkIndex(index)
+// SetReservesCheckmarkSpace sets whether the popup menu reserves space for the
+// checkmark column even when no item is currently checked. This keeps item
+// widths and positions stable across check-state changes.
+//
+// Items can independently toggle [PopupMenuItem.Checked] to render a checkmark.
+// The column is automatically reserved when at least one item is checked, so
+// this setter is only needed when no items are currently checked but might be
+// in the future.
+func (p *PopupMenu[T]) SetReservesCheckmarkSpace(reserves bool) {
+	p.list.Widget().SetReservesCheckmarkSpace(reserves)
 }
 
 func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -172,6 +181,7 @@ func (p *PopupMenu[T]) updateListItems() {
 		p.listItems[i].Unselectable = item.Unselectable
 		p.listItems[i].Border = item.Border
 		p.listItems[i].Disabled = item.Disabled
+		p.listItems[i].Checked = item.Checked
 		p.listItems[i].Value = item.Value
 	}
 	p.list.Widget().SetItems(p.listItems)

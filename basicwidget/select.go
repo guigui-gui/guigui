@@ -59,6 +59,7 @@ func (s *Select[T]) updatePopupMenuItems() {
 			Unselectable: item.Unselectable,
 			Border:       item.Border,
 			Disabled:     item.Disabled,
+			Checked:      i == s.indexAtOpen,
 			Value:        item.Value,
 		}
 		if s.popupMenu.IsOpen() && pmItem.Content != nil {
@@ -117,7 +118,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		}
 	}
 	s.popupMenu.OnItemSelected(s.onPopupMenuItemSelected)
-	s.popupMenu.SetCheckmarkIndex(s.indexAtOpen)
+	s.popupMenu.SetReservesCheckmarkSpace(true)
 
 	return nil
 }

@@ -96,6 +96,7 @@ type ListItem[T comparable] struct {
 	IndentLevel  int
 	Padding      guigui.Padding
 	Collapsed    bool
+	Checked      bool
 }
 
 func (l *ListItem[T]) selectable() bool {
@@ -116,6 +117,7 @@ func (l *ListItem[T]) writeStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt(l.IndentLevel)
 	writePadding(w, l.Padding)
 	w.WriteBool(l.Collapsed)
+	w.WriteBool(l.Checked)
 
 	// Value is not written because it's opaque and only used for
 	// identifying the item, so it does not affect the widget state.
@@ -184,8 +186,16 @@ func (l *List[T]) OnItemExpanderToggled(f func(context *guigui.Context, index in
 	l.content.OnItemExpanderToggled(f)
 }
 
-func (l *List[T]) SetCheckmarkIndex(index int) {
-	l.content.SetCheckmarkIndex(index)
+// SetReservesCheckmarkSpace sets whether the list reserves space for the
+// checkmark column even when no item is currently checked. This keeps item
+// widths and positions stable across check-state changes.
+//
+// Items can independently toggle [ListItem.Checked] to render a checkmark.
+// The column is automatically reserved when at least one item is checked, so
+// this setter is only needed when no items are currently checked but might be
+// in the future.
+func (l *List[T]) SetReservesCheckmarkSpace(reserves bool) {
+	l.content.SetReservesCheckmarkSpace(reserves)
 }
 
 func (l *List[T]) SetHeaderHeight(height int) {
@@ -315,6 +325,7 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 		l.abstractListItems[i].IndentLevel = item.IndentLevel
 		l.abstractListItems[i].Padding = item.Padding
 		l.abstractListItems[i].Collapsed = item.Collapsed
+		l.abstractListItems[i].Checked = item.Checked
 		l.abstractListItems[i].index = i
 		l.abstractListItems[i].listContent = &l.content
 	}
@@ -584,6 +595,7 @@ type abstractListItem[T comparable] struct {
 	IndentLevel  int
 	Padding      guigui.Padding
 	Collapsed    bool
+	Checked      bool
 
 	index       int
 	available   bool
@@ -612,14 +624,15 @@ type listContent[T comparable] struct {
 
 	customBackground guigui.Widget
 	background2      listBackground2[T]
-	checkmark        Image
+	checkmarks       guigui.WidgetSlice[*Image]
 	expanderImages   guigui.WidgetSlice[*Image]
 
 	abstractList              abstractList[T, abstractListItem[T]]
 	stripeVisible             bool
 	unfocusedSelectionHidden  bool
 	style                     ListStyle
-	checkmarkIndexPlus1       int
+	reservesCheckmarkSpace    bool
+	hasCheckedItem            bool
 	hoveredItemIndexPlus1     int
 	lastHoveredItemIndexPlus1 int
 
@@ -737,7 +750,7 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 func (l *listContent[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	l.abstractList.writeStateKey(w)
 	w.WriteUint64(uint64(l.style))
-	w.WriteInt(l.checkmarkIndexPlus1)
+	w.WriteBool(l.reservesCheckmarkSpace)
 	w.WriteInt(l.contentWidthPlus1)
 	w.WriteInt(l.hoveredItemIndexPlus1)
 	w.WriteInt(l.lastHoveredItemIndexPlus1)
@@ -747,11 +760,20 @@ func (l *listContent[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt(l.expandAnimatingCount)
 }
 
-func (l *listContent[T]) SetCheckmarkIndex(index int) {
-	if index < 0 {
-		index = -1
+func (l *listContent[T]) SetReservesCheckmarkSpace(reserves bool) {
+	if l.reservesCheckmarkSpace == reserves {
+		return
 	}
-	l.checkmarkIndexPlus1 = index + 1
+	l.reservesCheckmarkSpace = reserves
+	// Invalidate the cached height so Measure recalculates.
+	l.widthForCachedHeight = 0
+}
+
+// hasCheckmarkColumn reports whether the list reserves a column for checkmarks.
+// The column is reserved either explicitly via [SetReservesCheckmarkSpace] or
+// implicitly when at least one item is checked.
+func (l *listContent[T]) hasCheckmarkColumn() bool {
+	return l.reservesCheckmarkSpace || l.hasCheckedItem
 }
 
 func (l *listContent[T]) SetContentWidth(width int) {
@@ -821,6 +843,7 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 		adder.AddWidget(l.customBackground)
 	}
 	adder.AddWidget(&l.background2)
+	l.checkmarks.SetLen(l.abstractList.ItemCount())
 	l.expanderImages.SetLen(l.abstractList.ItemCount())
 
 	// Only add items around the top item, extending downward and upward until
@@ -875,8 +898,8 @@ func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder
 	for ai := lo; ai < hi; ai++ {
 		i := availableIndices[ai]
 		item, _ := l.abstractList.ItemByIndex(i)
-		if l.checkmarkIndexPlus1 == i+1 {
-			adder.AddWidget(&l.checkmark)
+		if item.Checked {
+			adder.AddWidget(l.checkmarks.At(i))
 		}
 		var hasChild bool
 		if nextItem, ok := l.abstractList.ItemByIndex(i + 1); ok {
@@ -1184,10 +1207,12 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 
 	p := image.Pt(baseX, y)
 
+	hasCheckmarkColumn := l.hasCheckmarkColumn()
+
 	// Record item bounds.
 	{
 		itemP := p
-		if l.checkmarkIndexPlus1 > 0 {
+		if hasCheckmarkColumn {
 			itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 		}
 		itemP.X += ListItemIndentSize(context, item.IndentLevel)
@@ -1207,7 +1232,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		return itemH
 	}
 
-	if l.checkmarkIndexPlus1 == index+1 {
+	if item.Checked {
 		imgSize := listItemCheckmarkSize(context)
 		imgP := p
 		imgP.X += ListItemIndentSize(context, item.IndentLevel)
@@ -1216,7 +1241,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 		imgP.Y += UnitSize(context) / 16
 		imgP.Y += item.Padding.Top
 		imgP.Y = l.adjustItemY(context, imgP.Y)
-		layouter.LayoutWidget(&l.checkmark, image.Rectangle{
+		layouter.LayoutWidget(l.checkmarks.At(index), image.Rectangle{
 			Min: imgP,
 			Max: imgP.Add(image.Pt(imgSize, imgSize)),
 		})
@@ -1251,7 +1276,7 @@ func (l *listContent[T]) layoutItem(context *guigui.Context, widgetBounds *guigu
 	}
 
 	itemP := p
-	if l.checkmarkIndexPlus1 > 0 {
+	if hasCheckmarkColumn {
 		itemP.X += listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 	}
 	itemP.X += ListItemIndentSize(context, item.IndentLevel)
@@ -1283,7 +1308,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 		return image.Pt(width, l.cachedHeight)
 	}
 
-	hasCheckmark := l.checkmarkIndexPlus1 > 0
+	hasCheckmark := l.hasCheckmarkColumn()
 	offsetForCheckmark := listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 
 	var w, h int
@@ -1380,8 +1405,13 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 	// Detect collapse state changes and start animation.
 	// Also update each entry's generation to mark it as current.
 	// Also precompute item availability based on collapsed ancestors.
+	// Also recompute whether any item is checked.
+	l.hasCheckedItem = false
 	var lastCollapsedIndentLevel int
 	for i, item := range items {
+		if item.Checked {
+			l.hasCheckedItem = true
+		}
 		prev, ok := l.prevCollapsed[item.Value]
 		if l.onceDraw && ok && prev.collapsed != item.Collapsed {
 			l.expandAnimatingIndexPlus1 = i + 1
@@ -1712,15 +1742,25 @@ func (l *listContent[T]) lastSelectableVisibleIndex() int {
 }
 
 func (l *listContent[T]) updateCheckmarkColor(context *guigui.Context) {
-	colorMode := context.ColorMode()
-	if l.hoveredItemIndexPlus1 == l.checkmarkIndexPlus1 {
-		colorMode = ebiten.ColorModeDark
-	}
-	checkImg, err := theResourceImages.Get("check", colorMode)
+	defaultImg, err := theResourceImages.Get("check", context.ColorMode())
 	if err != nil {
 		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
 	}
-	l.checkmark.SetImage(checkImg)
+	hoveredImg, err := theResourceImages.Get("check", ebiten.ColorModeDark)
+	if err != nil {
+		panic(fmt.Sprintf("basicwidget: failed to get check image: %v", err))
+	}
+	for i := range l.abstractList.ItemCount() {
+		item, ok := l.abstractList.ItemByIndex(i)
+		if !ok || !item.Checked {
+			continue
+		}
+		img := defaultImg
+		if l.hoveredItemIndexPlus1 == i+1 {
+			img = hoveredImg
+		}
+		l.checkmarks.At(i).SetImage(img)
+	}
 }
 
 func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
@@ -2069,7 +2109,7 @@ func (l *listContent[T]) itemBounds(context *guigui.Context, index int) image.Re
 		return image.Rectangle{}
 	}
 	r := l.itemBoundsForLayoutFromIndex[index]
-	if l.checkmarkIndexPlus1 > 0 {
+	if l.hasCheckmarkColumn() {
 		r.Min.X -= listItemCheckmarkSize(context) + listItemTextAndImagePadding(context)
 	}
 	return r

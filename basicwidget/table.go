@@ -42,6 +42,7 @@ type TableRow[T comparable] struct {
 	Cells        []TableCell
 	Unselectable bool
 	Movable      bool
+	Checked      bool
 	Value        T
 }
 
@@ -72,8 +73,11 @@ func (t *Table[T]) OnItemsMoved(f func(context *guigui.Context, from, count, to 
 	t.list.OnItemsMoved(f)
 }
 
-func (t *Table[T]) SetCheckmarkIndex(index int) {
-	t.list.SetCheckmarkIndex(index)
+// SetReservesCheckmarkSpace sets whether the table reserves space for the
+// checkmark column even when no row is currently checked. See
+// [List.SetReservesCheckmarkSpace] for details.
+func (t *Table[T]) SetReservesCheckmarkSpace(reserves bool) {
+	t.list.SetReservesCheckmarkSpace(reserves)
 }
 
 func (t *Table[T]) SetFooterHeight(height int) {
@@ -377,6 +381,7 @@ func (t *tableRowWidget[T]) listItem() ListItem[T] {
 		Content:      t,
 		Unselectable: !t.selectable(),
 		Movable:      t.row.Movable,
+		Checked:      t.row.Checked,
 		Value:        t.row.Value,
 	}
 }
