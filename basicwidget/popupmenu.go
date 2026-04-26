@@ -46,6 +46,10 @@ func (p *PopupMenu[T]) OnItemSelected(f func(context *guigui.Context, index int)
 	guigui.SetEventHandler(p, popupMenuEventItemSelected, f)
 }
 
+func (p *PopupMenu[T]) OnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
+	p.popup.OnClose(f)
+}
+
 func (p *PopupMenu[T]) SetCheckmarkIndex(index int) {
 	p.list.Widget().SetCheckmarkIndex(index)
 }
