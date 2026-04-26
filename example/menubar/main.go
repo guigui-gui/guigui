@@ -32,43 +32,34 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.menubar)
 	adder.AddWidget(&r.resultText)
 
-	r.menubar.SetItems([]basicwidget.MenubarItem[string]{
-		{
-			Text: "File",
-			Items: []basicwidget.PopupMenuItem[string]{
-				{Text: "New", Value: "file.new"},
-				{Text: "Open...", Value: "file.open"},
-				{Text: "Save", Value: "file.save"},
-				{Border: true},
-				{Text: "Quit", Value: "file.quit"},
-			},
-		},
-		{
-			Text: "Edit",
-			Items: []basicwidget.PopupMenuItem[string]{
-				{Text: "Undo", KeyText: "Ctrl+Z", Value: "edit.undo"},
-				{Text: "Redo", KeyText: "Ctrl+Y", Value: "edit.redo"},
-				{Border: true},
-				{Text: "Cut", KeyText: "Ctrl+X", Value: "edit.cut"},
-				{Text: "Copy", KeyText: "Ctrl+C", Value: "edit.copy"},
-				{Text: "Paste", KeyText: "Ctrl+V", Value: "edit.paste"},
-			},
-		},
-		{
-			Text: "View",
-			Items: []basicwidget.PopupMenuItem[string]{
-				{Text: "Zoom In", Value: "view.zoomin"},
-				{Text: "Zoom Out", Value: "view.zoomout"},
-				{Text: "Reset Zoom", Value: "view.zoomreset"},
-			},
-		},
-		{
-			Text:     "Disabled",
-			Disabled: true,
-			Items: []basicwidget.PopupMenuItem[string]{
-				{Text: "Should not appear"},
-			},
-		},
+	r.menubar.SetItems([]basicwidget.MenubarItem{
+		{Text: "File"},
+		{Text: "Edit"},
+		{Text: "View"},
+		{Text: "Disabled", Disabled: true},
+	})
+	r.menubar.PopupMenuAt(0).SetItems([]basicwidget.PopupMenuItem[string]{
+		{Text: "New", Value: "file.new"},
+		{Text: "Open...", Value: "file.open"},
+		{Text: "Save", Value: "file.save"},
+		{Border: true},
+		{Text: "Quit", Value: "file.quit"},
+	})
+	r.menubar.PopupMenuAt(1).SetItems([]basicwidget.PopupMenuItem[string]{
+		{Text: "Undo", KeyText: "Ctrl+Z", Value: "edit.undo"},
+		{Text: "Redo", KeyText: "Ctrl+Y", Value: "edit.redo"},
+		{Border: true},
+		{Text: "Cut", KeyText: "Ctrl+X", Value: "edit.cut"},
+		{Text: "Copy", KeyText: "Ctrl+C", Value: "edit.copy"},
+		{Text: "Paste", KeyText: "Ctrl+V", Value: "edit.paste"},
+	})
+	r.menubar.PopupMenuAt(2).SetItems([]basicwidget.PopupMenuItem[string]{
+		{Text: "Zoom In", Value: "view.zoomin"},
+		{Text: "Zoom Out", Value: "view.zoomout"},
+		{Text: "Reset Zoom", Value: "view.zoomreset"},
+	})
+	r.menubar.PopupMenuAt(3).SetItems([]basicwidget.PopupMenuItem[string]{
+		{Text: "Should not appear"},
 	})
 	r.menubar.OnItemSelected(func(context *guigui.Context, menuIndex, itemIndex int) {
 		r.lastSelection = fmt.Sprintf("Selected: menu %d, item %d", menuIndex, itemIndex)

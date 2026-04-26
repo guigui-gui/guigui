@@ -19,12 +19,12 @@ var (
 	menubarEventItemSelected guigui.EventKey = guigui.GenerateEventKey()
 )
 
-// MenubarItem is a single entry in a [Menubar]. Each entry has a title text
-// and a list of popup menu items that are shown when the title is clicked.
-type MenubarItem[T comparable] struct {
+// MenubarItem is a single entry in a [Menubar]. Each entry has a title text;
+// the popup menu shown when the title is clicked is configured separately via
+// [Menubar.PopupMenuAt].
+type MenubarItem struct {
 	Text     string
 	Disabled bool
-	Items    []PopupMenuItem[T]
 }
 
 // Menubar is a horizontal row of title texts. Clicking a title shows the
@@ -34,7 +34,7 @@ type MenubarItem[T comparable] struct {
 type Menubar[T comparable] struct {
 	guigui.DefaultWidget
 
-	items  []MenubarItem[T]
+	items  []MenubarItem
 	titles guigui.WidgetSlice[*menubarTitle[T]]
 	popups guigui.WidgetSlice[*PopupMenu[T]]
 
@@ -56,13 +56,27 @@ type Menubar[T comparable] struct {
 	onCloseHandlers        []func(context *guigui.Context, reason PopupCloseReason)
 }
 
-// SetItems sets the menubar's items.
-func (m *Menubar[T]) SetItems(items []MenubarItem[T]) {
+// SetItems sets the menubar's items. After this call, the popup menu for each
+// item can be configured via [Menubar.PopupMenuAt].
+func (m *Menubar[T]) SetItems(items []MenubarItem) {
 	m.items = adjustSliceSize(m.items, len(items))
 	copy(m.items, items)
+	m.titles.SetLen(len(items))
+	m.popups.SetLen(len(items))
+	m.onItemSelectedHandlers = adjustSliceSize(m.onItemSelectedHandlers, len(items))
+	m.onCloseHandlers = adjustSliceSize(m.onCloseHandlers, len(items))
 	if m.openIndexPlus1 > len(m.items) {
 		m.openIndexPlus1 = 0
 	}
+}
+
+// PopupMenuAt returns the popup menu associated with the i-th item.
+// [Menubar.SetItems] must be called first so that the popup at i exists.
+//
+// Items shown in the popup are configured via [PopupMenu.SetItems]. A title
+// whose popup has no items is automatically disabled.
+func (m *Menubar[T]) PopupMenuAt(index int) *PopupMenu[T] {
+	return m.popups.At(index)
 }
 
 // OnItemSelected sets the event handler that is invoked when a popup menu
@@ -85,7 +99,7 @@ func (m *Menubar[T]) requestOpen(index int) {
 	if index >= len(m.items) {
 		return
 	}
-	if m.items[index].Disabled || len(m.items[index].Items) == 0 {
+	if m.items[index].Disabled || len(m.popups.At(index).items) == 0 {
 		return
 	}
 	m.openIndexPlus1 = index + 1
@@ -93,11 +107,6 @@ func (m *Menubar[T]) requestOpen(index int) {
 
 // Build implements [guigui.Widget.Build].
 func (m *Menubar[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	m.titles.SetLen(len(m.items))
-	m.popups.SetLen(len(m.items))
-	m.onItemSelectedHandlers = adjustSliceSize(m.onItemSelectedHandlers, len(m.items))
-	m.onCloseHandlers = adjustSliceSize(m.onCloseHandlers, len(m.items))
-
 	if m.openIndexPlus1 < 0 || m.openIndexPlus1 > len(m.items) {
 		m.openIndexPlus1 = 0
 	}
@@ -109,12 +118,11 @@ func (m *Menubar[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 		title.index = i
 		title.setText(m.items[i].Text)
 		adder.AddWidget(title)
-		context.SetEnabled(title, !m.items[i].Disabled && len(m.items[i].Items) > 0)
+		context.SetEnabled(title, !m.items[i].Disabled && len(m.popups.At(i).items) > 0)
 	}
 
 	for i := range m.items {
 		popup := m.popups.At(i)
-		popup.SetItems(m.items[i].Items)
 		popup.setModal(false)
 
 		if m.onItemSelectedHandlers[i] == nil {
