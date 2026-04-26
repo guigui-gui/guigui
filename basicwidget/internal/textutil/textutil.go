@@ -320,10 +320,21 @@ func textPositionFromIndex(width int, str string, lines []line, index int, optio
 		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
 		if index == l.pos+len(l.str) {
-			found0 = true
-			line0 = l.str
-			indexInLine0 = index - l.pos
-			y0 = y
+			if !found0 {
+				found0 = true
+				line0 = l.str
+				indexInLine0 = index - l.pos
+				y0 = y
+			} else {
+				// A previous line already matched as the tail position; this line
+				// (typically an empty trailing line for a string ending in a line break)
+				// is the head of the next line.
+				found1 = true
+				line1 = l.str
+				indexInLine1 = index - l.pos
+				y1 = y
+				break
+			}
 		} else if l.pos <= index && index < l.pos+len(l.str) {
 			found1 = true
 			line1 = l.str

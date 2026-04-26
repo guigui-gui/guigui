@@ -4,9 +4,13 @@
 package textutil_test
 
 import (
+	"bytes"
 	"fmt"
 	"slices"
 	"testing"
+
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/image/font/gofont/goregular"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
@@ -211,6 +215,125 @@ func TestFindWordBoundaries(t *testing.T) {
 			gotStart, gotEnd := textutil.FindWordBoundaries(tc.text, tc.idx)
 			if gotStart != tc.wantStart || gotEnd != tc.wantEnd {
 				t.Errorf("got (%d, %d), want (%d, %d)", gotStart, gotEnd, tc.wantStart, tc.wantEnd)
+			}
+		})
+	}
+}
+
+func TestTextPositionFromIndex(t *testing.T) {
+	source, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	face := &text.GoTextFace{Source: source, Size: 16}
+	const lineHeight = 24.0
+	op := &textutil.Options{
+		Face:       face,
+		LineHeight: lineHeight,
+	}
+
+	// Baseline: position at index 0 of a single-line string sits on visual
+	// line 0. Use it to derive line N's Top without hard-coding the face's
+	// vertical padding.
+	baseline, _, _ := textutil.TextPositionFromIndex(1000, "a", 0, op)
+	topOfLine := func(n int) float64 {
+		return baseline.Top + float64(n)*lineHeight
+	}
+
+	testCases := []struct {
+		name      string
+		text      string
+		index     int
+		wantCount int
+		// Visual line index for each returned position (0 = first line).
+		// -1 means "don't check".
+		wantLine0 int
+		wantLine1 int
+		// Whether pos0.X / pos1.X must be 0 (line start).
+		wantPos0XZero bool
+		wantPos1XZero bool
+	}{
+		{
+			name:          "single-line/start",
+			text:          "abc",
+			index:         0,
+			wantCount:     1,
+			wantLine0:     0,
+			wantLine1:     -1,
+			wantPos0XZero: true,
+		},
+		{
+			name:      "single-line/end",
+			text:      "abc",
+			index:     3,
+			wantCount: 1,
+			wantLine0: 0,
+			wantLine1: -1,
+		},
+		{
+			name:          "trailing-newline/end",
+			text:          "a\n",
+			index:         2,
+			wantCount:     2,
+			wantLine0:     0, // tail of "a\n" — must be on line 0 with X > 0
+			wantLine1:     1, // head of empty line — at start of line 1
+			wantPos1XZero: true,
+		},
+		{
+			name:          "trailing-newline/start",
+			text:          "a\n",
+			index:         0,
+			wantCount:     1,
+			wantLine0:     0,
+			wantLine1:     -1,
+			wantPos0XZero: true,
+		},
+		{
+			name:          "mid-newline-boundary",
+			text:          "a\nb",
+			index:         2,
+			wantCount:     2,
+			wantLine0:     0,
+			wantLine1:     1,
+			wantPos1XZero: true,
+		},
+		{
+			name:          "empty",
+			text:          "",
+			index:         0,
+			wantCount:     1,
+			wantLine0:     0,
+			wantLine1:     -1,
+			wantPos0XZero: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pos0, pos1, count := textutil.TextPositionFromIndex(1000, tc.text, tc.index, op)
+			if count != tc.wantCount {
+				t.Fatalf("count: got %d, want %d", count, tc.wantCount)
+			}
+			if tc.wantLine0 >= 0 {
+				if want := topOfLine(tc.wantLine0); pos0.Top != want {
+					t.Errorf("pos0.Top: got %v, want %v (line %d)", pos0.Top, want, tc.wantLine0)
+				}
+			}
+			if tc.wantLine1 >= 0 && count == 2 {
+				if want := topOfLine(tc.wantLine1); pos1.Top != want {
+					t.Errorf("pos1.Top: got %v, want %v (line %d)", pos1.Top, want, tc.wantLine1)
+				}
+			}
+			if tc.wantPos0XZero && pos0.X != 0 {
+				t.Errorf("pos0.X: got %v, want 0", pos0.X)
+			}
+			if tc.wantPos1XZero && count == 2 && pos1.X != 0 {
+				t.Errorf("pos1.X: got %v, want 0", pos1.X)
+			}
+			// For "trailing-newline/end" specifically, the tail (pos0) must have
+			// a non-zero X (after "a"), otherwise the selection rendering would
+			// draw width=0 — the bug this regression test is guarding.
+			if tc.name == "trailing-newline/end" && pos0.X <= 0 {
+				t.Errorf("pos0.X for trailing newline tail: got %v, want > 0", pos0.X)
 			}
 		})
 	}
