@@ -101,13 +101,14 @@ type Text struct {
 	tabular       bool
 	tabWidth      float64
 
-	selectable       bool
-	editable         bool
-	multiline        bool
-	autoWrap         bool
-	cursorStatic     bool
-	keepTailingSpace bool
-	ellipsisString   string
+	selectable                  bool
+	editable                    bool
+	multiline                   bool
+	autoWrap                    bool
+	cursorStatic                bool
+	keepTailingSpace            bool
+	selectionVisibleWhenUnfocus bool
+	ellipsisString              string
 
 	selectionDragStartPlus1 int
 	selectionDragEndPlus1   int
@@ -227,7 +228,9 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(t.editable)
 	w.WriteBool(t.multiline)
 	w.WriteBool(t.autoWrap)
+	w.WriteBool(t.cursorStatic)
 	w.WriteBool(t.keepTailingSpace)
+	w.WriteBool(t.selectionVisibleWhenUnfocus)
 	w.WriteString(t.ellipsisString)
 	writePadding(w, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
@@ -410,6 +413,14 @@ func (t *Text) selectAll() {
 
 func (t *Text) doSelectAll() {
 	t.setSelection(0, t.field.TextLengthInBytes(), -1, false)
+}
+
+func (t *Text) Selection() (start, end int) {
+	return t.field.Selection()
+}
+
+func (t *Text) SetSelection(start, end int) {
+	t.setSelection(start, end, -1, true)
 }
 
 func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) bool {
@@ -612,13 +623,15 @@ func (t *Text) SetAutoWrap(autoWrap bool) {
 // SetCursorBlinking sets whether the cursor blinks.
 // The default value is true.
 func (t *Text) SetCursorBlinking(cursorBlinking bool) {
-	cursorStatic := !cursorBlinking
-	if t.cursorStatic == cursorStatic {
-		return
-	}
+	t.cursorStatic = !cursorBlinking
+}
 
-	t.cursorStatic = cursorStatic
-	guigui.RequestRedraw(t)
+// SetSelectionVisibleWhenUnfocused sets whether the selection range stays
+// drawn while the widget is not focused. By default the selection is hidden
+// when the widget loses focus. Enable this when a separate UI (e.g. a Find
+// dialog) holds focus but the user still needs to see what was matched.
+func (t *Text) SetSelectionVisibleWhenUnfocused(visible bool) {
+	t.selectionVisibleWhenUnfocus = visible
 }
 
 func (t *Text) SetEllipsisString(str string) {
@@ -1179,7 +1192,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	}
 	op.TextColor = textColor
 	if start, end, ok := t.selectionToDraw(context); ok {
-		if context.IsFocused(t) {
+		if context.IsFocused(t) || (t.selectionVisibleWhenUnfocus && start != end) {
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end

@@ -27,9 +27,10 @@ type TextInput struct {
 	focus       textInputFocus
 	supportText Text
 
-	style            TextInputStyle
-	hasError         bool
-	supportTextValue string
+	style             TextInputStyle
+	hasError          bool
+	focusBorderHidden bool
+	supportTextValue  string
 }
 
 // OnValueChanged sets the event handler that is called when the text value changes.
@@ -94,8 +95,23 @@ func (t *TextInput) SetCursorBlinking(cursorBlinking bool) {
 	t.textInput.SetCursorBlinking(cursorBlinking)
 }
 
+// SetSelectionVisibleWhenUnfocused sets whether the selection range stays
+// drawn while the widget is not focused. By default the selection is hidden
+// when the widget loses focus.
+func (t *TextInput) SetSelectionVisibleWhenUnfocused(visible bool) {
+	t.textInput.SetSelectionVisibleWhenUnfocused(visible)
+}
+
 func (t *TextInput) SelectAll() {
 	t.textInput.SelectAll()
+}
+
+func (t *TextInput) Selection() (start, end int) {
+	return t.textInput.Selection()
+}
+
+func (t *TextInput) SetSelection(start, end int) {
+	t.textInput.SetSelection(start, end)
 }
 
 func (t *TextInput) SetTabular(tabular bool) {
@@ -109,7 +125,15 @@ func (t *TextInput) IsEditable() bool {
 func (t *TextInput) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteUint64(uint64(t.style))
 	w.WriteBool(t.hasError)
+	w.WriteBool(t.focusBorderHidden)
 	w.WriteString(t.supportTextValue)
+}
+
+// SetFocusBorderVisible sets whether the focus border is drawn around the
+// text input when it has focus. The default is true. The focus border is
+// always hidden for [TextInputStyleInline] regardless of this setting.
+func (t *TextInput) SetFocusBorderVisible(visible bool) {
+	t.focusBorderHidden = !visible
 }
 
 func (t *TextInput) SetStyle(style TextInputStyle) {
@@ -258,7 +282,7 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	context.SetVisible(&t.focus, t.style != TextInputStyleInline && context.IsFocused(t.textInput.text.Text()))
+	context.SetVisible(&t.focus, !t.focusBorderHidden && t.style != TextInputStyleInline && context.IsFocused(t.textInput.text.Text()))
 	return nil
 }
 
@@ -344,8 +368,20 @@ func (t *textInput) SetCursorBlinking(cursorBlinking bool) {
 	t.text.Text().SetCursorBlinking(cursorBlinking)
 }
 
+func (t *textInput) SetSelectionVisibleWhenUnfocused(visible bool) {
+	t.text.Text().SetSelectionVisibleWhenUnfocused(visible)
+}
+
 func (t *textInput) SelectAll() {
 	t.text.Text().selectAll()
+}
+
+func (t *textInput) Selection() (start, end int) {
+	return t.text.Text().Selection()
+}
+
+func (t *textInput) SetSelection(start, end int) {
+	t.text.Text().SetSelection(start, end)
 }
 
 func (t *textInput) SetTabular(tabular bool) {
