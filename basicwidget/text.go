@@ -604,6 +604,10 @@ func (t *Text) SetEditable(editable bool) {
 		t.selectionDragStartPlus1 = 0
 		t.selectionDragEndPlus1 = 0
 		t.selectionShiftIndexPlus1 = 0
+	} else if t.field.IsFocused() {
+		// Blur immediately so Ebitengine's BeforeUpdate hook stops auto-committing
+		// pending input into the field before HandlePointingInput runs next tick.
+		t.field.Blur()
 	}
 	t.editable = editable
 }
