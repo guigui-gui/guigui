@@ -70,7 +70,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 	var lastFittingEnd int
 	seg := pushSegmenter()
 	defer popSegmenter()
-	initSegmenterWithString(seg, str)
+	str = initSegmenterWithString(seg, str)
 	it := seg.GraphemeIterator()
 	var bytePos int
 	for it.Next() {
@@ -181,7 +181,12 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 
 			seg := pushSegmenter()
 			defer popSegmenter()
-			initSegmenterWithString(seg, str)
+			// If str is not valid UTF-8, the sanitized string returned here
+			// is what the segmenter actually iterates over. Use it as origStr
+			// so byte offsets from the segmenter align with the string being
+			// sliced.
+			str = initSegmenterWithString(seg, str)
+			origStr = str
 			it := seg.LineIterator()
 			for it.Next() {
 				l := it.Line()
@@ -528,7 +533,11 @@ func textPositionYOffset(size image.Point, str string, options *Options) float64
 func FindWordBoundaries(text string, idx int) (start, end int) {
 	seg := pushSegmenter()
 	defer popSegmenter()
-	initSegmenterWithString(seg, text)
+	if sanitized := initSegmenterWithString(seg, text); sanitized != text {
+		// Invalid UTF-8: byte offsets reported by the segmenter are into
+		// the sanitized string and would not be meaningful in the original.
+		return idx, idx
+	}
 	it := seg.WordIterator()
 
 	for it.Next() {

@@ -25,7 +25,12 @@ func graphemes(str string) iter.Seq[string] {
 func PrevPositionOnGraphemes(str string, position int) int {
 	seg := pushSegmenter()
 	defer popSegmenter()
-	initSegmenterWithString(seg, str)
+	if sanitized := initSegmenterWithString(seg, str); sanitized != str {
+		// Invalid UTF-8: byte offsets from the segmenter would be into the
+		// sanitized string. Fall back to the input position to avoid returning
+		// a mismatched index.
+		return position
+	}
 	it := seg.GraphemeIterator()
 	var bytePos int
 	for it.Next() {
@@ -45,7 +50,12 @@ func PrevPositionOnGraphemes(str string, position int) int {
 func NextPositionOnGraphemes(str string, position int) int {
 	seg := pushSegmenter()
 	defer popSegmenter()
-	initSegmenterWithString(seg, str)
+	if sanitized := initSegmenterWithString(seg, str); sanitized != str {
+		// Invalid UTF-8: byte offsets from the segmenter would be into the
+		// sanitized string. Fall back to the input position to avoid returning
+		// a mismatched index.
+		return position
+	}
 	it := seg.GraphemeIterator()
 	var bytePos int
 	for it.Next() {

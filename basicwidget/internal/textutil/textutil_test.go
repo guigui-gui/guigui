@@ -90,6 +90,37 @@ func TestNoWrapLines(t *testing.T) {
 	}
 }
 
+// TestAutoWrapInvalidUTF8 guards against a panic when auto-wrapping a string
+// that is not valid UTF-8. The segmenter sanitizes its input by replacing
+// invalid bytes with U+FFFD (3 bytes), so its byte offsets/segment lengths
+// would otherwise grow past the original string's length and cause an
+// out-of-range slice when iterating lines.
+func TestAutoWrapInvalidUTF8(t *testing.T) {
+	source, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	face := &text.GoTextFace{Source: source, Size: 16}
+	advance := func(s string) float64 {
+		return text.Advance(s, face)
+	}
+
+	cases := []string{
+		"\xff",
+		"abc\xffdef",
+		"hello\xff\xfe\xfdworld",
+		"\xff\xff\xff\xff\xff\xff\xff\xff",
+	}
+	for _, s := range cases {
+		t.Run(fmt.Sprintf("%q", s), func(t *testing.T) {
+			// Iterating must not panic. The exact line breakdown is not part
+			// of the contract; this only verifies that Lines completes.
+			for range textutil.Lines(100, s, true, advance) {
+			}
+		})
+	}
+}
+
 func TestFindWordBoundaries(t *testing.T) {
 	testCases := []struct {
 		text      string
