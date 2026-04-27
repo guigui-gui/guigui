@@ -753,7 +753,13 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 		}
 		return guigui.HandleInputResult{}
 	}
-	t.field.Focus()
+	// The field auto-commits text input via Ebitengine's BeforeUpdate hook whenever
+	// it is focused, so only focus it when this widget actually accepts edits.
+	if t.editable {
+		t.field.Focus()
+	} else if t.field.IsFocused() {
+		t.field.Blur()
+	}
 
 	if !t.editable && !t.selectable {
 		return guigui.HandleInputResult{}
