@@ -32,6 +32,7 @@ var (
 func loadImage(name string, colorMode ebiten.ColorMode) *ebiten.Image {
 	imageCacheMu.Lock()
 	defer imageCacheMu.Unlock()
+
 	key := imageCacheKey{name: name, colorMode: colorMode}
 	if img, ok := imageCache[key]; ok {
 		return img
@@ -40,7 +41,10 @@ func loadImage(name string, colorMode ebiten.ColorMode) *ebiten.Image {
 	if err != nil {
 		return nil
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
+
 	src, err := png.Decode(f)
 	if err != nil {
 		return nil
