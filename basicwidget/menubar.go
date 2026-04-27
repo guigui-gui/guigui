@@ -330,6 +330,8 @@ func (t *menubarTitle[T]) backgroundBounds(context *guigui.Context, bounds image
 }
 
 func (t *menubarTitle[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+	dst.Fill(basicwidgetdraw.BackgroundColorFromSemanticColor(context.ColorMode(), basicwidgetdraw.SemanticColorBase))
+
 	if !context.IsEnabled(t) {
 		return
 	}
