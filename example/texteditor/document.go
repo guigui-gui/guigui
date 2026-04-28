@@ -10,31 +10,24 @@ import (
 )
 
 type Document struct {
-	path string
-	// Holding the entire file as a single string is fine for an example
-	// but scales poorly: every edit reallocates and copies the whole
-	// buffer, and dirty tracking keeps two full copies (text + saved).
-	// A real implementation would use a piece table (or similar
-	// structure) so edits and dirty tracking are O(edit-size) rather
-	// than O(file-size).
-	text  string
-	saved string
+	path  string
+	dirty bool
 }
 
 func (d *Document) Path() string {
 	return d.path
 }
 
-func (d *Document) Text() string {
-	return d.text
-}
-
 func (d *Document) IsDirty() bool {
-	return d.text != d.saved
+	return d.dirty
 }
 
-func (d *Document) SetText(text string) {
-	d.text = text
+func (d *Document) MarkDirty() {
+	d.dirty = true
+}
+
+func (d *Document) MarkClean() {
+	d.dirty = false
 }
 
 func (d *Document) DisplayName() string {
@@ -46,33 +39,33 @@ func (d *Document) DisplayName() string {
 
 func (d *Document) New() {
 	d.path = ""
-	d.text = ""
-	d.saved = ""
+	d.dirty = false
 }
 
-func (d *Document) Load(path string) error {
+// Load reads the file at path. The caller is responsible for installing
+// the returned text into the editor.
+func (d *Document) Load(path string) (string, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	d.path = path
-	d.text = string(b)
-	d.saved = d.text
-	return nil
+	d.dirty = false
+	return string(b), nil
 }
 
-func (d *Document) Save() error {
+func (d *Document) Save(text string) error {
 	if d.path == "" {
 		return errors.New("no path set; use SaveAs")
 	}
-	if err := os.WriteFile(d.path, []byte(d.text), 0o644); err != nil {
+	if err := os.WriteFile(d.path, []byte(text), 0o644); err != nil {
 		return err
 	}
-	d.saved = d.text
+	d.dirty = false
 	return nil
 }
 
-func (d *Document) SaveAs(path string) error {
+func (d *Document) SaveAs(path, text string) error {
 	d.path = path
-	return d.Save()
+	return d.Save(text)
 }

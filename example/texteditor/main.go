@@ -33,6 +33,7 @@ type Root struct {
 	infoDialog    infoDialog
 
 	doc           Document
+	initialText   string
 	wordWrap      bool
 	inited        bool
 	exitRequested bool
@@ -74,12 +75,13 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.editor.SetAutoWrap(r.wordWrap)
 
 	if !r.inited {
-		r.editor.ForceSetValue(r.doc.Text())
+		r.editor.ForceSetValue(r.initialText)
+		r.initialText = ""
 		r.inited = true
 	}
 
 	r.editor.OnValueChanged(func(context *guigui.Context, text string, committed bool) {
-		r.doc.SetText(text)
+		r.doc.MarkDirty()
 	})
 	r.editor.OnHandleButtonInput(r.handleHotkeys)
 
@@ -164,7 +166,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	start, _ := r.editor.Selection()
-	r.statusBar.SetText(formatPosition(r.doc.Text(), start))
+	r.statusBar.SetText(formatPosition(r.editor.Value(), start))
 
 	if r.findDialog.IsOpen() {
 		r.updateFindCount()
@@ -253,10 +255,15 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("open: %w", res.err))
 			default:
-				if e := r.doc.Load(res.path); e != nil {
+				text, e := r.doc.Load(res.path)
+				if e != nil {
 					err = errors.Join(err, fmt.Errorf("open: %w", e))
 				} else {
-					r.editor.ForceSetValue(r.doc.Text())
+					r.editor.ForceSetValue(text)
+					// ForceSetValue triggers OnValueChanged, which marks the
+					// document dirty. The freshly loaded buffer matches disk,
+					// so override that.
+					r.doc.MarkClean()
 				}
 			}
 		default:
@@ -272,7 +279,7 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("save: %w", res.err))
 			default:
-				if e := r.doc.SaveAs(res.path); e != nil {
+				if e := r.doc.SaveAs(res.path, r.editor.Value()); e != nil {
 					err = errors.Join(err, fmt.Errorf("save: %w", e))
 				} else {
 					saved = true
@@ -326,8 +333,10 @@ func (r *Root) handleConfirmNew(save bool) {
 }
 
 func (r *Root) doNew() {
-	r.doc.New()
 	r.editor.ForceSetValue("")
+	// ForceSetValue may have triggered OnValueChanged → MarkDirty.
+	// New() resets dirty afterward.
+	r.doc.New()
 }
 
 func (r *Root) actionOpen() {
@@ -381,7 +390,7 @@ func (r *Root) actionSave() {
 		r.actionSaveAs()
 		return
 	}
-	if err := r.doc.Save(); err != nil {
+	if err := r.doc.Save(r.editor.Value()); err != nil {
 		slog.Error("save", "err", err)
 	}
 }
@@ -512,10 +521,12 @@ func hotkeyShift(key string) string {
 func main() {
 	var root Root
 	if len(os.Args) > 1 {
-		if err := root.doc.Load(os.Args[1]); err != nil {
+		text, err := root.doc.Load(os.Args[1])
+		if err != nil {
 			fmt.Fprintln(os.Stderr, "load:", err)
 			os.Exit(1)
 		}
+		root.initialText = text
 	}
 	op := &guigui.RunOptions{
 		Title:         "Text Editor",
