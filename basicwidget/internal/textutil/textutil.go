@@ -488,6 +488,13 @@ func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth fl
 	return count
 }
 
+// MeasureHeight is like [Measure] but only returns height. When width does not
+// need to be computed, this avoids per-line shaping calls and is dramatically
+// cheaper for very long text (e.g. a multi-megabyte editor buffer).
+func MeasureHeight(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
+	return lineHeight * float64(lineCount(width, str, autoWrap, face, tabWidth, keepTailingSpace))
+}
+
 func Measure(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range lines(width, str, autoWrap, func(str string) float64 {

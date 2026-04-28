@@ -126,7 +126,8 @@ type Text struct {
 
 	tmpClipboard string
 
-	cachedTextSizes       [4][4]cachedTextSizeEntry
+	cachedTextWidths      [4][4]cachedTextWidthEntry
+	cachedTextHeights     [4][4]cachedTextHeightEntry
 	cachedDefaultTabWidth float64
 	lastFaceCacheKey      faceCacheKey
 	lastScale             float64
@@ -157,11 +158,18 @@ type Text struct {
 	onHandleButtonInput func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
 }
 
-type cachedTextSizeEntry struct {
+type cachedTextWidthEntry struct {
 	// 0 indicates that the entry is invalid.
 	constraintWidth int
 
-	size image.Point
+	width int
+}
+
+type cachedTextHeightEntry struct {
+	// 0 indicates that the entry is invalid.
+	constraintWidth int
+
+	height int
 }
 
 type textSizeCacheKey int
@@ -244,7 +252,8 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 }
 
 func (t *Text) resetCachedTextSize() {
-	clear(t.cachedTextSizes[:])
+	clear(t.cachedTextWidths[:])
+	clear(t.cachedTextHeights[:])
 	t.cachedDefaultTabWidth = 0
 }
 
@@ -653,17 +662,17 @@ func (t *Text) setKeepTailingSpace(keep bool) {
 
 func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
 	b := bounds
-	ts := t.Measure(context, guigui.FixedWidthConstraints(b.Dx()))
+	h := t.textHeight(context, guigui.FixedWidthConstraints(b.Dx()))
 
 	switch t.vAlign {
 	case VerticalAlignTop:
-		b.Max.Y = b.Min.Y + ts.Y
+		b.Max.Y = b.Min.Y + h
 	case VerticalAlignMiddle:
-		h := b.Dy()
-		b.Min.Y += (h - ts.Y) / 2
-		b.Max.Y = b.Min.Y + ts.Y
+		dy := b.Dy()
+		b.Min.Y += (dy - h) / 2
+		b.Max.Y = b.Min.Y + h
 	case VerticalAlignBottom:
-		b.Min.Y = b.Max.Y - ts.Y
+		b.Min.Y = b.Max.Y - h
 	}
 
 	return b
@@ -1235,6 +1244,51 @@ func (t *Text) boldTextSize(context *guigui.Context, constraints guigui.Constrai
 	return t.textSize(context, constraints, true)
 }
 
+// textHeight returns the height of the rendered text under the given
+// constraints, without computing the width. Skipping width avoids per-line
+// shaping, which dominates the cost for very long text.
+func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraints) int {
+	constraintWidth := math.MaxInt
+	if w, ok := constraints.FixedWidth(); ok {
+		constraintWidth = w
+	}
+	if constraintWidth == 0 {
+		constraintWidth = 1
+	}
+
+	bold := t.bold
+	key := newTextSizeCacheKey(t.autoWrap, bold)
+
+	for i := range t.cachedTextHeights[key] {
+		entry := &t.cachedTextHeights[key][i]
+		if entry.constraintWidth == 0 {
+			continue
+		}
+		if entry.constraintWidth != constraintWidth {
+			continue
+		}
+		if i == 0 {
+			return entry.height
+		}
+		e := *entry
+		copy(t.cachedTextHeights[key][1:i+1], t.cachedTextHeights[key][:i])
+		t.cachedTextHeights[key][0] = e
+		return e.height
+	}
+
+	txt := t.textToDraw(context, true)
+	h := textutil.MeasureHeight(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
+	hi := int(math.Ceil(h))
+
+	copy(t.cachedTextHeights[key][1:], t.cachedTextHeights[key][:])
+	t.cachedTextHeights[key][0] = cachedTextHeightEntry{
+		constraintWidth: constraintWidth,
+		height:          hi,
+	}
+
+	return hi
+}
+
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
 	constraintWidth := math.MaxInt
 	if w, ok := constraints.FixedWidth(); ok {
@@ -1246,24 +1300,48 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 
 	bold := t.bold || forceBold
 	key := newTextSizeCacheKey(t.autoWrap, bold)
-	for i := range t.cachedTextSizes[key] {
-		// Use a pointer to avoid runtime.duffcopy.
-		entry := &t.cachedTextSizes[key][i]
+
+	var width, height int
+	var hasWidth, hasHeight bool
+
+	for i := range t.cachedTextWidths[key] {
+		entry := &t.cachedTextWidths[key][i]
 		if entry.constraintWidth == 0 {
 			continue
 		}
 		if entry.constraintWidth != constraintWidth {
 			continue
 		}
-		if i == 0 {
-			return entry.size
+		width = entry.width
+		hasWidth = true
+		if i != 0 {
+			e := *entry
+			copy(t.cachedTextWidths[key][1:i+1], t.cachedTextWidths[key][:i])
+			t.cachedTextWidths[key][0] = e
 		}
+		break
+	}
 
-		// Move the used entry to the head.
-		e := *entry
-		copy(t.cachedTextSizes[key][1:i+1], t.cachedTextSizes[key][:i])
-		t.cachedTextSizes[key][0] = e
-		return e.size
+	for i := range t.cachedTextHeights[key] {
+		entry := &t.cachedTextHeights[key][i]
+		if entry.constraintWidth == 0 {
+			continue
+		}
+		if entry.constraintWidth != constraintWidth {
+			continue
+		}
+		height = entry.height
+		hasHeight = true
+		if i != 0 {
+			e := *entry
+			copy(t.cachedTextHeights[key][1:i+1], t.cachedTextHeights[key][:i])
+			t.cachedTextHeights[key][0] = e
+		}
+		break
+	}
+
+	if hasWidth && hasHeight {
+		return image.Pt(width, height)
 	}
 
 	txt := t.textToDraw(context, true)
@@ -1276,16 +1354,24 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 	// Force to set a positive number as the width.
 	w = max(w, 1)
 
-	s := image.Pt(int(math.Ceil(w)), int(math.Ceil(h)))
-
-	// Put the new entry at the head.
-	copy(t.cachedTextSizes[key][1:], t.cachedTextSizes[key][:])
-	t.cachedTextSizes[key][0] = cachedTextSizeEntry{
-		constraintWidth: constraintWidth,
-		size:            s,
+	if !hasWidth {
+		width = int(math.Ceil(w))
+		copy(t.cachedTextWidths[key][1:], t.cachedTextWidths[key][:])
+		t.cachedTextWidths[key][0] = cachedTextWidthEntry{
+			constraintWidth: constraintWidth,
+			width:           width,
+		}
+	}
+	if !hasHeight {
+		height = int(math.Ceil(h))
+		copy(t.cachedTextHeights[key][1:], t.cachedTextHeights[key][:])
+		t.cachedTextHeights[key][0] = cachedTextHeightEntry{
+			constraintWidth: constraintWidth,
+			height:          height,
+		}
 	}
 
-	return s
+	return image.Pt(width, height)
 }
 
 func (t *Text) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
