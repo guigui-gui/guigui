@@ -139,8 +139,17 @@ type Text struct {
 	// contentHashCache memoizes the most recently computed hash, keyed by
 	// [textinput.Field.ChangedAt]. While the field has not been mutated, repeated
 	// [Text.WriteStateKey] calls return the cached value without re-hashing.
-	contentHashCache    xxh3.Uint128
-	contentHashCachedAt time.Time
+	contentHashCache          xxh3.Uint128
+	contentHashFieldChangedAt time.Time
+
+	// lineByteOffsets holds the byte offsets where each logical line begins
+	// in the field's committed text. Used by virtualized layout paths that
+	// need to walk a window of logical lines without rescanning the whole
+	// buffer. Refreshed lazily by ensureLineByteOffsets when
+	// [textinput.Field.ChangedAt] advances past
+	// lineByteOffsetsFieldChangedAt.
+	lineByteOffsets               textutil.LineByteOffsets
+	lineByteOffsetsFieldChangedAt time.Time
 
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
@@ -207,14 +216,27 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 // and [Text.Measure] see).
 func (t *Text) contentHashForStateKey() xxh3.Uint128 {
 	changedAt := t.field.ChangedAt()
-	if changedAt.Equal(t.contentHashCachedAt) {
+	if changedAt.Equal(t.contentHashFieldChangedAt) {
 		return t.contentHashCache
 	}
 	t.contentHasher.Reset()
 	_ = t.field.WriteTextForRendering(&t.contentHasher)
 	t.contentHashCache = t.contentHasher.Sum128()
-	t.contentHashCachedAt = changedAt
+	t.contentHashFieldChangedAt = changedAt
 	return t.contentHashCache
+}
+
+// ensureLineByteOffsets refreshes t.lineByteOffsets if the field has been
+// mutated since the last call. The offsets are built from the committed text
+// only (no IME composition), matching what [textinput.Field.WriteText]
+// returns.
+func (t *Text) ensureLineByteOffsets() {
+	changedAt := t.field.ChangedAt()
+	if t.lineByteOffsets.LineCount() > 0 && changedAt.Equal(t.lineByteOffsetsFieldChangedAt) {
+		return
+	}
+	t.lineByteOffsets.RebuildFromString(t.stringValue())
+	t.lineByteOffsetsFieldChangedAt = changedAt
 }
 
 func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
