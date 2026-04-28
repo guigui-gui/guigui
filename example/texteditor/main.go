@@ -523,7 +523,7 @@ func main() {
 	if len(os.Args) > 1 {
 		text, err := root.doc.Load(os.Args[1])
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "load:", err)
+			slog.Error("load", "err", err)
 			os.Exit(1)
 		}
 		root.initialText = text
@@ -533,7 +533,7 @@ func main() {
 		WindowMinSize: image.Pt(480, 320),
 	}
 	if err := guigui.Run(&root, op); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		slog.Error("guigui.Run", "err", err)
 		os.Exit(1)
 	}
 }
