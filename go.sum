@@ -12,12 +12,12 @@ github.com/go-text/typesetting-utils v0.0.0-20260327125527-fbf04b32d9ad h1:J6fi0
 github.com/go-text/typesetting-utils v0.0.0-20260327125527-fbf04b32d9ad/go.mod h1:3/62I4La/HBRX9TcTpBj4eipLiwzf+vhI+7whTc9V7o=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
-github.com/hajimehoshi/bitmapfont/v4 v4.1.0 h1:eE3qa5Do4qhowZVIHjsrX5pYyyPN6sAFWMsO7QREm3U=
-github.com/hajimehoshi/bitmapfont/v4 v4.1.0/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
+github.com/hajimehoshi/bitmapfont/v4 v4.1.1 h1:5FNENqs0QbURnFG8HeDJuPl/FIjU4tNesm4suKJfIwY=
+github.com/hajimehoshi/bitmapfont/v4 v4.1.1/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
 github.com/hajimehoshi/dialog v0.0.0-20260426055613-a260f66f13d3 h1:xtMg+dOG35FHZkpHBYnvqLAd4gUAUkPubMGlhBO5/Is=
 github.com/hajimehoshi/dialog v0.0.0-20260426055613-a260f66f13d3/go.mod h1:enjUufCy3yc6XrfWeEsaGuNE8hYE7O2jCN5hh3Uefsg=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260419062649-1a4c38c37d35 h1:CZKfmzf7TVT2hL3GVs/12m2iPzUe+v8fPza55y+6r0I=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260419062649-1a4c38c37d35/go.mod h1:7wbeAfKdQzxPWoatXutvJBgjXLrwXDdsDxZONyf4xLk=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260428072509-70dae6ffbbc9 h1:wwYuIKH0I7aeexi5xyXQzNkvjxr5/vGc2d3yZulmDKw=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260428072509-70dae6ffbbc9/go.mod h1:anjlEjE4i9i68evHBEtuwE1DX6MW2WkHkHammWY6g4w=
 github.com/hajimehoshi/iro v0.2.0 h1:7RFpvbI9Cvdna445mF4uJGsGSVwnqh1uK/j/GKUfYpY=
 github.com/hajimehoshi/iro v0.2.0/go.mod h1:gfbDojwwKcq04DipcwqdW35ooEStXByUF3JanzJG5Ks=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade h1:FmusiCI1wHw+XQbvL9M+1r/C3SPqKrmBaIOYwVfQoDE=
