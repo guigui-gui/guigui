@@ -33,6 +33,12 @@ type DrawOptions struct {
 	InactiveCompositionColor color.Color
 	ActiveCompositionColor   color.Color
 	CompositionBorderWidth   float32
+
+	// VisibleBounds, when non-empty, restricts per-line drawing to lines that
+	// intersect this rectangle. Lines fully above or below are skipped without
+	// shaping, which matters for very long text whose [bounds] greatly exceed
+	// the on-screen viewport. When empty, [bounds] is used (back-compatible).
+	VisibleBounds image.Rectangle
 }
 
 var theCachedLines []line
@@ -58,12 +64,22 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		theCachedLines = append(theCachedLines, line)
 	}
 
+	clipMinY := bounds.Min.Y
+	clipMaxY := bounds.Max.Y
+	if !options.VisibleBounds.Empty() {
+		clipMinY = max(clipMinY, options.VisibleBounds.Min.Y)
+		clipMaxY = min(clipMaxY, options.VisibleBounds.Max.Y)
+	}
+
 	for _, line := range theCachedLines {
 		y := op.GeoM.Element(1, 2)
-		if int(math.Ceil(y+options.LineHeight)) < bounds.Min.Y {
+		if int(math.Ceil(y+options.LineHeight)) < clipMinY {
+			// Advance to the next line so the loop terminates; the bottom-of-body
+			// translation is skipped by [continue].
+			op.GeoM.Translate(0, options.LineHeight)
 			continue
 		}
-		if int(math.Floor(y)) >= bounds.Max.Y {
+		if int(math.Floor(y)) >= clipMaxY {
 			break
 		}
 
