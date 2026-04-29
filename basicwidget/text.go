@@ -285,7 +285,7 @@ func (t *Text) ensureLineByteOffsets() {
 // repeat calls with non-decreasing lineIdx are amortized O(1).
 //
 // Per-line ceiling matches what virtualizing parents
-// (e.g. textInputText.cumulativeHeight, the [virtualScrollContent] hook)
+// (e.g. textInputText.cumulativeY, the [virtualScrollContent] hook)
 // use for integer pixel positioning.
 func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int {
 	lineH := int(math.Ceil(t.lineHeight(context)))

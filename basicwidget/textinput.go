@@ -755,8 +755,8 @@ func (t *textInputText) itemCount() int {
 	return txt.lineByteOffsets.LineCount()
 }
 
-// cumulativeHeight implements [virtualScrollContent].
-func (t *textInputText) cumulativeHeight(context *guigui.Context, idx int) int {
+// cumulativeY implements [virtualScrollContent].
+func (t *textInputText) cumulativeY(context *guigui.Context, idx int) int {
 	txt := t.text.Widget()
 	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
 	return txt.cumulativeY(context, width, idx)
@@ -890,9 +890,9 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	t.panel.forceSetTopItem(topIdx, topOff, false)
 
 	// Position the *Text widget so logical line topIdx lands at the panel
-	// viewport top, shifted by topOff. cumulativeHeight is fast for the
+	// viewport top, shifted by topOff. cumulativeY is fast for the
 	// non-autoWrap path (idx*lineHeight) and iterates per-line for autoWrap.
-	topYOffset := topOff - t.cumulativeHeight(context, topIdx)
+	topYOffset := topOff - t.cumulativeY(context, topIdx)
 
 	textBounds := bounds
 	textBounds.Min.X += t.padding.Start

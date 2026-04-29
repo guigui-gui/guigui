@@ -724,7 +724,7 @@ func (l *listContent[T]) contentWidth(_ *guigui.Context) int {
 	return 0
 }
 
-// cumulativeHeight implements [virtualScrollContent] using the running
+// cumulativeY implements [virtualScrollContent] using the running
 // estimatedItemHeight average rather than measuring each preceding item.
 // Exact cumulative measurement would require an O(N) Measure pass per
 // Layout, which would defeat the point of virtual scrolling.
@@ -734,7 +734,7 @@ func (l *listContent[T]) contentWidth(_ *guigui.Context) int {
 // slightly at the canonical bottom. Acceptable for now since lists tend
 // to have roughly uniform items and exact computation is incompatible
 // with virtual scrolling without an additional cache.
-func (l *listContent[T]) cumulativeHeight(_ *guigui.Context, availableIdx int) int {
+func (l *listContent[T]) cumulativeY(_ *guigui.Context, availableIdx int) int {
 	if l.listPanel == nil {
 		return 0
 	}

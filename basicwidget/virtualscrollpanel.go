@@ -38,15 +38,16 @@ type virtualScrollContent interface {
 	// position and during scroll-bar drag.
 	measureItemHeight(context *guigui.Context, index int) int
 
-	// cumulativeHeight returns the sum of measured heights for items
-	// [0, idx). Used by [virtualScrollPanel.thumbBounds] to compute an
-	// accurate scroll-bar thumb position when item heights are
-	// heterogeneous - in particular so the thumb doesn't snap upward when
-	// a small last item is reached at the canonical bottom.
+	// cumulativeY returns the rendered Y of the start of item idx,
+	// equivalently the sum of measured heights for items [0, idx). Used
+	// by [virtualScrollPanel.thumbBounds] to compute an accurate
+	// scroll-bar thumb position when item heights are heterogeneous - in
+	// particular so the thumb doesn't snap upward when a small last item
+	// is reached at the canonical bottom.
 	//
 	// Implementations should use a fast path when item heights are uniform
 	// (just idx*itemHeight); the fallback iteration is O(idx) per call.
-	cumulativeHeight(context *guigui.Context, idx int) int
+	cumulativeY(context *guigui.Context, idx int) int
 }
 
 // virtualScrollPanel is a scroll panel that uses virtual scrolling: instead
@@ -590,11 +591,11 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 		//
 		// scrollMax is the document-space scroll range. Using
 		// totalCount*estimatedItemHeight rather than an exact docHeight keeps
-		// the formula consistent with cumulativeHeight implementations that
+		// the formula consistent with cumulativeY implementations that
 		// approximate via the same average; for content where the average is
 		// the exact mean (e.g. textInputText sets estimatedItemHeight =
 		// docHeight/itemCount), scrollMax is exact.
-		scrollPos := float64(p.content.cumulativeHeight(context, p.topItemIndex) - p.topItemOffset)
+		scrollPos := float64(p.content.cumulativeY(context, p.topItemIndex) - p.topItemOffset)
 		scrollMax := float64(totalCount*p.estimatedItemHeight - bounds.Dy())
 		var rate float64
 		if scrollMax > 0 {
