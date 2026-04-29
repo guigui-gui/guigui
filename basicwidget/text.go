@@ -1694,6 +1694,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	if position.Y >= textContentBounds.Max.Y {
 		return len(txt)
 	}
+	width := textContentBounds.Dx()
 	op := &textutil.Options{
 		AutoWrap:         t.autoWrap,
 		Face:             t.face(context, false),
@@ -1704,7 +1705,35 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		KeepTailingSpace: t.keepTailingSpace,
 	}
 	position = position.Sub(textContentBounds.Min)
-	idx := textutil.TextIndexFromPosition(textContentBounds.Dx(), position, txt, op)
+
+	// Pass the cached lineByteOffsets sidecar and cumulativeVisualLineCount
+	// callback so [textutil.TextIndexFromPosition] localizes the visual-
+	// line walk to the single logical line covering position.Y. The
+	// sidecar-less fallback walks every visual line in the document; for
+	// drag-select on multi-megabyte buffers this fires every tick from
+	// [Text.HandlePointingInput] and dominates CPU.
+	t.ensureLineByteOffsets()
+	var committed string
+	var sStart, sEnd, compLen int
+	if showComposition {
+		compLen = t.field.UncommittedTextLengthInBytes()
+		if compLen > 0 {
+			committed = t.stringValue()
+			sStart, sEnd = t.field.Selection()
+		}
+	}
+	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
+		Position:                 position,
+		RenderingText:            txt,
+		Width:                    width,
+		Options:                  op,
+		CommittedText:            committed,
+		LineByteOffsets:          &t.lineByteOffsets,
+		SelectionStart:           sStart,
+		SelectionEnd:             sEnd,
+		CompositionLen:           compLen,
+		PrecedingVisualLineCount: func(lineIdx int) int { return t.cumulativeVisualLineCount(context, width, lineIdx) },
+	})
 	if idx < 0 || idx > len(txt) {
 		return -1
 	}

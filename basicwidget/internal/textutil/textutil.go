@@ -264,7 +264,12 @@ func oneLineLeft(width int, vlStr string, face text.Face, hAlign HorizontalAlign
 	}
 }
 
-func TextIndexFromPosition(width int, position image.Point, str string, options *Options) int {
+// textIndexFromPosition is the unrestricted whole-document
+// implementation: it walks every visual line in str to find the one
+// covering position.Y. O(documentLen) per call and only suitable when
+// no [LineByteOffsets] sidecar is available; the public
+// [TextIndexFromPosition] uses this as a fallback.
+func textIndexFromPosition(width int, position image.Point, str string, options *Options) int {
 	// Determine the visual line first.
 	padding := textPadding(options.Face, options.LineHeight)
 	n := int((float64(position.Y) + padding) / options.LineHeight)

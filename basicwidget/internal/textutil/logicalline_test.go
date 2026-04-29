@@ -264,7 +264,12 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 			// Local Y near the top of the per-logical line maps to a whole-doc
 			// Y of originY.
 			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], op)
-			whole := textutil.TextIndexFromPosition(width, image.Pt(q.x, int(originY)), str, op)
+			whole := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
+				Position:      image.Pt(q.x, int(originY)),
+				RenderingText: str,
+				Width:         width,
+				Options:       op,
+			})
 			lineStart := l.ByteOffsetByLineIndex(q.lineIndex)
 			if got, want := perLine+lineStart, whole; got != want {
 				t.Errorf("perLine(%d)+lineStart(%d) = %d, whole = %d",
