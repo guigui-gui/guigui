@@ -7,15 +7,15 @@ import (
 	"iter"
 )
 
-type Line struct {
+type VisualLine struct {
 	Pos int
 	Str string
 }
 
-func Lines(width int, str string, autoWrap bool, advance func(str string) float64) iter.Seq[Line] {
-	return func(yield func(Line) bool) {
-		for l := range lines(width, str, autoWrap, advance) {
-			if !yield(Line{
+func VisualLines(width int, str string, autoWrap bool, advance func(str string) float64) iter.Seq[VisualLine] {
+	return func(yield func(VisualLine) bool) {
+		for l := range visualLines(width, str, autoWrap, advance) {
+			if !yield(VisualLine{
 				Pos: l.pos,
 				Str: l.str,
 			}) {

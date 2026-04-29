@@ -15,7 +15,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
-func TestNoWrapLines(t *testing.T) {
+func TestNoWrapVisualLines(t *testing.T) {
 	testCases := []struct {
 		str       string
 		positions []int
@@ -76,7 +76,7 @@ func TestNoWrapLines(t *testing.T) {
 		t.Run(tc.str, func(t *testing.T) {
 			var gotPositions []int
 			var gotLines []string
-			for l := range textutil.Lines(0, tc.str, false, nil) {
+			for l := range textutil.VisualLines(0, tc.str, false, nil) {
 				gotPositions = append(gotPositions, l.Pos)
 				gotLines = append(gotLines, l.Str)
 			}
@@ -115,7 +115,7 @@ func TestAutoWrapInvalidUTF8(t *testing.T) {
 		t.Run(fmt.Sprintf("%q", s), func(t *testing.T) {
 			// Iterating must not panic. The exact line breakdown is not part
 			// of the contract; this only verifies that Lines completes.
-			for range textutil.Lines(100, s, true, advance) {
+			for range textutil.VisualLines(100, s, true, advance) {
 			}
 		})
 	}

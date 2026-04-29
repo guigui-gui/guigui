@@ -41,7 +41,7 @@ type DrawOptions struct {
 	VisibleBounds image.Rectangle
 }
 
-var theCachedLines []line
+var theCachedVisualLines []visualLine
 
 func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOptions) {
 	op := &text.DrawOptions{}
@@ -57,11 +57,11 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	yOffset := textPositionYOffset(bounds.Size(), str, &options.Options)
 	op.GeoM.Translate(0, yOffset)
 
-	theCachedLines = theCachedLines[:0]
-	for line := range lines(bounds.Dx(), str, options.AutoWrap, func(str string) float64 {
+	theCachedVisualLines = theCachedVisualLines[:0]
+	for vl := range visualLines(bounds.Dx(), str, options.AutoWrap, func(str string) float64 {
 		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}) {
-		theCachedLines = append(theCachedLines, line)
+		theCachedVisualLines = append(theCachedVisualLines, vl)
 	}
 
 	clipMinY := bounds.Min.Y
@@ -71,7 +71,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		clipMaxY = min(clipMaxY, options.VisibleBounds.Max.Y)
 	}
 
-	for _, line := range theCachedLines {
+	for _, vl := range theCachedVisualLines {
 		y := op.GeoM.Element(1, 2)
 		if int(math.Ceil(y+options.LineHeight)) < clipMinY {
 			// Advance to the next line so the loop terminates; the bottom-of-body
@@ -83,16 +83,16 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			break
 		}
 
-		start := line.pos
-		end := line.pos + len(line.str)
+		start := vl.pos
+		end := vl.pos + len(vl.str)
 
 		if options.DrawSelection {
 			if start <= options.SelectionEnd && end >= options.SelectionStart {
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -114,8 +114,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -134,8 +134,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedLines, start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedLines, end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, start, &options.Options)
+					posEnd0, _, countEnd := textPositionFromIndex(bounds.Dx(), str, theCachedVisualLines, end, &options.Options)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -153,17 +153,17 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		}
 
 		// Draw the text.
-		lineStr := line.str
+		vlStr := vl.str
 		origGeoM := op.GeoM
 		if !options.KeepTailingSpace {
-			lineStr = strings.TrimRightFunc(lineStr, unicode.IsSpace)
+			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
-		if options.EllipsisString != "" && advance(lineStr, options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
-			lineStr = truncateWithEllipsis(lineStr, options.EllipsisString, float64(bounds.Dx()), options.Face, options.TabWidth)
+		if options.EllipsisString != "" && advance(vlStr, options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
+			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(bounds.Dx()), options.Face, options.TabWidth)
 		}
 		// Ebitengine's text.Draw does not handle tab characters, so lines
 		// containing tabs must use manual alignment via oneLineLeft and GeoM.
-		if !strings.Contains(lineStr, "\t") {
+		if !strings.Contains(vlStr, "\t") {
 			// Use Ebitengine's PrimaryAlign for horizontal alignment so that the
 			// text origin accounts for the alignment offset. This ensures that each
 			// glyph's subpixel position is determined relative to the aligned origin,
@@ -179,14 +179,14 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			default:
 				op.PrimaryAlign = text.AlignStart
 			}
-			text.Draw(dst, lineStr, options.Face, op)
+			text.Draw(dst, vlStr, options.Face, op)
 		} else {
 			op.PrimaryAlign = text.AlignStart
-			x := oneLineLeft(bounds.Dx(), lineStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			x := oneLineLeft(bounds.Dx(), vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 			op.GeoM.Translate(x, 0)
 			var origX float64
 			for {
-				head, tail, ok := strings.Cut(lineStr, "\t")
+				head, tail, ok := strings.Cut(vlStr, "\t")
 				text.Draw(dst, head, options.Face, op)
 				if !ok {
 					break
@@ -195,7 +195,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				nextX := nextIndentPosition(x, options.TabWidth)
 				op.GeoM.Translate(nextX-origX, 0)
 				origX = nextX
-				lineStr = tail
+				vlStr = tail
 			}
 		}
 		op.GeoM = origGeoM

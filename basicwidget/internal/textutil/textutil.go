@@ -120,37 +120,44 @@ func visibleCulsters(str string, face text.Face) []text.Glyph {
 	return text.AppendGlyphs(nil, str, face, nil)
 }
 
-type line struct {
+// visualLine is one rendered row of pixels: the unit yielded by visualLines
+// and consumed by Draw / position helpers. With autoWrap on, a single
+// hard-break-delimited "logical line" can decompose into multiple visualLines.
+type visualLine struct {
 	pos int
 	str string
 }
 
-// cachedSingleLineSeq avoids closure allocation for the common single-line case.
-// The line value is set before returning seq, and seq yields it without capturing any per-call state.
-type cachedSingleLineSeq struct {
-	line line
-	seq  iter.Seq[line]
+// cachedSingleVisualLineSeq avoids closure allocation for the common
+// single-visual-line case. The value is set before returning seq, and seq
+// yields it without capturing any per-call state.
+type cachedSingleVisualLineSeq struct {
+	visualLine visualLine
+	seq        iter.Seq[visualLine]
 }
 
-var theCachedSingleLineSeq cachedSingleLineSeq
+var theCachedSingleVisualLineSeq cachedSingleVisualLineSeq
 
 func init() {
-	theCachedSingleLineSeq.seq = func(yield func(line) bool) {
-		yield(theCachedSingleLineSeq.line)
+	theCachedSingleVisualLineSeq.seq = func(yield func(visualLine) bool) {
+		yield(theCachedSingleVisualLineSeq.visualLine)
 	}
 }
 
-func lines(width int, str string, autoWrap bool, advance func(str string) float64) iter.Seq[line] {
-	// Fast path: single-line text that fits within width.
+// visualLines yields the visual sublines (rendered rows) of str at the given
+// width. With autoWrap on, hard-break-delimited segments may further split
+// at width-based wrap opportunities.
+func visualLines(width int, str string, autoWrap bool, advance func(str string) float64) iter.Seq[visualLine] {
+	// Fast path: single visual line that fits within width.
 	// Returns a cached iter.Seq to avoid closure allocation.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
 		if !autoWrap || width == math.MaxInt || advance(str) <= float64(width) {
-			theCachedSingleLineSeq.line = line{pos: 0, str: str}
-			return theCachedSingleLineSeq.seq
+			theCachedSingleVisualLineSeq.visualLine = visualLine{pos: 0, str: str}
+			return theCachedSingleVisualLineSeq.seq
 		}
 	}
 
-	return func(yield func(line) bool) {
+	return func(yield func(visualLine) bool) {
 		origStr := str
 
 		if !autoWrap {
@@ -158,7 +165,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 			for pos < len(str) {
 				p, l := FirstLineBreakPositionAndLen(str[pos:])
 				if p == -1 {
-					if !yield(line{
+					if !yield(visualLine{
 						pos: pos,
 						str: str[pos:],
 					}) {
@@ -166,7 +173,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 					}
 					break
 				}
-				if !yield(line{
+				if !yield(visualLine{
 					pos: pos,
 					str: str[pos : pos+p+l],
 				}) {
@@ -195,7 +202,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 					candidate := origStr[lineStart : lineEnd+len(segment)]
 					// TODO: Consider a line alignment and/or editable/selectable states when calculating the width.
 					if advance(candidate[:len(candidate)-tailingLineBreakLen(candidate)]) > float64(width) {
-						if !yield(line{
+						if !yield(visualLine{
 							pos: pos,
 							str: origStr[lineStart:lineEnd],
 						}) {
@@ -207,7 +214,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 				}
 				lineEnd += len(segment)
 				if l.IsMandatoryBreak {
-					if !yield(line{
+					if !yield(visualLine{
 						pos: pos,
 						str: origStr[lineStart:lineEnd],
 					}) {
@@ -219,7 +226,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 			}
 
 			if lineEnd-lineStart > 0 {
-				if !yield(line{
+				if !yield(visualLine{
 					pos: pos,
 					str: origStr[lineStart:lineEnd],
 				}) {
@@ -232,7 +239,7 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 
 		// If the string ends with a line break, or an empty line, add an extra empty line.
 		if tailingLineBreakLen(origStr) > 0 || origStr == "" {
-			if !yield(line{
+			if !yield(visualLine{
 				pos: len(origStr),
 			}) {
 				return
@@ -241,8 +248,8 @@ func lines(width int, str string, autoWrap bool, advance func(str string) float6
 	}
 }
 
-func oneLineLeft(width int, line string, face text.Face, hAlign HorizontalAlign, tabWidth float64, keepTailingSpace bool) float64 {
-	w := advance(line[:len(line)-tailingLineBreakLen(line)], face, tabWidth, keepTailingSpace)
+func oneLineLeft(width int, vlStr string, face text.Face, hAlign HorizontalAlign, tabWidth float64, keepTailingSpace bool) float64 {
+	w := advance(vlStr[:len(vlStr)-tailingLineBreakLen(vlStr)], face, tabWidth, keepTailingSpace)
 	switch hAlign {
 	case HorizontalAlignStart, HorizontalAlignLeft:
 		// For RTL languages, HorizontalAlignStart should be the same as HorizontalAlignRight.
@@ -258,30 +265,30 @@ func oneLineLeft(width int, line string, face text.Face, hAlign HorizontalAlign,
 }
 
 func TextIndexFromPosition(width int, position image.Point, str string, options *Options) int {
-	// Determine the line first.
+	// Determine the visual line first.
 	padding := textPadding(options.Face, options.LineHeight)
 	n := int((float64(position.Y) + padding) / options.LineHeight)
 
 	var pos int
-	var line string
-	var lineIndex int
-	for l := range lines(width, str, options.AutoWrap, func(str string) float64 {
+	var vlStr string
+	var vlIndex int
+	for l := range visualLines(width, str, options.AutoWrap, func(str string) float64 {
 		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}) {
-		line = l.str
+		vlStr = l.str
 		pos = l.pos
-		if lineIndex >= n {
+		if vlIndex >= n {
 			break
 		}
-		lineIndex++
+		vlIndex++
 	}
 
-	// Deterine the line index.
-	left := oneLineLeft(width, line, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+	// Determine the index within the visual line.
+	left := oneLineLeft(width, vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 	var prevA float64
 	var clusterFound bool
-	for _, c := range visibleCulsters(line, options.Face) {
-		a := advance(line[:c.EndIndexInBytes], options.Face, options.TabWidth, true)
+	for _, c := range visibleCulsters(vlStr, options.Face) {
+		a := advance(vlStr[:c.EndIndexInBytes], options.Face, options.TabWidth, true)
 		if (float64(position.X) - left) < (prevA + (a-prevA)/2) {
 			pos += c.StartIndexInBytes
 			clusterFound = true
@@ -290,8 +297,8 @@ func TextIndexFromPosition(width int, position image.Point, str string, options 
 		prevA = a
 	}
 	if !clusterFound {
-		pos += len(line)
-		pos -= tailingLineBreakLen(line)
+		pos += len(vlStr)
+		pos -= tailingLineBreakLen(vlStr)
 	}
 
 	return pos
@@ -307,12 +314,12 @@ func TextPositionFromIndex(width int, str string, index int, options *Options) (
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndex(width, str, slices.Collect(lines(width, str, options.AutoWrap, func(str string) float64 {
+	return textPositionFromIndex(width, str, slices.Collect(visualLines(width, str, options.AutoWrap, func(str string) float64 {
 		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
 	})), index, options)
 }
 
-func textPositionFromIndex(width int, str string, lines []line, index int, options *Options) (position0, position1 TextPosition, count int) {
+func textPositionFromIndex(width int, str string, vls []visualLine, index int, options *Options) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
 	}
@@ -321,7 +328,7 @@ func textPositionFromIndex(width int, str string, lines []line, index int, optio
 	var indexInLine0, indexInLine1 int
 	var line0, line1 string
 	var found0, found1 bool
-	for _, l := range lines {
+	for _, l := range vls {
 		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
 		if index == l.pos+len(l.str) {
@@ -470,8 +477,10 @@ func trimTailingLineBreak(str string) string {
 	return str
 }
 
-func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) int {
-	// Fast path: single-line text that fits within width.
+// visualLineCount returns the number of visual lines str produces at the
+// given width.
+func visualLineCount(width int, str string, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) int {
+	// Fast path: single visual line that fits within width.
 	// This avoids allocating a closure for the advance function.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
 		if !autoWrap || width == math.MaxInt || advance(str, face, tabWidth, keepTailingSpace) <= float64(width) {
@@ -480,7 +489,7 @@ func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth fl
 	}
 
 	var count int
-	for range lines(width, str, autoWrap, func(str string) float64 {
+	for range visualLines(width, str, autoWrap, func(str string) float64 {
 		return advance(str, face, tabWidth, keepTailingSpace)
 	}) {
 		count++
@@ -489,29 +498,30 @@ func lineCount(width int, str string, autoWrap bool, face text.Face, tabWidth fl
 }
 
 // MeasureHeight is like [Measure] but only returns height. When width does not
-// need to be computed, this avoids per-line shaping calls and is dramatically
-// cheaper for very long text (e.g. a multi-megabyte editor buffer).
+// need to be computed, this avoids per-visual-line shaping calls and is
+// dramatically cheaper for very long text (e.g. a multi-megabyte editor
+// buffer).
 func MeasureHeight(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(lineCount(width, str, autoWrap, face, tabWidth, keepTailingSpace))
+	return lineHeight * float64(visualLineCount(width, str, autoWrap, face, tabWidth, keepTailingSpace))
 }
 
 func Measure(width int, str string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range lines(width, str, autoWrap, func(str string) float64 {
+	for l := range visualLines(width, str, autoWrap, func(str string) float64 {
 		return advance(str, face, tabWidth, keepTailingSpace)
 	}) {
-		line := l.str
+		vlStr := l.str
 		if !keepTailingSpace {
-			line = trimTailingLineBreak(line)
+			vlStr = trimTailingLineBreak(vlStr)
 		}
-		lineWidth := advance(line, face, tabWidth, keepTailingSpace)
-		if ellipsisString != "" && lineWidth > float64(width) {
-			line = truncateWithEllipsis(line, ellipsisString, float64(width), face, tabWidth)
-			lineWidth = advance(line, face, tabWidth, false)
+		vlWidth := advance(vlStr, face, tabWidth, keepTailingSpace)
+		if ellipsisString != "" && vlWidth > float64(width) {
+			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face, tabWidth)
+			vlWidth = advance(vlStr, face, tabWidth, false)
 		}
-		maxWidth = max(maxWidth, lineWidth)
+		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
-		// Thus, just counting the line number is enough.
+		// Thus, just counting the visual line number is enough.
 		height += lineHeight
 	}
 	return maxWidth, height
@@ -524,7 +534,7 @@ func textPadding(face text.Face, lineHeight float64) float64 {
 }
 
 func textPositionYOffset(size image.Point, str string, options *Options) float64 {
-	c := lineCount(size.X, str, options.AutoWrap, options.Face, options.TabWidth, options.KeepTailingSpace)
+	c := visualLineCount(size.X, str, options.AutoWrap, options.Face, options.TabWidth, options.KeepTailingSpace)
 	textHeight := options.LineHeight * float64(c)
 	yOffset := textPadding(options.Face, options.LineHeight)
 	switch options.VerticalAlign {
