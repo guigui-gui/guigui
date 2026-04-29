@@ -37,6 +37,16 @@ type virtualScrollContent interface {
 	// given index. Called by [virtualScrollPanel] when computing thumb
 	// position and during scroll-bar drag.
 	measureItemHeight(context *guigui.Context, index int) int
+
+	// cumulativeHeight returns the sum of measured heights for items
+	// [0, idx). Used by [virtualScrollPanel.thumbBounds] to compute an
+	// accurate scroll-bar thumb position when item heights are
+	// heterogeneous - in particular so the thumb doesn't snap upward when
+	// a small last item is reached at the canonical bottom.
+	//
+	// Implementations should use a fast path when item heights are uniform
+	// (just idx*itemHeight); the fallback iteration is O(idx) per call.
+	cumulativeHeight(context *guigui.Context, idx int) int
 }
 
 // virtualScrollPanel is a scroll panel that uses virtual scrolling: instead
@@ -567,30 +577,28 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 		horizontalBarBounds = image.Rect(int(x0), int(y0), int(x1), int(y1))
 	}
 
-	// Vertical thumb — position based directly on topItemIndex.
+	// Vertical thumb — position based on the document-space scroll position.
 	totalCount := p.content.itemCount()
 	if barHeight := p.vThumbHeight(context, widgetBounds, totalCount); barHeight > 0 {
-		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight),
-		// so the division below is safe.
-		viewportItems := float64(bounds.Dy()) / float64(p.estimatedItemHeight)
-		maxIndex := float64(totalCount) - viewportItems
-		if maxIndex < 1 {
-			maxIndex = 1
-		}
+		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight)
+		// and totalCount > 0.
+		//
+		// scrollPos is the document-space pixel y of the panel viewport top:
+		// the cumulative height of items before topItemIndex, minus
+		// topItemOffset (which is typically <= 0; negating it gives the
+		// pixels scrolled into the top item).
+		//
+		// scrollMax is the document-space scroll range. Using
+		// totalCount*estimatedItemHeight rather than an exact docHeight keeps
+		// the formula consistent with cumulativeHeight implementations that
+		// approximate via the same average; for content where the average is
+		// the exact mean (e.g. textInputText sets estimatedItemHeight =
+		// docHeight/itemCount), scrollMax is exact.
+		scrollPos := float64(p.content.cumulativeHeight(context, p.topItemIndex) - p.topItemOffset)
+		scrollMax := float64(totalCount*p.estimatedItemHeight - bounds.Dy())
 		var rate float64
-		if float64(p.topItemIndex)+viewportItems >= float64(totalCount) {
-			// The last item is visible — thumb should be at the bottom.
-			rate = 1
-		} else {
-			// Include topItemOffset so the thumb moves smoothly between items.
-			// topItemOffset is typically <= 0; negating it gives the fraction scrolled into the current item.
-			topItemH := p.content.measureItemHeight(context, p.topItemIndex)
-			if topItemH <= 0 {
-				topItemH = p.estimatedItemHeight
-			}
-			fractionalIndex := float64(p.topItemIndex) + float64(-p.topItemOffset)/float64(topItemH)
-			rate = fractionalIndex / maxIndex
-			rate = min(max(rate, 0), 1)
+		if scrollMax > 0 {
+			rate = min(max(scrollPos/scrollMax, 0), 1)
 		}
 		y0 := float64(bounds.Min.Y) + padding + rate*(float64(bounds.Dy())-2*padding-barHeight)
 		y1 := y0 + barHeight
