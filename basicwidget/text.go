@@ -158,6 +158,18 @@ type Text struct {
 	cachedStringValue               string
 	cachedStringValueFieldChangedAt time.Time
 
+	// cumulativeYs[i] is the rendered Y offset (in pixels, ceiled
+	// per-line) of the start of logical line i, used by virtualizing
+	// parents to position individual lines (and, in upcoming changes, by
+	// Text itself for cursor positioning and Draw input slicing). For
+	// non-autoWrap text the value is i*ceil(lineHeight) and the cache is
+	// not consulted; for autoWrap it is lazily extended one logical line
+	// at a time via [textutil.MeasureLogicalLineHeight]. Invalidated when
+	// the field, width, or any rendering parameter listed in
+	// cumulativeYsKey changes.
+	cumulativeYs    []int
+	cumulativeYsKey cumulativeYsKey
+
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.WriteStateKey] so locale changes trigger automatic rebuilds without
@@ -199,6 +211,23 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 		key |= 1 << 1
 	}
 	return key
+}
+
+// cumulativeYsKey identifies the layout parameters that the
+// [Text.cumulativeYs] cache was built against. Any change invalidates the
+// cache. The face is captured via faceCacheKey rather than the [text.Face]
+// interface value so the key remains comparable.
+//
+// autoWrap is intentionally not part of the key: [Text.cumulativeY] only
+// ever consults the cache when autoWrap is true; the off case
+// short-circuits to lineIdx*lineHeight without touching cumulativeYs.
+type cumulativeYsKey struct {
+	fieldChangedAt   time.Time
+	face             faceCacheKey
+	width            int
+	lineHeight       float64
+	tabWidth         float64
+	keepTailingSpace bool
 }
 
 // OnValueChanged sets the event handler that is called when the text value changes.
@@ -244,6 +273,67 @@ func (t *Text) ensureLineByteOffsets() {
 	}
 	t.lineByteOffsets.RebuildFromString(t.stringValue())
 	t.lineByteOffsetsFieldChangedAt = changedAt
+}
+
+// cumulativeY returns the rendered Y offset (in pixels, ceiled per-line)
+// of the start of the lineIdx-th logical line at the given content width.
+//
+// For non-autoWrap text every logical line is exactly one lineHeight
+// tall and the result is lineIdx*ceil(lineHeight) - O(1). For autoWrap
+// text the result is served from [Text.cumulativeYs], lazily extended
+// one logical line at a time using [textutil.MeasureLogicalLineHeight];
+// repeat calls with non-decreasing lineIdx are amortized O(1).
+//
+// Per-line ceiling matches what virtualizing parents
+// (e.g. textInputText.cumulativeHeight, the [virtualScrollContent] hook)
+// use for integer pixel positioning.
+func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int {
+	lineH := int(math.Ceil(t.lineHeight(context)))
+	if !t.autoWrap {
+		return lineIdx * lineH
+	}
+
+	t.ensureLineByteOffsets()
+	n := t.lineByteOffsets.LineCount()
+	lineIdx = min(max(lineIdx, 0), n)
+
+	key := cumulativeYsKey{
+		fieldChangedAt:   t.field.ChangedAt(),
+		face:             t.lastFaceCacheKey,
+		width:            width,
+		lineHeight:       t.lineHeight(context),
+		tabWidth:         t.actualTabWidth(context),
+		keepTailingSpace: t.keepTailingSpace,
+	}
+	if t.cumulativeYsKey != key {
+		t.cumulativeYs = append(t.cumulativeYs[:0], 0)
+		t.cumulativeYsKey = key
+	}
+
+	if len(t.cumulativeYs) > lineIdx {
+		return t.cumulativeYs[lineIdx]
+	}
+
+	str := t.stringValue()
+	face := t.face(context, false)
+	lineHF := t.lineHeight(context)
+	tabW := t.actualTabWidth(context)
+	keepTailing := t.keepTailingSpace
+	measureWidth := width
+	if measureWidth <= 0 {
+		measureWidth = math.MaxInt
+	}
+	for len(t.cumulativeYs) <= lineIdx {
+		i := len(t.cumulativeYs) - 1
+		start := t.lineByteOffsets.ByteOffsetByLineIndex(i)
+		end := len(str)
+		if i+1 < n {
+			end = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
+		}
+		h := textutil.MeasureLogicalLineHeight(measureWidth, str[start:end], t.autoWrap, face, lineHF, tabW, keepTailing)
+		t.cumulativeYs = append(t.cumulativeYs, t.cumulativeYs[i]+int(math.Ceil(h)))
+	}
+	return t.cumulativeYs[lineIdx]
 }
 
 func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {

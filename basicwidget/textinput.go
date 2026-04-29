@@ -6,7 +6,6 @@ package basicwidget
 import (
 	"image"
 	"math"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -672,17 +671,6 @@ type textInputText struct {
 	// and shrinks as the user scrolls past wide regions, but it is never
 	// stale after edits or document replacement.
 	measuredMaxWidth int
-
-	// cumulativeHeights caches per-logical-line cumulative pixel heights
-	// for autoWrap text, where measuring a single logical line runs the
-	// segmenter and is too expensive to repeat per Layout for every
-	// preceding line up to topItemIndex. cumulativeHeights[i] is the
-	// rendered height of lines [0, i); cumulativeHeights[0] is always 0.
-	// Invalidated when the field content or the wrap width changes; lazily
-	// extended in [textInputText.cumulativeHeight] up to the requested idx.
-	cumulativeHeights               []int
-	cumulativeHeightsFieldChangedAt time.Time
-	cumulativeHeightsWidth          int
 }
 
 var _ virtualScrollContent = (*textInputText)(nil)
@@ -767,35 +755,11 @@ func (t *textInputText) itemCount() int {
 	return txt.lineByteOffsets.LineCount()
 }
 
-// cumulativeHeight implements [virtualScrollContent]. For non-autoWrap text
-// every logical line is exactly one lineHeight tall, so the sum is
-// idx*lineHeight - O(1). For autoWrap text where logical lines wrap into
-// heterogeneous heights, the result is cached across Layouts and lazily
-// extended; once the cache covers idx, subsequent calls are O(1). The
-// cache is invalidated when the field content or wrap width changes.
+// cumulativeHeight implements [virtualScrollContent].
 func (t *textInputText) cumulativeHeight(context *guigui.Context, idx int) int {
 	txt := t.text.Widget()
-	if !txt.autoWrap {
-		return idx * int(math.Ceil(txt.lineHeight(context)))
-	}
-
 	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-	changedAt := txt.field.ChangedAt()
-	if !changedAt.Equal(t.cumulativeHeightsFieldChangedAt) || width != t.cumulativeHeightsWidth {
-		t.cumulativeHeights = append(t.cumulativeHeights[:0], 0)
-		t.cumulativeHeightsFieldChangedAt = changedAt
-		t.cumulativeHeightsWidth = width
-	}
-
-	n := t.itemCount()
-	idx = min(max(idx, 0), n)
-
-	for len(t.cumulativeHeights) <= idx {
-		i := len(t.cumulativeHeights) - 1
-		t.cumulativeHeights = append(t.cumulativeHeights, t.cumulativeHeights[i]+t.measureItemHeight(context, i))
-	}
-
-	return t.cumulativeHeights[idx]
+	return txt.cumulativeY(context, width, idx)
 }
 
 // measureItemHeight implements [virtualScrollContent]. Returns the rendered
