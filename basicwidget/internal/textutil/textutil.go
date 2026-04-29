@@ -310,23 +310,20 @@ type TextPosition struct {
 	Bottom float64
 }
 
-// textPositionFromIndexFromString is the unrestricted whole-document
-// implementation: it collects every visual line in str and walks them
-// to find the one containing index. O(documentLen) per call and only
+// textPositionFromIndex returns the visual position(s) for index in
+// str, walking the supplied visual lines vls. When vls is nil it falls
+// back to the unrestricted whole-document layout: every visual line in
+// str is collected and walked. O(documentLen) in that case and only
 // suitable when no [LineByteOffsets] sidecar is available; the public
-// [TextPositionFromIndex] uses this as a fallback.
-func textPositionFromIndexFromString(width int, str string, index int, options *Options) (position0, position1 TextPosition, count int) {
-	if index < 0 || index > len(str) {
-		return TextPosition{}, TextPosition{}, 0
-	}
-	return textPositionFromIndex(width, str, slices.Collect(visualLines(width, str, options.AutoWrap, func(str string) float64 {
-		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
-	})), index, options)
-}
-
+// [TextPositionFromIndex] uses the nil form as a fallback.
 func textPositionFromIndex(width int, str string, vls []visualLine, index int, options *Options) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
+	}
+	if vls == nil {
+		vls = slices.Collect(visualLines(width, str, options.AutoWrap, func(str string) float64 {
+			return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+		}))
 	}
 
 	var y, y0, y1 float64

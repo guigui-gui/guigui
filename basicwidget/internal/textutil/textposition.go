@@ -71,11 +71,11 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		return TextPosition{}, TextPosition{}, 0
 	}
 	if p.LineByteOffsets == nil || p.PrecedingVisualLineCount == nil {
-		return textPositionFromIndexFromString(p.Width, p.RenderingText, index, p.Options)
+		return textPositionFromIndex(p.Width, p.RenderingText, nil, index, p.Options)
 	}
 	n := p.LineByteOffsets.LineCount()
 	if n == 0 {
-		return textPositionFromIndexFromString(p.Width, p.RenderingText, index, p.Options)
+		return textPositionFromIndex(p.Width, p.RenderingText, nil, index, p.Options)
 	}
 
 	// Resolve composition shifts so the committed-text sidecar is
@@ -105,7 +105,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 			// Composition straddles a logical-line boundary: the
 			// committed sidecar's logical-line shape doesn't match
 			// RenderingText. Fall back to the unrestricted walk.
-			return textPositionFromIndexFromString(p.Width, p.RenderingText, index, p.Options)
+			return textPositionFromIndex(p.Width, p.RenderingText, nil, index, p.Options)
 		}
 		compInfo = info
 		hasComp = true
