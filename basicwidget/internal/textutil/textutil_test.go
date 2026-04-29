@@ -266,7 +266,12 @@ func TestTextPositionFromIndex(t *testing.T) {
 	// Baseline: position at index 0 of a single-line string sits on visual
 	// line 0. Use it to derive line N's Top without hard-coding the face's
 	// vertical padding.
-	baseline, _, _ := textutil.TextPositionFromIndex(1000, "a", 0, op)
+	baseline, _, _ := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
+		Index:         0,
+		RenderingText: "a",
+		Width:         1000,
+		Options:       op,
+	})
 	topOfLine := func(n int) float64 {
 		return baseline.Top + float64(n)*lineHeight
 	}
@@ -340,7 +345,12 @@ func TestTextPositionFromIndex(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pos0, pos1, count := textutil.TextPositionFromIndex(1000, tc.text, tc.index, op)
+			pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
+				Index:         tc.index,
+				RenderingText: tc.text,
+				Width:         1000,
+				Options:       op,
+			})
 			if count != tc.wantCount {
 				t.Fatalf("count: got %d, want %d", count, tc.wantCount)
 			}

@@ -192,7 +192,12 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 				// Whole-document positions. When count == 2, one of (pos0, pos1)
 				// matches our per-logical query: the head of the next line, at
 				// y == originY.
-				wp0, wp1, wpCount := textutil.TextPositionFromIndex(width, tc.str, idx, op)
+				wp0, wp1, wpCount := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
+					Index:         idx,
+					RenderingText: tc.str,
+					Width:         width,
+					Options:       op,
+				})
 
 				expectedTop := lp0.Top + originY
 

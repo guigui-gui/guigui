@@ -84,13 +84,20 @@ func visualLinesFromLogicalLine(width int, logicalLine string, autoWrap bool, ad
 // [MeasureHeight] and is used by virtualized layout to size lines one at a
 // time without scanning the whole document.
 func MeasureLogicalLineHeight(width int, logicalLine string, autoWrap bool, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
+	return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, autoWrap, face, tabWidth, keepTailingSpace))
+}
+
+// VisualLineCountForLogicalLine returns the number of visual lines one
+// logical line wraps into at the given width. With autoWrap off (or when
+// the line fits) the result is always 1.
+func VisualLineCountForLogicalLine(width int, logicalLine string, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) int {
 	var count int
 	for range visualLinesFromLogicalLine(width, logicalLine, autoWrap, func(s string) float64 {
 		return advance(s, face, tabWidth, keepTailingSpace)
 	}) {
 		count++
 	}
-	return lineHeight * float64(count)
+	return count
 }
 
 // MeasureLogicalLine returns the rendered width and height of one logical

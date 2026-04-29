@@ -310,7 +310,12 @@ type TextPosition struct {
 	Bottom float64
 }
 
-func TextPositionFromIndex(width int, str string, index int, options *Options) (position0, position1 TextPosition, count int) {
+// textPositionFromIndexFromString is the unrestricted whole-document
+// implementation: it collects every visual line in str and walks them
+// to find the one containing index. O(documentLen) per call and only
+// suitable when no [LineByteOffsets] sidecar is available; the public
+// [TextPositionFromIndex] uses this as a fallback.
+func textPositionFromIndexFromString(width int, str string, index int, options *Options) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(str) {
 		return TextPosition{}, TextPosition{}, 0
 	}
