@@ -191,3 +191,48 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(p.Position.X, localY), line, p.Options)
 	return renderingLineStart + pos
 }
+
+// textIndexFromPosition is the unrestricted whole-document
+// implementation: it walks every visual line in str to find the one
+// covering position.Y. O(documentLen) per call and only suitable when
+// no [LineByteOffsets] sidecar is available; the public
+// [TextIndexFromPosition] uses this as a fallback.
+func textIndexFromPosition(width int, position image.Point, str string, options *Options) int {
+	// Determine the visual line first.
+	padding := textPadding(options.Face, options.LineHeight)
+	n := int((float64(position.Y) + padding) / options.LineHeight)
+
+	var pos int
+	var vlStr string
+	var vlIndex int
+	for l := range visualLines(width, str, options.AutoWrap, func(str string) float64 {
+		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+	}) {
+		vlStr = l.str
+		pos = l.pos
+		if vlIndex >= n {
+			break
+		}
+		vlIndex++
+	}
+
+	// Determine the index within the visual line.
+	left := oneLineLeft(width, vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+	var prevA float64
+	var clusterFound bool
+	for _, c := range visibleCulsters(vlStr, options.Face) {
+		a := advance(vlStr[:c.EndIndexInBytes], options.Face, options.TabWidth, true)
+		if (float64(position.X) - left) < (prevA + (a-prevA)/2) {
+			pos += c.StartIndexInBytes
+			clusterFound = true
+			break
+		}
+		prevA = a
+	}
+	if !clusterFound {
+		pos += len(vlStr)
+		pos -= tailingLineBreakLen(vlStr)
+	}
+
+	return pos
+}

@@ -3,6 +3,14 @@
 
 package textutil
 
+import "slices"
+
+type TextPosition struct {
+	X      float64
+	Top    float64
+	Bottom float64
+}
+
 // TextPositionFromIndexParams describes the inputs for
 // [TextPositionFromIndex]. The first group of fields is always
 // required; the second group is optional state that enables the
@@ -233,4 +241,87 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		}
 	}
 	return pos0, pos1, c
+}
+
+// textPositionFromIndex returns the visual position(s) for index in
+// str, walking the supplied visual lines vls. When vls is nil it falls
+// back to the unrestricted whole-document layout: every visual line in
+// str is collected and walked. O(documentLen) in that case and only
+// suitable when no [LineByteOffsets] sidecar is available; the public
+// [TextPositionFromIndex] uses the nil form as a fallback.
+func textPositionFromIndex(width int, str string, vls []visualLine, index int, options *Options) (position0, position1 TextPosition, count int) {
+	if index < 0 || index > len(str) {
+		return TextPosition{}, TextPosition{}, 0
+	}
+	if vls == nil {
+		vls = slices.Collect(visualLines(width, str, options.AutoWrap, func(str string) float64 {
+			return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+		}))
+	}
+
+	var y, y0, y1 float64
+	var indexInLine0, indexInLine1 int
+	var line0, line1 string
+	var found0, found1 bool
+	for _, l := range vls {
+		// When auto wrap is on or the string ends with a line break, there can be two positions:
+		// one in the tail of the previous line and one in the head of the next line.
+		if index == l.pos+len(l.str) {
+			if !found0 {
+				found0 = true
+				line0 = l.str
+				indexInLine0 = index - l.pos
+				y0 = y
+			} else {
+				// A previous line already matched as the tail position; this line
+				// (typically an empty trailing line for a string ending in a line break)
+				// is the head of the next line.
+				found1 = true
+				line1 = l.str
+				indexInLine1 = index - l.pos
+				y1 = y
+				break
+			}
+		} else if l.pos <= index && index < l.pos+len(l.str) {
+			found1 = true
+			line1 = l.str
+			indexInLine1 = index - l.pos
+			y1 = y
+			break
+		}
+		y += options.LineHeight
+	}
+
+	if !found0 && !found1 {
+		return TextPosition{}, TextPosition{}, 0
+	}
+
+	paddingY := textPadding(options.Face, options.LineHeight)
+
+	var pos0, pos1 TextPosition
+	if found0 {
+		x0 := oneLineLeft(width, line0, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+		x0 += advance(line0[:indexInLine0], options.Face, options.TabWidth, true)
+		pos0 = TextPosition{
+			X:      x0,
+			Top:    y0 + paddingY,
+			Bottom: y0 + options.LineHeight - paddingY,
+		}
+	}
+	if found1 {
+		x1 := oneLineLeft(width, line1, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+		x1 += advance(line1[:indexInLine1], options.Face, options.TabWidth, true)
+		pos1 = TextPosition{
+			X:      x1,
+			Top:    y1 + paddingY,
+			Bottom: y1 + options.LineHeight - paddingY,
+		}
+	}
+	if found0 && !found1 {
+		return pos0, TextPosition{}, 1
+	}
+	if found1 && !found0 {
+		return pos1, TextPosition{}, 1
+	}
+	return pos0, pos1, 2
 }
