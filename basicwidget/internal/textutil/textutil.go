@@ -404,7 +404,7 @@ func FirstLineBreakPositionAndLen(str string) (pos, length int) {
 		}
 		if r == 0x000d {
 			// \r\n
-			if len(str[i:]) > 0 && str[i+1] == 0x000a {
+			if i+1 < len(str) && str[i+1] == 0x000a {
 				return i, 2
 			}
 			return i, 1

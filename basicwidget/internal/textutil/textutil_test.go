@@ -435,6 +435,12 @@ func TestFirstLineBreakPositionAndLen(t *testing.T) {
 		{"abc\u2028def", 3, 3},
 		{"abc\u2029def", 3, 3},
 		{"abc\ndef\nghi", 3, 1},
+		// Trailing line breaks with no following byte: the \r\n
+		// look-ahead must not read past the end of str.
+		{"abc\r", 3, 1},
+		{"abc\n", 3, 1},
+		{"abc\r\n", 3, 2},
+		{"\r", 0, 1},
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%q", tc.str), func(t *testing.T) {
