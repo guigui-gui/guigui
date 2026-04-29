@@ -534,14 +534,16 @@ func textPadding(face text.Face, lineHeight float64) float64 {
 }
 
 func textPositionYOffset(size image.Point, str string, options *Options) float64 {
-	c := visualLineCount(size.X, str, options.AutoWrap, options.Face, options.TabWidth, options.KeepTailingSpace)
-	textHeight := options.LineHeight * float64(c)
 	yOffset := textPadding(options.Face, options.LineHeight)
 	switch options.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
+		c := visualLineCount(size.X, str, options.AutoWrap, options.Face, options.TabWidth, options.KeepTailingSpace)
+		textHeight := options.LineHeight * float64(c)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
+		c := visualLineCount(size.X, str, options.AutoWrap, options.Face, options.TabWidth, options.KeepTailingSpace)
+		textHeight := options.LineHeight * float64(c)
 		yOffset += float64(size.Y) - textHeight
 	}
 	return yOffset
