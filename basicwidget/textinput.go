@@ -673,13 +673,6 @@ type textInputText struct {
 	// stale after edits or document replacement.
 	measuredMaxWidth int
 
-	// cachedStringValue memoizes [Text.stringValue] across calls to
-	// [textInputText.measureItemHeight] so a single virtualized Layout
-	// pass over many visible lines doesn't re-allocate the full document
-	// string per call. Keyed by [textinput.Field.ChangedAt].
-	cachedStringValue               string
-	cachedStringValueFieldChangedAt time.Time
-
 	// cumulativeHeights caches per-logical-line cumulative pixel heights
 	// for autoWrap text, where measuring a single logical line runs the
 	// segmenter and is too expensive to repeat per Layout for every
@@ -733,21 +726,6 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 func (t *textInputText) setPanel(p *virtualScrollPanel) {
 	t.panel = p
-}
-
-// stringValueCached returns the field's committed text, allocating it at
-// most once per [textinput.Field.ChangedAt] tick. Used by virtualized
-// layout so per-line measurement doesn't re-allocate the full document
-// string on every call.
-func (t *textInputText) stringValueCached() string {
-	txt := t.text.Widget()
-	changedAt := txt.field.ChangedAt()
-	if changedAt.Equal(t.cachedStringValueFieldChangedAt) {
-		return t.cachedStringValue
-	}
-	t.cachedStringValue = txt.stringValue()
-	t.cachedStringValueFieldChangedAt = changedAt
-	return t.cachedStringValue
 }
 
 // contentWidth implements [virtualScrollContent]. For single-line text the
@@ -844,7 +822,7 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 
-	str := t.stringValueCached()
+	str := txt.stringValue()
 	logicalLine := str[start:end]
 
 	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End

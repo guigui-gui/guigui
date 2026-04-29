@@ -151,6 +151,13 @@ type Text struct {
 	lineByteOffsets               textutil.LineByteOffsets
 	lineByteOffsetsFieldChangedAt time.Time
 
+	// cachedStringValue memoizes [Text.stringValue] across calls within the
+	// same [textinput.Field.ChangedAt] tick. For very long buffers this
+	// avoids reallocating the entire text on every per-tick consumer
+	// (cursor positioning, line-height measurement, sidecar refresh, draw).
+	cachedStringValue               string
+	cachedStringValueFieldChangedAt time.Time
+
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.WriteStateKey] so locale changes trigger automatic rebuilds without
@@ -350,10 +357,20 @@ func (t *Text) isEqualToStringValue(text string) bool {
 	return t.valueEqualChecker.Result()
 }
 
+// stringValue returns the field's committed text, allocating it at most
+// once per [textinput.Field.ChangedAt] tick. Per-tick consumers (cursor
+// positioning, sidecar refresh, per-line measurement, draw) share the
+// same backing string instead of each copying the entire buffer.
 func (t *Text) stringValue() string {
+	changedAt := t.field.ChangedAt()
+	if changedAt.Equal(t.cachedStringValueFieldChangedAt) {
+		return t.cachedStringValue
+	}
 	t.valueBuilder.Reset()
 	_ = t.field.WriteText(&t.valueBuilder)
-	return t.valueBuilder.String()
+	t.cachedStringValue = t.valueBuilder.String()
+	t.cachedStringValueFieldChangedAt = changedAt
+	return t.cachedStringValue
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
@@ -849,7 +866,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 }
 
 func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string {
-	if showComposition {
+	if showComposition && t.field.UncommittedTextLengthInBytes() > 0 {
 		return t.stringValueForRendering()
 	}
 	return t.stringValue()
