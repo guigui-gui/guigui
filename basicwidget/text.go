@@ -962,6 +962,107 @@ func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string 
 	return t.stringValue()
 }
 
+// restrictedTextToDraw is [Text.textToDraw] restricted to just the logical
+// lines that intersect visibleBounds when conditions allow it. When
+// restricted is true the caller shifts textBounds.Min.Y by yShift,
+// subtracts byteStart from selection / composition byte offsets, and
+// forces [textutil.VerticalAlignTop] before calling [textutil.Draw];
+// otherwise txt is the full text and the other returns are zero.
+func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visibleBounds image.Rectangle) (txt string, byteStart int, yShift int, restricted bool) {
+	txt = t.textToDraw(context, true)
+	t.ensureLineByteOffsets()
+	n := t.lineByteOffsets.LineCount()
+	if n == 0 {
+		return txt, 0, 0, false
+	}
+
+	width := textBounds.Dx()
+
+	var compInfo textutil.CompositionInfo
+	if t.field.UncommittedTextLengthInBytes() > 0 {
+		sStart, sEnd := t.field.Selection()
+		info, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
+			RenderingText:    txt,
+			CommittedText:    t.stringValue(),
+			LineByteOffsets:  &t.lineByteOffsets,
+			SelectionStart:   sStart,
+			SelectionEnd:     sEnd,
+			CompositionLen:   t.field.UncommittedTextLengthInBytes(),
+			AutoWrap:         t.autoWrap,
+			Face:             t.face(context, false),
+			LineHeight:       t.lineHeight(context),
+			TabWidth:         t.actualTabWidth(context),
+			KeepTailingSpace: t.keepTailingSpace,
+			WrapWidth:        width,
+		})
+		if !ok {
+			return txt, 0, 0, false
+		}
+		compInfo = info
+	}
+
+	// totalHeight already reflects the rendering text (composition included).
+	var totalHeight int
+	if t.vAlign != VerticalAlignTop {
+		totalHeight = t.textHeight(context, guigui.FixedWidthConstraints(width))
+	}
+
+	lineH := int(math.Ceil(t.lineHeight(context)))
+	if lineH <= 0 {
+		return txt, 0, 0, false
+	}
+
+	// For autoWrap, extend cumulativeYs forward until the last entry
+	// covers VisibleMaxY (in rendering Y, with the composition delta on
+	// lines past compLine). The panel's Layout pass typically populates
+	// the cache up to topItemIndex+visible already, so for the texteditor
+	// case this loop is a no-op.
+	if t.autoWrap {
+		// Pre-compute the bound the cache needs to cover. We don't know
+		// the exact line yet, so use the same alignOffset math the
+		// textutil function will and aim the cache at VisibleMaxY -
+		// alignOffset.
+		var alignOffset int
+		switch t.vAlign {
+		case VerticalAlignMiddle:
+			alignOffset = (textBounds.Dy() - totalHeight) / 2
+		case VerticalAlignBottom:
+			alignOffset = textBounds.Dy() - totalHeight
+		}
+		target := visibleBounds.Max.Y - textBounds.Min.Y - alignOffset
+		t.cumulativeY(context, width, 0)
+		for len(t.cumulativeYs) <= n {
+			i := len(t.cumulativeYs) - 1
+			y := t.cumulativeYs[i]
+			if i > compInfo.LineIndex {
+				y += compInfo.RenderingYShift
+			}
+			if y >= target {
+				break
+			}
+			t.cumulativeY(context, width, len(t.cumulativeYs))
+		}
+	}
+
+	r, ok := textutil.ComputeVisibleRange(&textutil.VisibleRangeParams{
+		LineByteOffsets: &t.lineByteOffsets,
+		RenderingLength: len(txt),
+		CumulativeYs:    t.cumulativeYs,
+		LineHeight:      lineH,
+		AutoWrap:        t.autoWrap,
+		VerticalAlign:   textutil.VerticalAlign(t.vAlign),
+		BoundsHeight:    textBounds.Dy(),
+		TotalHeight:     totalHeight,
+		VisibleMinY:     visibleBounds.Min.Y - textBounds.Min.Y,
+		VisibleMaxY:     visibleBounds.Max.Y - textBounds.Min.Y,
+		Composition:     compInfo,
+	})
+	if !ok {
+		return txt, 0, 0, false
+	}
+	return txt[r.StartInBytes:r.EndInBytes], r.StartInBytes, r.YShift, true
+}
+
 func (t *Text) selectionToDraw(context *guigui.Context) (start, end int, ok bool) {
 	s, e := t.field.Selection()
 	if !t.editable {
@@ -1362,7 +1463,27 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	} else {
 		op.DrawComposition = false
 	}
-	textutil.Draw(textBounds, dst, t.textToDraw(context, true), op)
+
+	txt, byteStart, yShift, restricted := t.restrictedTextToDraw(context, textBounds, widgetBounds.VisibleBounds())
+	if restricted {
+		textBounds.Min.Y += yShift
+		// yShift already includes the alignment-specific portion of the
+		// textPositionYOffset the inner Draw would have computed; force
+		// vAlign=Top so it only adds paddingY rather than re-centering /
+		// re-bottom-aligning the restricted text inside the bounds.
+		op.Options.VerticalAlign = textutil.VerticalAlignTop
+		if op.DrawSelection {
+			op.SelectionStart -= byteStart
+			op.SelectionEnd -= byteStart
+		}
+		if op.DrawComposition {
+			op.CompositionStart -= byteStart
+			op.CompositionEnd -= byteStart
+			op.CompositionActiveStart -= byteStart
+			op.CompositionActiveEnd -= byteStart
+		}
+	}
+	textutil.Draw(textBounds, dst, txt, op)
 }
 
 func (t *Text) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
