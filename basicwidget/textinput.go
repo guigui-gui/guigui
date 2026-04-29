@@ -662,9 +662,15 @@ type textInputText struct {
 	measuredLineHeights map[int]int
 
 	// measuredMaxWidth tracks the widest logical line measured during the
-	// most recent virtualized Layout, plus any prior-Layout high-water mark.
-	// Used by [textInputText.contentWidth] to size the panel's horizontal
-	// scroll bar without scanning every logical line.
+	// current Layout. Used by [textInputText.contentWidth] to size the
+	// panel's horizontal scroll bar without scanning every logical line.
+	//
+	// Reset at the start of each [textInputText.Layout]; updated by
+	// [textInputText.measureItemHeight] for each visible line measured.
+	// As a result the H scroll bar reflects the widest line in the current
+	// viewport rather than a historical high-water mark - the bar grows
+	// and shrinks as the user scrolls past wide regions, but it is never
+	// stale after edits or document replacement.
 	measuredMaxWidth int
 
 	// cachedStringValue memoizes [Text.stringValue] across calls to
@@ -817,7 +823,7 @@ func (t *textInputText) cumulativeHeight(context *guigui.Context, idx int) int {
 // measureItemHeight implements [virtualScrollContent]. Returns the rendered
 // height of one logical line at the panel's current content width, cached
 // for the lifetime of the current virtualized Layout. Also updates the
-// running [textInputText.measuredMaxWidth] high-water mark used by
+// per-Layout [textInputText.measuredMaxWidth] used by
 // [textInputText.contentWidth] for the multiline case.
 func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int) int {
 	if h, ok := t.measuredLineHeights[lineIndex]; ok {
@@ -869,6 +875,7 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 // visible logical line lands at the panel viewport.
 func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	clear(t.measuredLineHeights)
+	t.measuredMaxWidth = 0
 
 	bounds := widgetBounds.Bounds()
 	txt := t.text.Widget()
