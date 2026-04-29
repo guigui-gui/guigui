@@ -5,12 +5,15 @@ package basicwidget
 
 import (
 	"image"
+	"math"
+	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
 type TextInputStyle int
@@ -303,7 +306,7 @@ type textInput struct {
 
 	background     textInputBackground
 	text           textInputText
-	panel          Panel
+	panel          virtualScrollPanel
 	iconBackground textInputIconBackground
 	icon           Image
 	frame          textInputFrame
@@ -461,8 +464,8 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddWidget(&t.panel)
 	adder.AddWidget(&t.frame)
 
-	t.panel.SetContent(&t.text)
-	t.panel.SetContentConstraints(PanelContentConstraintsFixedWidth)
+	t.panel.setContent(&t.text)
+	t.text.setPanel(&t.panel)
 
 	t.background.setEditable(!t.readonly)
 	t.iconBackground.setEditable(!t.readonly)
@@ -470,12 +473,10 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	if t.onTextScrollDelta == nil {
 		t.onTextScrollDelta = func(context *guigui.Context, deltaX, deltaY float64) {
-			t.panel.ForceSetScrollOffsetByDelta(deltaX, deltaY)
+			t.panel.forceSetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
 	t.text.Text().onScrollDelta(t.onTextScrollDelta)
-
-	t.panel.setScrolBarVisible(t.text.Text().IsMultiline())
 
 	context.SetPassthrough(&t.frame, true)
 	context.DelegateFocus(t, t.text.Text())
@@ -485,7 +486,6 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	padding := t.textInputPaddingInScrollableContent(context, widgetBounds)
-	t.text.setContainerBounds(widgetBounds.Bounds())
 	t.text.setPadding(padding)
 
 	bounds := widgetBounds.Bounds()
@@ -509,6 +509,11 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 		panelBounds.Min.X = iconBounds.Max.X
 	}
+	// Use the panel area (excluding any icon) as the container so that
+	// width-related decisions inside textInputText - in particular the
+	// horizontal scroll-bar threshold in [textInputText.contentWidth] -
+	// are made against the actual scrollable viewport.
+	t.text.setContainerBounds(panelBounds)
 	layouter.LayoutWidget(&t.panel, panelBounds)
 }
 
@@ -643,7 +648,34 @@ type textInputText struct {
 	editable        bool
 	containerBounds image.Rectangle
 	padding         guigui.Padding
+
+	// panel is the [virtualScrollPanel] this content lives inside, set by
+	// [textInput.Build]. Layout uses windowed positioning anchored at the
+	// panel's topItemIndex/topItemOffset, and the [virtualScrollContent]
+	// methods report logical-line counts and heights so the panel can size
+	// its scroll bar without measuring the whole document.
+	panel *virtualScrollPanel
+
+	// measuredLineHeights caches per-Layout logical-line heights, populated
+	// during virtualized layout and consumed by [textInputText.measureItemHeight].
+	// Cleared at the start of each virtualized Layout.
+	measuredLineHeights map[int]int
+
+	// measuredMaxWidth tracks the widest logical line measured during the
+	// most recent virtualized Layout, plus any prior-Layout high-water mark.
+	// Used by [textInputText.contentWidth] to size the panel's horizontal
+	// scroll bar without scanning every logical line.
+	measuredMaxWidth int
+
+	// cachedStringValue memoizes [Text.stringValue] across calls to
+	// [textInputText.measureItemHeight] so a single virtualized Layout
+	// pass over many visible lines doesn't re-allocate the full document
+	// string per call. Keyed by [textinput.Field.ChangedAt].
+	cachedStringValue               string
+	cachedStringValueFieldChangedAt time.Time
 }
+
+var _ virtualScrollContent = (*textInputText)(nil)
 
 func (t *textInputText) setEditable(editable bool) {
 	t.text.Widget().SetEditable(editable)
@@ -682,20 +714,241 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	return nil
 }
 
-func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	// guigui.LinearLayout cannot treat auto-wrapping texts very well.
-	// Calculate the layout directly here.
-	bounds := widgetBounds.Bounds()
-	bounds.Min.X += t.padding.Start
-	bounds.Min.Y += t.padding.Top
-	bounds.Max.X -= t.padding.End
-	bounds.Max.Y -= t.padding.Bottom
+func (t *textInputText) setPanel(p *virtualScrollPanel) {
+	t.panel = p
+}
 
-	// As the text is rendered in an inset box, shift the text bounds down by 0.5 pixel.
-	bounds = bounds.Add(image.Pt(0, int(0.5*context.Scale())))
-	layouter.LayoutWidget(&t.text, bounds)
+// stringValueCached returns the field's committed text, allocating it at
+// most once per [textinput.Field.ChangedAt] tick. Used by virtualized
+// layout so per-line measurement doesn't re-allocate the full document
+// string on every call.
+func (t *textInputText) stringValueCached() string {
+	txt := t.text.Widget()
+	changedAt := txt.field.ChangedAt()
+	if changedAt.Equal(t.cachedStringValueFieldChangedAt) {
+		return t.cachedStringValue
+	}
+	t.cachedStringValue = txt.stringValue()
+	t.cachedStringValueFieldChangedAt = changedAt
+	return t.cachedStringValue
+}
+
+// contentWidth implements [virtualScrollContent]. For single-line text the
+// width is measured on demand (cheap: one line). For multiline text the
+// width is taken from the high-water mark recorded during virtualized
+// Layout - lines outside the viewport aren't measured, so the bar may
+// underestimate until the user has scrolled through wide regions.
+//
+// The result is clamped up to at least the container width so the *Text
+// widget always covers the full viewport horizontally and clicks anywhere
+// inside the panel reach it (cursor I-beam, click-to-focus,
+// click-to-position-cursor).
+func (t *textInputText) contentWidth(context *guigui.Context) int {
+	txt := t.text.Widget()
+	// AutoWrap text wraps at the viewport width, so short-circuit to the
+	// container width even though individual long words can still overflow.
+	// This avoids returning a stale wide measuredMaxWidth carried over from
+	// a prior non-autoWrap state, which would lay the content out wider
+	// than the viewport and make autoWrap appear inert (the *Text would
+	// have plenty of horizontal room and stop wrapping).
+	if txt.autoWrap {
+		return t.containerBounds.Dx()
+	}
+	var measured int
+	if !txt.IsMultiline() {
+		w := txt.Measure(context, guigui.Constraints{}).X
+		measured = w + t.padding.Start + t.padding.End
+	} else {
+		measured = t.measuredMaxWidth
+	}
+	return max(measured, t.containerBounds.Dx())
+}
+
+// itemCount implements [virtualScrollContent]. Each item is one logical
+// line of the source text.
+func (t *textInputText) itemCount() int {
+	txt := t.text.Widget()
+	txt.ensureLineByteOffsets()
+	return txt.lineByteOffsets.LineCount()
+}
+
+// measureItemHeight implements [virtualScrollContent]. Returns the rendered
+// height of one logical line at the panel's current content width, cached
+// for the lifetime of the current virtualized Layout. Also updates the
+// running [textInputText.measuredMaxWidth] high-water mark used by
+// [textInputText.contentWidth] for the multiline case.
+func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int) int {
+	if h, ok := t.measuredLineHeights[lineIndex]; ok {
+		return h
+	}
+
+	txt := t.text.Widget()
+	txt.ensureLineByteOffsets()
+
+	n := txt.lineByteOffsets.LineCount()
+	if lineIndex < 0 || lineIndex >= n {
+		return 0
+	}
+
+	start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
+	end := txt.field.TextLengthInBytes()
+	if lineIndex+1 < n {
+		end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
+	}
+
+	str := t.stringValueCached()
+	logicalLine := str[start:end]
+
+	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
+	if width <= 0 {
+		width = math.MaxInt
+	}
+
+	w, h := textutil.MeasureLogicalLine(
+		width, logicalLine, txt.autoWrap, txt.face(context, false),
+		txt.lineHeight(context), txt.actualTabWidth(context), txt.keepTailingSpace, "",
+	)
+	height := int(math.Ceil(h))
+
+	if t.measuredLineHeights == nil {
+		t.measuredLineHeights = map[int]int{}
+	}
+	t.measuredLineHeights[lineIndex] = height
+
+	if mw := int(math.Ceil(w)) + t.padding.Start + t.padding.End; mw > t.measuredMaxWidth {
+		t.measuredMaxWidth = mw
+	}
+
+	return height
+}
+
+// Layout normalizes the panel's (topItemIndex, topItemOffset) using real
+// measured line heights, then positions the [*Text] child so the top
+// visible logical line lands at the panel viewport.
+func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	clear(t.measuredLineHeights)
+
+	bounds := widgetBounds.Bounds()
+	txt := t.text.Widget()
+	lh := int(math.Ceil(txt.lineHeight(context)))
+
+	// Normalize topItemOffset into [-itemH, 0] by advancing or retreating
+	// topItemIndex over real measured line heights. Mirrors
+	// listContent.normalizeTopItem.
+	topIdx, topOff := t.panel.topItem()
+	n := t.itemCount()
+	for topOff < 0 && topIdx < n-1 {
+		ih := t.measureItemHeight(context, topIdx)
+		if ih == 0 {
+			break
+		}
+		if -topOff >= ih {
+			topOff += ih
+			topIdx++
+			continue
+		}
+		break
+	}
+	for topOff > 0 && topIdx > 0 {
+		topIdx--
+		topOff -= t.measureItemHeight(context, topIdx)
+	}
+	if topIdx == 0 && topOff > 0 {
+		topOff = 0
+	}
+	if topIdx >= n {
+		topIdx = max(0, n-1)
+		topOff = 0
+	}
+	if topIdx < 0 {
+		topIdx = 0
+		topOff = 0
+	}
+
+	// Bottom clamp: if the last logical line is visible with empty space
+	// below, pull topIdx backward so the document's last line aligns with
+	// the viewport bottom rather than leaving a gap. Mirrors the pre-pass
+	// in listContent.layoutItems.
+	{
+		viewportInner := bounds.Dy() - t.padding.Top - t.padding.Bottom
+		y := topOff
+		var reachedEnd bool
+		for ai := topIdx; ai < n; ai++ {
+			if y >= viewportInner {
+				break
+			}
+			y += t.measureItemHeight(context, ai)
+			if ai == n-1 {
+				reachedEnd = true
+			}
+		}
+		if reachedEnd {
+			if gap := viewportInner - y; gap > 0 {
+				topOff += gap
+				for topOff > 0 && topIdx > 0 {
+					topIdx--
+					topOff -= t.measureItemHeight(context, topIdx)
+				}
+				if topIdx == 0 && topOff > 0 {
+					topOff = 0
+				}
+			}
+		}
+	}
+
+	t.panel.forceSetTopItem(topIdx, topOff, false)
+
+	// Compute the document-space pixel offset of logical line topIdx so the
+	// *Text widget can be positioned with that line at the panel viewport
+	// top (shifted by topOff). For non-autoWrap text every logical line is
+	// exactly one lineHeight tall, so the sum is topIdx*lh. For autoWrap
+	// text where logical lines have heterogeneous wrapped heights, sum
+	// each preceding line's measured height; this is O(topIdx) per Layout
+	// but only autoWrap pays for it.
+	var cumulativeHeight int
+	if txt.autoWrap {
+		for i := 0; i < topIdx; i++ {
+			cumulativeHeight += t.measureItemHeight(context, i)
+		}
+	} else {
+		cumulativeHeight = topIdx * lh
+	}
+	topYOffset := topOff - cumulativeHeight
+
+	textBounds := bounds
+	textBounds.Min.X += t.padding.Start
+	textBounds.Min.Y += topYOffset + t.padding.Top
+	textBounds.Max.X -= t.padding.End
+
+	contentWidth := max(bounds.Dx()-t.padding.Start-t.padding.End, 0)
+	docHeight := txt.textHeight(context, guigui.FixedWidthConstraints(contentWidth))
+	textBounds.Max.Y = textBounds.Min.Y + docHeight
+	// Ensure the *Text widget covers the full viewport vertically so clicks
+	// in the empty area below short documents still hit it (cursor I-beam,
+	// click-to-focus, click-to-position-cursor). The widget area extending
+	// beyond docHeight is just empty: [Text.Draw] only renders up to the
+	// actual content.
+	if minMaxY := bounds.Max.Y - t.padding.Bottom; textBounds.Max.Y < minMaxY {
+		textBounds.Max.Y = minMaxY
+	}
+
+	textBounds = textBounds.Add(image.Pt(0, int(0.5*context.Scale())))
+	layouter.LayoutWidget(&t.text, textBounds)
 
 	t.text.SetRenderingBounds(t.containerBounds)
+
+	// Report the average per-logical-line height to the panel. For non-
+	// autoWrap text this equals lineHeight exactly; for autoWrap text where
+	// one logical line can wrap into many visual lines, the average is what
+	// the panel needs so its viewport-vs-itemCount comparison (and thus the
+	// scroll bar visibility / thumb sizing) is in the right units.
+	estimatedH := lh
+	if n > 0 && docHeight > 0 {
+		if avg := docHeight / n; avg > estimatedH {
+			estimatedH = avg
+		}
+	}
+	t.panel.setEstimatedItemHeight(estimatedH)
 }
 
 func (t *textInputText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

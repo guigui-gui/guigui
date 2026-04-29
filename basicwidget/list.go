@@ -710,14 +710,14 @@ func (l *listContent[T]) measureItemHeight(context *guigui.Context, availableInd
 			continue
 		}
 		if idx == availableIndex {
-			return l.measureItemHeightWithContentWidth(context, i, l.contentWidth())
+			return l.measureItemHeightWithContentWidth(context, i, l.contentWidth(context))
 		}
 		idx++
 	}
 	return 0
 }
 
-func (l *listContent[T]) contentWidth() int {
+func (l *listContent[T]) contentWidth(_ *guigui.Context) int {
 	if l.contentWidthPlus1 > 0 {
 		return l.contentWidthPlus1 - 1
 	}

@@ -22,9 +22,11 @@ import (
 type virtualScrollContent interface {
 	guigui.Widget
 
-	// contentWidth returns the widest item measured in the most recent
-	// layout pass, used to size the horizontal scroll bar's thumb.
-	contentWidth() int
+	// contentWidth returns the rendered content width used to size the
+	// horizontal scroll bar's thumb. Implementations may compute this on
+	// demand (e.g. by calling Measure for a single line) or cache from a
+	// prior Layout pass.
+	contentWidth(context *guigui.Context) int
 
 	// itemCount returns the total number of scrollable items. For list
 	// widgets this is the number of currently-visible (filtered) items;
@@ -303,7 +305,7 @@ func (p *virtualScrollPanel) Layout(context *guigui.Context, widgetBounds *guigu
 	// topItemIndex/topItemOffset, so we don't need to do it here.
 
 	// Compute horizontal content size for scroll bar.
-	cw := p.content.contentWidth()
+	cw := p.content.contentWidth(context)
 	if cw == 0 {
 		cw = bounds.Dx()
 	}
@@ -547,7 +549,7 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 	var horizontalBarBounds, verticalBarBounds image.Rectangle
 
 	// Horizontal thumb.
-	if cw := p.content.contentWidth(); cw > bounds.Dx() {
+	if cw := p.content.contentWidth(context); cw > bounds.Dx() {
 		barWidth := (float64(bounds.Dx()) - 2*padding) * float64(bounds.Dx()) / float64(cw)
 		barWidth = max(barWidth, scrollThumbStrokeWidth(context))
 
