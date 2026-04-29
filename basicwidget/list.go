@@ -130,7 +130,7 @@ type List[T comparable] struct {
 	listItemWidgets   guigui.WidgetSlice[*listItemWidget[T]]
 	background1       listBackground1[T]
 	content           listContent[T]
-	panel             listPanel[T]
+	panel             virtualScrollPanel
 	frame             listFrame
 
 	listItemHeightPlus1 int
@@ -686,11 +686,11 @@ type listContent[T comparable] struct {
 	onItemSelected  func(index int)
 	onItemsSelected func(indices []int)
 
-	// listPanel is a back-reference to the list panel for virtual scrolling.
-	listPanel *listPanel[T]
+	// listPanel is a back-reference to the virtual-scroll panel.
+	listPanel *virtualScrollPanel
 }
 
-func (l *listContent[T]) availableItemCount() int {
+func (l *listContent[T]) itemCount() int {
 	var count int
 	for i := range l.abstractList.ItemCount() {
 		if l.isItemAvailable(i) {
@@ -700,16 +700,17 @@ func (l *listContent[T]) availableItemCount() int {
 	return count
 }
 
-// measureAvailableItemHeight returns the height of the item at the given
-// available-item index, or 0 if the index is out of range.
-func (l *listContent[T]) measureAvailableItemHeight(context *guigui.Context, availableIndex int) int {
+// measureItemHeight returns the height of the available item at the given
+// available-item index, or 0 if the index is out of range. Implements
+// [virtualScrollContent.measureItemHeight].
+func (l *listContent[T]) measureItemHeight(context *guigui.Context, availableIndex int) int {
 	var idx int
 	for i := range l.abstractList.ItemCount() {
 		if !l.isItemAvailable(i) {
 			continue
 		}
 		if idx == availableIndex {
-			return l.measureItemHeight(context, i, l.contentWidth())
+			return l.measureItemHeightWithContentWidth(context, i, l.contentWidth())
 		}
 		idx++
 	}
@@ -978,7 +979,7 @@ func (l *listContent[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 	l.layoutItems(context, widgetBounds, layouter, cw)
 }
 
-// layoutItems lays out only items near the viewport using the listPanel's
+// layoutItems lays out only items near the viewport using the panel's
 // topItemIndex and topItemOffset.
 func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter, cw int) {
 	bounds := widgetBounds.Bounds()
@@ -1032,7 +1033,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 			if y >= viewportHeight {
 				break
 			}
-			h := l.measureItemHeight(context, availableIndices[ai], cw)
+			h := l.measureItemHeightWithContentWidth(context, availableIndices[ai], cw)
 			if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(availableIndices[ai]) {
 				y += int(float64(h) * animRate)
 			} else {
@@ -1049,7 +1050,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 				// Pull topIdx backward if needed.
 				for topOff > 0 && topIdx > 0 {
 					topIdx--
-					topOff -= l.measureItemHeight(context, availableIndices[topIdx], cw)
+					topOff -= l.measureItemHeightWithContentWidth(context, availableIndices[topIdx], cw)
 				}
 				if topIdx == 0 && topOff > 0 {
 					topOff = 0
@@ -1086,7 +1087,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	y = viewportTop + RoundedCornerRadius(context) + topOff
 	for ai := topIdx - 1; ai >= 0; ai-- {
 		i := availableIndices[ai]
-		itemH := l.measureItemHeight(context, i, cw)
+		itemH := l.measureItemHeightWithContentWidth(context, i, cw)
 		totalMeasuredHeight += itemH
 		measuredCount++
 
@@ -1102,7 +1103,7 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 		}
 	}
 
-	// Report average measured height to listPanel.
+	// Report average measured height to the panel.
 	if measuredCount > 0 {
 		l.listPanel.setEstimatedItemHeight(totalMeasuredHeight / measuredCount)
 	} else {
@@ -1134,7 +1135,7 @@ func (l *listContent[T]) normalizeTopItem(context *guigui.Context, availableIndi
 	// Move topItemIndex forward when topItemOffset scrolled past an item.
 	for topOff < 0 && topIdx < len(availableIndices)-1 {
 		i := availableIndices[topIdx]
-		itemH := l.measureItemHeight(context, i, cw)
+		itemH := l.measureItemHeightWithContentWidth(context, i, cw)
 		if -topOff >= itemH {
 			topOff += itemH
 			topIdx++
@@ -1147,7 +1148,7 @@ func (l *listContent[T]) normalizeTopItem(context *guigui.Context, availableIndi
 	for topOff > 0 && topIdx > 0 {
 		topIdx--
 		i := availableIndices[topIdx]
-		itemH := l.measureItemHeight(context, i, cw)
+		itemH := l.measureItemHeightWithContentWidth(context, i, cw)
 		topOff -= itemH
 	}
 
@@ -1189,8 +1190,12 @@ func (l *listContent[T]) measureItemContentHeight(context *guigui.Context, index
 	return contentH
 }
 
-// measureItemHeight returns the total height of an item (content + padding).
-func (l *listContent[T]) measureItemHeight(context *guigui.Context, index int, cw int) int {
+// measureItemHeightWithContentWidth returns the total height (content +
+// padding) of the item at the given index, at the given content width.
+// Counterpart to the panel-facing [listContent.measureItemHeight] which
+// always uses [listContent.contentWidth] and keys by the available-item
+// index instead.
+func (l *listContent[T]) measureItemHeightWithContentWidth(context *guigui.Context, index int, cw int) int {
 	contentH := l.measureItemContentHeight(context, index, cw)
 	item, _ := l.abstractList.ItemByIndex(index)
 	return contentH + item.Padding.Top + item.Padding.Bottom
@@ -2019,7 +2024,7 @@ func (l *listContent[T]) availableIndexForItemIndex(itemIndex int) int {
 	return -1
 }
 
-// scrollToEnsureItemVisible adjusts the listPanel's topItem to make the given item visible.
+// scrollToEnsureItemVisible adjusts the panel's topItem to make the given item visible.
 func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds, itemIndex int) {
 	ai := l.availableIndexForItemIndex(itemIndex)
 	if ai < 0 {
@@ -2052,7 +2057,7 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 	availableIndices := l.tmpAvailableIndices
 	y := topOff + RoundedCornerRadius(context)
 	for aIdx := topIdx; aIdx <= ai && aIdx < len(availableIndices); aIdx++ {
-		h := l.measureItemHeight(context, availableIndices[aIdx], cw)
+		h := l.measureItemHeightWithContentWidth(context, availableIndices[aIdx], cw)
 		if aIdx == ai {
 			// Check if the bottom of this item is below the viewport.
 			itemBottom := y + h

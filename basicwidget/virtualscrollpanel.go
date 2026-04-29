@@ -14,25 +14,52 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-// listPanel is a specialized panel for list widgets that uses virtual scrolling.
-// Instead of measuring all items to compute the total content height,
-// it tracks the topmost visible item index and its pixel offset.
+// virtualScrollContent is the interface that [virtualScrollPanel] requires
+// from its content widget. Concrete content types (list cells, multiline
+// text, etc.) implement these so the panel can size its scroll bar thumb,
+// estimate viewport population, and drive drag-to-scroll without knowing
+// the item type's specifics.
+type virtualScrollContent interface {
+	guigui.Widget
+
+	// contentWidth returns the widest item measured in the most recent
+	// layout pass, used to size the horizontal scroll bar's thumb.
+	contentWidth() int
+
+	// itemCount returns the total number of scrollable items. For list
+	// widgets this is the number of currently-visible (filtered) items;
+	// for multiline text it is the logical-line count.
+	itemCount() int
+
+	// measureItemHeight returns the rendered height of the item at the
+	// given index. Called by [virtualScrollPanel] when computing thumb
+	// position and during scroll-bar drag.
+	measureItemHeight(context *guigui.Context, index int) int
+}
+
+// virtualScrollPanel is a scroll panel that uses virtual scrolling: instead
+// of measuring all items to compute total content height, it tracks the
+// topmost visible item's index and its pixel offset.
 //
 // Scroll wheel input is handled directly (delta applied to topItemOffset).
-// Scroll bar dragging maps position directly to item index.
-// This avoids lossy round-trips through virtual pixel offsets.
-type listPanel[T comparable] struct {
+// Scroll bar dragging maps position directly to item index. This avoids
+// lossy round-trips through virtual pixel offsets and keeps scrolling
+// stable across heterogeneous item heights.
+//
+// "Item" here is whatever unit the [virtualScrollContent] implementation
+// chooses — a list row, a logical line of text, etc.
+type virtualScrollPanel struct {
 	guigui.DefaultWidget
 
-	content    *listContent[T]
+	content    virtualScrollContent
 	scrollHBar scrollBar
-	scrollVBar listVScrollBar[T]
+	scrollVBar virtualScrollVBar
 
-	// topItemIndex is the index (in the available items list) of the topmost visible item.
+	// topItemIndex is the index of the topmost visible item.
 	topItemIndex int
 
-	// topItemOffset is the pixel offset of the top item's top edge
-	// relative to the viewport top. This is typically <= 0.
+	// topItemOffset is the pixel offset of the top item's top edge relative
+	// to the viewport top. This is typically <= 0.
 	topItemOffset int
 
 	// offsetX is the horizontal scroll offset.
@@ -54,14 +81,14 @@ type listPanel[T comparable] struct {
 
 	// Vertical scroll animation state. The animation interpolates a pixel
 	// delta (vAnimDelta) over scrollAnimMaxCount() ticks using easeOutQuad,
-	// applying the eased increment to topItemOffset on each tick. topItemIndex
-	// is left untouched during the animation; normalizeTopItem advances it
-	// between ticks using real measured heights, which keeps the visible
-	// scroll smooth when items have heterogeneous heights. The final tick
-	// snaps (topItemIndex, topItemOffset) to (vAnimTargetIndex, vAnimTargetOffset)
-	// to ensure an exact landing position.
-	// vAnimCount counts down from scrollAnimMaxCount() to 0; a positive value
-	// indicates an animation is in flight.
+	// applying the eased increment to topItemOffset on each tick.
+	// topItemIndex is left untouched during the animation; the content's
+	// layout pass advances it between ticks using real measured heights,
+	// which keeps the visible scroll smooth when items have heterogeneous
+	// heights. The final tick snaps (topItemIndex, topItemOffset) to
+	// (vAnimTargetIndex, vAnimTargetOffset) for an exact landing.
+	// vAnimCount counts down from scrollAnimMaxCount() to 0; a positive
+	// value indicates an animation is in flight.
 	vAnimTargetIndex  int
 	vAnimTargetOffset int
 	vAnimDelta        int
@@ -71,8 +98,9 @@ type listPanel[T comparable] struct {
 	scrollHBarCount int
 	scrollVBarCount int
 
-	// estimatedItemHeight is the average item height computed during the most
-	// recent layout, used to estimate scroll bar thumb size and viewport item count.
+	// estimatedItemHeight is the average item height computed during the
+	// most recent layout, used to estimate scroll bar thumb size and
+	// viewport item count.
 	estimatedItemHeight int
 
 	// Scroll wheel state for bar visibility.
@@ -82,24 +110,24 @@ type listPanel[T comparable] struct {
 	onceDraw bool
 }
 
-func (p *listPanel[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (p *virtualScrollPanel) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt64(int64(p.topItemIndex))
 	w.WriteInt64(int64(p.topItemOffset))
 	w.WriteFloat64(p.offsetX)
 }
 
-func (p *listPanel[T]) setContent(content *listContent[T]) {
+func (p *virtualScrollPanel) setContent(content virtualScrollContent) {
 	p.content = content
 }
 
 // scrollOffset returns (offsetX, 0). Only the horizontal offset is pixel-based.
 // Vertical scroll is managed via topItemIndex/topItemOffset.
-func (p *listPanel[T]) scrollOffset() (float64, float64) {
+func (p *virtualScrollPanel) scrollOffset() (float64, float64) {
 	return p.offsetX, 0
 }
 
 // forceSetScrollOffsetX sets the horizontal scroll offset.
-func (p *listPanel[T]) forceSetScrollOffsetX(x float64) {
+func (p *virtualScrollPanel) forceSetScrollOffsetX(x float64) {
 	if p.offsetX == x {
 		return
 	}
@@ -110,15 +138,16 @@ func (p *listPanel[T]) forceSetScrollOffsetX(x float64) {
 
 // forceSetScrollOffset satisfies [scrollOffsetGetSetter], used by the horizontal
 // scroll bar. Y is ignored because vertical scroll is item-based, not
-// pixel-based (see [listPanel.forceSetTopItem] / [listPanel.setTopItem]).
-func (p *listPanel[T]) forceSetScrollOffset(x, _ float64) {
+// pixel-based (see [virtualScrollPanel.forceSetTopItem] /
+// [virtualScrollPanel.setTopItem]).
+func (p *virtualScrollPanel) forceSetScrollOffset(x, _ float64) {
 	p.forceSetScrollOffsetX(x)
 }
 
 // forceSetScrollOffsetByDelta adjusts the horizontal offset by dx and the
 // vertical position by dy pixels, without animation. Direct user input (wheel)
 // cancels any in-flight vertical animation.
-func (p *listPanel[T]) forceSetScrollOffsetByDelta(dx, dy float64) {
+func (p *virtualScrollPanel) forceSetScrollOffsetByDelta(dx, dy float64) {
 	if dx != 0 {
 		if p.nextOffsetXSet && p.nextOffsetXIsDelta {
 			p.nextOffsetX += dx
@@ -140,10 +169,10 @@ func (p *listPanel[T]) forceSetScrollOffsetByDelta(dx, dy float64) {
 	}
 }
 
-// setTopItem animates the vertical scroll position toward the given
-// available-item index and offset. Falls back to an instant set when
-// no item-height estimate is available yet, or before the first Draw.
-func (p *listPanel[T]) setTopItem(index, offset int) {
+// setTopItem animates the vertical scroll position toward the given item
+// index and offset. Falls back to an instant set when no item-height
+// estimate is available yet, or before the first Draw.
+func (p *virtualScrollPanel) setTopItem(index, offset int) {
 	estH := p.estimatedItemHeight
 	if estH <= 0 || !p.onceDraw {
 		p.vAnimCount = 0
@@ -185,7 +214,7 @@ func (p *listPanel[T]) setTopItem(index, offset int) {
 }
 
 // topItem returns the current vertical scroll state.
-func (p *listPanel[T]) topItem() (int, int) {
+func (p *virtualScrollPanel) topItem() (int, int) {
 	return p.topItemIndex, p.topItemOffset
 }
 
@@ -201,7 +230,7 @@ func (p *listPanel[T]) topItem() (int, int) {
 // position, and that derivation must not cancel the animation target. Callers
 // must ensure no pending vertical change is queued (verified by the assert).
 // In practice Layout runs applyPendingScrollOffset before child layout.
-func (p *listPanel[T]) forceSetTopItem(index, offset int, cancelAnimation bool) {
+func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation bool) {
 	if !cancelAnimation && p.nextTopItemSet {
 		panic("basicwidget: forceSetTopItem(cancelAnimation=false) called with a pending vertical change; callers must run applyPendingScrollOffset first")
 	}
@@ -219,11 +248,11 @@ func (p *listPanel[T]) forceSetTopItem(index, offset int, cancelAnimation bool) 
 
 // setEstimatedItemHeight records the estimated item height, used to
 // estimate scroll bar thumb size and viewport item count.
-func (p *listPanel[T]) setEstimatedItemHeight(h int) {
+func (p *virtualScrollPanel) setEstimatedItemHeight(h int) {
 	p.estimatedItemHeight = h
 }
 
-func (p *listPanel[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (p *virtualScrollPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(p.content)
 	adder.AddWidget(&p.scrollHBar)
 	adder.AddWidget(&p.scrollVBar)
@@ -241,7 +270,7 @@ func (p *listPanel[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 // HandlePointingInput handles scroll wheel input directly,
 // applying vertical deltas to topItemOffset without virtual offset conversion.
-func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+func (p *virtualScrollPanel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	// Handle scroll wheel.
 	if widgetBounds.IsHitAtCursor() {
 		wheelX, wheelY := adjustedWheel()
@@ -261,16 +290,16 @@ func (p *listPanel[T]) HandlePointingInput(context *guigui.Context, widgetBounds
 	return guigui.HandleInputResult{}
 }
 
-func (p *listPanel[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (p *virtualScrollPanel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	p.onceDraw = true
 }
 
-func (p *listPanel[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (p *virtualScrollPanel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	p.applyPendingScrollOffset()
 
 	bounds := widgetBounds.Bounds()
 
-	// listContent.layoutItems handles clamping and normalization of
+	// The content's layout handles clamping and normalization of
 	// topItemIndex/topItemOffset, so we don't need to do it here.
 
 	// Compute horizontal content size for scroll bar.
@@ -284,7 +313,7 @@ func (p *listPanel[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	p.offsetX = min(max(p.offsetX, maxOffsetX), 0)
 
 	// Layout the content widget at the panel bounds with the horizontal offset.
-	// The listContent will use topItemIndex/topItemOffset to position items.
+	// The content uses topItemIndex/topItemOffset to position items.
 	pt := bounds.Min.Add(image.Pt(int(p.offsetX), 0))
 	contentSize := image.Pt(cw, bounds.Dy())
 	layouter.LayoutWidget(p.content, image.Rectangle{
@@ -304,7 +333,7 @@ func (p *listPanel[T]) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	p.scrollVBar.setThumbBounds(vb)
 }
 
-func (p *listPanel[T]) applyPendingScrollOffset() {
+func (p *virtualScrollPanel) applyPendingScrollOffset() {
 	if p.nextOffsetXSet {
 		if p.nextOffsetXIsDelta {
 			p.offsetX += p.nextOffsetX
@@ -330,27 +359,27 @@ func (p *listPanel[T]) applyPendingScrollOffset() {
 	}
 }
 
-func (p *listPanel[T]) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *virtualScrollPanel) horizontalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.Y = max(bounds.Min.Y, bounds.Max.Y-scrollBarAreaSize(context))
 	return bounds
 }
 
-func (p *listPanel[T]) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
+func (p *virtualScrollPanel) verticalBarBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
 	bounds := widgetBounds.Bounds()
 	bounds.Min.X = max(bounds.Min.X, bounds.Max.X-scrollBarAreaSize(context))
 	return bounds
 }
 
-func (p *listPanel[T]) isScrollingX() bool {
+func (p *virtualScrollPanel) isScrollingX() bool {
 	return p.lastWheelX != 0
 }
 
-func (p *listPanel[T]) isScrollingY() bool {
+func (p *virtualScrollPanel) isScrollingY() bool {
 	return p.lastWheelY != 0
 }
 
-func (p *listPanel[T]) isHBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+func (p *virtualScrollPanel) isHBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
 	if p.isScrollingX() {
 		return true
 	}
@@ -364,7 +393,7 @@ func (p *listPanel[T]) isHBarVisible(context *guigui.Context, widgetBounds *guig
 	return pt.In(p.horizontalBarBounds(context, widgetBounds))
 }
 
-func (p *listPanel[T]) isVBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+func (p *virtualScrollPanel) isVBarVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
 	if p.isScrollingY() {
 		return true
 	}
@@ -378,21 +407,21 @@ func (p *listPanel[T]) isVBarVisible(context *guigui.Context, widgetBounds *guig
 	return pt.In(p.verticalBarBounds(context, widgetBounds))
 }
 
-func (p *listPanel[T]) startShowingHBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+func (p *virtualScrollPanel) startShowingHBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 	if hb, _ := p.thumbBounds(context, widgetBounds); hb.Empty() {
 		return
 	}
 	p.scrollHBarCount = startShowingBarCount(p.scrollHBarCount)
 }
 
-func (p *listPanel[T]) startShowingVBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+func (p *virtualScrollPanel) startShowingVBarIfNeeded(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
 	if _, vb := p.thumbBounds(context, widgetBounds); vb.Empty() {
 		return
 	}
 	p.scrollVBarCount = startShowingBarCount(p.scrollVBarCount)
 }
 
-func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+func (p *virtualScrollPanel) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	shouldShowHBar := p.isHBarVisible(context, widgetBounds)
 	shouldShowVBar := p.isVBarVisible(context, widgetBounds)
 	// lastWheelX/Y are a one-tick signal: HandlePointingInput only runs on ticks
@@ -446,14 +475,15 @@ func (p *listPanel[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widget
 
 // advanceScrollAnimation advances the vertical scroll animation by one tick.
 // Each tick applies the eased increment of vAnimDelta to topItemOffset only;
-// topItemIndex is updated by normalizeTopItem between ticks using real measured
-// heights. This avoids visual jumps when items have heterogeneous heights — a
-// virtual-pixel-space interpolation can otherwise step topItemIndex on a tick
-// where the actual item heights say it should not yet have advanced (or vice
-// versa), producing a backward jump in the rendered position. The final tick
-// snaps (topItemIndex, topItemOffset) to the exact target so any approximation
-// in vAnimDelta (cross-index animations using estH) lands cleanly.
-func (p *listPanel[T]) advanceScrollAnimation() bool {
+// topItemIndex is updated by the content's normalization between ticks using
+// real measured heights. This avoids visual jumps when items have
+// heterogeneous heights — a virtual-pixel-space interpolation can otherwise
+// step topItemIndex on a tick where the actual item heights say it should
+// not yet have advanced (or vice versa), producing a backward jump in the
+// rendered position. The final tick snaps (topItemIndex, topItemOffset) to
+// the exact target so any approximation in vAnimDelta (cross-index
+// animations using estH) lands cleanly.
+func (p *virtualScrollPanel) advanceScrollAnimation() bool {
 	if p.vAnimCount <= 0 {
 		return false
 	}
@@ -476,7 +506,7 @@ func (p *listPanel[T]) advanceScrollAnimation() bool {
 
 // applyPendingScrollOffsetInTick applies pending offsets and reports whether
 // the horizontal and vertical positions changed, respectively.
-func (p *listPanel[T]) applyPendingScrollOffsetInTick() (bool, bool) {
+func (p *virtualScrollPanel) applyPendingScrollOffsetInTick() (bool, bool) {
 	if !p.nextOffsetXSet && !p.nextTopItemSet {
 		return false, false
 	}
@@ -487,7 +517,7 @@ func (p *listPanel[T]) applyPendingScrollOffsetInTick() (bool, bool) {
 
 	p.applyPendingScrollOffset()
 
-	// topItemIndex/topItemOffset/offsetX are in the listPanel's WriteStateKey,
+	// topItemIndex/topItemOffset/offsetX are in WriteStateKey,
 	// so the rebuild that re-invokes Layout is triggered automatically.
 	hChanged := p.offsetX != oldOffsetX
 	vChanged := p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
@@ -496,7 +526,7 @@ func (p *listPanel[T]) applyPendingScrollOffsetInTick() (bool, bool) {
 
 // vThumbHeight returns the vertical thumb height.
 // Returns 0 if no items have been measured yet or no thumb should be shown.
-func (p *listPanel[T]) vThumbHeight(context *guigui.Context, widgetBounds *guigui.WidgetBounds, totalCount int) float64 {
+func (p *virtualScrollPanel) vThumbHeight(context *guigui.Context, widgetBounds *guigui.WidgetBounds, totalCount int) float64 {
 	if p.estimatedItemHeight <= 0 || totalCount == 0 {
 		return 0
 	}
@@ -510,7 +540,7 @@ func (p *listPanel[T]) vThumbHeight(context *guigui.Context, widgetBounds *guigu
 	return max(barHeight, scrollThumbStrokeWidth(context))
 }
 
-func (p *listPanel[T]) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
+func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, image.Rectangle) {
 	bounds := widgetBounds.Bounds()
 	padding := scrollThumbPadding(context)
 
@@ -536,7 +566,7 @@ func (p *listPanel[T]) thumbBounds(context *guigui.Context, widgetBounds *guigui
 	}
 
 	// Vertical thumb — position based directly on topItemIndex.
-	totalCount := p.content.availableItemCount()
+	totalCount := p.content.itemCount()
 	if barHeight := p.vThumbHeight(context, widgetBounds, totalCount); barHeight > 0 {
 		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight),
 		// so the division below is safe.
@@ -552,7 +582,7 @@ func (p *listPanel[T]) thumbBounds(context *guigui.Context, widgetBounds *guigui
 		} else {
 			// Include topItemOffset so the thumb moves smoothly between items.
 			// topItemOffset is typically <= 0; negating it gives the fraction scrolled into the current item.
-			topItemH := p.content.measureAvailableItemHeight(context, p.topItemIndex)
+			topItemH := p.content.measureItemHeight(context, p.topItemIndex)
 			if topItemH <= 0 {
 				topItemH = p.estimatedItemHeight
 			}
@@ -576,13 +606,13 @@ func (p *listPanel[T]) thumbBounds(context *guigui.Context, widgetBounds *guigui
 	return horizontalBarBounds, verticalBarBounds
 }
 
-// listVScrollBar is a child widget that draws and handles input for
-// the vertical scroll bar of a listPanel. It maps drag position directly
-// to item index, avoiding lossy virtual offset conversions.
-type listVScrollBar[T comparable] struct {
+// virtualScrollVBar is a child widget that draws and handles input for
+// the vertical scroll bar of a [virtualScrollPanel]. It maps drag position
+// directly to item index, avoiding lossy virtual offset conversions.
+type virtualScrollVBar struct {
 	guigui.DefaultWidget
 
-	panel       *listPanel[T]
+	panel       *virtualScrollPanel
 	thumbBounds image.Rectangle
 	alpha       float64
 
@@ -593,7 +623,7 @@ type listVScrollBar[T comparable] struct {
 	onceDraw              bool
 }
 
-func (s *listVScrollBar[T]) setThumbBounds(bounds image.Rectangle) {
+func (s *virtualScrollVBar) setThumbBounds(bounds image.Rectangle) {
 	if s.thumbBounds == bounds {
 		return
 	}
@@ -601,7 +631,7 @@ func (s *listVScrollBar[T]) setThumbBounds(bounds image.Rectangle) {
 	guigui.RequestRedraw(s)
 }
 
-func (s *listVScrollBar[T]) setAlpha(alpha float64) {
+func (s *virtualScrollVBar) setAlpha(alpha float64) {
 	if s.alpha == alpha {
 		return
 	}
@@ -611,16 +641,16 @@ func (s *listVScrollBar[T]) setAlpha(alpha float64) {
 	}
 }
 
-func (s *listVScrollBar[T]) isDragging() bool {
+func (s *virtualScrollVBar) isDragging() bool {
 	return s.dragging
 }
 
-func (s *listVScrollBar[T]) isOnceDrawn() bool {
+func (s *virtualScrollVBar) isOnceDrawn() bool {
 	return s.onceDraw
 }
 
-func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	totalCount := s.panel.content.availableItemCount()
+func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	totalCount := s.panel.content.itemCount()
 	if totalCount == 0 {
 		return guigui.HandleInputResult{}
 	}
@@ -683,7 +713,7 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 			// Use fractional position to compute both index and sub-item offset.
 			// Use the actual height of the start item (matching thumbBounds) so
 			// the start fraction agrees with the thumb position on screen.
-			startItemH := s.panel.content.measureAvailableItemHeight(context, s.draggingStartIndex)
+			startItemH := s.panel.content.measureItemHeight(context, s.draggingStartIndex)
 			if startItemH <= 0 {
 				startItemH = s.panel.estimatedItemHeight
 			}
@@ -692,7 +722,7 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 			newFraction = min(max(newFraction, 0), float64(totalCount-1))
 			newIdx := int(newFraction)
 			// Use the actual height of the target item for the sub-item offset.
-			newItemH := s.panel.content.measureAvailableItemHeight(context, newIdx)
+			newItemH := s.panel.content.measureItemHeight(context, newIdx)
 			if newItemH <= 0 {
 				newItemH = s.panel.estimatedItemHeight
 			}
@@ -709,11 +739,11 @@ func (s *listVScrollBar[T]) HandlePointingInput(context *guigui.Context, widgetB
 	return guigui.HandleInputResult{}
 }
 
-func (s *listVScrollBar[T]) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+func (s *virtualScrollVBar) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
 	return ebiten.CursorShapeDefault, true
 }
 
-func (s *listVScrollBar[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
+func (s *virtualScrollVBar) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if s.thumbBounds.Empty() {
 		return
 	}
