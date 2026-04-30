@@ -513,6 +513,56 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 	return t.valueBuilder.Bytes()
 }
 
+// stringValueForLineContaining returns the bytes of the logical line that
+// contains byteOffset (clamped to the document) along with the line's
+// starting byte offset, suitable for translating local↔global byte
+// positions. It is used by per-cursor textutil calls (word-boundary
+// lookup, grapheme stepping) so they can scan the relevant logical line
+// without materializing the whole document.
+func (t *Text) stringValueForLineContaining(byteOffset int) (line string, lineStart int) {
+	t.ensureLineByteOffsets()
+	lineIdx := t.lineByteOffsets.LineIndexForByteOffset(byteOffset)
+	lineStart = t.lineByteOffsets.ByteOffsetByLineIndex(lineIdx)
+	lineEnd := t.field.TextLengthInBytes()
+	if lineIdx+1 < t.lineByteOffsets.LineCount() {
+		lineEnd = t.lineByteOffsets.ByteOffsetByLineIndex(lineIdx + 1)
+	}
+	return t.stringValueWithRange(lineStart, lineEnd), lineStart
+}
+
+// findWordBoundaries returns the byte range of the word containing idx,
+// scanning only the logical line containing idx. Word-segmentation rules
+// always break at line breaks (UAX #29 WB3a/3b), so a word never spans
+// logical lines.
+func (t *Text) findWordBoundaries(idx int) (start, end int) {
+	line, lineStart := t.stringValueForLineContaining(idx)
+	s, e := textutil.FindWordBoundaries(line, idx-lineStart)
+	return s + lineStart, e + lineStart
+}
+
+// prevPositionOnGraphemes returns the byte offset of the grapheme cluster
+// boundary that immediately precedes position. Grapheme breaks always
+// exist around line-break characters (UAX #29 GB4/GB5), so the previous
+// boundary is always inside the logical line containing position-1.
+func (t *Text) prevPositionOnGraphemes(position int) int {
+	if position <= 0 {
+		return position
+	}
+	line, lineStart := t.stringValueForLineContaining(position - 1)
+	return lineStart + textutil.PrevPositionOnGraphemes(line, position-lineStart)
+}
+
+// nextPositionOnGraphemes returns the byte offset of the grapheme cluster
+// boundary that immediately follows position. The next boundary is always
+// inside the logical line containing position (cf. prevPositionOnGraphemes).
+func (t *Text) nextPositionOnGraphemes(position int) int {
+	if position >= t.field.TextLengthInBytes() {
+		return position
+	}
+	line, lineStart := t.stringValueForLineContaining(position)
+	return lineStart + textutil.NextPositionOnGraphemes(line, position-lineStart)
+}
+
 func (t *Text) stringValueForRendering() string {
 	t.valueBuilder.Reset()
 	_ = t.field.WriteTextForRendering(&t.valueBuilder)
@@ -979,7 +1029,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 	case 2:
 		t.dragging = true
-		start, end := textutil.FindWordBoundaries(t.stringValue(), idx)
+		start, end := t.findWordBoundaries(idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
 		t.setSelection(start, end, -1, false)
@@ -1204,7 +1254,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if start != end {
 				t.replaceTextAtSelection("")
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := t.prevPositionOnGraphemes(start)
 				t.replaceTextAt("", pos, start)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -1215,14 +1265,14 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if start != end {
 				t.replaceTextAtSelection("")
 			} else if isDarwin() && end < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := t.nextPositionOnGraphemes(end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if _, end := t.field.Selection(); end < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := t.nextPositionOnGraphemes(end)
 				t.replaceTextAt("", start, pos)
 			}
 			return guigui.HandleInputByWidget(t)
@@ -1267,17 +1317,17 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == end {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), end)
+				pos := t.prevPositionOnGraphemes(end)
 				t.setSelection(start, pos, pos, true)
 			} else {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := t.prevPositionOnGraphemes(start)
 				t.setSelection(pos, end, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(start, start, -1, true)
 			} else if start > 0 {
-				pos := textutil.PrevPositionOnGraphemes(t.stringValue(), start)
+				pos := t.prevPositionOnGraphemes(start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
@@ -1287,17 +1337,17 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.selectionShiftIndexPlus1-1 == start {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
+				pos := t.nextPositionOnGraphemes(start)
 				t.setSelection(pos, end, pos, true)
 			} else {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), end)
+				pos := t.nextPositionOnGraphemes(end)
 				t.setSelection(start, pos, pos, true)
 			}
 		} else {
 			if start != end {
 				t.setSelection(end, end, -1, true)
 			} else if start < t.field.TextLengthInBytes() {
-				pos := textutil.NextPositionOnGraphemes(t.stringValue(), start)
+				pos := t.nextPositionOnGraphemes(start)
 				t.setSelection(pos, pos, -1, true)
 			}
 		}
