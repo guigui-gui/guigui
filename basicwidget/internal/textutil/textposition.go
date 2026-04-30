@@ -16,12 +16,23 @@ type TextPosition struct {
 // required; the second group is optional state that enables the
 // sidecar-accelerated fast path.
 type TextPositionFromIndexParams struct {
-	// Index is the byte offset in RenderingText to query.
+	// Index is the byte offset in the rendering text to query.
 	Index int
 
 	// RenderingText is the full text to query: committed text with
-	// any active composition spliced in.
+	// any active composition spliced in. Required when
+	// RenderingTextRange is nil; ignored when it is set.
 	RenderingText string
+
+	// RenderingTextRange is an optional callback returning
+	// rendering[start:end), and RenderingTextLength is the total
+	// byte length of the rendering text (paired with the callback).
+	// When set, all fast-path slicing reads through the callback
+	// instead of slicing RenderingText, so the caller never has to
+	// materialize the full document. The slow-path fallback still
+	// uses RenderingText.
+	RenderingTextRange  func(start, end int) string
+	RenderingTextLength int
 
 	// Width is the rendering width.
 	Width int
@@ -31,8 +42,15 @@ type TextPositionFromIndexParams struct {
 	Options *Options
 
 	// CommittedText is RenderingText without the active composition.
-	// When CompositionLen == 0, ignored.
+	// Required when CommittedTextRange is nil and CompositionLen > 0;
+	// ignored otherwise.
 	CommittedText string
+
+	// CommittedTextRange is an optional callback returning
+	// committed[start:end). When set, the composition splice line's
+	// committed bytes are read through the callback instead of
+	// slicing CommittedText.
+	CommittedTextRange func(start, end int) string
 
 	// LineByteOffsets is the logical-line layout of CommittedText.
 	// Optional; when nil [TextPositionFromIndex] falls back to an
@@ -58,6 +76,34 @@ type TextPositionFromIndexParams struct {
 	PrecedingVisualLineCount func(lineIdx int) int
 }
 
+// readRenderingTextRange returns rendering[start:end), preferring the
+// caller-supplied callback over slicing the materialized string.
+func (p *TextPositionFromIndexParams) readRenderingTextRange(start, end int) string {
+	if p.RenderingTextRange != nil {
+		return p.RenderingTextRange(start, end)
+	}
+	return p.RenderingText[start:end]
+}
+
+// readCommittedTextRange returns committed[start:end), preferring the
+// caller-supplied callback over slicing the materialized string.
+func (p *TextPositionFromIndexParams) readCommittedTextRange(start, end int) string {
+	if p.CommittedTextRange != nil {
+		return p.CommittedTextRange(start, end)
+	}
+	return p.CommittedText[start:end]
+}
+
+// getRenderingTextLength returns the byte length of the rendering text from
+// the explicit field if a callback is set; otherwise from the
+// materialized string.
+func (p *TextPositionFromIndexParams) getRenderingTextLength() int {
+	if p.RenderingTextRange != nil {
+		return p.RenderingTextLength
+	}
+	return len(p.RenderingText)
+}
+
 // TextPositionFromIndex returns the visual position(s) corresponding
 // to p.Index in p.RenderingText. When p.LineByteOffsets and
 // p.PrecedingVisualLineCount are supplied, the visual-line walk is
@@ -75,7 +121,7 @@ type TextPositionFromIndexParams struct {
 // the fast path.
 func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1 TextPosition, count int) {
 	index := p.Index
-	if index < 0 || index > len(p.RenderingText) {
+	if index < 0 || index > p.getRenderingTextLength() {
 		return TextPosition{}, TextPosition{}, 0
 	}
 	if p.LineByteOffsets == nil || p.PrecedingVisualLineCount == nil {
@@ -97,11 +143,11 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	if p.CompositionLen > 0 {
 		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
 		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
-		ce := len(p.CommittedText)
+		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
+		ce := p.getRenderingTextLength() - byteDelta
 		if selectionLineIdx+1 < n {
 			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
 		}
-		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
 		// The selection-line slices are only valid when the selection
 		// lies inside a single logical line; otherwise ce+byteDelta
 		// underflows. When the selection crosses lines we leave them
@@ -110,12 +156,12 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		// below.
 		var committedSelectionLine, renderingSelectionLine string
 		if p.Options.AutoWrap && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
-			committedSelectionLine = p.CommittedText[cs:ce]
-			renderingSelectionLine = p.RenderingText[cs : ce+byteDelta]
+			committedSelectionLine = p.readCommittedTextRange(cs, ce)
+			renderingSelectionLine = p.readRenderingTextRange(cs, ce+byteDelta)
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			CompositionText:        p.RenderingText[p.SelectionStart : p.SelectionStart+p.CompositionLen],
+			CompositionText:        p.readRenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
 			LineByteOffsets:        p.LineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
@@ -169,7 +215,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	}
 
 	committedLineStart := p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx)
-	committedTextLen := len(p.RenderingText)
+	committedTextLen := p.getRenderingTextLength()
 	if hasComp {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
@@ -193,7 +239,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		}
 	}
 
-	line := p.RenderingText[renderingLineStart:renderingLineEnd]
+	line := p.readRenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine := index - renderingLineStart
 
 	pos0, pos1, c := TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, p.Options)
@@ -239,7 +285,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 				prevRenderingLineEnd += compInfo.RenderingByteShift
 			}
 		}
-		prevLine := p.RenderingText[prevRenderingLineStart:prevRenderingLineEnd]
+		prevLine := p.readRenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
 		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), p.Options)
 		if prevCount > 0 {
 			prevPrecedingVisualLines := p.PrecedingVisualLineCount(prevCommittedLineIdx)

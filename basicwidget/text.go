@@ -1188,17 +1188,17 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		renderingLength = renderingLength - (sEnd - sStart) + t.field.UncommittedTextLengthInBytes()
 	}
 	r, ok := textutil.ComputeVisibleRange(&textutil.VisibleRangeParams{
-		LineByteOffsets: &t.lineByteOffsets,
-		RenderingLength: renderingLength,
-		CumulativeYs:    t.cumulativeYs,
-		LineHeight:      lineH,
-		AutoWrap:        t.autoWrap,
-		VerticalAlign:   textutil.VerticalAlign(t.vAlign),
-		BoundsHeight:    textBounds.Dy(),
-		TotalHeight:     totalHeight,
-		VisibleMinY:     visibleBounds.Min.Y - textBounds.Min.Y,
-		VisibleMaxY:     visibleBounds.Max.Y - textBounds.Min.Y,
-		Composition:     compInfo,
+		LineByteOffsets:     &t.lineByteOffsets,
+		RenderingTextLength: renderingLength,
+		CumulativeYs:        t.cumulativeYs,
+		LineHeight:          lineH,
+		AutoWrap:            t.autoWrap,
+		VerticalAlign:       textutil.VerticalAlign(t.vAlign),
+		BoundsHeight:        textBounds.Dy(),
+		TotalHeight:         totalHeight,
+		VisibleMinY:         visibleBounds.Min.Y - textBounds.Min.Y,
+		VisibleMaxY:         visibleBounds.Max.Y - textBounds.Min.Y,
+		Composition:         compInfo,
 	})
 	if !ok {
 		return materializeFull(), 0, 0, false
@@ -1982,9 +1982,22 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	if position.Y < textContentBounds.Min.Y {
 		return 0
 	}
-	txt := t.textToDraw(context, showComposition)
+
+	// Compute the rendering text's byte length without materializing
+	// it. RenderingTextLength = committedLength + composition byte delta
+	// when composition is active and visible; otherwise == committedLength.
+	renderingLength := t.field.TextLengthInBytes()
+	var sStart, sEnd, compLen int
+	if showComposition {
+		compLen = t.field.UncommittedTextLengthInBytes()
+		if compLen > 0 {
+			sStart, sEnd = t.field.Selection()
+			renderingLength = renderingLength + compLen - (sEnd - sStart)
+		}
+	}
+
 	if position.Y >= textContentBounds.Max.Y {
-		return len(txt)
+		return renderingLength
 	}
 	width := textContentBounds.Dx()
 	op := &textutil.Options{
@@ -2005,28 +2018,28 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	// drag-select on multi-megabyte buffers this fires every tick from
 	// [Text.HandlePointingInput] and dominates CPU.
 	t.ensureLineByteOffsets()
-	var committed string
-	var sStart, sEnd, compLen int
+	readRendering := func(start, end int) string { return t.stringValueWithRange(start, end) }
 	if showComposition {
-		compLen = t.field.UncommittedTextLengthInBytes()
-		if compLen > 0 {
-			committed = t.stringValue()
-			sStart, sEnd = t.field.Selection()
-		}
+		readRendering = func(start, end int) string { return t.stringValueForRenderingRange(start, end) }
+	}
+	var readCommitted func(start, end int) string
+	if compLen > 0 {
+		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
 	}
 	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
 		Position:                 position,
-		RenderingText:            txt,
+		RenderingTextRange:       readRendering,
+		RenderingTextLength:      renderingLength,
 		Width:                    width,
 		Options:                  op,
-		CommittedText:            committed,
+		CommittedTextRange:       readCommitted,
 		LineByteOffsets:          &t.lineByteOffsets,
 		SelectionStart:           sStart,
 		SelectionEnd:             sEnd,
 		CompositionLen:           compLen,
 		PrecedingVisualLineCount: func(lineIdx int) int { return t.cumulativeVisualLineCount(context, width, lineIdx) },
 	})
-	if idx < 0 || idx > len(txt) {
+	if idx < 0 || idx > renderingLength {
 		return -1
 	}
 	return idx
@@ -2035,7 +2048,6 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
 	textBounds := t.textContentBounds(context, bounds)
 	width := textBounds.Dx()
-	txt := t.textToDraw(context, showComposition)
 	op := &textutil.Options{
 		AutoWrap:         t.autoWrap,
 		Face:             t.face(context, false),
@@ -2054,21 +2066,31 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	// tick and that fallback dominates CPU. With the sidecar, cost is
 	// O(log n + lineLen) per call.
 	t.ensureLineByteOffsets()
-	var committed string
+
+	renderingLength := t.field.TextLengthInBytes()
 	var sStart, sEnd, compLen int
 	if showComposition {
 		compLen = t.field.UncommittedTextLengthInBytes()
 		if compLen > 0 {
-			committed = t.stringValue()
 			sStart, sEnd = t.field.Selection()
+			renderingLength = renderingLength + compLen - (sEnd - sStart)
 		}
+	}
+	readRendering := func(start, end int) string { return t.stringValueWithRange(start, end) }
+	if showComposition {
+		readRendering = func(start, end int) string { return t.stringValueForRenderingRange(start, end) }
+	}
+	var readCommitted func(start, end int) string
+	if compLen > 0 {
+		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
 	}
 	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
 		Index:                    index,
-		RenderingText:            txt,
+		RenderingTextRange:       readRendering,
+		RenderingTextLength:      renderingLength,
 		Width:                    width,
 		Options:                  op,
-		CommittedText:            committed,
+		CommittedTextRange:       readCommitted,
 		LineByteOffsets:          &t.lineByteOffsets,
 		SelectionStart:           sStart,
 		SelectionEnd:             sEnd,

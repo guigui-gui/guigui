@@ -119,8 +119,8 @@ type VisibleRangeParams struct {
 	// lines comes from its LineCount.
 	LineByteOffsets *LineByteOffsets
 
-	// RenderingLength is the total byte length of the rendering text.
-	RenderingLength int
+	// RenderingTextLength is the total byte length of the rendering text.
+	RenderingTextLength int
 
 	// CumulativeYs[i] is the rendered Y of the start of logical line
 	// i in the committed text; required when AutoWrap is true and must
@@ -225,7 +225,7 @@ func ComputeVisibleRange(p *VisibleRangeParams) (VisibleRange, bool) {
 	if firstLine > p.Composition.LineIndex {
 		startInBytes += p.Composition.RenderingByteShift
 	}
-	endInBytes := p.RenderingLength
+	endInBytes := p.RenderingTextLength
 	if lastLine+1 < n {
 		endInBytes = p.LineByteOffsets.ByteOffsetByLineIndex(lastLine + 1)
 		if lastLine+1 > p.Composition.LineIndex {

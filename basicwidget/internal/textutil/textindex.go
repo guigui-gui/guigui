@@ -18,8 +18,19 @@ type TextIndexFromPositionParams struct {
 	Position image.Point
 
 	// RenderingText is the full text to query: committed text with
-	// any active composition spliced in.
+	// any active composition spliced in. Required when
+	// RenderingTextRange is nil; ignored when it is set.
 	RenderingText string
+
+	// RenderingTextRange is an optional callback returning
+	// rendering[start:end), and RenderingTextLength is the total
+	// byte length of the rendering text (paired with the callback).
+	// When set, all fast-path slicing reads through the callback
+	// instead of slicing RenderingText, so the caller never has to
+	// materialize the full document. The slow-path fallback still
+	// uses RenderingText.
+	RenderingTextRange  func(start, end int) string
+	RenderingTextLength int
 
 	// Width is the rendering width.
 	Width int
@@ -29,8 +40,15 @@ type TextIndexFromPositionParams struct {
 	Options *Options
 
 	// CommittedText is RenderingText without the active composition.
-	// When CompositionLen == 0, ignored.
+	// Required when CommittedTextRange is nil and CompositionLen > 0;
+	// ignored otherwise.
 	CommittedText string
+
+	// CommittedTextRange is an optional callback returning
+	// committed[start:end). When set, the composition splice line's
+	// committed bytes are read through the callback instead of
+	// slicing CommittedText.
+	CommittedTextRange func(start, end int) string
 
 	// LineByteOffsets is the logical-line layout of CommittedText.
 	// Optional; when nil [TextIndexFromPosition] falls back to an
@@ -54,6 +72,34 @@ type TextIndexFromPositionParams struct {
 	// per-call cost (otherwise this dominates). Required when
 	// LineByteOffsets is set and Options.AutoWrap is true.
 	PrecedingVisualLineCount func(lineIdx int) int
+}
+
+// readRenderingTextRange returns rendering[start:end), preferring the
+// caller-supplied callback over slicing the materialized string.
+func (p *TextIndexFromPositionParams) readRenderingTextRange(start, end int) string {
+	if p.RenderingTextRange != nil {
+		return p.RenderingTextRange(start, end)
+	}
+	return p.RenderingText[start:end]
+}
+
+// readCommittedTextRange returns committed[start:end), preferring the
+// caller-supplied callback over slicing the materialized string.
+func (p *TextIndexFromPositionParams) readCommittedTextRange(start, end int) string {
+	if p.CommittedTextRange != nil {
+		return p.CommittedTextRange(start, end)
+	}
+	return p.CommittedText[start:end]
+}
+
+// getRenderingTextLength returns the byte length of the rendering text from
+// the explicit field if a callback is set; otherwise from the
+// materialized string.
+func (p *TextIndexFromPositionParams) getRenderingTextLength() int {
+	if p.RenderingTextRange != nil {
+		return p.RenderingTextLength
+	}
+	return len(p.RenderingText)
 }
 
 // TextIndexFromPosition returns the byte offset in p.RenderingText
@@ -91,11 +137,11 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	if p.CompositionLen > 0 {
 		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
 		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
-		ce := len(p.CommittedText)
+		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
+		ce := p.getRenderingTextLength() - byteDelta
 		if selectionLineIdx+1 < n {
 			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
 		}
-		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
 		// The selection-line slices are only valid when the selection
 		// lies inside a single logical line; otherwise ce+byteDelta
 		// underflows. When the selection crosses lines we leave them
@@ -104,12 +150,12 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		// below.
 		var committedSelectionLine, renderingSelectionLine string
 		if p.Options.AutoWrap && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
-			committedSelectionLine = p.CommittedText[cs:ce]
-			renderingSelectionLine = p.RenderingText[cs : ce+byteDelta]
+			committedSelectionLine = p.readCommittedTextRange(cs, ce)
+			renderingSelectionLine = p.readRenderingTextRange(cs, ce+byteDelta)
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			CompositionText:        p.RenderingText[p.SelectionStart : p.SelectionStart+p.CompositionLen],
+			CompositionText:        p.readRenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
 			LineByteOffsets:        p.LineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
@@ -173,7 +219,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	}
 
 	committedLineStart := p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx)
-	committedTextLen := len(p.RenderingText)
+	committedTextLen := p.getRenderingTextLength()
 	if hasComp {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
@@ -196,7 +242,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		}
 	}
 
-	line := p.RenderingText[renderingLineStart:renderingLineEnd]
+	line := p.readRenderingTextRange(renderingLineStart, renderingLineEnd)
 
 	// Translate the position into the logical line's local Y so
 	// TextIndexFromPositionInLogicalLine picks the right visual

@@ -154,14 +154,14 @@ func uniformAutoWrapOffParams(lineHeight int) textutil.VisibleRangeParams {
 	const n = 10
 	src, lbo := makeLineSource(n, 10)
 	return textutil.VisibleRangeParams{
-		LineByteOffsets: lbo,
-		RenderingLength: len(src),
-		LineHeight:      lineHeight,
-		AutoWrap:        false,
-		VerticalAlign:   textutil.VerticalAlignTop,
-		BoundsHeight:    n * lineHeight,
-		TotalHeight:     n * lineHeight,
-		Composition:     textutil.CompositionInfo{},
+		LineByteOffsets:     lbo,
+		RenderingTextLength: len(src),
+		LineHeight:          lineHeight,
+		AutoWrap:            false,
+		VerticalAlign:       textutil.VerticalAlignTop,
+		BoundsHeight:        n * lineHeight,
+		TotalHeight:         n * lineHeight,
+		Composition:         textutil.CompositionInfo{},
 	}
 }
 
@@ -295,15 +295,15 @@ func TestComputeVisibleRange_AutoWrapOnHeterogeneous(t *testing.T) {
 	// visual heights for some logical lines). cumulativeYs = prefix sums.
 	src, lbo := makeLineSource(5, 10)
 	p := textutil.VisibleRangeParams{
-		LineByteOffsets: lbo,
-		RenderingLength: len(src),
-		CumulativeYs:    []int{0, 10, 40, 50, 80, 90},
-		LineHeight:      10,
-		AutoWrap:        true,
-		VerticalAlign:   textutil.VerticalAlignTop,
-		BoundsHeight:    90,
-		TotalHeight:     90,
-		Composition:     textutil.CompositionInfo{},
+		LineByteOffsets:     lbo,
+		RenderingTextLength: len(src),
+		CumulativeYs:        []int{0, 10, 40, 50, 80, 90},
+		LineHeight:          10,
+		AutoWrap:            true,
+		VerticalAlign:       textutil.VerticalAlignTop,
+		BoundsHeight:        90,
+		TotalHeight:         90,
+		Composition:         textutil.CompositionInfo{},
 	}
 	// Visible [25, 75]: line 1 spans [10, 40), line 2 [40, 50), line 3
 	// [50, 80). All three intersect; with slack, also includes 0 and 4.
@@ -328,7 +328,7 @@ func TestComputeVisibleRange_CompositionInsertionAutoWrapOff(t *testing.T) {
 	p := uniformAutoWrapOffParams(10)
 	p.Composition.LineIndex = 3
 	p.Composition.RenderingByteShift = 5
-	p.RenderingLength = 100 + 5
+	p.RenderingTextLength = 100 + 5
 	p.VisibleMinY = 50
 	p.VisibleMaxY = 70
 	r, ok := textutil.ComputeVisibleRange(&p)
@@ -359,7 +359,7 @@ func TestComputeVisibleRange_CompositionStraddlesCompLine(t *testing.T) {
 	p := uniformAutoWrapOffParams(10)
 	p.Composition.LineIndex = 5
 	p.Composition.RenderingByteShift = 7
-	p.RenderingLength = 100 + 7
+	p.RenderingTextLength = 100 + 7
 	// Visible [40, 70] → lines 4..7, slack to 3..8.
 	p.VisibleMinY = 40
 	p.VisibleMaxY = 70
@@ -390,14 +390,14 @@ func TestComputeVisibleRange_CompositionAutoWrapOnDelta(t *testing.T) {
 	// rendering are at cumulativeYs[i] + 10.
 	src, lbo := makeLineSource(5, 10)
 	p := textutil.VisibleRangeParams{
-		LineByteOffsets: lbo,
-		RenderingLength: len(src) + 3, // composition added 3 bytes
-		CumulativeYs:    []int{0, 10, 20, 30, 40, 50},
-		LineHeight:      10,
-		AutoWrap:        true,
-		VerticalAlign:   textutil.VerticalAlignTop,
-		BoundsHeight:    60,
-		TotalHeight:     60,
+		LineByteOffsets:     lbo,
+		RenderingTextLength: len(src) + 3, // composition added 3 bytes
+		CumulativeYs:        []int{0, 10, 20, 30, 40, 50},
+		LineHeight:          10,
+		AutoWrap:            true,
+		VerticalAlign:       textutil.VerticalAlignTop,
+		BoundsHeight:        60,
+		TotalHeight:         60,
 		Composition: textutil.CompositionInfo{
 			LineIndex:          2,
 			RenderingByteShift: 3,
