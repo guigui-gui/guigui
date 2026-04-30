@@ -82,7 +82,7 @@ type Text struct {
 	guigui.DefaultWidget
 
 	field             textinput.Field
-	valueBuilder      stringBuilderWithRange
+	valueBuilder      bytes.Buffer
 	valueEqualChecker stringEqualChecker
 
 	nextTextSet   bool
@@ -323,7 +323,7 @@ func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int 
 		return t.cumulativeYs[lineIdx]
 	}
 
-	str := t.stringValue()
+	totalLen := t.field.TextLengthInBytes()
 	face := t.face(context, false)
 	lineHF := t.lineHeight(context)
 	tabW := t.actualTabWidth(context)
@@ -335,11 +335,12 @@ func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int 
 	for len(t.cumulativeYs) <= lineIdx {
 		i := len(t.cumulativeYs) - 1
 		start := t.lineByteOffsets.ByteOffsetByLineIndex(i)
-		end := len(str)
+		end := totalLen
 		if i+1 < n {
 			end = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
 		}
-		c := textutil.VisualLineCountForLogicalLine(measureWidth, str[start:end], t.autoWrap, face, tabW, keepTailing)
+		line := t.stringValueWithRange(start, end)
+		c := textutil.VisualLineCountForLogicalLine(measureWidth, line, t.autoWrap, face, tabW, keepTailing)
 		h := lineHF * float64(c)
 		t.cumulativeYs = append(t.cumulativeYs, t.cumulativeYs[i]+int(math.Ceil(h)))
 		t.cumulativeVisualLineCounts = append(t.cumulativeVisualLineCounts, t.cumulativeVisualLineCounts[i]+c)
@@ -495,14 +496,20 @@ func (t *Text) stringValue() string {
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
-	t.valueBuilder.ResetWithRange(start, end)
-	_ = t.field.WriteText(&t.valueBuilder)
+	if end < 0 {
+		end = t.field.TextLengthInBytes()
+	}
+	t.valueBuilder.Reset()
+	_ = t.field.WriteTextRange(&t.valueBuilder, start, end)
 	return t.valueBuilder.String()
 }
 
 func (t *Text) bytesValueWithRange(start, end int) []byte {
-	t.valueBuilder.ResetWithRange(start, end)
-	_ = t.field.WriteText(&t.valueBuilder)
+	if end < 0 {
+		end = t.field.TextLengthInBytes()
+	}
+	t.valueBuilder.Reset()
+	_ = t.field.WriteTextRange(&t.valueBuilder, start, end)
 	return t.valueBuilder.Bytes()
 }
 
@@ -2080,59 +2087,6 @@ func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	text = buf.String()
 
 	return text, start, end
-}
-
-type stringBuilderWithRange struct {
-	buf      []byte
-	start    int
-	endPlus1 int
-	offset   int
-}
-
-func (s *stringBuilderWithRange) Reset() {
-	s.buf = s.buf[:0]
-	s.start = 0
-	s.endPlus1 = 0
-	s.offset = 0
-}
-
-func (s *stringBuilderWithRange) ResetWithRange(start, end int) {
-	s.buf = s.buf[:0]
-	s.start = start
-	s.endPlus1 = end + 1
-	s.offset = 0
-}
-
-func (s *stringBuilderWithRange) Write(b []byte) (int, error) {
-	origN := len(b)
-	defer func() {
-		s.offset += origN
-	}()
-
-	start := s.start
-	end := math.MaxInt
-	if s.endPlus1 > 0 {
-		end = s.endPlus1 - 1
-	}
-
-	// Calculate the intersection of [s.offset, s.offset+len(b)) and [start, end).
-	idx0 := max(s.offset, start)
-	idx1 := min(s.offset+len(b), end)
-
-	if idx0 >= idx1 {
-		return origN, nil
-	}
-
-	s.buf = append(s.buf, b[idx0-s.offset:idx1-s.offset]...)
-	return origN, nil
-}
-
-func (s *stringBuilderWithRange) String() string {
-	return string(s.buf)
-}
-
-func (s *stringBuilderWithRange) Bytes() []byte {
-	return s.buf
 }
 
 type stringEqualChecker struct {
