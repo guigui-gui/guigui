@@ -513,6 +513,16 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 	return t.valueBuilder.Bytes()
 }
 
+// stringValueForRenderingRange returns the bytes of the rendering text
+// (committed text with the active IME composition spliced in) in
+// [start, end). Coordinates are in rendering space; clamped by
+// [textinput.Field.WriteTextForRenderingRange].
+func (t *Text) stringValueForRenderingRange(start, end int) string {
+	t.valueBuilder.Reset()
+	_ = t.field.WriteTextForRenderingRange(&t.valueBuilder, start, end)
+	return t.valueBuilder.String()
+}
+
 // stringValueForLineContaining returns the bytes of the logical line that
 // contains byteOffset (clamped to the document) along with the line's
 // starting byte offset, suitable for translating local↔global byte
@@ -1056,35 +1066,75 @@ func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string 
 // subtracts byteStart from selection / composition byte offsets, and
 // forces [textutil.VerticalAlignTop] before calling [textutil.Draw];
 // otherwise txt is the full text and the other returns are zero.
+//
+// The full rendering text is materialized lazily — only when a fallback
+// path needs it or when an active IME composition forces it (because
+// [textutil.ComputeCompositionInfo] currently consumes the full string).
+// On the happy path with no composition the visible byte range is read
+// directly from the field via [Text.stringValueWithRange], so the
+// per-frame allocation is bounded by the visible window rather than the
+// document length.
 func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visibleBounds image.Rectangle) (txt string, byteStart int, yShift int, restricted bool) {
-	txt = t.textToDraw(context, true)
 	t.ensureLineByteOffsets()
 	n := t.lineByteOffsets.LineCount()
+
+	hasComp := t.field.UncommittedTextLengthInBytes() > 0
+	var fullTxt string
+	var fullTxtMaterialized bool
+	materializeFull := func() string {
+		if !fullTxtMaterialized {
+			fullTxt = t.textToDraw(context, true)
+			fullTxtMaterialized = true
+		}
+		return fullTxt
+	}
+
 	if n == 0 {
-		return txt, 0, 0, false
+		return materializeFull(), 0, 0, false
 	}
 
 	width := textBounds.Dx()
 
 	var compInfo textutil.CompositionInfo
-	if t.field.UncommittedTextLengthInBytes() > 0 {
+	if hasComp {
 		sStart, sEnd := t.field.Selection()
+		compLen := t.field.UncommittedTextLengthInBytes()
+		byteDelta := compLen - (sEnd - sStart)
+
+		selectionLineIdx := t.lineByteOffsets.LineIndexForByteOffset(sStart)
+		cs := t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
+		ce := t.field.TextLengthInBytes()
+		if selectionLineIdx+1 < n {
+			ce = t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
+		}
+		// The selection-line slices are only valid when the selection
+		// lies inside a single logical line; otherwise ce+byteDelta
+		// underflows. When the selection crosses lines we leave them
+		// empty — [textutil.ComputeCompositionInfo]'s own multi-line
+		// check returns false before reading them, and the caller falls
+		// back below.
+		var committedSelectionLine, renderingSelectionLine string
+		if t.autoWrap && t.lineByteOffsets.LineIndexForByteOffset(sEnd) == selectionLineIdx {
+			committedSelectionLine = t.stringValueWithRange(cs, ce)
+			renderingSelectionLine = t.stringValueForRenderingRange(cs, ce+byteDelta)
+		}
+
 		info, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-			RenderingText:    txt,
-			CommittedText:    t.stringValue(),
-			LineByteOffsets:  &t.lineByteOffsets,
-			SelectionStart:   sStart,
-			SelectionEnd:     sEnd,
-			CompositionLen:   t.field.UncommittedTextLengthInBytes(),
-			AutoWrap:         t.autoWrap,
-			Face:             t.face(context, false),
-			LineHeight:       t.lineHeight(context),
-			TabWidth:         t.actualTabWidth(context),
-			KeepTailingSpace: t.keepTailingSpace,
-			WrapWidth:        width,
+			CompositionText:        t.stringValueForRenderingRange(sStart, sStart+compLen),
+			LineByteOffsets:        &t.lineByteOffsets,
+			SelectionStart:         sStart,
+			SelectionEnd:           sEnd,
+			AutoWrap:               t.autoWrap,
+			CommittedSelectionLine: committedSelectionLine,
+			RenderingSelectionLine: renderingSelectionLine,
+			Face:                   t.face(context, false),
+			LineHeight:             t.lineHeight(context),
+			TabWidth:               t.actualTabWidth(context),
+			KeepTailingSpace:       t.keepTailingSpace,
+			WrapWidth:              width,
 		})
 		if !ok {
-			return txt, 0, 0, false
+			return materializeFull(), 0, 0, false
 		}
 		compInfo = info
 	}
@@ -1097,7 +1147,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 
 	lineH := int(math.Ceil(t.lineHeight(context)))
 	if lineH <= 0 {
-		return txt, 0, 0, false
+		return materializeFull(), 0, 0, false
 	}
 
 	// For autoWrap, extend cumulativeYs forward until the last entry
@@ -1132,9 +1182,14 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		}
 	}
 
+	renderingLength := t.field.TextLengthInBytes()
+	if hasComp {
+		sStart, sEnd := t.field.Selection()
+		renderingLength = renderingLength - (sEnd - sStart) + t.field.UncommittedTextLengthInBytes()
+	}
 	r, ok := textutil.ComputeVisibleRange(&textutil.VisibleRangeParams{
 		LineByteOffsets: &t.lineByteOffsets,
-		RenderingLength: len(txt),
+		RenderingLength: renderingLength,
 		CumulativeYs:    t.cumulativeYs,
 		LineHeight:      lineH,
 		AutoWrap:        t.autoWrap,
@@ -1146,9 +1201,12 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		Composition:     compInfo,
 	})
 	if !ok {
-		return txt, 0, 0, false
+		return materializeFull(), 0, 0, false
 	}
-	return txt[r.StartInBytes:r.EndInBytes], r.StartInBytes, r.YShift, true
+	if hasComp {
+		return t.stringValueForRenderingRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
+	}
+	return t.stringValueWithRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
 }
 
 func (t *Text) selectionToDraw(context *guigui.Context) (start, end int, ok bool) {

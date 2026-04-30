@@ -87,27 +87,46 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	}
 
 	// Resolve composition shifts so the committed-text sidecar is
-	// usable without a rebuild. compInfo carries the splice line and
-	// the constant byte/visual-line deltas applied to lines past it;
-	// hasComp tracks whether to apply them at all.
+	// usable without a rebuild. compInfo carries the selection line
+	// and the constant byte/visual-line deltas applied to lines past
+	// it; hasComp tracks whether to apply them at all.
 	var compInfo CompositionInfo
 	var hasComp bool
 	var compStart, compRenderingEnd int
-	var spliceVisualLineCountDelta int
+	var selectionLineVisualCountDelta int
 	if p.CompositionLen > 0 {
+		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
+		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
+		ce := len(p.CommittedText)
+		if selectionLineIdx+1 < n {
+			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
+		}
+		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
+		// The selection-line slices are only valid when the selection
+		// lies inside a single logical line; otherwise ce+byteDelta
+		// underflows. When the selection crosses lines we leave them
+		// empty — [ComputeCompositionInfo]'s own multi-line check
+		// returns false before reading them, and the caller falls back
+		// below.
+		var committedSelectionLine, renderingSelectionLine string
+		if p.Options.AutoWrap && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
+			committedSelectionLine = p.CommittedText[cs:ce]
+			renderingSelectionLine = p.RenderingText[cs : ce+byteDelta]
+		}
+
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			RenderingText:    p.RenderingText,
-			CommittedText:    p.CommittedText,
-			LineByteOffsets:  p.LineByteOffsets,
-			SelectionStart:   p.SelectionStart,
-			SelectionEnd:     p.SelectionEnd,
-			CompositionLen:   p.CompositionLen,
-			AutoWrap:         p.Options.AutoWrap,
-			Face:             p.Options.Face,
-			LineHeight:       p.Options.LineHeight,
-			TabWidth:         p.Options.TabWidth,
-			KeepTailingSpace: p.Options.KeepTailingSpace,
-			WrapWidth:        p.Width,
+			CompositionText:        p.RenderingText[p.SelectionStart : p.SelectionStart+p.CompositionLen],
+			LineByteOffsets:        p.LineByteOffsets,
+			SelectionStart:         p.SelectionStart,
+			SelectionEnd:           p.SelectionEnd,
+			AutoWrap:               p.Options.AutoWrap,
+			CommittedSelectionLine: committedSelectionLine,
+			RenderingSelectionLine: renderingSelectionLine,
+			Face:                   p.Options.Face,
+			LineHeight:             p.Options.LineHeight,
+			TabWidth:               p.Options.TabWidth,
+			KeepTailingSpace:       p.Options.KeepTailingSpace,
+			WrapWidth:              p.Width,
 		})
 		if !ok {
 			// Composition straddles a logical-line boundary: the
@@ -123,16 +142,11 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		if p.Options.AutoWrap {
 			// compInfo.RenderingYShift is in pixels (ceiled); for
 			// fractional-Y semantics we need the visual-line-count
-			// delta directly. Recompute it from the splice-line
+			// delta directly. Recompute it from the selection-line
 			// shape.
-			cs := p.LineByteOffsets.ByteOffsetByLineIndex(compInfo.LineIndex)
-			ce := len(p.CommittedText)
-			if compInfo.LineIndex+1 < n {
-				ce = p.LineByteOffsets.ByteOffsetByLineIndex(compInfo.LineIndex + 1)
-			}
-			committedCount := VisualLineCountForLogicalLine(p.Width, p.CommittedText[cs:ce], true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, p.RenderingText[cs:ce+compInfo.RenderingByteShift], true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
-			spliceVisualLineCountDelta = renderingCount - committedCount
+			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+			selectionLineVisualCountDelta = renderingCount - committedCount
 		}
 	}
 
@@ -189,7 +203,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 
 	precedingVisualLines := p.PrecedingVisualLineCount(committedLineIdx)
 	if hasComp && committedLineIdx > compInfo.LineIndex {
-		precedingVisualLines += spliceVisualLineCountDelta
+		precedingVisualLines += selectionLineVisualCountDelta
 	}
 	yOffset := p.Options.LineHeight * float64(precedingVisualLines)
 
@@ -230,7 +244,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		if prevCount > 0 {
 			prevPrecedingVisualLines := p.PrecedingVisualLineCount(prevCommittedLineIdx)
 			if hasComp && prevCommittedLineIdx > compInfo.LineIndex {
-				prevPrecedingVisualLines += spliceVisualLineCountDelta
+				prevPrecedingVisualLines += selectionLineVisualCountDelta
 			}
 			prevYOffset := p.Options.LineHeight * float64(prevPrecedingVisualLines)
 			prevPos0.Top += prevYOffset

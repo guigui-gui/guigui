@@ -12,33 +12,33 @@ import (
 
 // CompositionInfoParams describes the inputs for [ComputeCompositionInfo].
 type CompositionInfoParams struct {
-	// RenderingText is the field text with the composition spliced in
-	// at SelectionStart; the composition itself is
-	// RenderingText[SelectionStart : SelectionStart+CompositionLen].
-	RenderingText string
+	// CompositionText is the active composition's bytes — the bytes
+	// inserted into the rendering text at SelectionStart, replacing
+	// committed[SelectionStart:SelectionEnd].
+	CompositionText string
 
-	// CommittedText is the field text without the composition. Only
-	// read when AutoWrap is true, to measure the visual-Y delta of the
-	// splice line.
-	CommittedText string
-
-	// LineByteOffsets is the logical-line layout of CommittedText.
+	// LineByteOffsets is the logical-line layout of the committed text.
 	LineByteOffsets *LineByteOffsets
 
-	// SelectionStart and SelectionEnd are byte offsets into
-	// CommittedText describing the range the composition replaces.
+	// SelectionStart and SelectionEnd are byte offsets into the
+	// committed text describing the range the composition replaces.
 	// SelectionStart == SelectionEnd for a pure insertion.
 	SelectionStart int
 	SelectionEnd   int
 
-	// CompositionLen is the byte length of the composition in
-	// RenderingText.
-	CompositionLen int
-
-	// AutoWrap toggles the visual-Y delta measurement for the splice
-	// line. When false, RenderingYShift in the result is always 0 and
-	// the fields below are ignored.
+	// AutoWrap toggles the visual-Y delta measurement for the
+	// selection line. When false, RenderingYShift in the result is
+	// always 0 and the fields below are ignored.
 	AutoWrap bool
+
+	// CommittedSelectionLine and RenderingSelectionLine are the bytes
+	// of the logical line containing the selection (SelectionStart ..
+	// SelectionEnd, which always lies within a single logical line —
+	// the function rejects multi-line selections), in committed and
+	// rendering coordinates respectively. Required when AutoWrap is
+	// true; ignored otherwise.
+	CommittedSelectionLine string
+	RenderingSelectionLine string
 
 	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
 	// to [MeasureLogicalLineHeight] when AutoWrap is true.
@@ -58,8 +58,8 @@ type CompositionInfoParams struct {
 // to pass when no composition is active: the shifts are zero, so any
 // "past the splice" comparison the slicer makes is harmless.
 type CompositionInfo struct {
-	// LineIndex is the logical-line index of the splice line. Lines
-	// with index > LineIndex are "past the splice" and have
+	// LineIndex is the logical-line index of the selection line.
+	// Lines with index > LineIndex are "past the splice" and have
 	// RenderingByteShift and RenderingYShift applied.
 	LineIndex int
 
@@ -73,7 +73,7 @@ type CompositionInfo struct {
 	// RenderingYShift is added to a past-the-splice line's committed
 	// visual-Y (in pixels, top-of-line) to get its rendering visual-Y.
 	// Non-zero only when AutoWrap is on and the composition causes the
-	// splice line to wrap into a different number of visual sub-lines.
+	// selection line to wrap into a different number of visual sub-lines.
 	RenderingYShift int
 }
 
@@ -83,31 +83,26 @@ type CompositionInfo struct {
 // a selection that straddles a logical line boundary - and the caller
 // should fall back to drawing the unrestricted text.
 func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
-	if pos, _ := FirstLineBreakPositionAndLen(p.RenderingText[p.SelectionStart : p.SelectionStart+p.CompositionLen]); pos >= 0 {
+	if pos, _ := FirstLineBreakPositionAndLen(p.CompositionText); pos >= 0 {
 		return CompositionInfo{}, false
 	}
 	lineIndex := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
 	if p.SelectionStart != p.SelectionEnd && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) != lineIndex {
 		return CompositionInfo{}, false
 	}
-	byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
+	byteDelta := len(p.CompositionText) - (p.SelectionEnd - p.SelectionStart)
 
 	var yDelta int
 	if p.AutoWrap {
-		// Visual height of the splice line in rendering vs committed:
-		// the only line whose wrap layout the composition can change.
-		n := p.LineByteOffsets.LineCount()
-		cs := p.LineByteOffsets.ByteOffsetByLineIndex(lineIndex)
-		ce := len(p.CommittedText)
-		if lineIndex+1 < n {
-			ce = p.LineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
-		}
+		// Visual height of the selection line in rendering vs
+		// committed: the only line whose wrap layout the composition
+		// can change.
 		measureWidth := p.WrapWidth
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedText[cs:ce], true, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingText[cs:ce+byteDelta], true, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, true, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, true, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{

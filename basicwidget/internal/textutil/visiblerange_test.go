@@ -32,12 +32,10 @@ func TestComputeCompositionInfo_PureInsertion(t *testing.T) {
 	var offsets textutil.LineByteOffsets
 	offsets.RebuildFromString("abc\ndef")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-		RenderingText:   "abXYZc\ndef",
-		CommittedText:   "abc\ndef",
+		CompositionText: "XYZ",
 		LineByteOffsets: &offsets,
 		SelectionStart:  2,
 		SelectionEnd:    2,
-		CompositionLen:  3,
 	})
 	if !ok {
 		t.Fatalf("got ok=false, want true")
@@ -51,12 +49,10 @@ func TestComputeCompositionInfo_LineBreakInComposition(t *testing.T) {
 	var offsets textutil.LineByteOffsets
 	offsets.RebuildFromString("abc\ndef")
 	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-		RenderingText:   "abX\nYZc\ndef",
-		CommittedText:   "abc\ndef",
+		CompositionText: "X\nYZ",
 		LineByteOffsets: &offsets,
 		SelectionStart:  2,
 		SelectionEnd:    2,
-		CompositionLen:  4, // "X\nYZ"
 	})
 	if ok {
 		t.Errorf("got ok=true, want false (composition contains a line break)")
@@ -69,12 +65,10 @@ func TestComputeCompositionInfo_CrossLineSelection(t *testing.T) {
 	var offsets textutil.LineByteOffsets
 	offsets.RebuildFromString("abc\ndef\nghi")
 	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-		RenderingText:   "abXYZef\nghi", // 11-byte rendering
-		CommittedText:   "abc\ndef\nghi",
+		CompositionText: "XYZ",
 		LineByteOffsets: &offsets,
 		SelectionStart:  2,
 		SelectionEnd:    6,
-		CompositionLen:  3,
 	})
 	if ok {
 		t.Errorf("got ok=true, want false (selection spans two logical lines)")
@@ -86,12 +80,10 @@ func TestComputeCompositionInfo_SameLineReplacement(t *testing.T) {
 	var offsets textutil.LineByteOffsets
 	offsets.RebuildFromString("abcdef\nghi")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-		RenderingText:   "aXYef\nghi",
-		CommittedText:   "abcdef\nghi",
+		CompositionText: "XY",
 		LineByteOffsets: &offsets,
 		SelectionStart:  1,
 		SelectionEnd:    4,
-		CompositionLen:  2,
 	})
 	if !ok {
 		t.Fatalf("got ok=false, want true")
@@ -102,6 +94,32 @@ func TestComputeCompositionInfo_SameLineReplacement(t *testing.T) {
 	}
 }
 
+func TestComputeCompositionInfo_CrossLineSelectionAutoWrap(t *testing.T) {
+	// AutoWrap=on with a multi-line selection. The function must reject
+	// (ok=false) without ever reading the selection-line fields, since
+	// the caller can't safely compute them when ce+byteDelta would
+	// underflow. Pass empty selection-line strings to verify the
+	// rejection happens before they're consulted.
+	face := newTestFace(t)
+	var offsets textutil.LineByteOffsets
+	offsets.RebuildFromString("abc\ndef\nghi")
+	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
+		CompositionText:        "X",
+		LineByteOffsets:        &offsets,
+		SelectionStart:         2, // line 0
+		SelectionEnd:           8, // line 2; byteDelta = 1 - 6 = -5
+		AutoWrap:               true,
+		CommittedSelectionLine: "",
+		RenderingSelectionLine: "",
+		Face:                   face,
+		LineHeight:             24,
+		WrapWidth:              1000,
+	})
+	if ok {
+		t.Errorf("got ok=true, want false (selection spans multiple lines)")
+	}
+}
+
 func TestComputeCompositionInfo_AutoWrapNoWrapChange(t *testing.T) {
 	// AutoWrap=on with a wide enough width that the composition doesn't
 	// add any wrap → CompDelta == 0.
@@ -109,16 +127,16 @@ func TestComputeCompositionInfo_AutoWrapNoWrapChange(t *testing.T) {
 	var offsets textutil.LineByteOffsets
 	offsets.RebuildFromString("abcdef")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
-		RenderingText:   "abXYcdef",
-		CommittedText:   "abcdef",
-		LineByteOffsets: &offsets,
-		SelectionStart:  2,
-		SelectionEnd:    2,
-		CompositionLen:  2,
-		AutoWrap:        true,
-		Face:            face,
-		LineHeight:      24,
-		WrapWidth:       1000,
+		CompositionText:        "XY",
+		LineByteOffsets:        &offsets,
+		SelectionStart:         2,
+		SelectionEnd:           2,
+		AutoWrap:               true,
+		CommittedSelectionLine: "abcdef",
+		RenderingSelectionLine: "abXYcdef",
+		Face:                   face,
+		LineHeight:             24,
+		WrapWidth:              1000,
 	})
 	if !ok {
 		t.Fatalf("got ok=false, want true")
