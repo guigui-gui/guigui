@@ -64,12 +64,12 @@ func TestLineByteOffsetsRebuildFromString(t *testing.T) {
 		},
 		{
 			name:   "U+2028 line separator",
-			input:  "abc def",
+			input:  "abc\u2028def",
 			starts: []int{0, 6},
 		},
 		{
 			name:   "U+0085 NEL",
-			input:  "abcdef",
+			input:  "abc\u0085def",
 			starts: []int{0, 5},
 		},
 		{
