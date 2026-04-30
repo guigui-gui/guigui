@@ -5,6 +5,7 @@ package textutil
 
 import (
 	"slices"
+	"strings"
 )
 
 // LineByteOffsets holds the byte offsets where each logical line (segment
@@ -23,16 +24,113 @@ type LineByteOffsets struct {
 // RebuildFromString discards any current contents and rescans s for logical
 // line starts. It is O(len(s)).
 func (l *LineByteOffsets) RebuildFromString(s string) {
-	l.offsets = l.offsets[:0]
-	l.offsets = append(l.offsets, 0)
-	var pos int
-	for {
-		p, n := FirstLineBreakPositionAndLen(s[pos:])
-		if p == -1 {
+	l.offsets = append(l.offsets[:0], 0)
+
+	// Maintain the index of the next occurrence at or after cur for each
+	// line-break lead byte. len(s) means "no further occurrence". After a
+	// byte's first scan returns len(s), it stays that way for the rest of
+	// the rebuild — so lead bytes that never appear in s (commonly 0x0B,
+	// 0x0C, 0xC2, 0xE2 in editor text) cost a single IndexByte each total,
+	// rather than one per line as in the FirstLineBreakPositionAndLen
+	// loop.
+	n := len(s)
+	next := func(b byte, from int) int {
+		if from >= n {
+			return n
+		}
+		i := strings.IndexByte(s[from:], b)
+		if i < 0 {
+			return n
+		}
+		return from + i
+	}
+
+	nLF := next(0x0a, 0)
+	nCR := next(0x0d, 0)
+	nVT := next(0x0b, 0)
+	nFF := next(0x0c, 0)
+	nC2 := next(0xc2, 0)
+	nE2 := next(0xe2, 0)
+
+	cur := 0
+	for cur < n {
+		// Pick the earliest pending occurrence.
+		best := nLF
+		kind := 0
+		if nCR < best {
+			best = nCR
+			kind = 1
+		}
+		if nVT < best {
+			best = nVT
+			kind = 2
+		}
+		if nFF < best {
+			best = nFF
+			kind = 3
+		}
+		if nC2 < best {
+			best = nC2
+			kind = 4
+		}
+		if nE2 < best {
+			best = nE2
+			kind = 5
+		}
+		if best == n {
 			return
 		}
-		pos += p + n
-		l.offsets = append(l.offsets, pos)
+
+		var ln int
+		switch kind {
+		case 0: // LF
+			ln = 1
+		case 1: // CR (possibly CRLF)
+			ln = 1
+			if best+1 < n && s[best+1] == 0x0a {
+				ln = 2
+			}
+		case 2, 3: // VT, FF
+			ln = 1
+		case 4: // 0xC2 lead — only NEL (U+0085, 0xC2 0x85) is a line break.
+			if best+1 < n && s[best+1] == 0x85 {
+				ln = 2
+			} else {
+				// False positive (e.g. NBSP). Advance just this cache.
+				nC2 = next(0xc2, best+1)
+				continue
+			}
+		case 5: // 0xE2 lead — only LS (U+2028, 0xE2 0x80 0xA8) / PS (U+2029, 0xE2 0x80 0xA9) are breaks.
+			if best+2 < n && s[best+1] == 0x80 && (s[best+2] == 0xa8 || s[best+2] == 0xa9) {
+				ln = 3
+			} else {
+				nE2 = next(0xe2, best+1)
+				continue
+			}
+		}
+
+		cur = best + ln
+		l.offsets = append(l.offsets, cur)
+
+		// Refresh whichever caches were consumed.
+		if nLF < cur {
+			nLF = next(0x0a, cur)
+		}
+		if nCR < cur {
+			nCR = next(0x0d, cur)
+		}
+		if nVT < cur {
+			nVT = next(0x0b, cur)
+		}
+		if nFF < cur {
+			nFF = next(0x0c, cur)
+		}
+		if nC2 < cur {
+			nC2 = next(0xc2, cur)
+		}
+		if nE2 < cur {
+			nE2 = next(0xe2, cur)
+		}
 	}
 }
 
