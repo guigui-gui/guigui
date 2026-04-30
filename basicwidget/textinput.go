@@ -786,8 +786,7 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 
-	str := txt.stringValue()
-	logicalLine := str[start:end]
+	logicalLine := txt.stringValueWithRange(start, end)
 
 	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
 	if width <= 0 {
