@@ -264,25 +264,89 @@ func oneLineLeft(width int, vlStr string, face text.Face, hAlign HorizontalAlign
 }
 
 func FirstLineBreakPositionAndLen(str string) (pos, length int) {
-	for i, r := range str {
-		if r == 0x000a || r == 0x000b || r == 0x000c {
-			return i, 1
-		}
-		if r == 0x0085 {
-			return i, 2
-		}
-		if r == 0x2028 || r == 0x2029 {
-			return i, 3
-		}
-		if r == 0x000d {
-			// \r\n
-			if i+1 < len(str) && str[i+1] == 0x000a {
-				return i, 2
+	// Find the earliest line-break lead byte using strings.IndexByte
+	// (SIMD-accelerated). Each scan operates on a shrinking prefix, so
+	// once a common newline (LF) is found, the remaining searches for
+	// rarer line-break characters cover only the bytes before it.
+	bestPos := -1
+	bestLen := 0
+	upper := len(str)
+
+	// 0x0A LF — most common in editor text; scan first to bound the rest.
+	if i := strings.IndexByte(str, 0x0a); i >= 0 {
+		bestPos = i
+		bestLen = 1
+		upper = i
+	}
+
+	// 0x0D CR (possibly part of CRLF).
+	if upper > 0 {
+		if i := strings.IndexByte(str[:upper], 0x0d); i >= 0 {
+			n := 1
+			if i+1 < len(str) && str[i+1] == 0x0a {
+				n = 2
 			}
-			return i, 1
+			bestPos = i
+			bestLen = n
+			upper = i
 		}
 	}
-	return -1, 0
+
+	// 0x0B VT, 0x0C FF — rare.
+	if upper > 0 {
+		if i := strings.IndexByte(str[:upper], 0x0b); i >= 0 {
+			bestPos = i
+			bestLen = 1
+			upper = i
+		}
+	}
+	if upper > 0 {
+		if i := strings.IndexByte(str[:upper], 0x0c); i >= 0 {
+			bestPos = i
+			bestLen = 1
+			upper = i
+		}
+	}
+
+	// 0xC2 — lead of NEL (U+0085, encoded as C2 85). 0xC2 followed by any
+	// other byte is a different code point (e.g. NBSP), so loop past
+	// false positives.
+	for from := 0; from < upper; {
+		i := strings.IndexByte(str[from:upper], 0xc2)
+		if i < 0 {
+			break
+		}
+		idx := from + i
+		if idx+1 < len(str) && str[idx+1] == 0x85 {
+			bestPos = idx
+			bestLen = 2
+			upper = idx
+			break
+		}
+		from = idx + 1
+	}
+
+	// 0xE2 — lead of LS/PS (U+2028/2029, encoded as E2 80 A8/A9). Same
+	// false-positive handling: 0xE2 also leads many other code points
+	// (including common CJK punctuation), so step past mismatches.
+	for from := 0; from < upper; {
+		i := strings.IndexByte(str[from:upper], 0xe2)
+		if i < 0 {
+			break
+		}
+		idx := from + i
+		if idx+2 < len(str) && str[idx+1] == 0x80 {
+			if c := str[idx+2]; c == 0xa8 || c == 0xa9 {
+				bestPos = idx
+				bestLen = 3
+				upper = idx
+				break
+			}
+		}
+		from = idx + 1
+	}
+
+	return bestPos, bestLen
 }
 
 // LastLineBreakPositionAndLen returns the position and the byte length of the last line break in str.
