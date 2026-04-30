@@ -151,13 +151,6 @@ type Text struct {
 	lineByteOffsets               textutil.LineByteOffsets
 	lineByteOffsetsFieldChangedAt time.Time
 
-	// cachedStringValue memoizes [Text.stringValue] across calls within the
-	// same [textinput.Field.ChangedAt] tick. For very long buffers this
-	// avoids reallocating the entire text on every per-tick consumer
-	// (cursor positioning, line-height measurement, sidecar refresh, draw).
-	cachedStringValue               string
-	cachedStringValueFieldChangedAt time.Time
-
 	// cumulativeYs[i] is the rendered Y offset (in pixels, ceiled
 	// per-line) of the start of logical line i, used by virtualizing
 	// parents to position individual lines (and, in upcoming changes, by
@@ -479,20 +472,16 @@ func (t *Text) isEqualToStringValue(text string) bool {
 	return t.valueEqualChecker.Result()
 }
 
-// stringValue returns the field's committed text, allocating it at most
-// once per [textinput.Field.ChangedAt] tick. Per-tick consumers (cursor
-// positioning, sidecar refresh, per-line measurement, draw) share the
-// same backing string instead of each copying the entire buffer.
+// stringValue returns the field's committed text. The remaining callers
+// — value-changed event dispatch, [Text.Value], and the rare fallback
+// path of [Text.textToDraw] — fire infrequently enough that the per-
+// tick cache the function used to maintain is no longer worth its
+// fields; per-tick consumers all read narrower ranges via
+// [Text.stringValueWithRange].
 func (t *Text) stringValue() string {
-	changedAt := t.field.ChangedAt()
-	if changedAt.Equal(t.cachedStringValueFieldChangedAt) {
-		return t.cachedStringValue
-	}
 	t.valueBuilder.Reset()
 	_ = t.field.WriteText(&t.valueBuilder)
-	t.cachedStringValue = t.valueBuilder.String()
-	t.cachedStringValueFieldChangedAt = changedAt
-	return t.cachedStringValue
+	return t.valueBuilder.String()
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
