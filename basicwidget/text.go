@@ -279,7 +279,7 @@ func (t *Text) ensureLineByteOffsets() {
 	if t.lineByteOffsets.LineCount() > 0 && changedAt.Equal(t.lineByteOffsetsFieldChangedAt) {
 		return
 	}
-	t.lineByteOffsets.RebuildFromString(t.stringValue())
+	_ = t.lineByteOffsets.Rebuild(t.field.WriteText)
 	t.lineByteOffsetsFieldChangedAt = changedAt
 }
 

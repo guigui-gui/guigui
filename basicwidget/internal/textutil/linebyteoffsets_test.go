@@ -4,6 +4,7 @@
 package textutil_test
 
 import (
+	"io"
 	"slices"
 	"strings"
 	"testing"
@@ -172,6 +173,89 @@ func TestLineByteOffsetsReset(t *testing.T) {
 	l.Reset()
 	if got := l.LineCount(); got != 0 {
 		t.Errorf("after Reset: LineCount = %d, want 0", got)
+	}
+}
+
+func TestLineByteOffsetsStreamingMatchesRebuild(t *testing.T) {
+	// Inputs that exercise every line-break shape, including multi-byte
+	// sequences that may straddle chunk boundaries.
+	inputs := []string{
+		"",
+		"abc",
+		"abc\n",
+		"abc\ndef",
+		"abc\ndef\n",
+		"\n",
+		"\n\n\n",
+		"abc\r\ndef",
+		"abc\rdef",
+		"abc\r",
+		"\r\n",
+		"\r\r\n",
+		"abc def",
+		"abc def",
+		"abcdef",
+		"a\vb\fc",
+		"下\n中",
+		"   ",
+		"a b cd",
+		// 0xC2 / 0xE2 followed by non-break continuations to exercise
+		// the false-positive paths.
+		"a b",   // NBSP starts with 0xC2 0xA0.
+		"a‰b‱c", // PER-MILLE / PER-TEN-THOUSAND start with 0xE2 0x80 0xB0/0xB1.
+	}
+	for _, s := range inputs {
+		t.Run(s, func(t *testing.T) {
+			var ref textutil.LineByteOffsets
+			ref.RebuildFromString(s)
+			want := make([]int, ref.LineCount())
+			for i := range want {
+				want[i] = ref.ByteOffsetByLineIndex(i)
+			}
+
+			// Try every possible single chunk split.
+			for split := 0; split <= len(s); split++ {
+				var l textutil.LineByteOffsets
+				err := l.Rebuild(func(w io.Writer) error {
+					if _, err := w.Write([]byte(s[:split])); err != nil {
+						return err
+					}
+					_, err := w.Write([]byte(s[split:]))
+					return err
+				})
+				if err != nil {
+					t.Fatalf("Rebuild(%q split %d): %v", s, split, err)
+				}
+				got := make([]int, l.LineCount())
+				for i := range got {
+					got[i] = l.ByteOffsetByLineIndex(i)
+				}
+				if !slices.Equal(got, want) {
+					t.Errorf("streaming %q split at %d: got %v, want %v", s, split, got, want)
+				}
+			}
+
+			// One-byte-at-a-time streaming: the most fragmented split.
+			var l textutil.LineByteOffsets
+			err := l.Rebuild(func(w io.Writer) error {
+				for j := range len(s) {
+					if _, err := w.Write([]byte{s[j]}); err != nil {
+						return err
+					}
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatalf("Rebuild(%q byte-by-byte): %v", s, err)
+			}
+			got := make([]int, l.LineCount())
+			for i := range got {
+				got[i] = l.ByteOffsetByLineIndex(i)
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("streaming %q byte-by-byte: got %v, want %v", s, got, want)
+			}
+		})
 	}
 }
 
