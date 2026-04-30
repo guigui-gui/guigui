@@ -1677,10 +1677,9 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 	if visualCount, ok := t.totalRenderingVisualLineCount(context, constraintWidth, bold); ok {
 		hi = int(math.Ceil(lineH * float64(visualCount)))
 	} else {
-		// Fallback: an active composition contains a hard line break or
-		// straddles a logical-line boundary, or a forced bold face would
-		// disagree with the cumulativeY cache. Materialize the full
-		// rendering text and let MeasureHeight do the layout walk.
+		// Fallback when an active composition contains a hard line break
+		// or straddles a logical-line boundary — the rendering text's
+		// logical-line shape doesn't match the committed sidecar.
 		txt := t.textToDraw(context, true)
 		h := textutil.MeasureHeight(constraintWidth, txt, t.autoWrap, t.face(context, bold), lineH, t.actualTabWidth(context), t.keepTailingSpace)
 		hi = int(math.Ceil(h))
@@ -1698,47 +1697,78 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 // totalRenderingVisualLineCount returns the visual-line count of the
 // rendering text (committed text with the active composition spliced in)
 // at the given width without materializing the full document. Returns
-// ok=false when the layout can't be computed per-line — the composition
-// contains a hard line break, the composition's selection straddles
-// logical lines, or autoWrap with a forced bold face that doesn't match
-// the cumulativeY cache's natural face. The caller falls back to
-// [textutil.MeasureHeight] on the full rendering text in that case.
+// ok=false when the composition contains a hard line break or the
+// composition's selection straddles logical lines; the caller falls
+// back to [textutil.MeasureHeight] on the full rendering text in that
+// case.
+//
+// For autoWrap, the fast path consults [Text.cumulativeVisualLineCount]
+// (the per-line wrap-count cache populated by [Text.cumulativeY]) when
+// the requested face matches the cache's natural face. Otherwise the
+// function walks logical lines manually with the requested face — still
+// reading each line via the per-range field methods, no full-document
+// materialization.
 func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int, bold bool) (int, bool) {
-	// cumulativeY measures with the natural face (t.face(context, false));
-	// if `bold` would force a different face, the cached visual-line
-	// counts can't be reused.
-	if t.autoWrap && bold && t.lastFaceCacheKey.weight != text.WeightBold {
-		return 0, false
-	}
-
 	t.ensureLineByteOffsets()
 	n := t.lineByteOffsets.LineCount()
 
-	var committedCount int
-	if t.autoWrap {
-		committedCount = t.cumulativeVisualLineCount(context, width, n)
-	} else {
-		committedCount = n
+	hasComp := t.field.UncommittedTextLengthInBytes() > 0
+	var sStart, sEnd, compLen, byteDelta int
+	selectionLineIdx := -1
+	if hasComp {
+		sStart, sEnd = t.field.Selection()
+		compLen = t.field.UncommittedTextLengthInBytes()
+		byteDelta = compLen - (sEnd - sStart)
+		compositionText := t.stringValueForRenderingRange(sStart, sStart+compLen)
+		if pos, _ := textutil.FirstLineBreakPositionAndLen(compositionText); pos >= 0 {
+			return 0, false
+		}
+		selectionLineIdx = t.lineByteOffsets.LineIndexForByteOffset(sStart)
+		if t.lineByteOffsets.LineIndexForByteOffset(sEnd) != selectionLineIdx {
+			return 0, false
+		}
 	}
 
-	if t.field.UncommittedTextLengthInBytes() == 0 {
-		return committedCount, true
-	}
-
-	sStart, sEnd := t.field.Selection()
-	compLen := t.field.UncommittedTextLengthInBytes()
-	compositionText := t.stringValueForRenderingRange(sStart, sStart+compLen)
-	if pos, _ := textutil.FirstLineBreakPositionAndLen(compositionText); pos >= 0 {
-		return 0, false
-	}
-	selectionLineIdx := t.lineByteOffsets.LineIndexForByteOffset(sStart)
-	if t.lineByteOffsets.LineIndexForByteOffset(sEnd) != selectionLineIdx {
-		return 0, false
-	}
-
+	// Non-autoWrap: each logical line is one visual line; composition
+	// can't change that (single-line composition keeps the line count).
 	if !t.autoWrap {
-		// A single-line composition doesn't change a non-autoWrap line's
-		// visual count (still one visual line).
+		return n, true
+	}
+
+	// AutoWrap with a bold face that disagrees with the cumulativeY
+	// cache's natural face: walk logical lines manually with the
+	// requested face. (Same shape as the cache fill, just without the
+	// cross-call caching benefit.)
+	if bold && t.lastFaceCacheKey.weight != text.WeightBold {
+		face := t.face(context, bold)
+		tabW := t.actualTabWidth(context)
+		keepTailing := t.keepTailingSpace
+		measureWidth := width
+		if measureWidth <= 0 {
+			measureWidth = math.MaxInt
+		}
+		totalLen := t.field.TextLengthInBytes()
+		var count int
+		for i := range n {
+			cs := t.lineByteOffsets.ByteOffsetByLineIndex(i)
+			ce := totalLen
+			if i+1 < n {
+				ce = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
+			}
+			var line string
+			if hasComp && i == selectionLineIdx {
+				line = t.stringValueForRenderingRange(cs, ce+byteDelta)
+			} else {
+				line = t.stringValueWithRange(cs, ce)
+			}
+			count += textutil.VisualLineCountForLogicalLine(measureWidth, line, true, face, tabW, keepTailing)
+		}
+		return count, true
+	}
+
+	// Fast path: requested face matches the cumulativeY cache.
+	committedCount := t.cumulativeVisualLineCount(context, width, n)
+	if !hasComp {
 		return committedCount, true
 	}
 
@@ -1747,7 +1777,6 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 	if selectionLineIdx+1 < n {
 		ce = t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
 	}
-	byteDelta := compLen - (sEnd - sStart)
 	committedSelectionLine := t.stringValueWithRange(cs, ce)
 	renderingSelectionLine := t.stringValueForRenderingRange(cs, ce+byteDelta)
 	face := t.face(context, false)
