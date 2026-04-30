@@ -1672,9 +1672,19 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 		return e.height
 	}
 
-	txt := t.textToDraw(context, true)
-	h := textutil.MeasureHeight(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace)
-	hi := int(math.Ceil(h))
+	lineH := t.lineHeight(context)
+	var hi int
+	if visualCount, ok := t.totalRenderingVisualLineCount(context, constraintWidth, bold); ok {
+		hi = int(math.Ceil(lineH * float64(visualCount)))
+	} else {
+		// Fallback: an active composition contains a hard line break or
+		// straddles a logical-line boundary, or a forced bold face would
+		// disagree with the cumulativeY cache. Materialize the full
+		// rendering text and let MeasureHeight do the layout walk.
+		txt := t.textToDraw(context, true)
+		h := textutil.MeasureHeight(constraintWidth, txt, t.autoWrap, t.face(context, bold), lineH, t.actualTabWidth(context), t.keepTailingSpace)
+		hi = int(math.Ceil(h))
+	}
 
 	copy(t.cachedTextHeights[key][1:], t.cachedTextHeights[key][:])
 	t.cachedTextHeights[key][0] = cachedTextHeightEntry{
@@ -1683,6 +1693,73 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 	}
 
 	return hi
+}
+
+// totalRenderingVisualLineCount returns the visual-line count of the
+// rendering text (committed text with the active composition spliced in)
+// at the given width without materializing the full document. Returns
+// ok=false when the layout can't be computed per-line — the composition
+// contains a hard line break, the composition's selection straddles
+// logical lines, or autoWrap with a forced bold face that doesn't match
+// the cumulativeY cache's natural face. The caller falls back to
+// [textutil.MeasureHeight] on the full rendering text in that case.
+func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int, bold bool) (int, bool) {
+	// cumulativeY measures with the natural face (t.face(context, false));
+	// if `bold` would force a different face, the cached visual-line
+	// counts can't be reused.
+	if t.autoWrap && bold && t.lastFaceCacheKey.weight != text.WeightBold {
+		return 0, false
+	}
+
+	t.ensureLineByteOffsets()
+	n := t.lineByteOffsets.LineCount()
+
+	var committedCount int
+	if t.autoWrap {
+		committedCount = t.cumulativeVisualLineCount(context, width, n)
+	} else {
+		committedCount = n
+	}
+
+	if t.field.UncommittedTextLengthInBytes() == 0 {
+		return committedCount, true
+	}
+
+	sStart, sEnd := t.field.Selection()
+	compLen := t.field.UncommittedTextLengthInBytes()
+	compositionText := t.stringValueForRenderingRange(sStart, sStart+compLen)
+	if pos, _ := textutil.FirstLineBreakPositionAndLen(compositionText); pos >= 0 {
+		return 0, false
+	}
+	selectionLineIdx := t.lineByteOffsets.LineIndexForByteOffset(sStart)
+	if t.lineByteOffsets.LineIndexForByteOffset(sEnd) != selectionLineIdx {
+		return 0, false
+	}
+
+	if !t.autoWrap {
+		// A single-line composition doesn't change a non-autoWrap line's
+		// visual count (still one visual line).
+		return committedCount, true
+	}
+
+	cs := t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
+	ce := t.field.TextLengthInBytes()
+	if selectionLineIdx+1 < n {
+		ce = t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
+	}
+	byteDelta := compLen - (sEnd - sStart)
+	committedSelectionLine := t.stringValueWithRange(cs, ce)
+	renderingSelectionLine := t.stringValueForRenderingRange(cs, ce+byteDelta)
+	face := t.face(context, false)
+	tabW := t.actualTabWidth(context)
+	keepTailing := t.keepTailingSpace
+	measureWidth := width
+	if measureWidth <= 0 {
+		measureWidth = math.MaxInt
+	}
+	committedSpliceCount := textutil.VisualLineCountForLogicalLine(measureWidth, committedSelectionLine, true, face, tabW, keepTailing)
+	renderingSpliceCount := textutil.VisualLineCountForLogicalLine(measureWidth, renderingSelectionLine, true, face, tabW, keepTailing)
+	return committedCount + (renderingSpliceCount - committedSpliceCount), true
 }
 
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
