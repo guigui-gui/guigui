@@ -1791,6 +1791,70 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 	return committedCount + (renderingSpliceCount - committedSpliceCount), true
 }
 
+// totalRenderingMeasurement returns the rendered width and height of the
+// rendering text (committed text with the active composition spliced in)
+// at the given width without materializing the full document. Walks
+// logical lines via [Text.lineByteOffsets], reading each via the per-
+// range field methods (committed line bytes for unaffected lines, the
+// rendering line bytes for the selection line under composition), and
+// shapes each line with [textutil.MeasureLogicalLine] using
+// [Text.face](context, bold) — so bold and tabular settings are picked
+// up directly from the requested face, no cache to mismatch.
+//
+// Returns ok=false when the composition contains a hard line break or
+// when the composition's selection straddles logical lines; the caller
+// falls back to [textutil.Measure] on the full rendering text.
+func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bold bool, ellipsisString string) (float64, float64, bool) {
+	t.ensureLineByteOffsets()
+	n := t.lineByteOffsets.LineCount()
+
+	hasComp := t.field.UncommittedTextLengthInBytes() > 0
+	var sStart, sEnd, compLen, byteDelta int
+	selectionLineIdx := -1
+	if hasComp {
+		sStart, sEnd = t.field.Selection()
+		compLen = t.field.UncommittedTextLengthInBytes()
+		byteDelta = compLen - (sEnd - sStart)
+		compositionText := t.stringValueForRenderingRange(sStart, sStart+compLen)
+		if pos, _ := textutil.FirstLineBreakPositionAndLen(compositionText); pos >= 0 {
+			return 0, 0, false
+		}
+		selectionLineIdx = t.lineByteOffsets.LineIndexForByteOffset(sStart)
+		if t.lineByteOffsets.LineIndexForByteOffset(sEnd) != selectionLineIdx {
+			return 0, 0, false
+		}
+	}
+
+	lineH := t.lineHeight(context)
+	face := t.face(context, bold)
+	tabW := t.actualTabWidth(context)
+	keepTailing := t.keepTailingSpace
+	measureWidth := width
+	if measureWidth <= 0 {
+		measureWidth = math.MaxInt
+	}
+	totalLen := t.field.TextLengthInBytes()
+
+	var maxWidth, height float64
+	for i := range n {
+		cs := t.lineByteOffsets.ByteOffsetByLineIndex(i)
+		ce := totalLen
+		if i+1 < n {
+			ce = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
+		}
+		var line string
+		if hasComp && i == selectionLineIdx {
+			line = t.stringValueForRenderingRange(cs, ce+byteDelta)
+		} else {
+			line = t.stringValueWithRange(cs, ce)
+		}
+		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.autoWrap, face, lineH, tabW, keepTailing, ellipsisString)
+		maxWidth = max(maxWidth, w)
+		height += h
+	}
+	return maxWidth, height, true
+}
+
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
 	constraintWidth := math.MaxInt
 	if w, ok := constraints.FixedWidth(); ok {
@@ -1846,12 +1910,19 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		return image.Pt(width, height)
 	}
 
-	txt := t.textToDraw(context, true)
 	ellipsisString := t.ellipsisString
 	if t.editable {
 		ellipsisString = ""
 	}
-	w, h := textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
+	var w, h float64
+	if mw, mh, ok := t.totalRenderingMeasurement(context, constraintWidth, bold, ellipsisString); ok {
+		w, h = mw, mh
+	} else {
+		// Fallback when the composition contains a hard line break or
+		// straddles logical lines.
+		txt := t.textToDraw(context, true)
+		w, h = textutil.Measure(constraintWidth, txt, t.autoWrap, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
+	}
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its cursor is rendered.
 	// Force to set a positive number as the width.
 	w = max(w, 1)
