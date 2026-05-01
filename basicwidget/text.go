@@ -12,7 +12,6 @@ import (
 	"math"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
@@ -137,19 +136,19 @@ type Text struct {
 	contentHasher xxh3.Hasher128
 
 	// contentHashCache memoizes the most recently computed hash, keyed by
-	// [textinput.Field.ChangedAt]. While the field has not been mutated, repeated
+	// [textinput.Field.Generation]. While the field has not been mutated, repeated
 	// [Text.WriteStateKey] calls return the cached value without re-hashing.
-	contentHashCache          xxh3.Uint128
-	contentHashFieldChangedAt time.Time
+	contentHashCache           xxh3.Uint128
+	contentHashFieldGeneration int64
 
 	// lineByteOffsets holds the byte offsets where each logical line begins
 	// in the field's committed text. Used by virtualized layout paths that
 	// need to walk a window of logical lines without rescanning the whole
 	// buffer. Refreshed lazily by ensureLineByteOffsets when
-	// [textinput.Field.ChangedAt] advances past
-	// lineByteOffsetsFieldChangedAt.
-	lineByteOffsets               textutil.LineByteOffsets
-	lineByteOffsetsFieldChangedAt time.Time
+	// [textinput.Field.Generation] advances past
+	// lineByteOffsetsFieldGeneration.
+	lineByteOffsets                textutil.LineByteOffsets
+	lineByteOffsetsFieldGeneration int64
 
 	// cumulativeYs[i] is the rendered Y offset (in pixels, ceiled
 	// per-line) of the start of logical line i, used by virtualizing
@@ -223,7 +222,7 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 // ever consults the cache when autoWrap is true; the off case
 // short-circuits to lineIdx*lineHeight without touching cumulativeYs.
 type cumulativeYsKey struct {
-	fieldChangedAt   time.Time
+	fieldGeneration  int64
 	face             faceCacheKey
 	width            int
 	lineHeight       float64
@@ -252,14 +251,14 @@ func (t *Text) onScrollDelta(f func(context *guigui.Context, deltaX, deltaY floa
 // contents, including the active IME composition (matching what [Text.Draw]
 // and [Text.Measure] see).
 func (t *Text) contentHashForStateKey() xxh3.Uint128 {
-	changedAt := t.field.ChangedAt()
-	if changedAt.Equal(t.contentHashFieldChangedAt) {
+	generation := t.field.Generation()
+	if generation == t.contentHashFieldGeneration {
 		return t.contentHashCache
 	}
 	t.contentHasher.Reset()
 	_ = t.field.WriteTextForRendering(&t.contentHasher)
 	t.contentHashCache = t.contentHasher.Sum128()
-	t.contentHashFieldChangedAt = changedAt
+	t.contentHashFieldGeneration = generation
 	return t.contentHashCache
 }
 
@@ -268,12 +267,12 @@ func (t *Text) contentHashForStateKey() xxh3.Uint128 {
 // only (no IME composition), matching what [textinput.Field.WriteText]
 // returns.
 func (t *Text) ensureLineByteOffsets() {
-	changedAt := t.field.ChangedAt()
-	if t.lineByteOffsets.LineCount() > 0 && changedAt.Equal(t.lineByteOffsetsFieldChangedAt) {
+	generation := t.field.Generation()
+	if t.lineByteOffsets.LineCount() > 0 && generation == t.lineByteOffsetsFieldGeneration {
 		return
 	}
 	_ = t.lineByteOffsets.Rebuild(t.field.WriteText)
-	t.lineByteOffsetsFieldChangedAt = changedAt
+	t.lineByteOffsetsFieldGeneration = generation
 }
 
 // cumulativeY returns the rendered Y offset (in pixels, ceiled per-line)
@@ -299,7 +298,7 @@ func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int 
 	lineIdx = min(max(lineIdx, 0), n)
 
 	key := cumulativeYsKey{
-		fieldChangedAt:   t.field.ChangedAt(),
+		fieldGeneration:  t.field.Generation(),
 		face:             t.lastFaceCacheKey,
 		width:            width,
 		lineHeight:       t.lineHeight(context),
