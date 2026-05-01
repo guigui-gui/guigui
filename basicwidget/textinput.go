@@ -359,7 +359,7 @@ func (t *textInput) SetHorizontalAlign(halign HorizontalAlign) {
 }
 
 func (t *textInput) SetVerticalAlign(valign VerticalAlign) {
-	t.text.Text().SetVerticalAlign(valign)
+	t.text.SetVerticalAlign(valign)
 }
 
 func (t *textInput) SetAutoWrap(autoWrap bool) {
@@ -648,6 +648,16 @@ type textInputText struct {
 	containerBounds image.Rectangle
 	padding         guigui.Padding
 
+	// vAlign is the user-set vertical alignment for the TextInput. The inner
+	// [*Text] widget is intentionally left at its default ([VerticalAlignTop])
+	// so its own per-line shaping (via [Text.textContentBounds] /
+	// [Text.textHeight]) doesn't run on every Draw - dominant for autoWrap
+	// on multi-megabyte buffers. Instead, [textInputText.Layout] applies
+	// vAlign as a Min.Y shift on textBounds when the document fits the
+	// viewport; when it overflows, vAlign is moot and the panel's scroll
+	// state owns vertical positioning.
+	vAlign VerticalAlign
+
 	// panel is the [virtualScrollPanel] this content lives inside, set by
 	// [textInput.Build]. Layout uses windowed positioning anchored at the
 	// panel's topItemIndex/topItemOffset, and the [virtualScrollContent]
@@ -679,9 +689,17 @@ func (t *textInputText) setEditable(editable bool) {
 	t.text.Widget().SetEditable(editable)
 }
 
+// SetVerticalAlign records the user-set vertical alignment. The inner
+// [*Text] widget is not updated - see the [textInputText.vAlign] field
+// comment for why.
+func (t *textInputText) SetVerticalAlign(valign VerticalAlign) {
+	t.vAlign = valign
+}
+
 func (t *textInputText) WriteStateKey(w *guigui.StateKeyWriter) {
 	writeRectangle(w, t.containerBounds)
 	writePadding(w, t.padding)
+	w.WriteUint64(uint64(t.vAlign))
 }
 
 func (t *textInputText) setContainerBounds(bounds image.Rectangle) {
@@ -855,12 +873,13 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 		topOff = 0
 	}
 
+	viewportInner := bounds.Dy() - t.padding.Top - t.padding.Bottom
+
 	// Bottom clamp: if the last logical line is visible with empty space
 	// below, pull topIdx backward so the document's last line aligns with
 	// the viewport bottom rather than leaving a gap. Mirrors the pre-pass
 	// in listContent.layoutItems.
 	{
-		viewportInner := bounds.Dy() - t.padding.Top - t.padding.Bottom
 		y := topOff
 		var reachedEnd bool
 		for ai := topIdx; ai < n; ai++ {
@@ -897,6 +916,32 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	textBounds.Min.X += t.padding.Start
 	textBounds.Min.Y += topYOffset + t.padding.Top
 	textBounds.Max.X -= t.padding.End
+
+	// Apply the user-set vertical alignment as a Min.Y shift, but only when
+	// the document fits the viewport. When it overflows, vAlign is moot -
+	// the panel's scroll state owns vertical positioning. The cheap upper-
+	// bound predicate n*lh >= viewportInner short-circuits the texteditor
+	// case (huge n) without walking any lines; in the may-fit branch n is
+	// bounded by viewportInner/lh so the walk is O(viewport).
+	if t.vAlign != VerticalAlignTop && n*lh <= viewportInner {
+		var sum int
+		for i := range n {
+			sum += t.measureItemHeight(context, i)
+			if sum > viewportInner {
+				break
+			}
+		}
+		if sum <= viewportInner {
+			var alignOffset int
+			switch t.vAlign {
+			case VerticalAlignMiddle:
+				alignOffset = (viewportInner - sum) / 2
+			case VerticalAlignBottom:
+				alignOffset = viewportInner - sum
+			}
+			textBounds.Min.Y += alignOffset
+		}
+	}
 
 	// The *Text widget only needs to cover the viewport for hit testing -
 	// clicks past the viewport can't reach it because the panel clips.

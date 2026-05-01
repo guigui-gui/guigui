@@ -1590,7 +1590,14 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 }
 
 func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	textBounds := t.textContentBounds(context, widgetBounds.Bounds())
+	// Skip textContentBounds for vAlign=Top to avoid its [Text.textHeight]
+	// call, which walks every logical line for autoWrap.
+	var textBounds image.Rectangle
+	if t.vAlign == VerticalAlignTop {
+		textBounds = widgetBounds.Bounds()
+	} else {
+		textBounds = t.textContentBounds(context, widgetBounds.Bounds())
+	}
 	if !textBounds.Overlaps(widgetBounds.VisibleBounds()) {
 		return
 	}
