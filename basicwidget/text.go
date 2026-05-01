@@ -200,6 +200,19 @@ type Text struct {
 	// buffers without swallowing the legitimate commit that follows a user
 	// edit at the same generation as the prior uncommitted dispatch.
 	lastDispatchedCommittedGen int64
+
+	// firstLogicalLineInViewport is the logical-line index that sits
+	// at widget-local Y=0 — the first line drawn at the top of the
+	// widget. The default zero value means "line 0 at the top,"
+	// matching the historical line-0-anchored coordinate system.
+	// Virtualizing parents (e.g. [textInputText.Layout]) set it to
+	// the panel's topItemIndex so the inner Y math is taken relative
+	// to the visible region, avoiding an O(topIdx) cumulative-Y walk
+	// on every Layout. Set via [Text.setFirstLogicalLineInViewport];
+	// consumers (Draw, hit-testing, cursor positioning) will read it
+	// incrementally as the anchored coordinate system rolls in across
+	// phases.
+	firstLogicalLineInViewport int
 }
 
 type cachedTextWidthEntry struct {
@@ -921,6 +934,18 @@ func (t *Text) SetEllipsisString(str string) {
 
 func (t *Text) setKeepTailingSpace(keep bool) {
 	t.keepTailingSpace = keep
+}
+
+// setFirstLogicalLineInViewport tells the widget which logical line
+// should sit at widget-local Y=0 — i.e., the first line drawn at the
+// top of the widget. Default 0 means "line 0 at the top," the
+// historical behavior; virtualizing parents set this to the topmost
+// visible logical line so the widget can position itself without a
+// per-line cumulative-Y walk. Subsequent phases plug this value into
+// [Text.restrictedTextToDraw], hit testing, and cursor positioning;
+// for now writing it has no observable effect.
+func (t *Text) setFirstLogicalLineInViewport(idx int) {
+	t.firstLogicalLineInViewport = max(idx, 0)
 }
 
 func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
