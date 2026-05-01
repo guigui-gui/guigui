@@ -5,7 +5,6 @@ package textutil
 
 import (
 	"image"
-	"sort"
 )
 
 // TextIndexFromPositionParams describes the inputs for
@@ -65,13 +64,24 @@ type TextIndexFromPositionParams struct {
 	SelectionEnd   int
 	CompositionLen int
 
-	// PrecedingVisualLineCount returns the cumulative number of
-	// visual lines for committed-text logical lines [0, lineIdx).
-	// For non-autoWrap text this is just lineIdx; for autoWrap it
-	// must be served from a cache to preserve the O(log n + lineLen)
-	// per-call cost (otherwise this dominates). Required when
-	// LineByteOffsets is set and Options.AutoWrap is true.
-	PrecedingVisualLineCount func(lineIdx int) int
+	// LogicalLineIndexHint / VisualLineIndexHint are an optional hint
+	// that tells [TextIndexFromPosition] where to start its per-
+	// logical-line walk instead of starting from line 0.
+	// LogicalLineIndexHint is a logical-line index in committed text;
+	// VisualLineIndexHint is the cumulative number of visual lines
+	// preceding that logical line in committed text. The walk steps
+	// forward (or backward) from the hint measuring one logical line
+	// at a time, so a caller that places the hint inside its viewport
+	// pays O(visible lines) of typesetting per query instead of
+	// walking from the document top.
+	//
+	// Both fields are optional. The zero value means "start from line
+	// 0," equivalent to walking from the top of the document — correct
+	// but O(documentLen) for autoWrap when the click is far down.
+	// Used only when LineByteOffsets is set and Options.AutoWrap is
+	// true.
+	LogicalLineIndexHint int
+	VisualLineIndexHint  int
 }
 
 // readRenderingTextRange returns rendering[start:end), preferring the
@@ -103,11 +113,13 @@ func (p *TextIndexFromPositionParams) getRenderingTextLength() int {
 }
 
 // TextIndexFromPosition returns the byte offset in p.RenderingText
-// closest to p.Position. When p.LineByteOffsets and (for autoWrap)
-// p.PrecedingVisualLineCount are supplied, the visual-line walk is
-// localized to the single logical line covering p.Position.Y - O(log n
-// committed-line lookups) instead of the O(documentLen) full scan the
-// sidecar-less fallback performs.
+// closest to p.Position. When p.LineByteOffsets is supplied, the
+// visual-line walk is localized: it starts from
+// (p.LogicalLineIndexHint, p.VisualLineIndexHint) and steps forward
+// (or backward) one logical line at a time until the line covering
+// p.Position.Y is found. With the hint placed inside the viewport
+// this costs O(visible lines) of typesetting per query, instead of
+// the O(documentLen) full scan the sidecar-less fallback performs.
 //
 // When an active IME composition splices into p.RenderingText, the
 // committed-text sidecar is reused: byte/visual-line shifts derived
@@ -186,69 +198,107 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	padding := textPadding(p.Options.Face, p.Options.LineHeight)
 	target := max(int((float64(p.Position.Y)+padding)/p.Options.LineHeight), 0)
 
-	// committedVisualOffset returns the rendering visual-line index
-	// of the start of committed line idx. For non-autoWrap this is
-	// just idx; for autoWrap it consults the preceding-count callback
-	// and applies the splice delta.
-	committedVisualOffset := func(idx int) int {
-		if !p.Options.AutoWrap {
-			return idx
-		}
-		var v int
-		if p.PrecedingVisualLineCount != nil {
-			v = p.PrecedingVisualLineCount(idx)
-		}
-		if hasComp && idx > compInfo.LineIndex {
-			v += selectionLineVisualCountDelta
-		}
-		return v
-	}
-
-	// Locate the committed logical line whose visual range covers
-	// target. For non-autoWrap each logical line is one visual line,
-	// so target IS the line index (clamped). For autoWrap, binary-
-	// search on committedVisualOffset for the largest idx with
-	// committedVisualOffset(idx) <= target.
-	var committedLineIdx int
-	if !p.Options.AutoWrap {
-		committedLineIdx = min(max(target, 0), n-1)
-	} else {
-		committedLineIdx = max(sort.Search(n, func(i int) bool {
-			return committedVisualOffset(i) > target
-		})-1, 0)
-	}
-
-	committedLineStart := p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx)
 	committedTextLen := p.getRenderingTextLength()
 	if hasComp {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
-	committedLineEnd := committedTextLen
-	if committedLineIdx+1 < n {
-		committedLineEnd = p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx + 1)
-	}
 
-	renderingLineStart := committedLineStart
-	renderingLineEnd := committedLineEnd
-	if hasComp {
+	// renderingRangeForLogicalLine returns the [start, end) byte
+	// offsets, into the rendering text, of the committed-text logical
+	// line at logicalLineIdx. For lines before the composition the
+	// rendering range coincides with the committed range; on the
+	// composition line the range is extended by RenderingByteShift to
+	// include the spliced bytes; lines after the composition shift by
+	// the same amount.
+	renderingRangeForLogicalLine := func(logicalLineIdx int) (start, end int) {
+		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(logicalLineIdx)
+		committedEnd := committedTextLen
+		if logicalLineIdx+1 < n {
+			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(logicalLineIdx + 1)
+		}
+		if !hasComp {
+			return committedStart, committedEnd
+		}
 		switch {
-		case committedLineIdx < compInfo.LineIndex:
-			// identity
-		case committedLineIdx == compInfo.LineIndex:
-			renderingLineEnd += compInfo.RenderingByteShift
+		case logicalLineIdx < compInfo.LineIndex:
+			return committedStart, committedEnd
+		case logicalLineIdx == compInfo.LineIndex:
+			return committedStart, committedEnd + compInfo.RenderingByteShift
 		default:
-			renderingLineStart += compInfo.RenderingByteShift
-			renderingLineEnd += compInfo.RenderingByteShift
+			return committedStart + compInfo.RenderingByteShift, committedEnd + compInfo.RenderingByteShift
 		}
 	}
 
+	// renderingVisualLineCount returns the rendering-plane visual-line
+	// count of the logical line at idx. For non-autoWrap text this is
+	// always 1; for autoWrap it shapes the line content via
+	// VisualLineCountForLogicalLine.
+	renderingVisualLineCount := func(idx int) int {
+		if !p.Options.AutoWrap {
+			return 1
+		}
+		s, e := renderingRangeForLogicalLine(idx)
+		return VisualLineCountForLogicalLine(p.Width, p.readRenderingTextRange(s, e), true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+	}
+
+	// Locate the committed logical line whose visual range covers
+	// target. For non-autoWrap each logical line is one visual line,
+	// so target IS the line index (clamped). For autoWrap, walk
+	// forward (or backward) from the caller-supplied hint measuring
+	// each logical line's wrap count until the running visual offset
+	// crosses target. The hint lets the caller scope work to the
+	// viewport — without it (zero values) the walk starts from line 0
+	// and degrades to O(documentLen).
+	var logicalLineIndex int
+	var logicalLineVisualOriginIndex int
+	if !p.Options.AutoWrap {
+		logicalLineIndex = min(max(target, 0), n-1)
+		logicalLineVisualOriginIndex = logicalLineIndex
+	} else {
+		hintLL := min(max(p.LogicalLineIndexHint, 0), n-1)
+		hintVL := max(p.VisualLineIndexHint, 0)
+		// Translate the committed-text hint into a rendering-text
+		// visual offset by applying the composition delta when the
+		// hint sits past the composition's line.
+		if hasComp && hintLL > compInfo.LineIndex {
+			hintVL += selectionLineVisualCountDelta
+		}
+
+		curLL := hintLL
+		curVL := hintVL
+		if target >= hintVL {
+			for curLL < n-1 {
+				c := renderingVisualLineCount(curLL)
+				if curVL+c > target {
+					break
+				}
+				curVL += c
+				curLL++
+			}
+		} else {
+			for curLL > 0 {
+				curLL--
+				c := renderingVisualLineCount(curLL)
+				curVL -= c
+				if curVL <= target {
+					break
+				}
+			}
+			if curVL < 0 {
+				curVL = 0
+			}
+		}
+		logicalLineIndex = curLL
+		logicalLineVisualOriginIndex = curVL
+	}
+
+	renderingLineStart, renderingLineEnd := renderingRangeForLogicalLine(logicalLineIndex)
 	line := p.readRenderingTextRange(renderingLineStart, renderingLineEnd)
 
 	// Translate the position into the logical line's local Y so
 	// TextIndexFromPositionInLogicalLine picks the right visual
 	// subline.
-	visualLineOriginIdx := committedVisualOffset(committedLineIdx)
-	localY := p.Position.Y - int(float64(visualLineOriginIdx)*p.Options.LineHeight)
+	localY := p.Position.Y - int(float64(logicalLineVisualOriginIndex)*p.Options.LineHeight)
 	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(p.Position.X, localY), line, p.Options)
 	return renderingLineStart + pos
 }

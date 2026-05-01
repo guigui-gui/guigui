@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"math"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -2057,13 +2058,27 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 	position = position.Sub(textContentBounds.Min)
 
-	// Pass the cached lineByteOffsets sidecar and cumulativeVisualLineCount
-	// callback so [textutil.TextIndexFromPosition] localizes the visual-
-	// line walk to the single logical line covering position.Y. The
-	// sidecar-less fallback walks every visual line in the document; for
-	// drag-select on multi-megabyte buffers this fires every tick from
-	// [Text.HandlePointingInput] and dominates CPU.
+	// Pass a logical-line hint to [textutil.TextIndexFromPosition] so
+	// its per-line walk starts inside the viewport instead of at line
+	// 0. The hint is taken from t.cumulativeYs, which Layout has
+	// already populated up to the topmost visible line — calling
+	// t.cumulativeY(context, width, 0) here just refreshes the
+	// cumulativeYs cache key without extending it. Without a hint,
+	// the walk starts at line 0 and degrades to O(documentLen) for
+	// multi-megabyte buffers, which dominates CPU when drag-select
+	// fires this every tick from [Text.HandlePointingInput].
 	t.ensureLineByteOffsets()
+	var hintLL, hintVL int
+	if t.autoWrap {
+		t.cumulativeY(context, width, 0)
+		if k := len(t.cumulativeYs); k > 0 {
+			hintLL = max(sort.Search(k, func(i int) bool {
+				return t.cumulativeYs[i] > position.Y
+			})-1, 0)
+			hintVL = t.cumulativeVisualLineCounts[hintLL]
+		}
+	}
+
 	readRendering := func(start, end int) string { return t.stringValueWithRange(start, end) }
 	if showComposition {
 		readRendering = func(start, end int) string { return t.stringValueForRenderingRange(start, end) }
@@ -2073,17 +2088,18 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
 	}
 	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
-		Position:                 position,
-		RenderingTextRange:       readRendering,
-		RenderingTextLength:      renderingLength,
-		Width:                    width,
-		Options:                  op,
-		CommittedTextRange:       readCommitted,
-		LineByteOffsets:          &t.lineByteOffsets,
-		SelectionStart:           sStart,
-		SelectionEnd:             sEnd,
-		CompositionLen:           compLen,
-		PrecedingVisualLineCount: func(lineIdx int) int { return t.cumulativeVisualLineCount(context, width, lineIdx) },
+		Position:             position,
+		RenderingTextRange:   readRendering,
+		RenderingTextLength:  renderingLength,
+		Width:                width,
+		Options:              op,
+		CommittedTextRange:   readCommitted,
+		LineByteOffsets:      &t.lineByteOffsets,
+		SelectionStart:       sStart,
+		SelectionEnd:         sEnd,
+		CompositionLen:       compLen,
+		LogicalLineIndexHint: hintLL,
+		VisualLineIndexHint:  hintVL,
 	})
 	if idx < 0 || idx > renderingLength {
 		return -1

@@ -19,7 +19,8 @@ import (
 func withoutIndexSidecar(p *textutil.TextIndexFromPositionParams) *textutil.TextIndexFromPositionParams {
 	q := *p
 	q.LineByteOffsets = nil
-	q.PrecedingVisualLineCount = nil
+	q.LogicalLineIndexHint = 0
+	q.VisualLineIndexHint = 0
 	return &q
 }
 
@@ -54,11 +55,10 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 				var l textutil.LineByteOffsets
 				l.RebuildFromString(tc.str)
 				params := &textutil.TextIndexFromPositionParams{
-					RenderingText:            tc.str,
-					Width:                    width,
-					Options:                  op,
-					LineByteOffsets:          &l,
-					PrecedingVisualLineCount: precedingVisualLineCountFromString(tc.str, width, autoWrap, face, 0, false),
+					RenderingText:   tc.str,
+					Width:           width,
+					Options:         op,
+					LineByteOffsets: &l,
 				}
 
 				lineCount := l.LineCount()
@@ -94,11 +94,10 @@ func TestTextIndexFromPositionSidecarAutoWrap(t *testing.T) {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(str)
 	params := &textutil.TextIndexFromPositionParams{
-		RenderingText:            str,
-		Width:                    narrowWidth,
-		Options:                  op,
-		LineByteOffsets:          &l,
-		PrecedingVisualLineCount: precedingVisualLineCountFromString(str, narrowWidth, true, face, 0, false),
+		RenderingText:   str,
+		Width:           narrowWidth,
+		Options:         op,
+		LineByteOffsets: &l,
 	}
 
 	totalVL := textutil.MeasureHeight(narrowWidth, str, true, face, lineHeight, 0, false) / lineHeight
@@ -111,6 +110,63 @@ func TestTextIndexFromPositionSidecarAutoWrap(t *testing.T) {
 				t.Errorf("vl=%d x=%d: idx=%d, want %d", vl, x, got, want)
 			}
 		}
+	}
+}
+
+// TestTextIndexFromPositionHintParity sweeps non-zero hint values
+// across the document and asserts the hint-walk path matches the
+// sidecar-less fallback. This exercises forward walk (hint before
+// the click), backward walk (hint past the click), and the document
+// boundaries — paths that the default zero-hint sweeps don't cover.
+func TestTextIndexFromPositionHintParity(t *testing.T) {
+	const lineHeight = 24.0
+	face := newTestFace(t)
+
+	cases := []struct {
+		name     string
+		str      string
+		width    int
+		autoWrap bool
+	}{
+		{"three lines no wrap", "abc\ndef\nghi", math.MaxInt, false},
+		{"three lines autoWrap no wrap", "abc\ndef\nghi", math.MaxInt, true},
+		{"middle line wraps", "first\nthe quick brown fox jumps over the lazy dog\nlast", 80, true},
+		{"trailing LF", "abc\ndef\n", math.MaxInt, true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name+autoWrapSuffix(tc.autoWrap), func(t *testing.T) {
+			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: tc.autoWrap}
+			var l textutil.LineByteOffsets
+			l.RebuildFromString(tc.str)
+			n := l.LineCount()
+			if n == 0 {
+				n = 1
+			}
+			precVL := precedingVisualLineCountFromString(tc.str, tc.width, tc.autoWrap, face, 0, false)
+
+			totalVL := int(textutil.MeasureHeight(tc.width, tc.str, tc.autoWrap, face, lineHeight, 0, false) / lineHeight)
+			for hint := 0; hint < n; hint++ {
+				params := &textutil.TextIndexFromPositionParams{
+					RenderingText:        tc.str,
+					Width:                tc.width,
+					Options:              op,
+					LineByteOffsets:      &l,
+					LogicalLineIndexHint: hint,
+					VisualLineIndexHint:  precVL(hint),
+				}
+				for vl := 0; vl < totalVL+2; vl++ {
+					for _, x := range []int{-10, 0, 30, 200} {
+						params.Position = image.Pt(x, int(float64(vl)*lineHeight))
+						want := textutil.TextIndexFromPosition(withoutIndexSidecar(params))
+						got := textutil.TextIndexFromPosition(params)
+						if got != want {
+							t.Errorf("hint=%d vl=%d x=%d: idx=%d, want %d", hint, vl, x, got, want)
+						}
+					}
+				}
+			}
+		})
 	}
 }
 
@@ -144,15 +200,14 @@ func TestTextIndexFromPositionSidecarComposition(t *testing.T) {
 			var l textutil.LineByteOffsets
 			l.RebuildFromString(tc.committed)
 			params := &textutil.TextIndexFromPositionParams{
-				RenderingText:            rendering,
-				Width:                    width,
-				Options:                  op,
-				CommittedText:            tc.committed,
-				LineByteOffsets:          &l,
-				SelectionStart:           tc.c.sStart,
-				SelectionEnd:             tc.c.sEnd,
-				CompositionLen:           tc.c.compLen,
-				PrecedingVisualLineCount: precedingVisualLineCountFromString(tc.committed, width, false, face, 0, false),
+				RenderingText:   rendering,
+				Width:           width,
+				Options:         op,
+				CommittedText:   tc.committed,
+				LineByteOffsets: &l,
+				SelectionStart:  tc.c.sStart,
+				SelectionEnd:    tc.c.sEnd,
+				CompositionLen:  tc.c.compLen,
 			}
 			renderingLineCount := 1
 			for _, c := range rendering {
