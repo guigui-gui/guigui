@@ -898,31 +898,31 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	textBounds.Min.Y += topYOffset + t.padding.Top
 	textBounds.Max.X -= t.padding.End
 
-	contentWidth := max(bounds.Dx()-t.padding.Start-t.padding.End, 0)
-	docHeight := txt.textHeight(context, guigui.FixedWidthConstraints(contentWidth))
-	textBounds.Max.Y = textBounds.Min.Y + docHeight
-	// Ensure the *Text widget covers the full viewport vertically so clicks
-	// in the empty area below short documents still hit it (cursor I-beam,
-	// click-to-focus, click-to-position-cursor). The widget area extending
-	// beyond docHeight is just empty: [Text.Draw] only renders up to the
-	// actual content.
-	if minMaxY := bounds.Max.Y - t.padding.Bottom; textBounds.Max.Y < minMaxY {
-		textBounds.Max.Y = minMaxY
-	}
+	// The *Text widget only needs to cover the viewport for hit testing -
+	// clicks past the viewport can't reach it because the panel clips.
+	// Inside Text, positioning is anchored on textBounds.Min.Y plus per-line
+	// cumulativeY, and [Text.textContentBounds] recomputes the content
+	// extent itself; the input Max.Y doesn't propagate into Text's content
+	// layout. So Max.Y just needs to bottom out at the panel viewport.
+	textBounds.Max.Y = bounds.Max.Y - t.padding.Bottom
 
 	textBounds = textBounds.Add(image.Pt(0, int(0.5*context.Scale())))
 	layouter.LayoutWidget(&t.text, textBounds)
 
 	t.text.SetRenderingBounds(t.containerBounds)
 
-	// Report the average per-logical-line height to the panel. For non-
-	// autoWrap text this equals lineHeight exactly; for autoWrap text where
-	// one logical line can wrap into many visual lines, the average is what
-	// the panel needs so its viewport-vs-itemCount comparison (and thus the
-	// scroll bar visibility / thumb sizing) is in the right units.
+	// Per-logical-line height for the panel's scroll bar sizing, sampled
+	// from the lines just measured during the normalize / bottom-clamp
+	// loops above (i.e. the viewport region). For autoWrap text where one
+	// logical line wraps into several visual lines this is a representative
+	// average; otherwise it equals lineHeight.
 	estimatedH := lh
-	if n > 0 && docHeight > 0 {
-		if avg := docHeight / n; avg > estimatedH {
+	if len(t.measuredLineHeights) > 0 {
+		var sum int
+		for _, h := range t.measuredLineHeights {
+			sum += h
+		}
+		if avg := sum / len(t.measuredLineHeights); avg > estimatedH {
 			estimatedH = avg
 		}
 	}
