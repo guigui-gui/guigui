@@ -940,6 +940,17 @@ func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle
 	return b
 }
 
+// contentBoundsForLayout returns the bounds for laying out content.
+func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
+	if t.vAlign == VerticalAlignTop {
+		// For Top, [Text.textContentBounds] would only tighten Max.Y, which
+		// no caller depends on beyond it staying within bounds. Skip it to
+		// avoid [Text.textHeight], which walks every logical line for autoWrap.
+		return bounds
+	}
+	return t.textContentBounds(context, bounds)
+}
+
 func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKey {
 	size := FontSize(context) * (t.scaleMinus1 + 1)
 	weight := text.WeightMedium
@@ -1590,14 +1601,7 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 }
 
 func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	// Skip textContentBounds for vAlign=Top to avoid its [Text.textHeight]
-	// call, which walks every logical line for autoWrap.
-	var textBounds image.Rectangle
-	if t.vAlign == VerticalAlignTop {
-		textBounds = widgetBounds.Bounds()
-	} else {
-		textBounds = t.textContentBounds(context, widgetBounds.Bounds())
-	}
+	textBounds := t.contentBoundsForLayout(context, widgetBounds.Bounds())
 	if !textBounds.Overlaps(widgetBounds.VisibleBounds()) {
 		return
 	}
@@ -2020,7 +2024,7 @@ func (t *Text) cursorPosition(context *guigui.Context, widgetBounds *guigui.Widg
 }
 
 func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
-	textContentBounds := t.textContentBounds(context, textBounds)
+	textContentBounds := t.contentBoundsForLayout(context, textBounds)
 	if position.Y < textContentBounds.Min.Y {
 		return 0
 	}
@@ -2088,7 +2092,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 }
 
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
-	textBounds := t.textContentBounds(context, bounds)
+	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := textBounds.Dx()
 	op := &textutil.Options{
 		AutoWrap:         t.autoWrap,
