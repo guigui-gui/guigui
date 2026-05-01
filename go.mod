@@ -6,7 +6,7 @@ require (
 	github.com/ebitengine/purego v0.11.0-alpha.1.0.20260430031838-fa49e74b0075
 	github.com/go-text/typesetting v0.3.5-0.20260328164731-48df487c1500
 	github.com/hajimehoshi/dialog v0.0.0-20260426055613-a260f66f13d3
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260430171138-1d93b0cb8bf0
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260501045648-37cbbc56a425
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/jezek/xgb v1.3.0
