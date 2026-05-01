@@ -184,6 +184,13 @@ type Text struct {
 
 	onFocusChanged      func(context *guigui.Context, focused bool)
 	onHandleButtonInput func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
+
+	// lastDispatchedValueGen is the [textinput.Field.Generation] value at the
+	// time the most recent textEventValueChanged was dispatched. Used to
+	// suppress redundant value-changed events when the underlying content has
+	// not advanced (e.g., focus-loss commits or IME state replays that don't
+	// modify the text).
+	lastDispatchedValueGen int64
 }
 
 type cachedTextWidthEntry struct {
@@ -234,9 +241,26 @@ type cumulativeYsKey struct {
 // The handler receives the current text and whether the change is committed.
 // A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
 // An uncommitted change occurs on every keystroke or text modification during editing.
-// Note that the handler might be called even when the text content has not actually changed.
+//
+// The handler fires only when the text content actually advances. Input
+// activity that doesn't modify the text — cursor moves, focus changes, IME
+// state replays, redundant commit gestures — does not trigger the handler.
 func (t *Text) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	guigui.SetEventHandler(t, textEventValueChanged, f)
+}
+
+// dispatchValueChanged dispatches a value-changed event only when the field's
+// generation has advanced since the previous dispatch. This filters out
+// signals that don't reflect a real content change — focus-loss commits on
+// unchanged buffers, IME state replays, and the like — while still firing
+// once per genuine edit.
+func (t *Text) dispatchValueChanged(committed bool) {
+	gen := t.field.Generation()
+	if gen == t.lastDispatchedValueGen {
+		return
+	}
+	t.lastDispatchedValueGen = gen
+	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), committed)
 }
 
 func (t *Text) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
@@ -623,8 +647,7 @@ func (t *Text) ReplaceValueAtSelection(text string) {
 func (t *Text) CommitWithCurrentInputValue() {
 	t.nextText = ""
 	t.nextTextSet = false
-	// Fire the event even if the text is not changed.
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
+	t.dispatchValueChanged(true)
 }
 
 func (t *Text) selectAll() {
@@ -686,7 +709,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 	t.field.ReplaceText(text, start, end)
 
 	t.resetCachedTextSize()
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+	t.dispatchValueChanged(false)
 
 	t.nextText = ""
 	t.nextTextSet = false
@@ -720,7 +743,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 			t.field.SetSelection(start, end)
 		}
 		t.resetCachedTextSize()
-		guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+		t.dispatchValueChanged(false)
 	} else {
 		t.field.SetSelection(0, len(text))
 	}
@@ -1274,7 +1297,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if processed {
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
-			guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), false)
+			t.dispatchValueChanged(false)
 			return guigui.HandleInputByWidget(t)
 		}
 
@@ -1509,7 +1532,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) commit() {
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), true)
+	t.dispatchValueChanged(true)
 	t.nextText = ""
 	t.nextTextSet = false
 }
