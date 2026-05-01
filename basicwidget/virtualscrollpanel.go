@@ -584,18 +584,14 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight)
 		// and totalCount > 0.
 		//
-		// scrollPos is the document-space pixel y of the panel viewport top:
-		// the cumulative height of items before topItemIndex, minus
-		// topItemOffset (which is typically <= 0; negating it gives the
-		// pixels scrolled into the top item).
-		//
-		// scrollMax is the document-space scroll range. Using
-		// totalCount*estimatedItemHeight rather than an exact docHeight keeps
-		// the formula consistent with cumulativeY implementations that
-		// approximate via the same average; for content where the average is
-		// the exact mean (e.g. textInputText sets estimatedItemHeight =
-		// docHeight/itemCount), scrollMax is exact.
-		scrollPos := float64(p.content.cumulativeY(context, p.topItemIndex) - p.topItemOffset)
+		// scrollPos approximates the panel viewport top in document space
+		// using topItemIndex*estimatedItemHeight, matching the estimate
+		// scrollMax uses (so for uniform-height content the rate is still
+		// exact). The exact form, content.cumulativeY(topItemIndex),
+		// would force the content's per-line cache to extend up to
+		// topItemIndex every Layout — dominant CPU during scroll on
+		// multi-megabyte text buffers.
+		scrollPos := float64(p.topItemIndex*p.estimatedItemHeight - p.topItemOffset)
 		scrollMax := float64(totalCount*p.estimatedItemHeight - bounds.Dy())
 		var rate float64
 		if scrollMax > 0 {
