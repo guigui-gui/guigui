@@ -513,6 +513,8 @@ func (t *Text) stringValueForRendering() string {
 	return t.valueBuilder.String()
 }
 
+// Value returns the current value as a string.
+// For large values, prefer [Text.WriteValueTo] to avoid allocating a copy.
 func (t *Text) Value() string {
 	if t.nextTextSet {
 		return t.nextText
@@ -556,6 +558,55 @@ func (t *Text) SetValue(text string) {
 
 func (t *Text) ForceSetValue(text string) {
 	t.setText(text, false)
+}
+
+// WriteValueTo writes the current value to w and returns the number of bytes
+// written. It is the streaming counterpart of [Text.Value] and avoids
+// materializing the full value as a string.
+func (t *Text) WriteValueTo(w io.Writer) (int64, error) {
+	if t.nextTextSet {
+		n, err := io.WriteString(w, t.nextText)
+		return int64(n), err
+	}
+	return t.field.WriteTextTo(w)
+}
+
+// WriteValueRangeTo writes the bytes of the current value in
+// [startInBytes, endInBytes) to w. startInBytes and endInBytes are clamped
+// to [0, len(value)]. If the clamped start is not less than the clamped end,
+// nothing is written.
+func (t *Text) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int64, error) {
+	if t.nextTextSet {
+		l := len(t.nextText)
+		startInBytes = min(max(startInBytes, 0), l)
+		endInBytes = min(max(endInBytes, 0), l)
+		if startInBytes >= endInBytes {
+			return 0, nil
+		}
+		n, err := io.WriteString(w, t.nextText[startInBytes:endInBytes])
+		return int64(n), err
+	}
+	return t.field.WriteTextRangeTo(w, startInBytes, endInBytes)
+}
+
+// ReadValueFrom resets the value to the bytes read from r until EOF and
+// returns the number of bytes read. It is the streaming counterpart of
+// [Text.ForceSetValue]: the change is applied immediately, the undo history
+// is cleared, and the selection is reset to (0, 0).
+//
+// If r returns a non-EOF error, the value is reset to empty and the error
+// is returned.
+func (t *Text) ReadValueFrom(r io.Reader) (int64, error) {
+	n, err := t.field.ReadTextFrom(r)
+	t.selectionShiftIndexPlus1 = 0
+	t.prevStart = 0
+	t.prevEnd = 0
+	t.nextText = ""
+	t.nextTextSet = false
+	t.textInited = true
+	t.resetCachedTextSize()
+	t.dispatchValueChanged(false, true)
+	return n, err
 }
 
 func (t *Text) ReplaceValueAtSelection(text string) {

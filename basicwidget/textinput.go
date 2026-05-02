@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"io"
 	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -48,6 +49,8 @@ func (t *TextInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBo
 	t.textInput.OnHandleButtonInput(f)
 }
 
+// Value returns the current value as a string.
+// For large values, prefer [TextInput.WriteValueTo] to avoid allocating a copy.
 func (t *TextInput) Value() string {
 	return t.textInput.Value()
 }
@@ -65,6 +68,24 @@ func (t *TextInput) SetValue(text string) {
 
 func (t *TextInput) ForceSetValue(text string) {
 	t.textInput.ForceSetValue(text)
+}
+
+// WriteValueTo writes the current value to w and returns the number of bytes
+// written. See [Text.WriteValueTo] for details.
+func (t *TextInput) WriteValueTo(w io.Writer) (int64, error) {
+	return t.textInput.WriteValueTo(w)
+}
+
+// WriteValueRangeTo writes the bytes of the current value in
+// [startInBytes, endInBytes) to w. See [Text.WriteValueRangeTo] for details.
+func (t *TextInput) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int64, error) {
+	return t.textInput.WriteValueRangeTo(w, startInBytes, endInBytes)
+}
+
+// ReadValueFrom resets the value to the bytes read from r until EOF.
+// See [Text.ReadValueFrom] for details.
+func (t *TextInput) ReadValueFrom(r io.Reader) (int64, error) {
+	return t.textInput.ReadValueFrom(r)
 }
 
 func (t *TextInput) ReplaceValueAtSelection(text string) {
@@ -340,6 +361,18 @@ func (t *textInput) SetValue(text string) {
 
 func (t *textInput) ForceSetValue(text string) {
 	t.text.Text().ForceSetValue(text)
+}
+
+func (t *textInput) WriteValueTo(w io.Writer) (int64, error) {
+	return t.text.Text().WriteValueTo(w)
+}
+
+func (t *textInput) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int64, error) {
+	return t.text.Text().WriteValueRangeTo(w, startInBytes, endInBytes)
+}
+
+func (t *textInput) ReadValueFrom(r io.Reader) (int64, error) {
+	return t.text.Text().ReadValueFrom(r)
 }
 
 func (t *textInput) ReplaceValueAtSelection(text string) {

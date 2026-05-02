@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"image"
@@ -11,7 +12,6 @@ import (
 	"os"
 	"runtime"
 	"slices"
-	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -26,14 +26,14 @@ type Root struct {
 
 	background    basicwidget.Background
 	menubar       editorMenubar
-	editor        basicwidget.TextInput
+	editor        editor
 	statusBar     statusBar
 	findDialog    findDialog
 	confirmDialog confirmDialog
 	infoDialog    infoDialog
 
 	doc           Document
-	initialText   string
+	initialPath   string
 	wordWrap      bool
 	inited        bool
 	exitRequested bool
@@ -47,6 +47,12 @@ type Root struct {
 	pendingSave <-chan fileResult
 
 	layoutItems []guigui.LinearLayoutItem
+
+	// scratchBuf is a reusable buffer for streaming the editor's value out
+	// for one-off reads (status bar prefix, find search). Reusing one buffer
+	// across calls keeps the per-tick allocation cost flat regardless of
+	// document size, after the buffer has grown to its working set.
+	scratchBuf bytes.Buffer
 }
 
 // confirmKind identifies which action triggered the open confirm dialog.
@@ -75,8 +81,12 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.editor.SetAutoWrap(r.wordWrap)
 
 	if !r.inited {
-		r.editor.ForceSetValue(r.initialText)
-		r.initialText = ""
+		if r.initialPath != "" {
+			if err := r.doc.LoadInto(r.initialPath, &r.editor); err != nil {
+				slog.Error("load", "err", err)
+			}
+			r.initialPath = ""
+		}
 		r.inited = true
 	}
 
@@ -166,7 +176,11 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	start, _ := r.editor.Selection()
-	r.statusBar.SetText(formatPosition(r.editor.Value(), start))
+	r.scratchBuf.Reset()
+	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, 0, start); err != nil {
+		slog.Error("read prefix", "err", err)
+	}
+	r.statusBar.SetText(formatPosition(r.scratchBuf.Bytes()))
 
 	if r.findDialog.IsOpen() {
 		r.updateFindCount()
@@ -255,15 +269,10 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("open: %w", res.err))
 			default:
-				text, e := r.doc.Load(res.path)
-				if e != nil {
+				// LoadInto re-clears dirty after streaming, overriding the
+				// MarkDirty triggered by OnValueChanged during the read.
+				if e := r.doc.LoadInto(res.path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("open: %w", e))
-				} else {
-					r.editor.ForceSetValue(text)
-					// ForceSetValue triggers OnValueChanged, which marks the
-					// document dirty. The freshly loaded buffer matches disk,
-					// so override that.
-					r.doc.MarkClean()
 				}
 			}
 		default:
@@ -279,7 +288,7 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("save: %w", res.err))
 			default:
-				if e := r.doc.SaveAs(res.path, r.editor.Value()); e != nil {
+				if e := r.doc.SaveAs(res.path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("save: %w", e))
 				} else {
 					saved = true
@@ -390,7 +399,7 @@ func (r *Root) actionSave() {
 		r.actionSaveAs()
 		return
 	}
-	if err := r.doc.Save(r.editor.Value()); err != nil {
+	if err := r.doc.Save(&r.editor); err != nil {
 		slog.Error("save", "err", err)
 	}
 }
@@ -422,19 +431,34 @@ func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.Widge
 	return guigui.HandleInputByWidget(&r.editor)
 }
 
+// readEditorBytes streams the editor's current value into r.scratchBuf and
+// returns the buffer's underlying slice. The slice is only valid until the
+// next call that touches r.scratchBuf.
+//
+// TODO: Remove this. Find should be able to scan the editor's text without
+// materializing it into a byte slice.
+func (r *Root) readEditorBytes() []byte {
+	r.scratchBuf.Reset()
+	if _, err := r.editor.WriteValueTo(&r.scratchBuf); err != nil {
+		slog.Error("read editor", "err", err)
+	}
+	return r.scratchBuf.Bytes()
+}
+
 func (r *Root) findNext(query string) {
 	defer r.updateFindCount()
 	if query == "" {
 		return
 	}
-	text := r.editor.Value()
+	text := r.readEditorBytes()
+	q := []byte(query)
 	_, end := r.editor.Selection()
-	if i := strings.Index(text[end:], query); i >= 0 {
+	if i := bytes.Index(text[end:], q); i >= 0 {
 		start := end + i
 		r.editor.SetSelection(start, start+len(query))
 		return
 	}
-	if i := strings.Index(text, query); i >= 0 {
+	if i := bytes.Index(text, q); i >= 0 {
 		r.editor.SetSelection(i, i+len(query))
 	}
 }
@@ -444,13 +468,14 @@ func (r *Root) findPrev(query string) {
 	if query == "" {
 		return
 	}
-	text := r.editor.Value()
+	text := r.readEditorBytes()
+	q := []byte(query)
 	start, _ := r.editor.Selection()
-	if i := strings.LastIndex(text[:start], query); i >= 0 {
+	if i := bytes.LastIndex(text[:start], q); i >= 0 {
 		r.editor.SetSelection(i, i+len(query))
 		return
 	}
-	if i := strings.LastIndex(text, query); i >= 0 {
+	if i := bytes.LastIndex(text, q); i >= 0 {
 		r.editor.SetSelection(i, i+len(query))
 	}
 }
@@ -463,8 +488,8 @@ func (r *Root) updateFindCount() {
 		r.findDialog.SetCount(0, 0)
 		return
 	}
-	text := r.editor.Value()
-	matches := findAllNonOverlapping(text, query)
+	text := r.readEditorBytes()
+	matches := findAllNonOverlapping(text, []byte(query))
 	if len(matches) == 0 {
 		r.findDialog.SetCount(0, 0)
 		return
@@ -480,14 +505,14 @@ func (r *Root) updateFindCount() {
 	r.findDialog.SetCount(cur, len(matches))
 }
 
-func findAllNonOverlapping(text, query string) []int {
-	if query == "" {
+func findAllNonOverlapping(text, query []byte) []int {
+	if len(query) == 0 {
 		return nil
 	}
 	var out []int
 	var i int
 	for {
-		idx := strings.Index(text[i:], query)
+		idx := bytes.Index(text[i:], query)
 		if idx < 0 {
 			break
 		}
@@ -521,12 +546,14 @@ func hotkeyShift(key string) string {
 func main() {
 	var root Root
 	if len(os.Args) > 1 {
-		text, err := root.doc.Load(os.Args[1])
-		if err != nil {
+		// Fail fast on a bad path so users get a terminal error rather
+		// than the editor opening empty. The actual streaming load runs
+		// inside Build once the editor widget is ready.
+		if _, err := os.Stat(os.Args[1]); err != nil {
 			slog.Error("load", "err", err)
 			os.Exit(1)
 		}
-		root.initialText = text
+		root.initialPath = os.Args[1]
 	}
 	op := &guigui.RunOptions{
 		Title:         "Text Editor",

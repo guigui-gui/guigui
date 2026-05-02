@@ -5,6 +5,7 @@ package main
 
 import (
 	"errors"
+	"io"
 	"os"
 	"path/filepath"
 )
@@ -42,30 +43,44 @@ func (d *Document) New() {
 	d.dirty = false
 }
 
-// Load reads the file at path. The caller is responsible for installing
-// the returned text into the editor.
-func (d *Document) Load(path string) (string, error) {
-	b, err := os.ReadFile(path)
+// LoadInto opens the file at path and streams its contents into dst.
+// On success the document's path is updated and dirty is cleared.
+func (d *Document) LoadInto(path string, dst io.ReaderFrom) error {
+	f, err := os.Open(path)
 	if err != nil {
-		return "", err
+		return err
+	}
+	defer f.Close()
+	if _, err := dst.ReadFrom(f); err != nil {
+		return err
 	}
 	d.path = path
 	d.dirty = false
-	return string(b), nil
+	return nil
 }
 
-func (d *Document) Save(text string) error {
+// Save streams src to the document's current path. On success dirty is cleared.
+func (d *Document) Save(src io.WriterTo) error {
 	if d.path == "" {
 		return errors.New("no path set; use SaveAs")
 	}
-	if err := os.WriteFile(d.path, []byte(text), 0o644); err != nil {
+	f, err := os.Create(d.path)
+	if err != nil {
+		return err
+	}
+	if _, err := src.WriteTo(f); err != nil {
+		f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
 		return err
 	}
 	d.dirty = false
 	return nil
 }
 
-func (d *Document) SaveAs(path, text string) error {
+// SaveAs sets the path and streams src to it.
+func (d *Document) SaveAs(path string, src io.WriterTo) error {
 	d.path = path
-	return d.Save(text)
+	return d.Save(src)
 }

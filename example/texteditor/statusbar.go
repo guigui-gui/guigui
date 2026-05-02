@@ -4,8 +4,8 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/go-text/typesetting/segmenter"
 
@@ -38,22 +38,24 @@ func (s *statusBar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 }
 
 // lineCol returns 1-indexed line and grapheme-cluster column for the given
-// byte offset into text. Newlines count as the start of a new line.
-func lineCol(text string, offset int) (line, col int) {
-	offset = min(max(offset, 0), len(text))
-	prefix := text[:offset]
-	line = 1 + strings.Count(prefix, "\n")
+// prefix (the bytes of the document up to the cursor). Newlines count as
+// the start of a new line.
+//
+// TODO: Read only the bytes of the current line so this scales with line
+// length rather than cursor offset.
+func lineCol(prefix []byte) (line, col int) {
+	line = 1 + bytes.Count(prefix, []byte{'\n'})
 
 	var lineStart int
-	if i := strings.LastIndexByte(prefix, '\n'); i >= 0 {
+	if i := bytes.LastIndexByte(prefix, '\n'); i >= 0 {
 		lineStart = i + 1
 	}
 
 	col = 1
 	var seg segmenter.Segmenter
-	if err := seg.InitWithString(text[lineStart:offset]); err != nil {
+	if err := seg.InitWithBytes(prefix[lineStart:]); err != nil {
 		// Invalid UTF-8: fall back to byte-based column.
-		col = offset - lineStart + 1
+		col = len(prefix) - lineStart + 1
 		return
 	}
 	it := seg.GraphemeIterator()
@@ -63,7 +65,7 @@ func lineCol(text string, offset int) (line, col int) {
 	return
 }
 
-func formatPosition(text string, sel int) string {
-	line, col := lineCol(text, sel)
+func formatPosition(prefix []byte) string {
+	line, col := lineCol(prefix)
 	return fmt.Sprintf("Line %d, Column %d", line, col)
 }
