@@ -356,6 +356,7 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 		guigui.DispatchEvent(p, panelEventScroll, p.offsetX, p.offsetY)
 	}
 
+	p.border.setPanelBounds(bounds)
 	layouter.LayoutWidget(&p.border, bounds)
 	layouter.LayoutWidget(&p.scrollWheel, widgetBounds.Bounds())
 	layouter.LayoutWidget(&p.scrollHBar, p.horizontalBarBounds(context, widgetBounds))
@@ -392,17 +393,16 @@ func (p *panel) offset() (float64, float64) {
 }
 
 func (p *panel) adjustOffset(context *guigui.Context, widgetBounds *guigui.WidgetBounds, x, y float64) (float64, float64) {
-	r := p.scrollRange(context, widgetBounds)
+	r := p.scrollRange(context, widgetBounds.Bounds())
 	x = min(max(x, float64(r.Min.X)), float64(r.Max.X))
 	y = min(max(y, float64(r.Min.Y)), float64(r.Max.Y))
 	return x, y
 }
 
-func (p *panel) scrollRange(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	bounds := widgetBounds.Bounds()
+func (p *panel) scrollRange(context *guigui.Context, panelBounds image.Rectangle) image.Rectangle {
 	cs := p.contentSizeAtLayout
 	return image.Rectangle{
-		Min: image.Pt(min(bounds.Dx()-cs.X, 0), min(bounds.Dy()-cs.Y, 0)),
+		Min: image.Pt(min(panelBounds.Dx()-cs.X, 0), min(panelBounds.Dy()-cs.Y, 0)),
 		Max: image.Pt(0, 0),
 	}
 }
@@ -603,6 +603,18 @@ type panelBorder struct {
 	panel      *panel
 	borders    PanelBorders
 	autoBorder bool
+
+	// panelBoundsRect is the parent panel's bounds rectangle, captured by
+	// [panel.Layout]. Used so [panelBorder.Draw] can query [panel.scrollRange]
+	// against the panel's bounds rather than the border's own bounds.
+	//
+	// The value is invalid and unavailable during the Build phase, as it is only
+	// populated once [panel.Layout] runs.
+	panelBoundsRect image.Rectangle
+}
+
+func (b *panelBorder) setPanelBounds(rect image.Rectangle) {
+	b.panelBoundsRect = rect
 }
 
 func (b *panelBorder) WriteStateKey(w *guigui.StateKeyWriter) {
@@ -637,7 +649,7 @@ func (p *panelBorder) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	var r image.Rectangle
 	if p.panel != nil {
 		offsetX, offsetY = p.panel.offset()
-		r = p.panel.scrollRange(context, widgetBounds)
+		r = p.panel.scrollRange(context, p.panelBoundsRect)
 	}
 	clr := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
 	if (p.panel != nil && p.autoBorder && offsetX < float64(r.Max.X)) || p.borders.Start {

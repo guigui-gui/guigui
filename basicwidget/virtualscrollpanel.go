@@ -328,6 +328,7 @@ func (p *virtualScrollPanel) Layout(context *guigui.Context, widgetBounds *guigu
 	p.scrollHBar.setContentSize(hContentSize)
 
 	layouter.LayoutWidget(&p.scrollHBar, p.horizontalBarBounds(context, widgetBounds))
+	p.scrollVBar.setPanelBounds(bounds)
 	layouter.LayoutWidget(&p.scrollVBar, p.verticalBarBounds(context, widgetBounds))
 
 	hb, vb := p.thumbBounds(context, widgetBounds)
@@ -528,17 +529,16 @@ func (p *virtualScrollPanel) applyPendingScrollOffsetInTick() (bool, bool) {
 
 // vThumbHeight returns the vertical thumb height.
 // Returns 0 if no items have been measured yet or no thumb should be shown.
-func (p *virtualScrollPanel) vThumbHeight(context *guigui.Context, widgetBounds *guigui.WidgetBounds, totalCount int) float64 {
+func (p *virtualScrollPanel) vThumbHeight(context *guigui.Context, panelBounds image.Rectangle, totalCount int) float64 {
 	if p.estimatedItemHeight <= 0 || totalCount == 0 {
 		return 0
 	}
-	bounds := widgetBounds.Bounds()
 	padding := scrollThumbPadding(context)
-	viewportItems := float64(bounds.Dy()) / float64(p.estimatedItemHeight)
+	viewportItems := float64(panelBounds.Dy()) / float64(p.estimatedItemHeight)
 	if viewportItems >= float64(totalCount) {
 		return 0
 	}
-	barHeight := (float64(bounds.Dy()) - 2*padding) * viewportItems / float64(totalCount)
+	barHeight := (float64(panelBounds.Dy()) - 2*padding) * viewportItems / float64(totalCount)
 	return max(barHeight, scrollThumbStrokeWidth(context))
 }
 
@@ -569,7 +569,7 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 
 	// Vertical thumb — position based on the document-space scroll position.
 	totalCount := p.content.itemCount()
-	if barHeight := p.vThumbHeight(context, widgetBounds, totalCount); barHeight > 0 {
+	if barHeight := p.vThumbHeight(context, bounds, totalCount); barHeight > 0 {
 		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight)
 		// and totalCount > 0.
 		//
@@ -611,11 +611,24 @@ type virtualScrollVBar struct {
 	thumbBounds image.Rectangle
 	alpha       float64
 
+	// panelBoundsRect is the parent panel's bounds rectangle, captured by
+	// [virtualScrollPanel.Layout]. Used so [virtualScrollVBar.HandlePointingInput]
+	// can query [virtualScrollPanel.vThumbHeight] against the panel's bounds
+	// rather than the VBar's own (X-narrowed) bounds.
+	//
+	// The value is invalid and unavailable during the Build phase, as it is only
+	// populated once [virtualScrollPanel.Layout] runs.
+	panelBoundsRect image.Rectangle
+
 	dragging              bool
 	draggingStartPosition int
 	draggingStartIndex    int
 	draggingStartOffset   int
 	onceDraw              bool
+}
+
+func (s *virtualScrollVBar) setPanelBounds(rect image.Rectangle) {
+	s.panelBoundsRect = rect
 }
 
 func (s *virtualScrollVBar) setThumbBounds(bounds image.Rectangle) {
@@ -654,7 +667,7 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 	padding := scrollThumbPadding(context)
 	// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight),
 	// so divisions by estimatedItemHeight below are safe.
-	barHeight := s.panel.vThumbHeight(context, widgetBounds, totalCount)
+	barHeight := s.panel.vThumbHeight(context, s.panelBoundsRect, totalCount)
 	if barHeight <= 0 {
 		return guigui.HandleInputResult{}
 	}
