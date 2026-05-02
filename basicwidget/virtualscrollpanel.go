@@ -730,14 +730,12 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 			if scrollMax > 0 {
 				deltaScrollPos := int(float64(dy) * float64(scrollMax) / trackHeight)
 
-				// Walk from the drag-start anchor so the V drag can reach
-				// the document bottom even when items have heterogeneous
-				// heights (e.g. an autoWrap last line that wraps taller
-				// than the viewport). Layout's bottom-clamp pulls
-				// (topIdx, topOff) back if the walk overshoots.
-				measure := func(i int) int {
-					return s.panel.content.measureItemHeight(context, i)
-				}
+				// Walk with uniform estimatedItemHeight: per-step
+				// measurement can be expensive, and the drag-anchored
+				// walk re-traverses the same items every tick. The
+				// content's Layout is expected to normalize (topIdx,
+				// topOff) against real heights over its visible region.
+				measure := func(int) int { return -1 }
 				newIdx, newOff := topItemAfterPixelScroll(measure, s.panel.estimatedItemHeight, totalCount, s.draggingStartIndex, s.draggingStartOffset, deltaScrollPos)
 				s.panel.forceSetTopItem(newIdx, newOff, true)
 			}
