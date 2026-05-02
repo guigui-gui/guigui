@@ -37,17 +37,6 @@ type virtualScrollContent interface {
 	// given index. Called by [virtualScrollPanel] when computing thumb
 	// position and during scroll-bar drag.
 	measureItemHeight(context *guigui.Context, index int) int
-
-	// cumulativeY returns the rendered Y of the start of item idx,
-	// equivalently the sum of measured heights for items [0, idx). Used
-	// by [virtualScrollPanel.thumbBounds] to compute an accurate
-	// scroll-bar thumb position when item heights are heterogeneous - in
-	// particular so the thumb doesn't snap upward when a small last item
-	// is reached at the canonical bottom.
-	//
-	// Implementations should use a fast path when item heights are uniform
-	// (just idx*itemHeight); the fallback iteration is O(idx) per call.
-	cumulativeY(context *guigui.Context, idx int) int
 }
 
 // virtualScrollPanel is a scroll panel that uses virtual scrolling: instead
@@ -587,10 +576,9 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 		// scrollPos approximates the panel viewport top in document space
 		// using topItemIndex*estimatedItemHeight, matching the estimate
 		// scrollMax uses (so for uniform-height content the rate is still
-		// exact). The exact form, content.cumulativeY(topItemIndex),
-		// would force the content's per-line cache to extend up to
-		// topItemIndex every Layout — dominant CPU during scroll on
-		// multi-megabyte text buffers.
+		// exact). An exact prefix-sum of measured item heights would
+		// require walking [0, topItemIndex) every Layout — O(topItemIndex)
+		// per Layout — defeating the point of virtualizing.
 		scrollPos := float64(p.topItemIndex*p.estimatedItemHeight - p.topItemOffset)
 		scrollMax := float64(totalCount*p.estimatedItemHeight - bounds.Dy())
 		var rate float64

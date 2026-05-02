@@ -773,13 +773,6 @@ func (t *textInputText) itemCount() int {
 	return txt.lineByteOffsets.LineCount()
 }
 
-// cumulativeY implements [virtualScrollContent].
-func (t *textInputText) cumulativeY(context *guigui.Context, idx int) int {
-	txt := t.text.Widget()
-	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-	return txt.cumulativeY(context, width, idx)
-}
-
 // measureItemHeight implements [virtualScrollContent]. Returns the rendered
 // height of one logical line at the panel's current content width, cached
 // for the lifetime of the current virtualized Layout. Also updates the
@@ -947,10 +940,11 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 
 	// The *Text widget only needs to cover the viewport for hit testing -
 	// clicks past the viewport can't reach it because the panel clips.
-	// Inside Text, positioning is anchored on textBounds.Min.Y plus per-line
-	// cumulativeY, and [Text.textContentBounds] recomputes the content
-	// extent itself; the input Max.Y doesn't propagate into Text's content
-	// layout. So Max.Y just needs to bottom out at the panel viewport.
+	// Inside Text, the firstLogicalLineInViewport anchor sits at
+	// textBounds.Min.Y and lines below extend downward from there;
+	// [Text.textContentBounds] recomputes the content extent itself, so
+	// the input Max.Y doesn't propagate into Text's content layout. So
+	// Max.Y just needs to bottom out at the panel viewport.
 	textBounds.Max.Y = bounds.Max.Y - t.padding.Bottom
 
 	textBounds = textBounds.Add(image.Pt(0, int(0.5*context.Scale())))

@@ -6,7 +6,6 @@ package textutil
 import (
 	"image"
 	"math"
-	"sort"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
@@ -79,10 +78,11 @@ type CompositionInfo struct {
 }
 
 // ComputeCompositionInfo classifies an active composition and returns
-// info for [ComputeVisibleRange]. ok is false when the splice changes
-// the logical-line count - a hard line break inside the composition or
-// a selection that straddles a logical line boundary - and the caller
-// should fall back to drawing the unrestricted text.
+// info that the textutil functions use to translate between committed
+// and rendering byte/visual-line coordinates. ok is false when the
+// splice changes the logical-line count - a hard line break inside the
+// composition or a selection that straddles a logical line boundary -
+// and the caller should fall back to drawing the unrestricted text.
 func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 	if pos, _ := FirstLineBreakPositionAndLen(p.CompositionText); pos >= 0 {
 		return CompositionInfo{}, false
@@ -113,51 +113,7 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 	}, true
 }
 
-// VisibleRangeParams describes the inputs for [ComputeVisibleRange].
-//
-// Deprecated: along with [ComputeVisibleRange]; will be removed once
-// every caller has migrated to [VisibleRangeInViewport].
-type VisibleRangeParams struct {
-	// LineByteOffsets is the logical-line layout of the rendering text
-	// (same text that would be passed to [Draw]). The number of logical
-	// lines comes from its LineCount.
-	LineByteOffsets *LineByteOffsets
-
-	// RenderingTextLength is the total byte length of the rendering text.
-	RenderingTextLength int
-
-	// CumulativeYs[i] is the rendered Y of the start of logical line
-	// i in the committed text; required when AutoWrap is true and must
-	// be extended to at least the last line whose rendered Y meets or
-	// exceeds VisibleMaxY.
-	CumulativeYs []int
-
-	// LineHeight is ceil(lineHeight); used when AutoWrap is false to
-	// derive line indices via integer division.
-	LineHeight int
-
-	// AutoWrap toggles between LineHeight*idx (false) and CumulativeYs
-	// lookups (true) for finding visible lines.
-	AutoWrap bool
-
-	// VerticalAlign and BoundsHeight / TotalHeight together yield the
-	// alignment-specific Y offset that VisibleMinY / VisibleMaxY are
-	// implicitly measured against.
-	VerticalAlign VerticalAlign
-	BoundsHeight  int
-	TotalHeight   int
-
-	// VisibleMinY and VisibleMaxY are the visible Y range, relative to
-	// the bounds origin (i.e. already had bounds.Min.Y subtracted).
-	VisibleMinY int
-	VisibleMaxY int
-
-	// Composition is the splice info from [ComputeCompositionInfo].
-	// The zero value means "no active composition".
-	Composition CompositionInfo
-}
-
-// VisibleRange is the result of [ComputeVisibleRange] when its ok
+// VisibleRange is the result of [VisibleRangeInViewport] when its ok
 // return is true.
 type VisibleRange struct {
 	// FirstLine and LastLine are the inclusive range of logical-line
@@ -173,107 +129,6 @@ type VisibleRange struct {
 	// specific portion of the original Y offset, so the caller forces
 	// [VerticalAlignTop] when calling [Draw].
 	YShift int
-}
-
-// ComputeVisibleRange returns the byte range and rendered Y offset that
-// covers just the logical lines whose visible-Y region intersects
-// [VisibleMinY, VisibleMaxY], plus one line of slack on each side. The
-// slack absorbs per-line padding that [Draw] adds internally and any
-// integer rounding; the inner Y clip in [Draw] drops lines that turn out
-// to be off-screen anyway.
-//
-// ok is false when the document is empty or the visible range falls
-// entirely outside the document; the caller should draw the unrestricted
-// text.
-//
-// CumulativeYs must be extended (when AutoWrap is true) to at least the
-// last line whose rendered Y meets or exceeds VisibleMaxY. The function
-// does not extend the cache.
-//
-// Deprecated: use [VisibleRangeInViewport]. ComputeVisibleRange relies
-// on a CumulativeYs prefix-sum cache populated up to the visible
-// region, which costs O(top of visible region) of typesetting on cold
-// cache and dominates scroll CPU on multi-megabyte buffers.
-// [VisibleRangeInViewport] walks forward from a caller-supplied
-// FirstLogicalLineInViewport instead, paying only O(visible) per
-// query.
-// ComputeVisibleRange will be removed once Text and textInputText
-// migrate.
-func ComputeVisibleRange(p *VisibleRangeParams) (VisibleRange, bool) {
-	n := p.LineByteOffsets.LineCount()
-	if n == 0 {
-		return VisibleRange{}, false
-	}
-
-	alignOffset := alignOffsetFor(p.VerticalAlign, p.BoundsHeight, p.TotalHeight)
-	relMinY := p.VisibleMinY - alignOffset
-	relMaxY := p.VisibleMaxY - alignOffset
-
-	var firstLine, lastLine int
-	if !p.AutoWrap {
-		if p.LineHeight <= 0 {
-			return VisibleRange{}, false
-		}
-		firstLine = max(0, relMinY/p.LineHeight-1)
-		lastLine = min(n-1, relMaxY/p.LineHeight+1)
-	} else {
-		renderingYAt := func(i int) int {
-			y := p.CumulativeYs[i]
-			if i > p.Composition.LineIndex {
-				y += p.Composition.RenderingYShift
-			}
-			return y
-		}
-		firstLine = max(0, sort.Search(len(p.CumulativeYs), func(i int) bool {
-			return renderingYAt(i) > relMinY
-		})-2)
-		lastLine = min(n-1, sort.Search(len(p.CumulativeYs), func(i int) bool {
-			return renderingYAt(i) >= relMaxY
-		}))
-	}
-	if firstLine > lastLine {
-		return VisibleRange{}, false
-	}
-
-	startInBytes := p.LineByteOffsets.ByteOffsetByLineIndex(firstLine)
-	if firstLine > p.Composition.LineIndex {
-		startInBytes += p.Composition.RenderingByteShift
-	}
-	endInBytes := p.RenderingTextLength
-	if lastLine+1 < n {
-		endInBytes = p.LineByteOffsets.ByteOffsetByLineIndex(lastLine + 1)
-		if lastLine+1 > p.Composition.LineIndex {
-			endInBytes += p.Composition.RenderingByteShift
-		}
-	}
-
-	var lineY int
-	if !p.AutoWrap {
-		lineY = firstLine * p.LineHeight
-	} else {
-		lineY = p.CumulativeYs[firstLine]
-		if firstLine > p.Composition.LineIndex {
-			lineY += p.Composition.RenderingYShift
-		}
-	}
-
-	return VisibleRange{
-		FirstLine:    firstLine,
-		LastLine:     lastLine,
-		StartInBytes: startInBytes,
-		EndInBytes:   endInBytes,
-		YShift:       alignOffset + lineY,
-	}, true
-}
-
-func alignOffsetFor(vAlign VerticalAlign, boundsHeight, totalHeight int) int {
-	switch vAlign {
-	case VerticalAlignMiddle:
-		return (boundsHeight - totalHeight) / 2
-	case VerticalAlignBottom:
-		return boundsHeight - totalHeight
-	}
-	return 0
 }
 
 // VisibleRangeInViewportParams describes the inputs for
@@ -332,13 +187,12 @@ type VisibleRangeInViewportParams struct {
 
 // VisibleRangeInViewport returns the byte range and logical-line
 // indices that cover the visible region when the widget is positioned
-// so FirstLogicalLineInViewport sits at widget-local Y=0. Compared to
-// [ComputeVisibleRange], this variant requires no precomputed
-// CumulativeYs — it walks logical lines forward from
-// FirstLogicalLineInViewport and measures each as it goes — so a
-// caller pinned to the topmost visible line pays only O(visible)
-// typesetting per query. Composition splices on lines past the
-// splice are handled the same way [ComputeVisibleRange] does.
+// so FirstLogicalLineInViewport sits at widget-local Y=0. The walk
+// steps forward from FirstLogicalLineInViewport, measuring each
+// logical line's wrap count on the fly, so a caller pinned to the
+// topmost visible line pays only O(visible) typesetting per query.
+// Composition splices on lines past the splice are handled by
+// reading rendering-text bytes for the composition's selection line.
 //
 // ok is false when the document is empty.
 //

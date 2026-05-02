@@ -150,26 +150,6 @@ type Text struct {
 	lineByteOffsets                textutil.LineByteOffsets
 	lineByteOffsetsFieldGeneration int64
 
-	// cumulativeYs[i] is the rendered Y offset (in pixels, ceiled
-	// per-line) of the start of logical line i, used by virtualizing
-	// parents to position individual lines (and, in upcoming changes, by
-	// Text itself for cursor positioning and Draw input slicing). For
-	// non-autoWrap text the value is i*ceil(lineHeight) and the cache is
-	// not consulted; for autoWrap it is lazily extended one logical line
-	// at a time via [textutil.VisualLineCountForLogicalLine]. Invalidated when
-	// the field, width, or any rendering parameter listed in
-	// cumulativeYsKey changes.
-	//
-	// cumulativeVisualLineCounts[i] is the number of visual lines preceding
-	// logical line i, used by [Text.textPosition] to compute Y as
-	// lineHeight*count (matching what [textutil.TextPositionFromIndex]
-	// produces). Distinct from cumulativeYs because that one stores ceiled
-	// pixel sums, which drift from lineHeight*count for non-integer line
-	// heights. Populated alongside cumulativeYs and shares its key.
-	cumulativeYs               []int
-	cumulativeVisualLineCounts []int
-	cumulativeYsKey            cumulativeYsKey
-
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.WriteStateKey] so locale changes trigger automatic rebuilds without
@@ -239,23 +219,6 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 		key |= 1 << 1
 	}
 	return key
-}
-
-// cumulativeYsKey identifies the layout parameters that the
-// [Text.cumulativeYs] cache was built against. Any change invalidates the
-// cache. The face is captured via faceCacheKey rather than the [text.Face]
-// interface value so the key remains comparable.
-//
-// autoWrap is intentionally not part of the key: [Text.cumulativeY] only
-// ever consults the cache when autoWrap is true; the off case
-// short-circuits to lineIdx*lineHeight without touching cumulativeYs.
-type cumulativeYsKey struct {
-	fieldGeneration  int64
-	face             faceCacheKey
-	width            int
-	lineHeight       float64
-	tabWidth         float64
-	keepTailingSpace bool
 }
 
 // OnValueChanged sets the event handler that is called when the text value changes.
@@ -334,91 +297,6 @@ func (t *Text) ensureLineByteOffsets() {
 	}
 	_ = t.lineByteOffsets.Rebuild(t.field.WriteText)
 	t.lineByteOffsetsFieldGeneration = generation
-}
-
-// cumulativeY returns the rendered Y offset (in pixels, ceiled per-line)
-// of the start of the lineIdx-th logical line at the given content width.
-//
-// For non-autoWrap text every logical line is exactly one lineHeight
-// tall and the result is lineIdx*ceil(lineHeight) - O(1). For autoWrap
-// text the result is served from [Text.cumulativeYs], lazily extended
-// one logical line at a time using [textutil.VisualLineCountForLogicalLine];
-// repeat calls with non-decreasing lineIdx are amortized O(1).
-//
-// Per-line ceiling matches what virtualizing parents
-// (e.g. textInputText.cumulativeY, the [virtualScrollContent] hook)
-// use for integer pixel positioning.
-func (t *Text) cumulativeY(context *guigui.Context, width int, lineIdx int) int {
-	lineH := int(math.Ceil(t.lineHeight(context)))
-	if !t.autoWrap {
-		return lineIdx * lineH
-	}
-
-	t.ensureLineByteOffsets()
-	n := t.lineByteOffsets.LineCount()
-	lineIdx = min(max(lineIdx, 0), n)
-
-	key := cumulativeYsKey{
-		fieldGeneration:  t.field.Generation(),
-		face:             t.lastFaceCacheKey,
-		width:            width,
-		lineHeight:       t.lineHeight(context),
-		tabWidth:         t.actualTabWidth(context),
-		keepTailingSpace: t.keepTailingSpace,
-	}
-	if t.cumulativeYsKey != key {
-		t.cumulativeYs = append(t.cumulativeYs[:0], 0)
-		t.cumulativeVisualLineCounts = append(t.cumulativeVisualLineCounts[:0], 0)
-		t.cumulativeYsKey = key
-	}
-
-	if len(t.cumulativeYs) > lineIdx {
-		return t.cumulativeYs[lineIdx]
-	}
-
-	totalLen := t.field.TextLengthInBytes()
-	face := t.face(context, false)
-	lineHF := t.lineHeight(context)
-	tabW := t.actualTabWidth(context)
-	keepTailing := t.keepTailingSpace
-	measureWidth := width
-	if measureWidth <= 0 {
-		measureWidth = math.MaxInt
-	}
-	for len(t.cumulativeYs) <= lineIdx {
-		i := len(t.cumulativeYs) - 1
-		start := t.lineByteOffsets.ByteOffsetByLineIndex(i)
-		end := totalLen
-		if i+1 < n {
-			end = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
-		}
-		line := t.stringValueWithRange(start, end)
-		c := textutil.VisualLineCountForLogicalLine(measureWidth, line, t.autoWrap, face, tabW, keepTailing)
-		h := lineHF * float64(c)
-		t.cumulativeYs = append(t.cumulativeYs, t.cumulativeYs[i]+int(math.Ceil(h)))
-		t.cumulativeVisualLineCounts = append(t.cumulativeVisualLineCounts, t.cumulativeVisualLineCounts[i]+c)
-	}
-	return t.cumulativeYs[lineIdx]
-}
-
-// cumulativeVisualLineCount returns the number of visual lines preceding
-// the lineIdx-th logical line at the given content width. For non-autoWrap
-// text every logical line is exactly one visual line and the result is
-// lineIdx - O(1). For autoWrap text the result piggybacks on the same
-// lazy walk that fills [Text.cumulativeYs]; calling this is equivalent to
-// calling [Text.cumulativeY] for the cache extension.
-func (t *Text) cumulativeVisualLineCount(context *guigui.Context, width int, lineIdx int) int {
-	if !t.autoWrap {
-		return lineIdx
-	}
-	if lineIdx <= 0 {
-		return 0
-	}
-	t.cumulativeY(context, width, lineIdx)
-	if lineIdx >= len(t.cumulativeVisualLineCounts) {
-		return t.cumulativeVisualLineCounts[len(t.cumulativeVisualLineCounts)-1]
-	}
-	return t.cumulativeVisualLineCounts[lineIdx]
 }
 
 func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
@@ -1221,13 +1099,11 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		renderingLength = renderingLength - (sEnd - sStart) + t.field.UncommittedTextLengthInBytes()
 	}
 
-	// vAlign==Top is the only mode that can skip the cumulativeYs
-	// walk: textInputText.Layout pins this widget at
-	// firstLogicalLineInViewport (the line at widget-local Y=0), so
-	// the walker only measures lines from there downward. Other
-	// alignments need totalHeight for the offset shift, which already
-	// requires walking the document, so the cumulativeYs-cached path
-	// below is fine.
+	// vAlign==Top: the walker starts at firstLogicalLineInViewport
+	// (the line that textInputText.Layout pinned at widget-local Y=0)
+	// and measures only lines from there downward. Other alignments
+	// need a totalHeight-based shift; the branch below computes that
+	// and walks from line 0.
 	if t.vAlign == VerticalAlignTop {
 		readRendering := t.stringValueWithRange
 		if hasComp {
@@ -1793,12 +1669,11 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 // back to [textutil.MeasureHeight] on the full rendering text in that
 // case.
 //
-// For autoWrap, the fast path consults [Text.cumulativeVisualLineCount]
-// (the per-line wrap-count cache populated by [Text.cumulativeY]) when
-// the requested face matches the cache's natural face. Otherwise the
-// function walks logical lines manually with the requested face — still
-// reading each line via the per-range field methods, no full-document
-// materialization.
+// For autoWrap, walks logical lines summing per-line wrap counts via
+// [textutil.VisualLineCountForLogicalLine]; reads each line through
+// the per-range field methods (committed bytes for unaffected lines,
+// rendering bytes for the composition's selection line) so no full-
+// document materialization is needed.
 func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int, bold bool) (int, bool) {
 	t.ensureLineByteOffsets()
 	n := t.lineByteOffsets.LineCount()
@@ -1826,60 +1701,34 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 		return n, true
 	}
 
-	// AutoWrap with a bold face that disagrees with the cumulativeY
-	// cache's natural face: walk logical lines manually with the
-	// requested face. (Same shape as the cache fill, just without the
-	// cross-call caching benefit.)
-	if bold && t.lastFaceCacheKey.weight != text.WeightBold {
-		face := t.face(context, bold)
-		tabW := t.actualTabWidth(context)
-		keepTailing := t.keepTailingSpace
-		measureWidth := width
-		if measureWidth <= 0 {
-			measureWidth = math.MaxInt
-		}
-		totalLen := t.field.TextLengthInBytes()
-		var count int
-		for i := range n {
-			cs := t.lineByteOffsets.ByteOffsetByLineIndex(i)
-			ce := totalLen
-			if i+1 < n {
-				ce = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
-			}
-			var line string
-			if hasComp && i == selectionLineIdx {
-				line = t.stringValueForRenderingRange(cs, ce+byteDelta)
-			} else {
-				line = t.stringValueWithRange(cs, ce)
-			}
-			count += textutil.VisualLineCountForLogicalLine(measureWidth, line, true, face, tabW, keepTailing)
-		}
-		return count, true
-	}
-
-	// Fast path: requested face matches the cumulativeY cache.
-	committedCount := t.cumulativeVisualLineCount(context, width, n)
-	if !hasComp {
-		return committedCount, true
-	}
-
-	cs := t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
-	ce := t.field.TextLengthInBytes()
-	if selectionLineIdx+1 < n {
-		ce = t.lineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
-	}
-	committedSelectionLine := t.stringValueWithRange(cs, ce)
-	renderingSelectionLine := t.stringValueForRenderingRange(cs, ce+byteDelta)
-	face := t.face(context, false)
+	// AutoWrap: walk logical lines summing per-line wrap counts.
+	// Reads the rendering content for the composition's selection line
+	// (so the wrap delta is included naturally) and committed content
+	// for everything else.
+	face := t.face(context, bold)
 	tabW := t.actualTabWidth(context)
 	keepTailing := t.keepTailingSpace
 	measureWidth := width
 	if measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
-	committedSpliceCount := textutil.VisualLineCountForLogicalLine(measureWidth, committedSelectionLine, true, face, tabW, keepTailing)
-	renderingSpliceCount := textutil.VisualLineCountForLogicalLine(measureWidth, renderingSelectionLine, true, face, tabW, keepTailing)
-	return committedCount + (renderingSpliceCount - committedSpliceCount), true
+	totalLen := t.field.TextLengthInBytes()
+	var count int
+	for i := range n {
+		cs := t.lineByteOffsets.ByteOffsetByLineIndex(i)
+		ce := totalLen
+		if i+1 < n {
+			ce = t.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
+		}
+		var line string
+		if hasComp && i == selectionLineIdx {
+			line = t.stringValueForRenderingRange(cs, ce+byteDelta)
+		} else {
+			line = t.stringValueWithRange(cs, ce)
+		}
+		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, true, face, tabW, keepTailing)
+	}
+	return count, true
 }
 
 // totalRenderingMeasurement returns the rendered width and height of the
@@ -2151,13 +2000,13 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		KeepTailingSpace: t.keepTailingSpace,
 	}
 
-	// Pass the cached lineByteOffsets sidecar and cumulativeVisualLineCount
-	// callback so [textutil.TextPositionFromIndex] localizes the visual-
-	// line walk to the single logical line containing index. The sidecar-
-	// less fallback walks every visual line in the document; for multi-
-	// megabyte buffers cursorPosition / adjustScrollOffset call this every
-	// tick and that fallback dominates CPU. With the sidecar, cost is
-	// O(log n + lineLen) per call.
+	// Pass the cached lineByteOffsets sidecar and the
+	// firstLogicalLineInViewport hint so
+	// [textutil.TextPositionFromIndex] walks only the logical lines
+	// between the viewport's first line and the cursor's line. The
+	// sidecar-less fallback walks every visual line in the document;
+	// for multi-megabyte buffers cursorPosition / adjustScrollOffset
+	// call this every tick and that fallback dominates CPU.
 	t.ensureLineByteOffsets()
 
 	renderingLength := t.field.TextLengthInBytes()
