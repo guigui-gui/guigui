@@ -2190,30 +2190,26 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	if compLen > 0 {
 		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
 	}
-	// PrecedingVisualLineCount returns the visual-line offset from the
-	// widget's firstLogicalLineInViewport — the line that
-	// textInputText.Layout pinned at widget-local Y=0 — to lineIdx.
-	// Subtracting that line's offset makes the textutil-returned
-	// pos.Top match the new textBounds.Min.Y, which sits at the first
-	// visible line's top (it was historically line-0-relative, but
-	// Layout no longer pays the O(topIdx) cumulativeY cost to position
-	// the widget at line 0). cumulativeVisualLineCount stays as the
-	// underlying cache so callbacks remain O(1) once warm.
-	firstLine := t.firstLogicalLineInViewport
+	// firstLogicalLineInViewport pins TextPositionFromIndex's Y origin
+	// to the line at widget-local Y=0 (the line that
+	// textInputText.Layout positioned at the panel viewport top); the
+	// returned pos.Top is therefore relative to that line, ready to
+	// add to textBounds.Min.Y for screen coordinates. The walk is
+	// bounded by the logical-line distance between firstLine and the
+	// cursor's line, which is a viewport's worth of lines for cursors
+	// visible on screen.
 	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
-		Index:               index,
-		RenderingTextRange:  readRendering,
-		RenderingTextLength: renderingLength,
-		Width:               width,
-		Options:             op,
-		CommittedTextRange:  readCommitted,
-		LineByteOffsets:     &t.lineByteOffsets,
-		SelectionStart:      sStart,
-		SelectionEnd:        sEnd,
-		CompositionLen:      compLen,
-		PrecedingVisualLineCount: func(lineIdx int) int {
-			return t.cumulativeVisualLineCount(context, width, lineIdx) - t.cumulativeVisualLineCount(context, width, firstLine)
-		},
+		Index:                index,
+		RenderingTextRange:   readRendering,
+		RenderingTextLength:  renderingLength,
+		Width:                width,
+		Options:              op,
+		CommittedTextRange:   readCommitted,
+		LineByteOffsets:      &t.lineByteOffsets,
+		SelectionStart:       sStart,
+		SelectionEnd:         sEnd,
+		CompositionLen:       compLen,
+		LogicalLineIndexHint: t.firstLogicalLineInViewport,
 	})
 	if count == 0 {
 		return textutil.TextPosition{}, false

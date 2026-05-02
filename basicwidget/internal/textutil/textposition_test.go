@@ -21,14 +21,15 @@ import (
 func withoutSidecar(p *textutil.TextPositionFromIndexParams) *textutil.TextPositionFromIndexParams {
 	q := *p
 	q.LineByteOffsets = nil
-	q.PrecedingVisualLineCount = nil
+	q.LogicalLineIndexHint = 0
+	q.VisualLineIndexHint = 0
 	return &q
 }
 
-// precedingVisualLineCountFromString returns a PrecedingVisualLineCount
-// implementation backed by a fresh visual-line-count walk over committed.
-// The Text widget caches this; tests just walk on each call since inputs
-// are tiny.
+// precedingVisualLineCountFromString returns a function that gives the
+// committed-text visual-line count from line 0 up to lineIdx — used by
+// tests to compute VisualLineIndexHint values for non-zero
+// LogicalLineIndexHint inputs.
 func precedingVisualLineCountFromString(committed string, width int, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) func(int) int {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(committed)
@@ -219,11 +220,10 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 				var l textutil.LineByteOffsets
 				l.RebuildFromString(tc.str)
 				params := &textutil.TextPositionFromIndexParams{
-					RenderingText:            tc.str,
-					Width:                    width,
-					Options:                  op,
-					LineByteOffsets:          &l,
-					PrecedingVisualLineCount: precedingVisualLineCountFromString(tc.str, width, autoWrap, face, 0, false),
+					RenderingText:   tc.str,
+					Width:           width,
+					Options:         op,
+					LineByteOffsets: &l,
 				}
 
 				for idx := 0; idx <= len(tc.str); idx++ {
@@ -266,11 +266,10 @@ func TestTextPositionFromIndexSidecarAutoWrap(t *testing.T) {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(str)
 	params := &textutil.TextPositionFromIndexParams{
-		RenderingText:            str,
-		Width:                    narrowWidth,
-		Options:                  op,
-		LineByteOffsets:          &l,
-		PrecedingVisualLineCount: precedingVisualLineCountFromString(str, narrowWidth, true, face, 0, false),
+		RenderingText:   str,
+		Width:           narrowWidth,
+		Options:         op,
+		LineByteOffsets: &l,
 	}
 
 	for idx := 0; idx <= len(str); idx++ {
@@ -335,15 +334,14 @@ func TestTextPositionFromIndexSidecarComposition(t *testing.T) {
 				var l textutil.LineByteOffsets
 				l.RebuildFromString(tc.committed)
 				params := &textutil.TextPositionFromIndexParams{
-					RenderingText:            rendering,
-					Width:                    width,
-					Options:                  op,
-					CommittedText:            tc.committed,
-					LineByteOffsets:          &l,
-					SelectionStart:           tc.c.sStart,
-					SelectionEnd:             tc.c.sEnd,
-					CompositionLen:           tc.c.compLen,
-					PrecedingVisualLineCount: precedingVisualLineCountFromString(tc.committed, width, autoWrap, face, 0, false),
+					RenderingText:   rendering,
+					Width:           width,
+					Options:         op,
+					CommittedText:   tc.committed,
+					LineByteOffsets: &l,
+					SelectionStart:  tc.c.sStart,
+					SelectionEnd:    tc.c.sEnd,
+					CompositionLen:  tc.c.compLen,
 				}
 
 				for idx := 0; idx <= len(rendering); idx++ {
@@ -384,15 +382,14 @@ func TestTextPositionFromIndexSidecarCompositionWithLineBreak(t *testing.T) {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(committed)
 	params := &textutil.TextPositionFromIndexParams{
-		RenderingText:            rendering,
-		Width:                    width,
-		Options:                  op,
-		CommittedText:            committed,
-		LineByteOffsets:          &l,
-		SelectionStart:           4,
-		SelectionEnd:             4,
-		CompositionLen:           3,
-		PrecedingVisualLineCount: precedingVisualLineCountFromString(committed, width, false, face, 0, false),
+		RenderingText:   rendering,
+		Width:           width,
+		Options:         op,
+		CommittedText:   committed,
+		LineByteOffsets: &l,
+		SelectionStart:  4,
+		SelectionEnd:    4,
+		CompositionLen:  3,
 	}
 
 	for idx := 0; idx <= len(rendering); idx++ {
@@ -423,11 +420,10 @@ func TestTextPositionFromIndexSidecarOutOfRange(t *testing.T) {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(str)
 	params := &textutil.TextPositionFromIndexParams{
-		RenderingText:            str,
-		Width:                    math.MaxInt,
-		Options:                  op,
-		LineByteOffsets:          &l,
-		PrecedingVisualLineCount: func(int) int { return 0 },
+		RenderingText:   str,
+		Width:           math.MaxInt,
+		Options:         op,
+		LineByteOffsets: &l,
 	}
 
 	for _, idx := range []int{-1, len(str) + 1, 1000} {
@@ -440,9 +436,9 @@ func TestTextPositionFromIndexSidecarOutOfRange(t *testing.T) {
 }
 
 // TestTextPositionFromIndexNilSidecar verifies that nil LineByteOffsets
-// and nil PrecedingVisualLineCount drive the unrestricted whole-document
-// fallback (not a panic) and produce results consistent with what the
-// fallback would produce on its own.
+// drives the unrestricted whole-document fallback (not a panic) and
+// produces results consistent with what the fallback would produce on
+// its own.
 func TestTextPositionFromIndexNilSidecar(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
@@ -450,55 +446,30 @@ func TestTextPositionFromIndexNilSidecar(t *testing.T) {
 
 	str := "abc\ndef"
 	const width = math.MaxInt
-	for _, tc := range []struct {
-		name   string
-		params *textutil.TextPositionFromIndexParams
-	}{
-		{
-			"nil offsets",
-			&textutil.TextPositionFromIndexParams{
-				RenderingText:            str,
-				Width:                    width,
-				Options:                  op,
-				PrecedingVisualLineCount: func(int) int { return 0 },
-			},
-		},
-		{
-			"nil count fn",
-			&textutil.TextPositionFromIndexParams{
-				RenderingText: str,
-				Width:         width,
-				Options:       op,
-				LineByteOffsets: func() *textutil.LineByteOffsets {
-					var l textutil.LineByteOffsets
-					l.RebuildFromString(str)
-					return &l
-				}(),
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			noSidecar := &textutil.TextPositionFromIndexParams{
-				RenderingText: str,
-				Width:         width,
-				Options:       op,
-			}
-			for idx := 0; idx <= len(str); idx++ {
-				noSidecar.Index = idx
-				tc.params.Index = idx
-				wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(noSidecar)
-				gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(tc.params)
-				if gotCount != wantCount {
-					t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
-					continue
-				}
-				if gotCount >= 1 && gotP0 != wantP0 {
-					t.Errorf("idx=%d: pos0=%+v, want %+v", idx, gotP0, wantP0)
-				}
-				if gotCount == 2 && gotP1 != wantP1 {
-					t.Errorf("idx=%d: pos1=%+v, want %+v", idx, gotP1, wantP1)
-				}
-			}
-		})
+	params := &textutil.TextPositionFromIndexParams{
+		RenderingText: str,
+		Width:         width,
+		Options:       op,
+	}
+	noSidecar := &textutil.TextPositionFromIndexParams{
+		RenderingText: str,
+		Width:         width,
+		Options:       op,
+	}
+	for idx := 0; idx <= len(str); idx++ {
+		noSidecar.Index = idx
+		params.Index = idx
+		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(noSidecar)
+		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+		if gotCount != wantCount {
+			t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
+			continue
+		}
+		if gotCount >= 1 && gotP0 != wantP0 {
+			t.Errorf("idx=%d: pos0=%+v, want %+v", idx, gotP0, wantP0)
+		}
+		if gotCount == 2 && gotP1 != wantP1 {
+			t.Errorf("idx=%d: pos1=%+v, want %+v", idx, gotP1, wantP1)
+		}
 	}
 }

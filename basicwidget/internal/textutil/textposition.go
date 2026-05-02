@@ -67,13 +67,23 @@ type TextPositionFromIndexParams struct {
 	SelectionEnd   int
 	CompositionLen int
 
-	// PrecedingVisualLineCount returns the cumulative number of
-	// visual lines for committed-text logical lines [0, lineIdx).
-	// For non-autoWrap text this is just lineIdx; for autoWrap it
-	// must be served from a cache to preserve the O(log n + lineLen)
-	// per-call cost (otherwise this dominates). Required when
-	// LineByteOffsets is set.
-	PrecedingVisualLineCount func(lineIdx int) int
+	// LogicalLineIndexHint / VisualLineIndexHint pin the result's Y
+	// coordinate system: the function treats the logical line at
+	// LogicalLineIndexHint as starting at visual-line index
+	// VisualLineIndexHint, and walks forward (or backward) from there
+	// to whichever line contains Index. The returned position's Top
+	// is therefore measured in the caller's coordinate system —
+	// (0, 0) means "Y is measured from line 0," matching the legacy
+	// behavior; (firstLogicalLineInViewport, 0) means "Y is measured
+	// from the first visible line's top," used by virtualized text.
+	//
+	// The walk is bounded by the logical-line distance between the
+	// hint and the line containing Index, so a caller that pins the
+	// hint inside its viewport pays only O(visible) typesetting per
+	// query. Used only when LineByteOffsets is set and Options.AutoWrap
+	// is true.
+	LogicalLineIndexHint int
+	VisualLineIndexHint  int
 }
 
 // readRenderingTextRange returns rendering[start:end), preferring the
@@ -105,10 +115,13 @@ func (p *TextPositionFromIndexParams) getRenderingTextLength() int {
 }
 
 // TextPositionFromIndex returns the visual position(s) corresponding
-// to p.Index in p.RenderingText. When p.LineByteOffsets and
-// p.PrecedingVisualLineCount are supplied, the visual-line walk is
-// localized to the single logical line containing p.Index — O(log n +
-// lineLen) per call instead of the O(documentLen) full scan the
+// to p.Index in p.RenderingText. When p.LineByteOffsets is supplied,
+// the visual-line walk is localized: it starts from
+// (p.LogicalLineIndexHint, p.VisualLineIndexHint) and steps forward
+// (or backward) one logical line at a time, measuring per-line wrap
+// counts, until it reaches the logical line containing p.Index. With
+// the hint placed inside the viewport the cost is O(visible logical
+// lines) per query, instead of the O(documentLen) full scan the
 // sidecar-less fallback performs.
 //
 // When an active IME composition splices into p.RenderingText, the
@@ -124,7 +137,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	if index < 0 || index > p.getRenderingTextLength() {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	if p.LineByteOffsets == nil || p.PrecedingVisualLineCount == nil {
+	if p.LineByteOffsets == nil {
 		return textPositionFromIndex(p.Width, p.RenderingText, nil, index, p.Options)
 	}
 	n := p.LineByteOffsets.LineCount()
@@ -134,12 +147,15 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 
 	// Resolve composition shifts so the committed-text sidecar is
 	// usable without a rebuild. compInfo carries the selection line
-	// and the constant byte/visual-line deltas applied to lines past
-	// it; hasComp tracks whether to apply them at all.
+	// and the constant byte shifts applied to lines past it; hasComp
+	// tracks whether to apply them at all. The visual-line-count delta
+	// the old code maintained explicitly is now folded into the
+	// per-line walk in renderingVisualLineCount below — measuring the
+	// rendering content at compInfo.LineIndex picks up the delta
+	// naturally.
 	var compInfo CompositionInfo
 	var hasComp bool
 	var compStart, compRenderingEnd int
-	var selectionLineVisualCountDelta int
 	if p.CompositionLen > 0 {
 		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
 		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
@@ -184,16 +200,6 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		hasComp = true
 		compStart = p.SelectionStart
 		compRenderingEnd = p.SelectionStart + p.CompositionLen
-
-		if p.Options.AutoWrap {
-			// compInfo.RenderingYShift is in pixels (ceiled); for
-			// fractional-Y semantics we need the visual-line-count
-			// delta directly. Recompute it from the selection-line
-			// shape.
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
-			selectionLineVisualCountDelta = renderingCount - committedCount
-		}
 	}
 
 	// Map rendering index to a committed byte offset for line lookup.
@@ -247,10 +253,52 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		return TextPosition{}, TextPosition{}, 0
 	}
 
-	precedingVisualLines := p.PrecedingVisualLineCount(committedLineIdx)
-	if hasComp && committedLineIdx > compInfo.LineIndex {
-		precedingVisualLines += selectionLineVisualCountDelta
+	// renderingVisualLineCount returns the rendering-plane visual-
+	// line count of the logical line at idx. Mirrors the helper
+	// inside [TextIndexFromPosition].
+	renderingVisualLineCount := func(idx int) int {
+		if !p.Options.AutoWrap {
+			return 1
+		}
+		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(idx)
+		committedEnd := committedTextLen
+		if idx+1 < n {
+			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(idx + 1)
+		}
+		var s, e int
+		switch {
+		case !hasComp || idx < compInfo.LineIndex:
+			s, e = committedStart, committedEnd
+		case idx == compInfo.LineIndex:
+			s, e = committedStart, committedEnd+compInfo.RenderingByteShift
+		default:
+			s, e = committedStart+compInfo.RenderingByteShift, committedEnd+compInfo.RenderingByteShift
+		}
+		return VisualLineCountForLogicalLine(p.Width, p.readRenderingTextRange(s, e), true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
 	}
+
+	// visualLineIndexAt walks from the caller-supplied hint to
+	// targetLine, accumulating per-line wrap counts so the result
+	// is the visual-line index where targetLine starts in the
+	// caller's coordinate system.
+	hintLine := min(max(p.LogicalLineIndexHint, 0), n-1)
+	visualLineIndexAt := func(targetLine int) int {
+		v := p.VisualLineIndexHint
+		if targetLine == hintLine {
+			return v
+		}
+		if targetLine > hintLine {
+			for i := hintLine; i < targetLine; i++ {
+				v += renderingVisualLineCount(i)
+			}
+			return v
+		}
+		for i := hintLine - 1; i >= targetLine; i-- {
+			v -= renderingVisualLineCount(i)
+		}
+		return v
+	}
+	precedingVisualLines := visualLineIndexAt(committedLineIdx)
 	yOffset := p.Options.LineHeight * float64(precedingVisualLines)
 
 	pos0.Top += yOffset
@@ -288,11 +336,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		prevLine := p.readRenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
 		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), p.Options)
 		if prevCount > 0 {
-			prevPrecedingVisualLines := p.PrecedingVisualLineCount(prevCommittedLineIdx)
-			if hasComp && prevCommittedLineIdx > compInfo.LineIndex {
-				prevPrecedingVisualLines += selectionLineVisualCountDelta
-			}
-			prevYOffset := p.Options.LineHeight * float64(prevPrecedingVisualLines)
+			prevYOffset := p.Options.LineHeight * float64(visualLineIndexAt(prevCommittedLineIdx))
 			prevPos0.Top += prevYOffset
 			prevPos0.Bottom += prevYOffset
 			pos1 = pos0
