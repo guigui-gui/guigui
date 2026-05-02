@@ -5,6 +5,7 @@ package textutil
 
 import (
 	"image"
+	"math"
 )
 
 // TextIndexFromPositionParams describes the inputs for
@@ -152,10 +153,14 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		}
 	}
 
-	// Target visual-line index from position.Y. Mirrors the slow
-	// path's lineHeight-based integer divide.
+	// Target visual-line index from position.Y. Use floor so a Y just
+	// above the hint's first visual line maps to a negative target and
+	// drives the backward walk — int() truncation rounds toward zero
+	// and would clamp such Ys onto the hint line, causing arrow-up at
+	// the viewport top to stand still instead of crossing into the
+	// previous logical line.
 	padding := textPadding(p.Options.Face, p.Options.LineHeight)
-	target := max(int((float64(p.Position.Y)+padding)/p.Options.LineHeight), 0)
+	target := int(math.Floor((float64(p.Position.Y) + padding) / p.Options.LineHeight))
 
 	committedTextLen := p.RenderingTextLength
 	if hasComp {
@@ -213,9 +218,6 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 			if curVL <= target {
 				break
 			}
-		}
-		if curVL < 0 {
-			curVL = 0
 		}
 	}
 	logicalLineIndex := curLL

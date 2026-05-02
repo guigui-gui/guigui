@@ -200,7 +200,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 			l.RebuildFromString(str)
 
 			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
-				for _, vlInViewport := range []int{0, 1, 5} {
+				for _, vlInViewport := range []int{-50, -5, -1, 0, 1, 5} {
 					params := &textutil.TextIndexFromPositionParams{
 						Position:             image.Pt(0, int(float64(vlInViewport)*lineHeight)),
 						RenderingTextRange:   func(start, end int) string { return str[start:end] },

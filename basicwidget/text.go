@@ -1969,9 +1969,6 @@ func (t *Text) isLogicalLineMaybeVisible(context *guigui.Context, textBounds ima
 
 func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
 	textContentBounds := t.contentBoundsForLayout(context, textBounds)
-	if position.Y < textContentBounds.Min.Y {
-		return 0
-	}
 
 	// Compute the rendering text's byte length without materializing
 	// it. RenderingTextLength = committedLength + composition byte delta
@@ -1986,9 +1983,6 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		}
 	}
 
-	if position.Y >= textContentBounds.Max.Y {
-		return renderingLength
-	}
 	width := textContentBounds.Dx()
 	op := &textutil.Options{
 		AutoWrap:         t.autoWrap,
