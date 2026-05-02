@@ -4,6 +4,7 @@
 package textutil
 
 import (
+	"image"
 	"math"
 	"sort"
 
@@ -113,6 +114,9 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 }
 
 // VisibleRangeParams describes the inputs for [ComputeVisibleRange].
+//
+// Deprecated: along with [ComputeVisibleRange]; will be removed once
+// every caller has migrated to [VisibleRangeInViewport].
 type VisibleRangeParams struct {
 	// LineByteOffsets is the logical-line layout of the rendering text
 	// (same text that would be passed to [Draw]). The number of logical
@@ -185,6 +189,16 @@ type VisibleRange struct {
 // CumulativeYs must be extended (when AutoWrap is true) to at least the
 // last line whose rendered Y meets or exceeds VisibleMaxY. The function
 // does not extend the cache.
+//
+// Deprecated: use [VisibleRangeInViewport]. ComputeVisibleRange relies
+// on a CumulativeYs prefix-sum cache populated up to the visible
+// region, which costs O(top of visible region) of typesetting on cold
+// cache and dominates scroll CPU on multi-megabyte buffers.
+// [VisibleRangeInViewport] walks forward from a caller-supplied
+// FirstLogicalLineInViewport instead, paying only O(visible) per
+// query.
+// ComputeVisibleRange will be removed once Text and textInputText
+// migrate.
 func ComputeVisibleRange(p *VisibleRangeParams) (VisibleRange, bool) {
 	n := p.LineByteOffsets.LineCount()
 	if n == 0 {
@@ -260,4 +274,146 @@ func alignOffsetFor(vAlign VerticalAlign, boundsHeight, totalHeight int) int {
 		return boundsHeight - totalHeight
 	}
 	return 0
+}
+
+// VisibleRangeInViewportParams describes the inputs for
+// [VisibleRangeInViewport]. The walk steps forward from
+// FirstLogicalLineInViewport measuring per-line heights via
+// [VisualLineCountForLogicalLine] until cumulative height covers
+// Height, so the cost is O(visible logical lines) — the prefix
+// [0, FirstLogicalLineInViewport) is never measured.
+type VisibleRangeInViewportParams struct {
+	// FirstLogicalLineInViewport is the logical line whose top sits
+	// at the widget-local origin (Y=0). The caller's bounds-positioning
+	// places this line at the top of the rendered output, so the
+	// returned VisibleRange.FirstLine is always this index (clamped to
+	// the document) and YShift is always 0.
+	FirstLogicalLineInViewport int
+
+	// LineByteOffsets is the logical-line layout of the committed
+	// text. The number of logical lines comes from its LineCount.
+	LineByteOffsets *LineByteOffsets
+
+	// RenderingTextRange returns rendering[start:end). The walker
+	// reads each measured line through this callback so the caller
+	// never has to materialize the full rendering text. Required when
+	// AutoWrap is true (so the walker can shape per-line content); for
+	// AutoWrap=false only RenderingTextLength is consulted.
+	RenderingTextRange func(start, end int) string
+
+	// RenderingTextLength is the total byte length of the rendering
+	// text.
+	RenderingTextLength int
+
+	// ViewportSize describes the rendering box the walker operates
+	// against: X is the wrap width passed through to
+	// [VisualLineCountForLogicalLine] when AutoWrap is true, and Y is
+	// the distance below FirstLogicalLineInViewport's top that the
+	// visible region extends downward. The walk stops once cumulative
+	// line heights exceed Y, leaving one line of slack so the
+	// caller's inner Y clip can handle off-by-one rounding.
+	ViewportSize image.Point
+
+	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
+	// to [VisualLineCountForLogicalLine] when AutoWrap is true.
+	Face             text.Face
+	LineHeight       float64
+	TabWidth         float64
+	KeepTailingSpace bool
+
+	// AutoWrap toggles between a per-line shaping walk (true) and a
+	// flat LineHeight*idx arithmetic (false).
+	AutoWrap bool
+
+	// Composition is the splice info from [ComputeCompositionInfo].
+	// The zero value means "no active composition".
+	Composition CompositionInfo
+}
+
+// VisibleRangeInViewport returns the byte range and logical-line
+// indices that cover the visible region when the widget is positioned
+// so FirstLogicalLineInViewport sits at widget-local Y=0. Compared to
+// [ComputeVisibleRange], this variant requires no precomputed
+// CumulativeYs — it walks logical lines forward from
+// FirstLogicalLineInViewport and measures each as it goes — so a
+// caller pinned to the topmost visible line pays only O(visible)
+// typesetting per query. Composition splices on lines past the
+// splice are handled the same way [ComputeVisibleRange] does.
+//
+// ok is false when the document is empty.
+//
+// VerticalAlign is intentionally not part of the input: when the
+// caller pins the viewport at a non-zero logical line, the document
+// is assumed to overflow the viewport (the case where alignment
+// matters), so YShift is always 0 and the caller's bounds positioning
+// carries any needed offset itself.
+func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool) {
+	n := p.LineByteOffsets.LineCount()
+	if n == 0 {
+		return VisibleRange{}, false
+	}
+	first := min(max(p.FirstLogicalLineInViewport, 0), n-1)
+
+	// renderingRangeForLogicalLine returns the [start, end) byte
+	// offsets, into the rendering text, of the committed-text logical
+	// line at idx. Mirrors the equivalent helper in
+	// [TextIndexFromPosition].
+	committedTextLen := p.RenderingTextLength - p.Composition.RenderingByteShift
+	renderingRangeForLogicalLine := func(idx int) (start, end int) {
+		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(idx)
+		committedEnd := committedTextLen
+		if idx+1 < n {
+			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(idx + 1)
+		}
+		switch {
+		case idx < p.Composition.LineIndex:
+			return committedStart, committedEnd
+		case idx == p.Composition.LineIndex:
+			return committedStart, committedEnd + p.Composition.RenderingByteShift
+		default:
+			return committedStart + p.Composition.RenderingByteShift, committedEnd + p.Composition.RenderingByteShift
+		}
+	}
+
+	var lastLine int
+	if !p.AutoWrap {
+		lh := int(math.Ceil(p.LineHeight))
+		if lh <= 0 {
+			return VisibleRange{}, false
+		}
+		// One line of slack at the bottom to absorb per-line padding
+		// and integer rounding.
+		count := p.ViewportSize.Y/lh + 2
+		lastLine = min(n-1, first+count-1)
+	} else {
+		cur := first
+		accY := 0
+		for cur < n-1 && accY <= p.ViewportSize.Y {
+			s, e := renderingRangeForLogicalLine(cur)
+			c := VisualLineCountForLogicalLine(p.ViewportSize.X, p.RenderingTextRange(s, e), true, p.Face, p.TabWidth, p.KeepTailingSpace)
+			accY += int(math.Ceil(p.LineHeight * float64(c)))
+			cur++
+		}
+		lastLine = cur
+	}
+	if lastLine < first {
+		lastLine = first
+	}
+
+	startInBytes, _ := renderingRangeForLogicalLine(first)
+	endInBytes := p.RenderingTextLength
+	if lastLine+1 < n {
+		_, endInBytes = renderingRangeForLogicalLine(lastLine)
+		// renderingRangeForLogicalLine(lastLine).end equals the start
+		// of lastLine+1 in rendering coordinates, which is what we
+		// want for the upper bound of the slice.
+	}
+
+	return VisibleRange{
+		FirstLine:    first,
+		LastLine:     lastLine,
+		StartInBytes: startInBytes,
+		EndInBytes:   endInBytes,
+		YShift:       0,
+	}, true
 }
