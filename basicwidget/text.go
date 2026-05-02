@@ -11,7 +11,6 @@ import (
 	"log/slog"
 	"math"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -1211,27 +1210,65 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		compInfo = info
 	}
 
-	// totalHeight already reflects the rendering text (composition included).
-	var totalHeight int
-	if t.vAlign != VerticalAlignTop {
-		totalHeight = t.textHeight(context, guigui.FixedWidthConstraints(width))
-	}
-
 	lineH := int(math.Ceil(t.lineHeight(context)))
 	if lineH <= 0 {
 		return materializeFull(), 0, 0, false
 	}
 
+	renderingLength := t.field.TextLengthInBytes()
+	if hasComp {
+		sStart, sEnd := t.field.Selection()
+		renderingLength = renderingLength - (sEnd - sStart) + t.field.UncommittedTextLengthInBytes()
+	}
+
+	// vAlign==Top is the only mode that can skip the cumulativeYs
+	// walk: textInputText.Layout pins this widget at
+	// firstLogicalLineInViewport (the line at widget-local Y=0), so
+	// the walker only measures lines from there downward. Other
+	// alignments need totalHeight for the offset shift, which already
+	// requires walking the document, so the cumulativeYs-cached path
+	// below is fine.
+	if t.vAlign == VerticalAlignTop {
+		readRendering := t.stringValueWithRange
+		if hasComp {
+			readRendering = t.stringValueForRenderingRange
+		}
+		r, ok := textutil.VisibleRangeInViewport(&textutil.VisibleRangeInViewportParams{
+			FirstLogicalLineInViewport: t.firstLogicalLineInViewport,
+			LineByteOffsets:            &t.lineByteOffsets,
+			RenderingTextRange:         readRendering,
+			RenderingTextLength:        renderingLength,
+			ViewportSize: image.Pt(
+				width,
+				visibleBounds.Max.Y-textBounds.Min.Y,
+			),
+			Face:             t.face(context, false),
+			LineHeight:       t.lineHeight(context),
+			TabWidth:         t.actualTabWidth(context),
+			KeepTailingSpace: t.keepTailingSpace,
+			AutoWrap:         t.autoWrap,
+			Composition:      compInfo,
+		})
+		if !ok {
+			return materializeFull(), 0, 0, false
+		}
+		if hasComp {
+			return t.stringValueForRenderingRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
+		}
+		return t.stringValueWithRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
+	}
+
+	// vAlign != Top: standalone Text where the document fits the
+	// viewport (otherwise alignment is moot). The alignment offset
+	// needs totalHeight, so the per-line walk required to compute it
+	// also fills cumulativeYs along the way; ComputeVisibleRange then
+	// reads the cache.
+	totalHeight := t.textHeight(context, guigui.FixedWidthConstraints(width))
+
 	// For autoWrap, extend cumulativeYs forward until the last entry
 	// covers VisibleMaxY (in rendering Y, with the composition delta on
-	// lines past compLine). The panel's Layout pass typically populates
-	// the cache up to topItemIndex+visible already, so for the texteditor
-	// case this loop is a no-op.
+	// lines past compLine).
 	if t.autoWrap {
-		// Pre-compute the bound the cache needs to cover. We don't know
-		// the exact line yet, so use the same alignOffset math the
-		// textutil function will and aim the cache at VisibleMaxY -
-		// alignOffset.
 		var alignOffset int
 		switch t.vAlign {
 		case VerticalAlignMiddle:
@@ -1254,11 +1291,6 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		}
 	}
 
-	renderingLength := t.field.TextLengthInBytes()
-	if hasComp {
-		sStart, sEnd := t.field.Selection()
-		renderingLength = renderingLength - (sEnd - sStart) + t.field.UncommittedTextLengthInBytes()
-	}
 	r, ok := textutil.ComputeVisibleRange(&textutil.VisibleRangeParams{
 		LineByteOffsets:     &t.lineByteOffsets,
 		RenderingTextLength: renderingLength,
@@ -2083,26 +2115,14 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 	position = position.Sub(textContentBounds.Min)
 
-	// Pass a logical-line hint to [textutil.TextIndexFromPosition] so
-	// its per-line walk starts inside the viewport instead of at line
-	// 0. The hint is taken from t.cumulativeYs, which Layout has
-	// already populated up to the topmost visible line — calling
-	// t.cumulativeY(context, width, 0) here just refreshes the
-	// cumulativeYs cache key without extending it. Without a hint,
-	// the walk starts at line 0 and degrades to O(documentLen) for
-	// multi-megabyte buffers, which dominates CPU when drag-select
-	// fires this every tick from [Text.HandlePointingInput].
+	// Pass the firstLogicalLineInViewport as the textutil walk hint.
+	// Virtualizing parents (textInputText.Layout) set this to the
+	// topmost visible logical line, so the walker only measures
+	// O(visible) lines per query instead of walking from line 0.
+	// Standalone Text leaves it at 0, which matches the historical
+	// "walk from line 0" behavior — fine for small documents.
 	t.ensureLineByteOffsets()
-	var hintLL, hintVL int
-	if t.autoWrap {
-		t.cumulativeY(context, width, 0)
-		if k := len(t.cumulativeYs); k > 0 {
-			hintLL = max(sort.Search(k, func(i int) bool {
-				return t.cumulativeYs[i] > position.Y
-			})-1, 0)
-			hintVL = t.cumulativeVisualLineCounts[hintLL]
-		}
-	}
+	hintLL := t.firstLogicalLineInViewport
 
 	readRendering := func(start, end int) string { return t.stringValueWithRange(start, end) }
 	if showComposition {
@@ -2124,7 +2144,6 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		SelectionEnd:         sEnd,
 		CompositionLen:       compLen,
 		LogicalLineIndexHint: hintLL,
-		VisualLineIndexHint:  hintVL,
 	})
 	if idx < 0 || idx > renderingLength {
 		return -1
@@ -2171,18 +2190,30 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	if compLen > 0 {
 		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
 	}
+	// PrecedingVisualLineCount returns the visual-line offset from the
+	// widget's firstLogicalLineInViewport — the line that
+	// textInputText.Layout pinned at widget-local Y=0 — to lineIdx.
+	// Subtracting that line's offset makes the textutil-returned
+	// pos.Top match the new textBounds.Min.Y, which sits at the first
+	// visible line's top (it was historically line-0-relative, but
+	// Layout no longer pays the O(topIdx) cumulativeY cost to position
+	// the widget at line 0). cumulativeVisualLineCount stays as the
+	// underlying cache so callbacks remain O(1) once warm.
+	firstLine := t.firstLogicalLineInViewport
 	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
-		Index:                    index,
-		RenderingTextRange:       readRendering,
-		RenderingTextLength:      renderingLength,
-		Width:                    width,
-		Options:                  op,
-		CommittedTextRange:       readCommitted,
-		LineByteOffsets:          &t.lineByteOffsets,
-		SelectionStart:           sStart,
-		SelectionEnd:             sEnd,
-		CompositionLen:           compLen,
-		PrecedingVisualLineCount: func(lineIdx int) int { return t.cumulativeVisualLineCount(context, width, lineIdx) },
+		Index:               index,
+		RenderingTextRange:  readRendering,
+		RenderingTextLength: renderingLength,
+		Width:               width,
+		Options:             op,
+		CommittedTextRange:  readCommitted,
+		LineByteOffsets:     &t.lineByteOffsets,
+		SelectionStart:      sStart,
+		SelectionEnd:        sEnd,
+		CompositionLen:      compLen,
+		PrecedingVisualLineCount: func(lineIdx int) int {
+			return t.cumulativeVisualLineCount(context, width, lineIdx) - t.cumulativeVisualLineCount(context, width, firstLine)
+		},
 	})
 	if count == 0 {
 		return textutil.TextPosition{}, false

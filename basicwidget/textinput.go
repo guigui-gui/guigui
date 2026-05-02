@@ -907,14 +907,16 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 
 	t.panel.forceSetTopItem(topIdx, topOff, false)
 
-	// Position the *Text widget so logical line topIdx lands at the panel
-	// viewport top, shifted by topOff. cumulativeY is fast for the
-	// non-autoWrap path (idx*lineHeight) and iterates per-line for autoWrap.
-	topYOffset := topOff - t.cumulativeY(context, topIdx)
+	// Position the *Text widget so logical line topIdx lands at the
+	// panel viewport top, shifted by topOff. The inner *Text takes
+	// topIdx as its coordinate-system origin via
+	// setFirstLogicalLineInViewport, so positioning here is O(1) and
+	// never walks the document prefix.
+	t.text.Widget().setFirstLogicalLineInViewport(topIdx)
 
 	textBounds := bounds
 	textBounds.Min.X += t.padding.Start
-	textBounds.Min.Y += topYOffset + t.padding.Top
+	textBounds.Min.Y += topOff + t.padding.Top
 	textBounds.Max.X -= t.padding.End
 
 	// Apply the user-set vertical alignment as a Min.Y shift, but only when
