@@ -389,27 +389,50 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) ([]any, bool) 
 		if h.key != eventKey {
 			continue
 		}
-		f := reflect.ValueOf(h.handler)
-		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-		widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
-		for _, arg := range args {
-			widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(arg))
+		argValues := make([]reflect.Value, len(args))
+		for i, a := range args {
+			argValues[i] = reflect.ValueOf(a)
 		}
-		results := f.Call(widgetState.tmpArgs)
-		widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
-		widgetState.eventDispatched = true
-		theApp.hasDirtyWidgets = true
-		RequestRebuild(widget)
-		if len(results) == 0 {
-			return nil, true
-		}
-		ret := make([]any, len(results))
-		for i, r := range results {
-			ret[i] = r.Interface()
-		}
-		return ret, true
+		return invokeEventHandler(widget, widgetState, h.handler, argValues), true
 	}
 	return nil, false
+}
+
+// DispatchEventLazy is like [DispatchEvent] but defers argument construction.
+// argsFunc must be a func with no parameters whose return values become the
+// handler arguments (after the *Context). It is invoked only when a handler is
+// registered for eventKey, so callers can skip expensive work (such as
+// materializing a large string) when no listener is attached.
+func DispatchEventLazy(widget Widget, eventKey EventKey, argsFunc any) ([]any, bool) {
+	widgetState := widget.widgetState()
+	for _, h := range widgetState.eventHandlers {
+		if h.key != eventKey {
+			continue
+		}
+		args := reflect.ValueOf(argsFunc).Call(nil)
+		return invokeEventHandler(widget, widgetState, h.handler, args), true
+	}
+	return nil, false
+}
+
+func invokeEventHandler(widget Widget, widgetState *widgetState, handler any, args []reflect.Value) []any {
+	f := reflect.ValueOf(handler)
+	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
+	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
+	widgetState.tmpArgs = append(widgetState.tmpArgs, args...)
+	results := f.Call(widgetState.tmpArgs)
+	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
+	widgetState.eventDispatched = true
+	theApp.hasDirtyWidgets = true
+	RequestRebuild(widget)
+	if len(results) == 0 {
+		return nil
+	}
+	ret := make([]any, len(results))
+	for i, r := range results {
+		ret[i] = r.Interface()
+	}
+	return ret
 }
 
 var widgetEventFocusChanged EventKey = GenerateEventKey()

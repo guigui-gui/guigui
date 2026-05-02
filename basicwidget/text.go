@@ -260,7 +260,9 @@ func (t *Text) dispatchValueChanged(committed, snapshot bool) {
 			t.lastDispatchedCommittedGen = gen
 		}
 	}
-	guigui.DispatchEvent(t, textEventValueChanged, t.stringValue(), committed)
+	guigui.DispatchEventLazy(t, textEventValueChanged, func() (string, bool) {
+		return t.stringValue(), committed
+	})
 }
 
 func (t *Text) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
