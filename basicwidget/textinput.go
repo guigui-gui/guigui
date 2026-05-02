@@ -775,9 +775,14 @@ func (t *textInputText) itemCount() int {
 
 // measureItemHeight implements [virtualScrollContent]. Returns the rendered
 // height of one logical line at the panel's current content width, cached
-// for the lifetime of the current virtualized Layout. Also updates the
-// per-Layout [textInputText.measuredMaxWidth] used by
-// [textInputText.contentWidth] for the multiline case.
+// for the lifetime of the current virtualized Layout.
+//
+// For non-autoWrap text every logical line is exactly one visual line, so
+// the height is constant and shaping is skipped entirely; this keeps dense
+// walks (e.g. dragging the V scroll thumb across a multi-million-line
+// document) O(N) trivial. The horizontal scroll bar's [textInputText.measuredMaxWidth]
+// is populated by [textInputText.measureMaxWidthForViewport] over the
+// viewport lines that Layout has already touched.
 func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int) int {
 	if h, ok := t.measuredLineHeights[lineIndex]; ok {
 		return h
@@ -791,35 +796,76 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		return 0
 	}
 
-	start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
-	end := txt.field.TextLengthInBytes()
-	if lineIndex+1 < n {
-		end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
+	var height int
+	if !txt.autoWrap {
+		height = int(math.Ceil(txt.lineHeight(context)))
+	} else {
+		start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
+		end := txt.field.TextLengthInBytes()
+		if lineIndex+1 < n {
+			end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
+		}
+
+		logicalLine := txt.stringValueWithRange(start, end)
+
+		width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
+		if width <= 0 {
+			width = math.MaxInt
+		}
+
+		_, h := textutil.MeasureLogicalLine(
+			width, logicalLine, txt.autoWrap, txt.face(context, false),
+			txt.lineHeight(context), txt.actualTabWidth(context), txt.keepTailingSpace, "",
+		)
+		height = int(math.Ceil(h))
+		// For autoWrap, [textInputText.contentWidth] short-circuits to
+		// containerBounds.Dx() and never reads measuredMaxWidth, so there
+		// is no width to track here.
 	}
-
-	logicalLine := txt.stringValueWithRange(start, end)
-
-	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-	if width <= 0 {
-		width = math.MaxInt
-	}
-
-	w, h := textutil.MeasureLogicalLine(
-		width, logicalLine, txt.autoWrap, txt.face(context, false),
-		txt.lineHeight(context), txt.actualTabWidth(context), txt.keepTailingSpace, "",
-	)
-	height := int(math.Ceil(h))
 
 	if t.measuredLineHeights == nil {
 		t.measuredLineHeights = map[int]int{}
 	}
 	t.measuredLineHeights[lineIndex] = height
 
-	if mw := int(math.Ceil(w)) + t.padding.Start + t.padding.End; mw > t.measuredMaxWidth {
-		t.measuredMaxWidth = mw
-	}
-
 	return height
+}
+
+// measureMaxWidthForViewport runs after [textInputText.Layout]'s
+// height-only walks and records the widest viewport line into
+// [textInputText.measuredMaxWidth] so the horizontal scroll bar can size
+// its thumb. Only non-autoWrap multiline text needs this; for autoWrap
+// or single-line text [textInputText.contentWidth] computes the width
+// itself and ignores measuredMaxWidth.
+func (t *textInputText) measureMaxWidthForViewport(context *guigui.Context) {
+	txt := t.text.Widget()
+	if txt.autoWrap || !txt.IsMultiline() || len(t.measuredLineHeights) == 0 {
+		return
+	}
+	txt.ensureLineByteOffsets()
+	n := txt.lineByteOffsets.LineCount()
+	face := txt.face(context, false)
+	lineHeight := txt.lineHeight(context)
+	tabWidth := txt.actualTabWidth(context)
+	keepTailingSpace := txt.keepTailingSpace
+	for lineIdx := range t.measuredLineHeights {
+		if lineIdx < 0 || lineIdx >= n {
+			continue
+		}
+		start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIdx)
+		end := txt.field.TextLengthInBytes()
+		if lineIdx+1 < n {
+			end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIdx + 1)
+		}
+		logicalLine := txt.stringValueWithRange(start, end)
+		w, _ := textutil.MeasureLogicalLine(
+			math.MaxInt, logicalLine, false, face,
+			lineHeight, tabWidth, keepTailingSpace, "",
+		)
+		if mw := int(math.Ceil(w)) + t.padding.Start + t.padding.End; mw > t.measuredMaxWidth {
+			t.measuredMaxWidth = mw
+		}
+	}
 }
 
 // Layout normalizes the panel's (topItemIndex, topItemOffset) using real
@@ -951,6 +997,13 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	layouter.LayoutWidget(&t.text, textBounds)
 
 	t.text.SetRenderingBounds(t.containerBounds)
+
+	// Now that the viewport's logical lines have been touched (and so are
+	// in [textInputText.measuredLineHeights]), measure their widths once
+	// to size the horizontal scroll bar. Done as a separate pass so that
+	// [textInputText.measureItemHeight] can stay shaping-free for non-
+	// autoWrap text on dense walks.
+	t.measureMaxWidthForViewport(context)
 
 	// Per-logical-line height for the panel's scroll bar sizing, sampled
 	// from the lines just measured during the normalize / bottom-clamp

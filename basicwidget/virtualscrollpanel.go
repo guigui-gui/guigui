@@ -709,33 +709,53 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 		_, y := ebiten.CursorPosition()
 		dy := y - s.draggingStartPosition
 		if dy != 0 && trackHeight > 0 {
-			// Map pixel drag to item index. Use the same maxIndex as
-			// thumbBounds so that the thumb tracks the cursor 1:1.
-			viewportItems := float64(bounds.Dy()) / float64(s.panel.estimatedItemHeight)
-			maxIndex := float64(totalCount) - viewportItems
-			if maxIndex < 1 {
-				maxIndex = 1
+			// Map cursor drag to a document-pixel scroll delta. dy maps
+			// 1:1 to the thumb's position on the track; the thumb's
+			// rate is scrollPos/scrollMax (see
+			// [virtualScrollPanel.thumbBounds]), so a thumb move of dy
+			// implies a scrollPos change of dy*scrollMax/trackHeight.
+			scrollMax := totalCount*s.panel.estimatedItemHeight - bounds.Dy()
+			if scrollMax > 0 {
+				deltaScrollPos := int(float64(dy) * float64(scrollMax) / trackHeight)
+
+				// Walk actual measured item heights from the drag-start
+				// anchor so the V drag can reach the document bottom
+				// even when items have heterogeneous heights (e.g. an
+				// autoWrap last line that wraps taller than the
+				// viewport). Layout's bottom-clamp pulls (topIdx,
+				// topOff) back if the walk overshoots.
+				newIdx := s.draggingStartIndex
+				newOff := s.draggingStartOffset - deltaScrollPos
+				if deltaScrollPos > 0 {
+					// Scrolling down: advance newIdx while newOff is
+					// more negative than the current item's height.
+					for newIdx < totalCount-1 {
+						h := s.panel.content.measureItemHeight(context, newIdx)
+						if h <= 0 {
+							h = s.panel.estimatedItemHeight
+						}
+						if -newOff < h {
+							break
+						}
+						newOff += h
+						newIdx++
+					}
+				} else {
+					// Scrolling up: retreat newIdx while newOff is positive.
+					for newOff > 0 && newIdx > 0 {
+						newIdx--
+						h := s.panel.content.measureItemHeight(context, newIdx)
+						if h <= 0 {
+							h = s.panel.estimatedItemHeight
+						}
+						newOff -= h
+					}
+					if newIdx == 0 && newOff > 0 {
+						newOff = 0
+					}
+				}
+				s.panel.forceSetTopItem(newIdx, newOff, true)
 			}
-			indexPerPixel := maxIndex / trackHeight
-			deltaItems := float64(dy) * indexPerPixel
-			// Use fractional position to compute both index and sub-item offset.
-			// Use the actual height of the start item (matching thumbBounds) so
-			// the start fraction agrees with the thumb position on screen.
-			startItemH := s.panel.content.measureItemHeight(context, s.draggingStartIndex)
-			if startItemH <= 0 {
-				startItemH = s.panel.estimatedItemHeight
-			}
-			startFraction := float64(s.draggingStartIndex) + float64(-s.draggingStartOffset)/float64(startItemH)
-			newFraction := startFraction + deltaItems
-			newFraction = min(max(newFraction, 0), float64(totalCount-1))
-			newIdx := int(newFraction)
-			// Use the actual height of the target item for the sub-item offset.
-			newItemH := s.panel.content.measureItemHeight(context, newIdx)
-			if newItemH <= 0 {
-				newItemH = s.panel.estimatedItemHeight
-			}
-			newOffset := -int((newFraction - float64(newIdx)) * float64(newItemH))
-			s.panel.forceSetTopItem(newIdx, newOffset, true)
 		}
 		return guigui.HandleInputByWidget(s)
 	}
