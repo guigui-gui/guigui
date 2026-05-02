@@ -1258,59 +1258,46 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		return t.stringValueWithRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
 	}
 
-	// vAlign != Top: standalone Text where the document fits the
-	// viewport (otherwise alignment is moot). The alignment offset
-	// needs totalHeight, so the per-line walk required to compute it
-	// also fills cumulativeYs along the way; ComputeVisibleRange then
-	// reads the cache.
+	// vAlign != Top: standalone Text. The alignment offset shifts the
+	// document's drawn-Y from textBounds.Min.Y by alignOffset. Pass
+	// that shift through to the caller as yShift; the walker itself
+	// stays vAlign-agnostic and just walks from line 0 forward.
 	totalHeight := t.textHeight(context, guigui.FixedWidthConstraints(width))
-
-	// For autoWrap, extend cumulativeYs forward until the last entry
-	// covers VisibleMaxY (in rendering Y, with the composition delta on
-	// lines past compLine).
-	if t.autoWrap {
-		var alignOffset int
-		switch t.vAlign {
-		case VerticalAlignMiddle:
-			alignOffset = (textBounds.Dy() - totalHeight) / 2
-		case VerticalAlignBottom:
-			alignOffset = textBounds.Dy() - totalHeight
-		}
-		target := visibleBounds.Max.Y - textBounds.Min.Y - alignOffset
-		t.cumulativeY(context, width, 0)
-		for len(t.cumulativeYs) <= n {
-			i := len(t.cumulativeYs) - 1
-			y := t.cumulativeYs[i]
-			if i > compInfo.LineIndex {
-				y += compInfo.RenderingYShift
-			}
-			if y >= target {
-				break
-			}
-			t.cumulativeY(context, width, len(t.cumulativeYs))
-		}
+	var alignOffset int
+	switch t.vAlign {
+	case VerticalAlignMiddle:
+		alignOffset = (textBounds.Dy() - totalHeight) / 2
+	case VerticalAlignBottom:
+		alignOffset = textBounds.Dy() - totalHeight
 	}
 
-	r, ok := textutil.ComputeVisibleRange(&textutil.VisibleRangeParams{
-		LineByteOffsets:     &t.lineByteOffsets,
-		RenderingTextLength: renderingLength,
-		CumulativeYs:        t.cumulativeYs,
-		LineHeight:          lineH,
-		AutoWrap:            t.autoWrap,
-		VerticalAlign:       textutil.VerticalAlign(t.vAlign),
-		BoundsHeight:        textBounds.Dy(),
-		TotalHeight:         totalHeight,
-		VisibleMinY:         visibleBounds.Min.Y - textBounds.Min.Y,
-		VisibleMaxY:         visibleBounds.Max.Y - textBounds.Min.Y,
-		Composition:         compInfo,
+	readRendering := t.stringValueWithRange
+	if hasComp {
+		readRendering = t.stringValueForRenderingRange
+	}
+	r, ok := textutil.VisibleRangeInViewport(&textutil.VisibleRangeInViewportParams{
+		FirstLogicalLineInViewport: 0,
+		LineByteOffsets:            &t.lineByteOffsets,
+		RenderingTextRange:         readRendering,
+		RenderingTextLength:        renderingLength,
+		ViewportSize: image.Pt(
+			width,
+			visibleBounds.Max.Y-textBounds.Min.Y-alignOffset,
+		),
+		Face:             t.face(context, false),
+		LineHeight:       t.lineHeight(context),
+		TabWidth:         t.actualTabWidth(context),
+		KeepTailingSpace: t.keepTailingSpace,
+		AutoWrap:         t.autoWrap,
+		Composition:      compInfo,
 	})
 	if !ok {
 		return materializeFull(), 0, 0, false
 	}
 	if hasComp {
-		return t.stringValueForRenderingRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
+		return t.stringValueForRenderingRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, alignOffset, true
 	}
-	return t.stringValueWithRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, r.YShift, true
+	return t.stringValueWithRange(r.StartInBytes, r.EndInBytes), r.StartInBytes, alignOffset, true
 }
 
 func (t *Text) selectionToDraw(context *guigui.Context) (start, end int, ok bool) {
