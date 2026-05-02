@@ -1910,6 +1910,18 @@ func (t *Text) cursorPosition(context *guigui.Context, textBounds image.Rectangl
 	if end < 0 {
 		return textutil.TextPosition{}, false
 	}
+	// A non-empty selection draws as a highlight, not a caret;
+	// [textCursor.alpha] returns 0 in that case, so no callers need
+	// the position.
+	if start != end {
+		return textutil.TextPosition{}, false
+	}
+
+	// Skip the textPosition walk when the cursor's line is off-screen;
+	// it can dominate CPU when the user has scrolled far from the cursor.
+	if !t.isLogicalLineMaybeVisible(context, textBounds, end) {
+		return textutil.TextPosition{}, false
+	}
 
 	_, e, ok := t.selectionToDraw(context)
 	if !ok {
@@ -1917,6 +1929,42 @@ func (t *Text) cursorPosition(context *guigui.Context, textBounds image.Rectangl
 	}
 
 	return t.textPosition(context, textBounds, e, true)
+}
+
+// isLogicalLineMaybeVisible reports whether the logical line containing the
+// committed byte offset byteOffset could be inside textBounds. It is
+// conservative: a true result means "compute the exact pixel position to know
+// for sure"; a false result means "definitely off-screen, no need to walk".
+// textBounds is the parent Text's bounds (the rectangle textPosition is
+// resolved against), which is also the visible viewport in the
+// virtualization-aware layouts that drive the hot path.
+func (t *Text) isLogicalLineMaybeVisible(context *guigui.Context, textBounds image.Rectangle, byteOffset int) bool {
+	if textBounds.Empty() {
+		// No Layout has run yet (or Text is not laid out). Defer to
+		// the exact path so behavior matches the pre-short-circuit code.
+		return true
+	}
+	t.ensureLineByteOffsets()
+	n := t.lineByteOffsets.LineCount()
+	if n == 0 {
+		return true
+	}
+	line := t.lineByteOffsets.LineIndexForByteOffset(byteOffset)
+	first := t.firstLogicalLineInViewport
+	if line < first {
+		return false
+	}
+	// The line's top sits at or below
+	//   textBounds.Min.Y + (line-first)*lineHeight
+	// because each preceding logical line contributes at least one
+	// visual line of height lineHeight. If that lower bound is already
+	// past the bounds bottom, the actual top is too.
+	lh := t.lineHeight(context)
+	minTop := float64(textBounds.Min.Y) + lh*float64(line-first)
+	if minTop >= float64(textBounds.Max.Y) {
+		return false
+	}
+	return true
 }
 
 func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
