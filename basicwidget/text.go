@@ -1960,13 +1960,13 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	t.ensureLineByteOffsets()
 	hintLL := t.firstLogicalLineInViewport
 
-	readRendering := func(start, end int) string { return t.stringValueWithRange(start, end) }
+	readRendering := t.stringValueWithRange
 	if showComposition {
-		readRendering = func(start, end int) string { return t.stringValueForRenderingRange(start, end) }
+		readRendering = t.stringValueForRenderingRange
 	}
 	var readCommitted func(start, end int) string
 	if compLen > 0 {
-		readCommitted = func(start, end int) string { return t.stringValueWithRange(start, end) }
+		readCommitted = t.stringValueWithRange
 	}
 	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
 		Position:             position,
