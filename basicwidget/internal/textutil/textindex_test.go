@@ -55,10 +55,11 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 				var l textutil.LineByteOffsets
 				l.RebuildFromString(tc.str)
 				params := &textutil.TextIndexFromPositionParams{
-					RenderingText:   tc.str,
-					Width:           width,
-					Options:         op,
-					LineByteOffsets: &l,
+					RenderingTextRange:  func(start, end int) string { return tc.str[start:end] },
+					RenderingTextLength: len(tc.str),
+					Width:               width,
+					Options:             op,
+					LineByteOffsets:     &l,
 				}
 
 				lineCount := l.LineCount()
@@ -94,10 +95,11 @@ func TestTextIndexFromPositionSidecarAutoWrap(t *testing.T) {
 	var l textutil.LineByteOffsets
 	l.RebuildFromString(str)
 	params := &textutil.TextIndexFromPositionParams{
-		RenderingText:   str,
-		Width:           narrowWidth,
-		Options:         op,
-		LineByteOffsets: &l,
+		RenderingTextRange:  func(start, end int) string { return str[start:end] },
+		RenderingTextLength: len(str),
+		Width:               narrowWidth,
+		Options:             op,
+		LineByteOffsets:     &l,
 	}
 
 	totalVL := textutil.MeasureHeight(narrowWidth, str, true, face, lineHeight, 0, false) / lineHeight
@@ -148,7 +150,8 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 			totalVL := int(textutil.MeasureHeight(tc.width, tc.str, tc.autoWrap, face, lineHeight, 0, false) / lineHeight)
 			for hint := 0; hint < n; hint++ {
 				params := &textutil.TextIndexFromPositionParams{
-					RenderingText:        tc.str,
+					RenderingTextRange:   func(start, end int) string { return tc.str[start:end] },
+					RenderingTextLength:  len(tc.str),
 					Width:                tc.width,
 					Options:              op,
 					LineByteOffsets:      &l,
@@ -200,14 +203,15 @@ func TestTextIndexFromPositionSidecarComposition(t *testing.T) {
 			var l textutil.LineByteOffsets
 			l.RebuildFromString(tc.committed)
 			params := &textutil.TextIndexFromPositionParams{
-				RenderingText:   rendering,
-				Width:           width,
-				Options:         op,
-				CommittedText:   tc.committed,
-				LineByteOffsets: &l,
-				SelectionStart:  tc.c.sStart,
-				SelectionEnd:    tc.c.sEnd,
-				CompositionLen:  tc.c.compLen,
+				RenderingTextRange:  func(start, end int) string { return rendering[start:end] },
+				RenderingTextLength: len(rendering),
+				Width:               width,
+				Options:             op,
+				CommittedTextRange:  func(start, end int) string { return tc.committed[start:end] },
+				LineByteOffsets:     &l,
+				SelectionStart:      tc.c.sStart,
+				SelectionEnd:        tc.c.sEnd,
+				CompositionLen:      tc.c.compLen,
 			}
 			renderingLineCount := 1
 			for _, c := range rendering {

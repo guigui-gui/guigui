@@ -193,10 +193,11 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 				// matches our per-logical query: the head of the next line, at
 				// y == originY.
 				wp0, wp1, wpCount := textutil.TextPositionFromIndex(&textutil.TextPositionFromIndexParams{
-					Index:         idx,
-					RenderingText: tc.str,
-					Width:         width,
-					Options:       op,
+					Index:               idx,
+					RenderingTextRange:  func(start, end int) string { return tc.str[start:end] },
+					RenderingTextLength: len(tc.str),
+					Width:               width,
+					Options:             op,
 				})
 
 				expectedTop := lp0.Top + originY
@@ -265,10 +266,11 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 			// Y of originY.
 			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], op)
 			whole := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
-				Position:      image.Pt(q.x, int(originY)),
-				RenderingText: str,
-				Width:         width,
-				Options:       op,
+				Position:            image.Pt(q.x, int(originY)),
+				RenderingTextRange:  func(start, end int) string { return str[start:end] },
+				RenderingTextLength: len(str),
+				Width:               width,
+				Options:             op,
 			})
 			lineStart := l.ByteOffsetByLineIndex(q.lineIndex)
 			if got, want := perLine+lineStart, whole; got != want {
