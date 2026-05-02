@@ -110,7 +110,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	// and the constant byte shifts applied to lines past it; hasComp
 	// tracks whether to apply them at all. The visual-line-count delta
 	// the old code maintained explicitly is now folded into the
-	// per-line walk in renderingVisualLineCount below — measuring the
+	// per-line walk via lineMeasurer.visualLineCount — measuring the
 	// rendering content at compInfo.LineIndex picks up the delta
 	// naturally.
 	var compInfo CompositionInfo
@@ -180,61 +180,31 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		committedLineIdx = p.LineByteOffsets.LineIndexForByteOffset(index)
 	}
 
-	committedLineStart := p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx)
 	committedTextLen := p.RenderingTextLength
 	if hasComp {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
-	committedLineEnd := committedTextLen
-	if committedLineIdx+1 < n {
-		committedLineEnd = p.LineByteOffsets.ByteOffsetByLineIndex(committedLineIdx + 1)
+
+	m := &lineMeasurer{
+		offsets:            p.LineByteOffsets,
+		logicalLineCount:   n,
+		committedTextLen:   committedTextLen,
+		renderingTextRange: p.RenderingTextRange,
+		width:              p.Width,
+		face:               p.Options.Face,
+		tabWidth:           p.Options.TabWidth,
+		keepTailingSpace:   p.Options.KeepTailingSpace,
+		autoWrap:           p.Options.AutoWrap,
+		composition:        compInfo,
 	}
 
-	// Translate the committed line range into rendering coordinates.
-	renderingLineStart := committedLineStart
-	renderingLineEnd := committedLineEnd
-	if hasComp {
-		switch {
-		case committedLineIdx < compInfo.LineIndex:
-			// Before the splice: identity.
-		case committedLineIdx == compInfo.LineIndex:
-			renderingLineEnd += compInfo.RenderingByteShift
-		default:
-			renderingLineStart += compInfo.RenderingByteShift
-			renderingLineEnd += compInfo.RenderingByteShift
-		}
-	}
-
+	renderingLineStart, renderingLineEnd := m.renderingRange(committedLineIdx)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine := index - renderingLineStart
 
 	pos0, pos1, c := TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, p.Options)
 	if c == 0 {
 		return TextPosition{}, TextPosition{}, 0
-	}
-
-	// renderingVisualLineCount returns the rendering-plane visual-
-	// line count of the logical line at idx. Mirrors the helper
-	// inside [TextIndexFromPosition].
-	renderingVisualLineCount := func(idx int) int {
-		if !p.Options.AutoWrap {
-			return 1
-		}
-		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(idx)
-		committedEnd := committedTextLen
-		if idx+1 < n {
-			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(idx + 1)
-		}
-		var s, e int
-		switch {
-		case !hasComp || idx < compInfo.LineIndex:
-			s, e = committedStart, committedEnd
-		case idx == compInfo.LineIndex:
-			s, e = committedStart, committedEnd+compInfo.RenderingByteShift
-		default:
-			s, e = committedStart+compInfo.RenderingByteShift, committedEnd+compInfo.RenderingByteShift
-		}
-		return VisualLineCountForLogicalLine(p.Width, p.RenderingTextRange(s, e), true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
 	}
 
 	// visualLineIndexAt walks from the caller-supplied hint to
@@ -249,12 +219,12 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 		}
 		if targetLine > hintLine {
 			for i := hintLine; i < targetLine; i++ {
-				v += renderingVisualLineCount(i)
+				v += m.visualLineCount(i)
 			}
 			return v
 		}
 		for i := hintLine - 1; i >= targetLine; i-- {
-			v -= renderingVisualLineCount(i)
+			v -= m.visualLineCount(i)
 		}
 		return v
 	}
@@ -278,21 +248,7 @@ func TextPositionFromIndex(p *TextPositionFromIndexParams) (position0, position1
 	// [TextPositionFromIndexInLogicalLine].
 	if c == 1 && indexInLine == 0 && committedLineIdx > 0 {
 		prevCommittedLineIdx := committedLineIdx - 1
-		prevCommittedLineStart := p.LineByteOffsets.ByteOffsetByLineIndex(prevCommittedLineIdx)
-		prevCommittedLineEnd := committedLineStart
-		prevRenderingLineStart := prevCommittedLineStart
-		prevRenderingLineEnd := prevCommittedLineEnd
-		if hasComp {
-			switch {
-			case prevCommittedLineIdx < compInfo.LineIndex:
-				// Before the splice: identity.
-			case prevCommittedLineIdx == compInfo.LineIndex:
-				prevRenderingLineEnd += compInfo.RenderingByteShift
-			default:
-				prevRenderingLineStart += compInfo.RenderingByteShift
-				prevRenderingLineEnd += compInfo.RenderingByteShift
-			}
-		}
+		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevCommittedLineIdx)
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
 		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), p.Options)
 		if prevCount > 0 {

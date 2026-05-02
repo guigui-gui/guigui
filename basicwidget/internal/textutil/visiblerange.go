@@ -208,25 +208,17 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 	}
 	first := min(max(p.FirstLogicalLineInViewport, 0), n-1)
 
-	// renderingRangeForLogicalLine returns the [start, end) byte
-	// offsets, into the rendering text, of the committed-text logical
-	// line at idx. Mirrors the equivalent helper in
-	// [TextIndexFromPosition].
-	committedTextLen := p.RenderingTextLength - p.Composition.RenderingByteShift
-	renderingRangeForLogicalLine := func(idx int) (start, end int) {
-		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(idx)
-		committedEnd := committedTextLen
-		if idx+1 < n {
-			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(idx + 1)
-		}
-		switch {
-		case idx < p.Composition.LineIndex:
-			return committedStart, committedEnd
-		case idx == p.Composition.LineIndex:
-			return committedStart, committedEnd + p.Composition.RenderingByteShift
-		default:
-			return committedStart + p.Composition.RenderingByteShift, committedEnd + p.Composition.RenderingByteShift
-		}
+	m := &lineMeasurer{
+		offsets:            p.LineByteOffsets,
+		logicalLineCount:   n,
+		committedTextLen:   p.RenderingTextLength - p.Composition.RenderingByteShift,
+		renderingTextRange: p.RenderingTextRange,
+		width:              p.ViewportSize.X,
+		face:               p.Face,
+		tabWidth:           p.TabWidth,
+		keepTailingSpace:   p.KeepTailingSpace,
+		autoWrap:           p.AutoWrap,
+		composition:        p.Composition,
 	}
 
 	var lastLine int
@@ -243,8 +235,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		cur := first
 		accY := 0
 		for cur < n-1 && accY <= p.ViewportSize.Y {
-			s, e := renderingRangeForLogicalLine(cur)
-			c := VisualLineCountForLogicalLine(p.ViewportSize.X, p.RenderingTextRange(s, e), true, p.Face, p.TabWidth, p.KeepTailingSpace)
+			c := m.visualLineCount(cur)
 			accY += int(math.Ceil(p.LineHeight * float64(c)))
 			cur++
 		}
@@ -254,13 +245,13 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		lastLine = first
 	}
 
-	startInBytes, _ := renderingRangeForLogicalLine(first)
+	startInBytes, _ := m.renderingRange(first)
 	endInBytes := p.RenderingTextLength
 	if lastLine+1 < n {
-		_, endInBytes = renderingRangeForLogicalLine(lastLine)
-		// renderingRangeForLogicalLine(lastLine).end equals the start
-		// of lastLine+1 in rendering coordinates, which is what we
-		// want for the upper bound of the slice.
+		// renderingRange(lastLine).end equals the start of lastLine+1
+		// in rendering coordinates, which is what we want for the
+		// upper bound of the slice.
+		_, endInBytes = m.renderingRange(lastLine)
 	}
 
 	return VisibleRange{

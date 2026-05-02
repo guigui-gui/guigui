@@ -163,42 +163,17 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
 
-	// renderingRangeForLogicalLine returns the [start, end) byte
-	// offsets, into the rendering text, of the committed-text logical
-	// line at logicalLineIdx. For lines before the composition the
-	// rendering range coincides with the committed range; on the
-	// composition line the range is extended by RenderingByteShift to
-	// include the spliced bytes; lines after the composition shift by
-	// the same amount.
-	renderingRangeForLogicalLine := func(logicalLineIdx int) (start, end int) {
-		committedStart := p.LineByteOffsets.ByteOffsetByLineIndex(logicalLineIdx)
-		committedEnd := committedTextLen
-		if logicalLineIdx+1 < n {
-			committedEnd = p.LineByteOffsets.ByteOffsetByLineIndex(logicalLineIdx + 1)
-		}
-		if !hasComp {
-			return committedStart, committedEnd
-		}
-		switch {
-		case logicalLineIdx < compInfo.LineIndex:
-			return committedStart, committedEnd
-		case logicalLineIdx == compInfo.LineIndex:
-			return committedStart, committedEnd + compInfo.RenderingByteShift
-		default:
-			return committedStart + compInfo.RenderingByteShift, committedEnd + compInfo.RenderingByteShift
-		}
-	}
-
-	// renderingVisualLineCount returns the rendering-plane visual-line
-	// count of the logical line at idx. For non-autoWrap text this is
-	// always 1; for autoWrap it shapes the line content via
-	// VisualLineCountForLogicalLine.
-	renderingVisualLineCount := func(idx int) int {
-		if !p.Options.AutoWrap {
-			return 1
-		}
-		s, e := renderingRangeForLogicalLine(idx)
-		return VisualLineCountForLogicalLine(p.Width, p.RenderingTextRange(s, e), true, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+	m := &lineMeasurer{
+		offsets:            p.LineByteOffsets,
+		logicalLineCount:   n,
+		committedTextLen:   committedTextLen,
+		renderingTextRange: p.RenderingTextRange,
+		width:              p.Width,
+		face:               p.Options.Face,
+		tabWidth:           p.Options.TabWidth,
+		keepTailingSpace:   p.Options.KeepTailingSpace,
+		autoWrap:           p.Options.AutoWrap,
+		composition:        compInfo,
 	}
 
 	// Locate the committed logical line whose visual range covers
@@ -228,7 +203,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		curVL := hintVL
 		if target >= hintVL {
 			for curLL < n-1 {
-				c := renderingVisualLineCount(curLL)
+				c := m.visualLineCount(curLL)
 				if curVL+c > target {
 					break
 				}
@@ -238,7 +213,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		} else {
 			for curLL > 0 {
 				curLL--
-				c := renderingVisualLineCount(curLL)
+				c := m.visualLineCount(curLL)
 				curVL -= c
 				if curVL <= target {
 					break
@@ -252,7 +227,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		logicalLineVisualOriginIndex = curVL
 	}
 
-	renderingLineStart, renderingLineEnd := renderingRangeForLogicalLine(logicalLineIndex)
+	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIndex)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 
 	// Translate the position into the logical line's local Y so
