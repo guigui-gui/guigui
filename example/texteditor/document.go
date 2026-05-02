@@ -50,7 +50,9 @@ func (d *Document) LoadInto(path string, dst io.ReaderFrom) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	if _, err := dst.ReadFrom(f); err != nil {
 		return err
 	}
@@ -68,11 +70,10 @@ func (d *Document) Save(src io.WriterTo) error {
 	if err != nil {
 		return err
 	}
+	defer func() {
+		_ = f.Close()
+	}()
 	if _, err := src.WriteTo(f); err != nil {
-		f.Close()
-		return err
-	}
-	if err := f.Close(); err != nil {
 		return err
 	}
 	d.dirty = false
