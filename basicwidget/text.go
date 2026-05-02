@@ -387,7 +387,9 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	if t.canHaveCursor() {
-		layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, widgetBounds))
+		b := widgetBounds.Bounds()
+		t.cursor.setTextWidgetBounds(b)
+		layouter.LayoutWidget(&t.cursor, t.cursorBounds(context, b))
 	}
 }
 
@@ -1894,7 +1896,7 @@ func (t *Text) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetB
 	return 0, false
 }
 
-func (t *Text) cursorPosition(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (position textutil.TextPosition, ok bool) {
+func (t *Text) cursorPosition(context *guigui.Context, textBounds image.Rectangle) (position textutil.TextPosition, ok bool) {
 	if !context.IsFocused(t) {
 		return textutil.TextPosition{}, false
 	}
@@ -1914,7 +1916,7 @@ func (t *Text) cursorPosition(context *guigui.Context, widgetBounds *guigui.Widg
 		return textutil.TextPosition{}, false
 	}
 
-	return t.textPosition(context, widgetBounds.Bounds(), e, true)
+	return t.textPosition(context, textBounds, e, true)
 }
 
 func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
@@ -2065,8 +2067,8 @@ func textCursorWidth(context *guigui.Context) int {
 	return int(math.Ceil(2 * context.Scale()))
 }
 
-func (t *Text) cursorBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
-	pos, ok := t.cursorPosition(context, widgetBounds)
+func (t *Text) cursorBounds(context *guigui.Context, textBounds image.Rectangle) image.Rectangle {
+	pos, ok := t.cursorPosition(context, textBounds)
 	if !ok {
 		return image.Rectangle{}
 	}
@@ -2243,10 +2245,22 @@ type textCursor struct {
 
 	text *Text
 
+	// textWidgetBoundsRect is the parent Text's bounds rectangle, captured by
+	// [Text.Layout]. cursorPosition is resolved against this rectangle, not the
+	// cursor's own caret-sized widgetBounds.
+	//
+	// The value is invalid and unavailable during the Build phase, as it is only
+	// populated once [Text.Layout] runs.
+	textWidgetBoundsRect image.Rectangle
+
 	counter   int
 	prevAlpha float64
 	prevPos   textutil.TextPosition
 	prevOK    bool
+}
+
+func (t *textCursor) setTextWidgetBounds(rect image.Rectangle) {
+	t.textWidgetBoundsRect = rect
 }
 
 func (t *textCursor) resetCounter() {
@@ -2254,7 +2268,7 @@ func (t *textCursor) resetCounter() {
 }
 
 func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	pos, ok := t.text.cursorPosition(context, widgetBounds)
+	pos, ok := t.text.cursorPosition(context, t.textWidgetBoundsRect)
 	if t.prevPos != pos {
 		t.resetCounter()
 	}
@@ -2262,25 +2276,25 @@ func (t *textCursor) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	t.prevOK = ok
 
 	t.counter++
-	if a := t.alpha(context, widgetBounds, t.text); t.prevAlpha != a {
+	if a := t.alpha(context); t.prevAlpha != a {
 		t.prevAlpha = a
 		guigui.RequestRedraw(t)
 	}
 	return nil
 }
 
-func (t *textCursor) alpha(context *guigui.Context, widgetBounds *guigui.WidgetBounds, text *Text) float64 {
-	if _, ok := text.cursorPosition(context, widgetBounds); !ok {
+func (t *textCursor) alpha(context *guigui.Context) float64 {
+	if _, ok := t.text.cursorPosition(context, t.textWidgetBoundsRect); !ok {
 		return 0
 	}
-	s, e, ok := text.selectionToDraw(context)
+	s, e, ok := t.text.selectionToDraw(context)
 	if !ok {
 		return 0
 	}
 	if s != e {
 		return 0
 	}
-	if text.cursorStatic {
+	if t.text.cursorStatic {
 		return 1
 	}
 	offset := ebiten.TPS() / 2
@@ -2302,7 +2316,7 @@ func (t *textCursor) alpha(context *guigui.Context, widgetBounds *guigui.WidgetB
 }
 
 func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	alpha := t.alpha(context, widgetBounds, t.text)
+	alpha := t.alpha(context)
 	if alpha == 0 {
 		return
 	}
