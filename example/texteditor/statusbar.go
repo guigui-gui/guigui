@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-text/typesetting/segmenter"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -35,16 +37,28 @@ func (s *statusBar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	layouter.LayoutWidget(&s.text, b)
 }
 
-// lineCol returns 1-indexed line and byte-column for the given byte offset
-// into text. Newlines count as the start of a new line.
+// lineCol returns 1-indexed line and grapheme-cluster column for the given
+// byte offset into text. Newlines count as the start of a new line.
 func lineCol(text string, offset int) (line, col int) {
 	offset = min(max(offset, 0), len(text))
 	prefix := text[:offset]
 	line = 1 + strings.Count(prefix, "\n")
+
+	var lineStart int
 	if i := strings.LastIndexByte(prefix, '\n'); i >= 0 {
-		col = offset - i
-	} else {
-		col = offset + 1
+		lineStart = i + 1
+	}
+
+	col = 1
+	var seg segmenter.Segmenter
+	if err := seg.InitWithString(text[lineStart:offset]); err != nil {
+		// Invalid UTF-8: fall back to byte-based column.
+		col = offset - lineStart + 1
+		return
+	}
+	it := seg.GraphemeIterator()
+	for it.Next() {
+		col++
 	}
 	return
 }
