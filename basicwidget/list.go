@@ -701,7 +701,7 @@ func (l *listContent[T]) itemCount() int {
 }
 
 // measureItemHeight returns the height of the available item at the given
-// available-item index, or 0 if the index is out of range. Implements
+// available-item index, or -1 if the index is out of range. Implements
 // [virtualScrollContent.measureItemHeight].
 func (l *listContent[T]) measureItemHeight(context *guigui.Context, availableIndex int) int {
 	var idx int
@@ -714,7 +714,7 @@ func (l *listContent[T]) measureItemHeight(context *guigui.Context, availableInd
 		}
 		idx++
 	}
-	return 0
+	return -1
 }
 
 func (l *listContent[T]) contentWidth(_ *guigui.Context) int {

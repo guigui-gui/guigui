@@ -7,6 +7,10 @@ func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	return replaceNewLinesWithSpace(text, start, end)
 }
 
+func TopItemAfterPixelScroll(measure func(index int) int, fallbackHeight, totalCount, startIndex, startOffset, deltaPx int) (int, int) {
+	return topItemAfterPixelScroll(measure, fallbackHeight, totalCount, startIndex, startOffset, deltaPx)
+}
+
 type AbstractListValuer[T comparable] interface {
 	valuer[T]
 }

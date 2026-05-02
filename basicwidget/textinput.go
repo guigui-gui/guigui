@@ -793,7 +793,7 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 
 	n := txt.lineByteOffsets.LineCount()
 	if lineIndex < 0 || lineIndex >= n {
-		return 0
+		return -1
 	}
 
 	var height int
@@ -879,16 +879,31 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	txt := t.text.Widget()
 	lh := int(math.Ceil(txt.lineHeight(context)))
 
+	// Pre-clamp topIdx to [0, n-1] so all the measureItemHeight calls below
+	// see an in-range index, per the [virtualScrollContent.measureItemHeight]
+	// contract. Out-of-range topIdx can occur when the document shrinks
+	// between layouts.
+	topIdx, topOff := t.panel.topItem()
+	n := t.itemCount()
+	if n == 0 {
+		topIdx = 0
+		topOff = 0
+	} else {
+		if topIdx >= n {
+			topIdx = n - 1
+			topOff = 0
+		}
+		if topIdx < 0 {
+			topIdx = 0
+			topOff = 0
+		}
+	}
+
 	// Normalize topItemOffset into [-itemH, 0] by advancing or retreating
 	// topItemIndex over real measured line heights. Mirrors
 	// listContent.normalizeTopItem.
-	topIdx, topOff := t.panel.topItem()
-	n := t.itemCount()
 	for topOff < 0 && topIdx < n-1 {
 		ih := t.measureItemHeight(context, topIdx)
-		if ih == 0 {
-			break
-		}
 		if -topOff >= ih {
 			topOff += ih
 			topIdx++
@@ -901,14 +916,6 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 		topOff -= t.measureItemHeight(context, topIdx)
 	}
 	if topIdx == 0 && topOff > 0 {
-		topOff = 0
-	}
-	if topIdx >= n {
-		topIdx = max(0, n-1)
-		topOff = 0
-	}
-	if topIdx < 0 {
-		topIdx = 0
 		topOff = 0
 	}
 

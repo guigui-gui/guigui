@@ -36,6 +36,10 @@ type virtualScrollContent interface {
 	// measureItemHeight returns the rendered height of the item at the
 	// given index. Called by [virtualScrollPanel] when computing thumb
 	// position and during scroll-bar drag.
+	//
+	// For an in-range index (0 <= index < itemCount()) the returned value
+	// must be >= 0; zero is a valid height (e.g. a collapsed or empty
+	// item). For an out-of-range index the implementation must return -1.
 	measureItemHeight(context *guigui.Context, index int) int
 }
 
@@ -688,14 +692,22 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 				s.draggingStartOffset = topOff
 				return guigui.HandleInputByWidget(s)
 			}
-			// Clicked on track — jump by page.
+			// Clicked on track — jump by one viewport in pixels. Walking
+			// real heights matters when a single item (e.g. a wrapped
+			// logical line) is taller than the viewport: in that case the
+			// index stays put and only topItemOffset advances. A naive
+			// bounds.Dy()/estimatedItemHeight quantum would round to 0
+			// and the page jump would be a no-op.
 			if !tb.Empty() {
-				pageItems := bounds.Dy() / s.panel.estimatedItemHeight
+				deltaPx := bounds.Dy()
 				if y < tb.Min.Y {
-					s.panel.setTopItem(max(0, topIdx-pageItems), 0)
-				} else {
-					s.panel.setTopItem(min(totalCount-1, topIdx+pageItems), 0)
+					deltaPx = -deltaPx
 				}
+				measure := func(i int) int {
+					return s.panel.content.measureItemHeight(context, i)
+				}
+				newIdx, newOff := topItemAfterPixelScroll(measure, s.panel.estimatedItemHeight, totalCount, topIdx, topOff, deltaPx)
+				s.panel.setTopItem(newIdx, newOff)
 				return guigui.HandleInputByWidget(s)
 			}
 		}
@@ -718,42 +730,15 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 			if scrollMax > 0 {
 				deltaScrollPos := int(float64(dy) * float64(scrollMax) / trackHeight)
 
-				// Walk actual measured item heights from the drag-start
-				// anchor so the V drag can reach the document bottom
-				// even when items have heterogeneous heights (e.g. an
-				// autoWrap last line that wraps taller than the
-				// viewport). Layout's bottom-clamp pulls (topIdx,
-				// topOff) back if the walk overshoots.
-				newIdx := s.draggingStartIndex
-				newOff := s.draggingStartOffset - deltaScrollPos
-				if deltaScrollPos > 0 {
-					// Scrolling down: advance newIdx while newOff is
-					// more negative than the current item's height.
-					for newIdx < totalCount-1 {
-						h := s.panel.content.measureItemHeight(context, newIdx)
-						if h <= 0 {
-							h = s.panel.estimatedItemHeight
-						}
-						if -newOff < h {
-							break
-						}
-						newOff += h
-						newIdx++
-					}
-				} else {
-					// Scrolling up: retreat newIdx while newOff is positive.
-					for newOff > 0 && newIdx > 0 {
-						newIdx--
-						h := s.panel.content.measureItemHeight(context, newIdx)
-						if h <= 0 {
-							h = s.panel.estimatedItemHeight
-						}
-						newOff -= h
-					}
-					if newIdx == 0 && newOff > 0 {
-						newOff = 0
-					}
+				// Walk from the drag-start anchor so the V drag can reach
+				// the document bottom even when items have heterogeneous
+				// heights (e.g. an autoWrap last line that wraps taller
+				// than the viewport). Layout's bottom-clamp pulls
+				// (topIdx, topOff) back if the walk overshoots.
+				measure := func(i int) int {
+					return s.panel.content.measureItemHeight(context, i)
 				}
+				newIdx, newOff := topItemAfterPixelScroll(measure, s.panel.estimatedItemHeight, totalCount, s.draggingStartIndex, s.draggingStartOffset, deltaScrollPos)
 				s.panel.forceSetTopItem(newIdx, newOff, true)
 			}
 		}
@@ -782,4 +767,58 @@ func (s *virtualScrollVBar) Draw(context *guigui.Context, widgetBounds *guigui.W
 	barColor := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.2)
 	barColor = draw.ScaleAlpha(barColor, s.alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
+}
+
+// topItemAfterPixelScroll returns the (topIndex, topOffset) that results
+// from scrolling by deltaPx pixels starting from (startIndex, startOffset).
+// The returned offset follows the same convention as
+// [virtualScrollPanel.topItemOffset]: the pixel offset of the top item's
+// top edge relative to the viewport top, typically <= 0.
+//
+// Positive deltaPx scrolls forward in document order. The computation steps
+// through items using real heights from measure, so it remains correct when
+// items are heterogeneous or when a single item is taller than the
+// viewport. measure follows the [virtualScrollContent.measureItemHeight]
+// contract: in-range indices return >= 0 (zero is a valid height for an
+// empty/collapsed item); a negative return indicates "no measurement"
+// and falls back to fallbackHeight as defensive guard against contract
+// violation.
+//
+// The returned index stays within [0, totalCount-1]. Forward scrolling
+// stops at totalCount-1 even if the remaining delta would consume more
+// items; the caller's layout pass is responsible for any bottom-edge clamp
+// against the viewport size. Backward scrolling clamps to (0, 0) at the
+// document top.
+func topItemAfterPixelScroll(measure func(index int) int, fallbackHeight, totalCount, startIndex, startOffset, deltaPx int) (newIndex, newOffset int) {
+	newIndex = startIndex
+	newOffset = startOffset - deltaPx
+	if deltaPx > 0 {
+		// Scrolling forward: advance newIndex while newOffset is more
+		// negative than the current item's height.
+		for newIndex < totalCount-1 {
+			h := measure(newIndex)
+			if h < 0 {
+				h = fallbackHeight
+			}
+			if -newOffset < h {
+				break
+			}
+			newOffset += h
+			newIndex++
+		}
+	} else if deltaPx < 0 {
+		// Scrolling backward: retreat newIndex while newOffset is positive.
+		for newOffset > 0 && newIndex > 0 {
+			newIndex--
+			h := measure(newIndex)
+			if h < 0 {
+				h = fallbackHeight
+			}
+			newOffset -= h
+		}
+		if newIndex == 0 && newOffset > 0 {
+			newOffset = 0
+		}
+	}
+	return
 }
