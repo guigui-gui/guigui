@@ -65,9 +65,8 @@ type TextIndexFromPositionParams struct {
 	//
 	// Both fields are optional. The zero value means "start from line
 	// 0," equivalent to walking from the top of the document — correct
-	// but O(documentLen) for autoWrap when the click is far down.
-	// Used only when LineByteOffsets is set and Options.AutoWrap is
-	// true.
+	// but O(documentLen) when the click is far down. Used only when
+	// LineByteOffsets is set.
 	LogicalLineIndexHint int
 	VisualLineIndexHint  int
 }
@@ -177,55 +176,50 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	}
 
 	// Locate the committed logical line whose visual range covers
-	// target. For non-autoWrap each logical line is one visual line,
-	// so target IS the line index (clamped). For autoWrap, walk
-	// forward (or backward) from the caller-supplied hint measuring
-	// each logical line's wrap count until the running visual offset
-	// crosses target. The hint lets the caller scope work to the
-	// viewport — without it (zero values) the walk starts from line 0
-	// and degrades to O(documentLen).
-	var logicalLineIndex int
-	var logicalLineVisualOriginIndex int
-	if !p.Options.AutoWrap {
-		logicalLineIndex = min(max(target, 0), n-1)
-		logicalLineVisualOriginIndex = logicalLineIndex
-	} else {
-		hintLL := min(max(p.LogicalLineIndexHint, 0), n-1)
-		hintVL := max(p.VisualLineIndexHint, 0)
-		// Translate the committed-text hint into a rendering-text
-		// visual offset by applying the composition delta when the
-		// hint sits past the composition's line.
-		if hasComp && hintLL > compInfo.LineIndex {
-			hintVL += selectionLineVisualCountDelta
-		}
-
-		curLL := hintLL
-		curVL := hintVL
-		if target >= hintVL {
-			for curLL < n-1 {
-				c := m.visualLineCount(curLL)
-				if curVL+c > target {
-					break
-				}
-				curVL += c
-				curLL++
-			}
-		} else {
-			for curLL > 0 {
-				curLL--
-				c := m.visualLineCount(curLL)
-				curVL -= c
-				if curVL <= target {
-					break
-				}
-			}
-			if curVL < 0 {
-				curVL = 0
-			}
-		}
-		logicalLineIndex = curLL
-		logicalLineVisualOriginIndex = curVL
+	// target by walking forward (or backward) from the caller-supplied
+	// hint, measuring each logical line's wrap count until the running
+	// visual offset crosses target. The hint lets the caller scope work
+	// to the viewport — without it (zero values) the walk starts from
+	// line 0 and degrades to O(documentLen). For non-autoWrap each
+	// logical line is exactly one visual line so the walk is a simple
+	// add/subtract, but it still needs to step from (hintLL, hintVL)
+	// rather than treating target as an absolute line index — the
+	// caller's coordinate system is whatever the hint says it is.
+	hintLL := min(max(p.LogicalLineIndexHint, 0), n-1)
+	hintVL := max(p.VisualLineIndexHint, 0)
+	// Translate the committed-text hint into a rendering-text
+	// visual offset by applying the composition delta when the
+	// hint sits past the composition's line.
+	if hasComp && hintLL > compInfo.LineIndex {
+		hintVL += selectionLineVisualCountDelta
 	}
+
+	curLL := hintLL
+	curVL := hintVL
+	if target >= hintVL {
+		for curLL < n-1 {
+			c := m.visualLineCount(curLL)
+			if curVL+c > target {
+				break
+			}
+			curVL += c
+			curLL++
+		}
+	} else {
+		for curLL > 0 {
+			curLL--
+			c := m.visualLineCount(curLL)
+			curVL -= c
+			if curVL <= target {
+				break
+			}
+		}
+		if curVL < 0 {
+			curVL = 0
+		}
+	}
+	logicalLineIndex := curLL
+	logicalLineVisualOriginIndex := curVL
 
 	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIndex)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)

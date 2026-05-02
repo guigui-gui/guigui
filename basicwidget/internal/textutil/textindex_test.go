@@ -173,6 +173,60 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 	}
 }
 
+// TestTextIndexFromPositionViewportRelativeHint covers the virtualized
+// caller's contract: pass (LogicalLineIndexHint = firstVisibleLine,
+// VisualLineIndexHint = 0) so position.Y is measured from the top of
+// the first visible line rather than the document top. The walk must
+// step from the hint instead of treating target as an absolute line
+// index — otherwise non-autoWrap clicks always resolve to lines near
+// the document start regardless of how far the user has scrolled.
+func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
+	const lineHeight = 24.0
+	face := newTestFace(t)
+
+	var sb []byte
+	for i := range 50 {
+		if i > 0 {
+			sb = append(sb, '\n')
+		}
+		sb = append(sb, byte('a'+i%26))
+	}
+	str := string(sb)
+
+	for _, autoWrap := range []bool{false, true} {
+		t.Run(autoWrapSuffix(autoWrap), func(t *testing.T) {
+			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: autoWrap}
+			var l textutil.LineByteOffsets
+			l.RebuildFromString(str)
+
+			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
+				for _, vlInViewport := range []int{0, 1, 5} {
+					params := &textutil.TextIndexFromPositionParams{
+						Position:             image.Pt(0, int(float64(vlInViewport)*lineHeight)),
+						RenderingTextRange:   func(start, end int) string { return str[start:end] },
+						RenderingTextLength:  len(str),
+						Width:                math.MaxInt,
+						Options:              op,
+						LineByteOffsets:      &l,
+						LogicalLineIndexHint: firstVisible,
+						VisualLineIndexHint:  0,
+					}
+					// Reference: the same click in absolute coords (visual
+					// line firstVisible+vlInViewport from the document top)
+					// resolved by the sidecar-less fallback.
+					ref := *params
+					ref.Position = image.Pt(0, int(float64(firstVisible+vlInViewport)*lineHeight))
+					want := textutil.TextIndexFromPosition(withoutIndexSidecar(&ref))
+					got := textutil.TextIndexFromPosition(params)
+					if got != want {
+						t.Errorf("firstVisible=%d vlInViewport=%d: idx=%d, want %d", firstVisible, vlInViewport, got, want)
+					}
+				}
+			}
+		})
+	}
+}
+
 // TestTextIndexFromPositionSidecarComposition verifies an active IME
 // composition is handled correctly (committed sidecar + composition
 // shifts vs the slow path on the already-spliced text).

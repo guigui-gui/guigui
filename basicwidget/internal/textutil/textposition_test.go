@@ -293,6 +293,79 @@ func TestTextPositionFromIndexSidecarAutoWrap(t *testing.T) {
 	}
 }
 
+// TestTextPositionFromIndexViewportRelativeHint covers the virtualized
+// caller's contract: pass (LogicalLineIndexHint = firstVisibleLine,
+// VisualLineIndexHint = 0) so the returned pos.Top is measured from
+// the top of the first visible line rather than the document top. The
+// walk must step from the hint regardless of autoWrap — a non-autoWrap
+// shortcut that treated the result as absolute would land cursors far
+// above the viewport once the caller scrolls.
+func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
+	const lineHeight = 24.0
+	face := newTestFace(t)
+
+	var sb []byte
+	for i := range 50 {
+		if i > 0 {
+			sb = append(sb, '\n')
+		}
+		sb = append(sb, byte('a'+i%26))
+	}
+	str := string(sb)
+
+	for _, autoWrap := range []bool{false, true} {
+		t.Run(autoWrapSuffix(autoWrap), func(t *testing.T) {
+			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: autoWrap}
+			var l textutil.LineByteOffsets
+			l.RebuildFromString(str)
+			precVL := precedingVisualLineCountFromString(str, math.MaxInt, autoWrap, face, 0, false)
+
+			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
+				offset := float64(precVL(firstVisible)) * lineHeight
+				for _, idx := range []int{0, 1, 5, 30, 60, len(str) - 1, len(str)} {
+					params := &textutil.TextPositionFromIndexParams{
+						Index:                idx,
+						RenderingTextRange:   func(start, end int) string { return str[start:end] },
+						RenderingTextLength:  len(str),
+						Width:                math.MaxInt,
+						Options:              op,
+						LineByteOffsets:      &l,
+						LogicalLineIndexHint: firstVisible,
+						VisualLineIndexHint:  0,
+					}
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutSidecar(params))
+					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+
+					// The hint shifts pos.Top by the visual-line count
+					// preceding firstVisible, but X is unaffected.
+					adjust := func(p textutil.TextPosition) textutil.TextPosition {
+						p.Top -= offset
+						p.Bottom -= offset
+						return p
+					}
+					if wantCount >= 1 {
+						wantP0 = adjust(wantP0)
+					}
+					if wantCount == 2 {
+						wantP1 = adjust(wantP1)
+					}
+
+					if gotCount != wantCount {
+						t.Errorf("firstVisible=%d idx=%d: count=%d, want %d", firstVisible, idx, gotCount, wantCount)
+						continue
+					}
+					if gotCount >= 1 && gotP0 != wantP0 {
+						t.Errorf("firstVisible=%d idx=%d: pos0=%+v, want %+v", firstVisible, idx, gotP0, wantP0)
+					}
+					if gotCount == 2 && gotP1 != wantP1 {
+						t.Errorf("firstVisible=%d idx=%d: pos1=%+v, want %+v", firstVisible, idx, gotP1, wantP1)
+					}
+				}
+			}
+		})
+	}
+}
+
 // TestTextPositionFromIndexSidecarComposition verifies that an active
 // IME composition (without a hard line break) is handled by the
 // sidecar path: results match a from-scratch unrestricted walk of the
