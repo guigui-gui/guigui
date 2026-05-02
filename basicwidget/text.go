@@ -282,7 +282,7 @@ func (t *Text) contentHashForStateKey() xxh3.Uint128 {
 		return t.contentHashCache
 	}
 	t.contentHasher.Reset()
-	_ = t.field.WriteTextForRenderingTo(&t.contentHasher)
+	_, _ = t.field.WriteTextForRenderingTo(&t.contentHasher)
 	t.contentHashCache = t.contentHasher.Sum128()
 	t.contentHashFieldGeneration = generation
 	return t.contentHashCache
@@ -297,7 +297,10 @@ func (t *Text) ensureLineByteOffsets() {
 	if t.lineByteOffsets.LineCount() > 0 && generation == t.lineByteOffsetsFieldGeneration {
 		return
 	}
-	_ = t.lineByteOffsets.Rebuild(t.field.WriteTextTo)
+	_ = t.lineByteOffsets.Rebuild(func(w io.Writer) error {
+		_, err := t.field.WriteTextTo(w)
+		return err
+	})
 	t.lineByteOffsetsFieldGeneration = generation
 }
 
@@ -410,7 +413,7 @@ func (t *Text) SetSelectable(selectable bool) {
 
 func (t *Text) isEqualToStringValue(text string) bool {
 	t.valueEqualChecker.Reset(text)
-	_ = t.field.WriteTextTo(&t.valueEqualChecker)
+	_, _ = t.field.WriteTextTo(&t.valueEqualChecker)
 	return t.valueEqualChecker.Result()
 }
 
@@ -422,7 +425,7 @@ func (t *Text) isEqualToStringValue(text string) bool {
 // [Text.stringValueWithRange].
 func (t *Text) stringValue() string {
 	t.valueBuilder.Reset()
-	_ = t.field.WriteTextTo(&t.valueBuilder)
+	_, _ = t.field.WriteTextTo(&t.valueBuilder)
 	return t.valueBuilder.String()
 }
 
@@ -431,7 +434,7 @@ func (t *Text) stringValueWithRange(start, end int) string {
 		end = t.field.TextLengthInBytes()
 	}
 	t.valueBuilder.Reset()
-	_ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
+	_, _ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
 	return t.valueBuilder.String()
 }
 
@@ -440,7 +443,7 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 		end = t.field.TextLengthInBytes()
 	}
 	t.valueBuilder.Reset()
-	_ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
+	_, _ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
 	return t.valueBuilder.Bytes()
 }
 
@@ -450,7 +453,7 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 // [textinput.Field.WriteTextForRenderingRangeTo].
 func (t *Text) stringValueForRenderingRange(start, end int) string {
 	t.valueBuilder.Reset()
-	_ = t.field.WriteTextForRenderingRangeTo(&t.valueBuilder, start, end)
+	_, _ = t.field.WriteTextForRenderingRangeTo(&t.valueBuilder, start, end)
 	return t.valueBuilder.String()
 }
 
@@ -506,7 +509,7 @@ func (t *Text) nextPositionOnGraphemes(position int) int {
 
 func (t *Text) stringValueForRendering() string {
 	t.valueBuilder.Reset()
-	_ = t.field.WriteTextForRenderingTo(&t.valueBuilder)
+	_, _ = t.field.WriteTextForRenderingTo(&t.valueBuilder)
 	return t.valueBuilder.String()
 }
 
