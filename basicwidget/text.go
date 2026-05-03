@@ -492,6 +492,32 @@ func (t *Text) stringValueForLineContaining(byteOffset int) (line string, lineSt
 	return t.stringValueWithRange(lineStart, lineEnd), lineStart
 }
 
+// LineCount returns the number of logical lines in the value. A logical
+// line is a span between hard line breaks; soft-wrapped visual lines are
+// not counted. The empty value has one logical line; a trailing line break
+// creates an extra empty line at the end, so "abc\n" has 2 lines.
+func (t *Text) LineCount() int {
+	t.ensureLineByteOffsets()
+	return t.lineByteOffsets.LineCount()
+}
+
+// LineStartInBytes returns the byte offset where the lineIndex-th logical
+// line begins within the value. lineIndex must be in [0, [Text.LineCount]).
+func (t *Text) LineStartInBytes(lineIndex int) int {
+	t.ensureLineByteOffsets()
+	return t.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
+}
+
+// LineIndexFromTextIndexInBytes returns the index of the logical line
+// containing textIndexInBytes. textIndexInBytes is clamped: negative values
+// map to line 0, values past the end map to the last line.
+//
+// See [Text.LineCount] for what counts as a logical line.
+func (t *Text) LineIndexFromTextIndexInBytes(textIndexInBytes int) int {
+	t.ensureLineByteOffsets()
+	return t.lineByteOffsets.LineIndexForByteOffset(textIndexInBytes)
+}
+
 // findWordBoundaries returns the byte range of the word containing idx,
 // scanning only the logical line containing idx. Word-segmentation rules
 // always break at line breaks (UAX #29 WB3a/3b), so a word never spans

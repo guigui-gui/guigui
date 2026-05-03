@@ -94,6 +94,25 @@ func (t *TextInput) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int)
 	return t.textInput.WriteValueRangeTo(w, startInBytes, endInBytes)
 }
 
+// LineCount returns the number of logical lines in the value.
+// See [Text.LineCount] for details.
+func (t *TextInput) LineCount() int {
+	return t.textInput.LineCount()
+}
+
+// LineStartInBytes returns the byte offset where the lineIndex-th logical
+// line begins within the value. See [Text.LineStartInBytes] for details.
+func (t *TextInput) LineStartInBytes(lineIndex int) int {
+	return t.textInput.LineStartInBytes(lineIndex)
+}
+
+// LineIndexFromTextIndexInBytes returns the index of the logical line
+// containing textIndexInBytes. See [Text.LineIndexFromTextIndexInBytes] for
+// details.
+func (t *TextInput) LineIndexFromTextIndexInBytes(textIndexInBytes int) int {
+	return t.textInput.LineIndexFromTextIndexInBytes(textIndexInBytes)
+}
+
 // ReadValueFrom resets the value to the bytes read from r until EOF.
 // See [Text.ReadValueFrom] for details.
 func (t *TextInput) ReadValueFrom(r io.Reader) (int64, error) {
@@ -385,6 +404,18 @@ func (t *textInput) WriteValueTo(w io.Writer) (int64, error) {
 
 func (t *textInput) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int64, error) {
 	return t.text.Text().WriteValueRangeTo(w, startInBytes, endInBytes)
+}
+
+func (t *textInput) LineCount() int {
+	return t.text.Text().LineCount()
+}
+
+func (t *textInput) LineStartInBytes(lineIndex int) int {
+	return t.text.Text().LineStartInBytes(lineIndex)
+}
+
+func (t *textInput) LineIndexFromTextIndexInBytes(textIndexInBytes int) int {
+	return t.text.Text().LineIndexFromTextIndexInBytes(textIndexInBytes)
 }
 
 func (t *textInput) ReadValueFrom(r io.Reader) (int64, error) {

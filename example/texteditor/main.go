@@ -48,10 +48,11 @@ type Root struct {
 
 	layoutItems []guigui.LinearLayoutItem
 
-	// scratchBuf is a reusable buffer for streaming the editor's value out
-	// during find. Reusing one buffer across calls keeps the per-call
-	// allocation cost flat regardless of document size, after the buffer
-	// has grown to its working set.
+	// scratchBuf is a reusable buffer for streaming bytes out of the editor
+	// (the whole value during find, the cursor's line prefix during the
+	// status-bar position update). Reusing one buffer across calls keeps the
+	// per-call allocation cost flat after the buffer has grown to its
+	// working set.
 	scratchBuf bytes.Buffer
 }
 
@@ -176,14 +177,13 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	})
 
 	start, _ := r.editor.Selection()
-	var lcw lineColWriter
-	if _, err := r.editor.WriteValueRangeTo(&lcw, 0, start); err != nil {
+	line := r.editor.LineIndexFromTextIndexInBytes(start)
+	lineStart := r.editor.LineStartInBytes(line)
+	r.scratchBuf.Reset()
+	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, start); err != nil {
 		return err
 	}
-	if err := lcw.Flush(); err != nil {
-		return err
-	}
-	r.statusBar.SetText(formatPosition(lcw.line, lcw.lineBuf.Bytes()))
+	r.statusBar.SetText(formatPosition(line, r.scratchBuf.Bytes()))
 
 	if r.findDialog.IsOpen() {
 		r.updateFindCount()
