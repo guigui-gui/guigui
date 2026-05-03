@@ -12,7 +12,16 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
-func TestLineByteOffsetsRebuildFromString(t *testing.T) {
+// rebuildFromString is a test helper that rescans s for logical-line starts
+// via [textutil.LineByteOffsets.Rebuild].
+func rebuildFromString(l *textutil.LineByteOffsets, s string) {
+	_ = l.Rebuild(func(w io.Writer) error {
+		_, err := w.Write([]byte(s))
+		return err
+	})
+}
+
+func TestLineByteOffsetsRebuild(t *testing.T) {
 	testCases := []struct {
 		name   string
 		input  string
@@ -87,13 +96,13 @@ func TestLineByteOffsetsRebuildFromString(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(tc.input)
+			rebuildFromString(&l, tc.input)
 			got := make([]int, l.LineCount())
 			for i := range got {
 				got[i] = l.ByteOffsetByLineIndex(i)
 			}
 			if !slices.Equal(got, tc.starts) {
-				t.Errorf("RebuildFromString(%q): starts = %v, want %v", tc.input, got, tc.starts)
+				t.Errorf("Rebuild(%q): starts = %v, want %v", tc.input, got, tc.starts)
 			}
 		})
 	}
@@ -101,8 +110,8 @@ func TestLineByteOffsetsRebuildFromString(t *testing.T) {
 
 func TestLineByteOffsetsRebuildIsIdempotent(t *testing.T) {
 	var l textutil.LineByteOffsets
-	l.RebuildFromString("abc\ndef\nghi")
-	l.RebuildFromString("abc\ndef\nghi")
+	rebuildFromString(&l, "abc\ndef\nghi")
+	rebuildFromString(&l, "abc\ndef\nghi")
 	want := []int{0, 4, 8}
 	got := make([]int, l.LineCount())
 	for i := range got {
@@ -115,8 +124,8 @@ func TestLineByteOffsetsRebuildIsIdempotent(t *testing.T) {
 
 func TestLineByteOffsetsRebuildAfterShrink(t *testing.T) {
 	var l textutil.LineByteOffsets
-	l.RebuildFromString("abc\ndef\nghi")
-	l.RebuildFromString("xyz")
+	rebuildFromString(&l, "abc\ndef\nghi")
+	rebuildFromString(&l, "xyz")
 	want := []int{0}
 	got := make([]int, l.LineCount())
 	for i := range got {
@@ -131,7 +140,7 @@ func TestLineByteOffsetsLineIndexForByteOffset(t *testing.T) {
 	var l textutil.LineByteOffsets
 	// "abc\ndef\nghi" — line 0 covers bytes 0..3 (incl. '\n' at 3),
 	// line 1 covers bytes 4..7 (incl. '\n' at 7), line 2 covers bytes 8..10.
-	l.RebuildFromString("abc\ndef\nghi")
+	rebuildFromString(&l, "abc\ndef\nghi")
 
 	testCases := []struct {
 		offset   int
@@ -158,7 +167,7 @@ func TestLineByteOffsetsLineIndexForByteOffset(t *testing.T) {
 func TestLineByteOffsetsLineIndexForByteOffsetTrailingBreak(t *testing.T) {
 	var l textutil.LineByteOffsets
 	// "abc\n" has two logical lines; the second is empty and starts at byte 4.
-	l.RebuildFromString("abc\n")
+	rebuildFromString(&l, "abc\n")
 	if got, want := l.LineCount(), 2; got != want {
 		t.Fatalf("LineCount = %d, want %d", got, want)
 	}
@@ -169,7 +178,7 @@ func TestLineByteOffsetsLineIndexForByteOffsetTrailingBreak(t *testing.T) {
 
 func TestLineByteOffsetsReset(t *testing.T) {
 	var l textutil.LineByteOffsets
-	l.RebuildFromString("abc\ndef")
+	rebuildFromString(&l, "abc\ndef")
 	l.Reset()
 	if got := l.LineCount(); got != 0 {
 		t.Errorf("after Reset: LineCount = %d, want 0", got)
@@ -207,7 +216,7 @@ func TestLineByteOffsetsStreamingMatchesRebuild(t *testing.T) {
 	for _, s := range inputs {
 		t.Run(s, func(t *testing.T) {
 			var ref textutil.LineByteOffsets
-			ref.RebuildFromString(s)
+			rebuildFromString(&ref, s)
 			want := make([]int, ref.LineCount())
 			for i := range want {
 				want[i] = ref.ByteOffsetByLineIndex(i)
@@ -311,7 +320,7 @@ func TestLineByteOffsetsReplaceMatchesRebuild(t *testing.T) {
 					post := base[:start] + patch + base[end:]
 
 					var l textutil.LineByteOffsets
-					l.RebuildFromString(base)
+					rebuildFromString(&l, base)
 					startCtx := base[max(0, start-2):start]
 					endCtxStart := start + len(patch)
 					endCtxEnd := min(endCtxStart+3, len(post))
@@ -324,7 +333,7 @@ func TestLineByteOffsetsReplaceMatchesRebuild(t *testing.T) {
 					}
 
 					var ref textutil.LineByteOffsets
-					ref.RebuildFromString(post)
+					rebuildFromString(&ref, post)
 					want := make([]int, ref.LineCount())
 					for i := range want {
 						want[i] = ref.ByteOffsetByLineIndex(i)
@@ -345,7 +354,7 @@ func TestLineByteOffsetsReplaceSequence(t *testing.T) {
 	// fresh rebuild of the cumulative result, exercising suffix shifts.
 	cur := "alpha\nbeta\ngamma\n"
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(cur)
+	rebuildFromString(&l, cur)
 
 	steps := []struct {
 		start, end int
@@ -395,7 +404,7 @@ func TestLineByteOffsetsReplaceSequence(t *testing.T) {
 			got[j] = l.ByteOffsetByLineIndex(j)
 		}
 		var ref textutil.LineByteOffsets
-		ref.RebuildFromString(next)
+		rebuildFromString(&ref, next)
 		want := make([]int, ref.LineCount())
 		for j := range want {
 			want[j] = ref.ByteOffsetByLineIndex(j)
@@ -420,7 +429,7 @@ func TestLineByteOffsetsLargeBuffer(t *testing.T) {
 	s := b.String()
 
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(s)
+	rebuildFromString(&l, s)
 
 	// "line\n" is 5 bytes, so line i starts at byte 5*i.
 	if got, want := l.LineCount(), n+1; got != want {

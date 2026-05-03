@@ -53,7 +53,7 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 					AutoWrap:   autoWrap,
 				}
 				var l textutil.LineByteOffsets
-				l.RebuildFromString(tc.str)
+				rebuildFromString(&l, tc.str)
 				params := &textutil.TextIndexFromPositionParams{
 					RenderingTextRange:  func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength: len(tc.str),
@@ -93,7 +93,7 @@ func TestTextIndexFromPositionSidecarAutoWrap(t *testing.T) {
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
 
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(str)
+	rebuildFromString(&l, str)
 	params := &textutil.TextIndexFromPositionParams{
 		RenderingTextRange:  func(start, end int) string { return str[start:end] },
 		RenderingTextLength: len(str),
@@ -140,7 +140,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 		t.Run(tc.name+autoWrapSuffix(tc.autoWrap), func(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: tc.autoWrap}
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(tc.str)
+			rebuildFromString(&l, tc.str)
 			n := l.LineCount()
 			if n == 0 {
 				n = 1
@@ -197,7 +197,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 		t.Run(autoWrapSuffix(autoWrap), func(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: autoWrap}
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(str)
+			rebuildFromString(&l, str)
 
 			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
 				for _, vlInViewport := range []int{-50, -5, -1, 0, 1, 5} {
@@ -255,7 +255,7 @@ func TestTextIndexFromPositionSidecarComposition(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight}
 			rendering := tc.committed[:tc.c.sStart] + tc.c.composition + tc.committed[tc.c.sEnd:]
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(tc.committed)
+			rebuildFromString(&l, tc.committed)
 			params := &textutil.TextIndexFromPositionParams{
 				RenderingTextRange:  func(start, end int) string { return rendering[start:end] },
 				RenderingTextLength: len(rendering),

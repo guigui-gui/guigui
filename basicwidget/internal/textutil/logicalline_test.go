@@ -28,7 +28,7 @@ func newTestFace(t *testing.T) text.Face {
 // LineByteOffsets to partition. The slices include any trailing line break.
 func logicalLineSlices(s string) []string {
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(s)
+	rebuildFromString(&l, s)
 	out := make([]string, l.LineCount())
 	for i := range out {
 		start := l.ByteOffsetByLineIndex(i)
@@ -170,7 +170,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			const width = math.MaxInt
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(tc.str)
+			rebuildFromString(&l, tc.str)
 			lines := logicalLineSlices(tc.str)
 
 			for idx := 0; idx <= len(tc.str); idx++ {
@@ -242,7 +242,7 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const width = math.MaxInt
 
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(str)
+	rebuildFromString(&l, str)
 	lines := logicalLineSlices(str)
 
 	// Query a few positions that fall inside specific logical lines and

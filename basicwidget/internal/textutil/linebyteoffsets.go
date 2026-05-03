@@ -221,12 +221,10 @@ type LineByteOffsets struct {
 
 // Rebuild discards any current contents and rescans the bytes written by
 // scan for logical-line starts. The [io.Writer] passed to scan accepts
-// bytes in any number of chunks.
-//
-// Rebuild produces the same offsets RebuildFromString would for the
-// concatenated bytes, but never requires those bytes to be materialized
-// contiguously. Any error from scan is returned unchanged after the
-// trailing partial-break state has been flushed.
+// bytes in any number of chunks; the recorded offsets are the same as if
+// the concatenated bytes had been scanned in a single pass. Any error from
+// scan is returned unchanged after the trailing partial-break state has
+// been flushed.
 func (l *LineByteOffsets) Rebuild(scan func(io.Writer) error) error {
 	l.offsets = append(l.offsets[:0], 0)
 	w := &lineByteOffsetsWriter{l: l}
@@ -235,15 +233,6 @@ func (l *LineByteOffsets) Rebuild(scan func(io.Writer) error) error {
 		l.offsets = append(l.offsets, w.streamOff)
 	}
 	return err
-}
-
-// RebuildFromString discards any current contents and rescans s for logical
-// line starts. It is a convenience wrapper around Rebuild.
-func (l *LineByteOffsets) RebuildFromString(s string) {
-	_ = l.Rebuild(func(w io.Writer) error {
-		_, err := w.Write([]byte(s))
-		return err
-	})
 }
 
 // Reset clears the offsets. After Reset, LineCount returns 0; callers that

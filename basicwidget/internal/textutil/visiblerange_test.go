@@ -24,14 +24,14 @@ func makeLineSource(count, lineLen int) (string, *textutil.LineByteOffsets) {
 	sb.WriteString(strings.Repeat("x", lineLen))
 	src := sb.String()
 	var lbo textutil.LineByteOffsets
-	lbo.RebuildFromString(src)
+	rebuildFromString(&lbo, src)
 	return src, &lbo
 }
 
 func TestComputeCompositionInfo_PureInsertion(t *testing.T) {
 	// committed: "abc\ndef" (offsets 0, 4). Insert "XYZ" at byte 2.
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abc\ndef")
+	rebuildFromString(&offsets, "abc\ndef")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText: "XYZ",
 		LineByteOffsets: &offsets,
@@ -48,7 +48,7 @@ func TestComputeCompositionInfo_PureInsertion(t *testing.T) {
 
 func TestComputeCompositionInfo_LineBreakInComposition(t *testing.T) {
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abc\ndef")
+	rebuildFromString(&offsets, "abc\ndef")
 	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText: "X\nYZ",
 		LineByteOffsets: &offsets,
@@ -64,7 +64,7 @@ func TestComputeCompositionInfo_CrossLineSelection(t *testing.T) {
 	// committed: "abc\ndef\nghi" (offsets 0, 4, 8). Selection 2..6 spans
 	// line 0 and line 1.
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abc\ndef\nghi")
+	rebuildFromString(&offsets, "abc\ndef\nghi")
 	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText: "XYZ",
 		LineByteOffsets: &offsets,
@@ -79,7 +79,7 @@ func TestComputeCompositionInfo_CrossLineSelection(t *testing.T) {
 func TestComputeCompositionInfo_SameLineReplacement(t *testing.T) {
 	// committed: "abcdef\nghi" (offsets 0, 7). Replace bytes 1..4 with "XY".
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abcdef\nghi")
+	rebuildFromString(&offsets, "abcdef\nghi")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText: "XY",
 		LineByteOffsets: &offsets,
@@ -103,7 +103,7 @@ func TestComputeCompositionInfo_CrossLineSelectionAutoWrap(t *testing.T) {
 	// rejection happens before they're consulted.
 	face := newTestFace(t)
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abc\ndef\nghi")
+	rebuildFromString(&offsets, "abc\ndef\nghi")
 	_, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText:        "X",
 		LineByteOffsets:        &offsets,
@@ -126,7 +126,7 @@ func TestComputeCompositionInfo_AutoWrapNoWrapChange(t *testing.T) {
 	// add any wrap → CompDelta == 0.
 	face := newTestFace(t)
 	var offsets textutil.LineByteOffsets
-	offsets.RebuildFromString("abcdef")
+	rebuildFromString(&offsets, "abcdef")
 	got, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
 		CompositionText:        "XY",
 		LineByteOffsets:        &offsets,
@@ -279,7 +279,7 @@ func TestVisibleRangeInViewport_AutoWrapOn(t *testing.T) {
 	const narrowWidth = 80
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
 	var lbo textutil.LineByteOffsets
-	lbo.RebuildFromString(str)
+	rebuildFromString(&lbo, str)
 
 	// Sanity: the long middle line wraps into multiple visual lines.
 	midStart := lbo.ByteOffsetByLineIndex(1)

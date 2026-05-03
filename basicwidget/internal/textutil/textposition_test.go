@@ -32,7 +32,7 @@ func withoutSidecar(p *textutil.TextPositionFromIndexParams) *textutil.TextPosit
 // LogicalLineIndexHint inputs.
 func precedingVisualLineCountFromString(committed string, width int, autoWrap bool, face text.Face, tabWidth float64, keepTailingSpace bool) func(int) int {
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(committed)
+	rebuildFromString(&l, committed)
 	return func(lineIdx int) int {
 		if lineIdx <= 0 {
 			return 0
@@ -220,7 +220,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 					AutoWrap:   autoWrap,
 				}
 				var l textutil.LineByteOffsets
-				l.RebuildFromString(tc.str)
+				rebuildFromString(&l, tc.str)
 				params := &textutil.TextPositionFromIndexParams{
 					RenderingTextRange:  func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength: len(tc.str),
@@ -267,7 +267,7 @@ func TestTextPositionFromIndexSidecarAutoWrap(t *testing.T) {
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
 
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(str)
+	rebuildFromString(&l, str)
 	params := &textutil.TextPositionFromIndexParams{
 		RenderingTextRange:  func(start, end int) string { return str[start:end] },
 		RenderingTextLength: len(str),
@@ -317,7 +317,7 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 		t.Run(autoWrapSuffix(autoWrap), func(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight, AutoWrap: autoWrap}
 			var l textutil.LineByteOffsets
-			l.RebuildFromString(str)
+			rebuildFromString(&l, str)
 			precVL := precedingVisualLineCountFromString(str, math.MaxInt, autoWrap, face, 0, false)
 
 			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
@@ -409,7 +409,7 @@ func TestTextPositionFromIndexSidecarComposition(t *testing.T) {
 					t.Fatalf("test setup: compLen %d != len(composition) %d", tc.c.compLen, len(tc.c.composition))
 				}
 				var l textutil.LineByteOffsets
-				l.RebuildFromString(tc.committed)
+				rebuildFromString(&l, tc.committed)
 				params := &textutil.TextPositionFromIndexParams{
 					RenderingTextRange:  func(start, end int) string { return rendering[start:end] },
 					RenderingTextLength: len(rendering),
@@ -458,7 +458,7 @@ func TestTextPositionFromIndexSidecarCompositionWithLineBreak(t *testing.T) {
 	const width = math.MaxInt
 
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(committed)
+	rebuildFromString(&l, committed)
 	params := &textutil.TextPositionFromIndexParams{
 		RenderingTextRange:  func(start, end int) string { return rendering[start:end] },
 		RenderingTextLength: len(rendering),
@@ -497,7 +497,7 @@ func TestTextPositionFromIndexSidecarOutOfRange(t *testing.T) {
 
 	str := "abc"
 	var l textutil.LineByteOffsets
-	l.RebuildFromString(str)
+	rebuildFromString(&l, str)
 	params := &textutil.TextPositionFromIndexParams{
 		RenderingTextRange:  func(start, end int) string { return str[start:end] },
 		RenderingTextLength: len(str),
