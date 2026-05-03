@@ -46,8 +46,9 @@ const (
 )
 
 var (
-	textEventValueChanged guigui.EventKey = guigui.GenerateEventKey()
-	textEventScrollDelta  guigui.EventKey = guigui.GenerateEventKey()
+	textEventValueChanged            guigui.EventKey = guigui.GenerateEventKey()
+	textEventValueChangedWithoutText guigui.EventKey = guigui.GenerateEventKey()
+	textEventScrollDelta             guigui.EventKey = guigui.GenerateEventKey()
 )
 
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
@@ -229,8 +230,24 @@ func newTextSizeCacheKey(autoWrap, bold bool) textSizeCacheKey {
 // The handler fires only when the text content actually advances. Input
 // activity that doesn't modify the text — cursor moves, focus changes, IME
 // state replays, redundant commit gestures — does not trigger the handler.
+//
+// If the handler does not need the text payload, prefer
+// [Text.OnValueChangedWithoutText] to avoid materializing the value on every
+// change.
 func (t *Text) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	guigui.SetEventHandler(t, textEventValueChanged, f)
+}
+
+// OnValueChangedWithoutText sets a handler that fires under the same conditions
+// as [Text.OnValueChanged] but is not given the current text. Use this when the
+// handler only needs to know that the value changed (e.g. to mark a document
+// dirty) so the underlying value is not materialized into a string on every
+// change.
+//
+// The handler can be registered alongside [Text.OnValueChanged]; both fire on
+// the same change.
+func (t *Text) OnValueChangedWithoutText(f func(context *guigui.Context, committed bool)) {
+	guigui.SetEventHandler(t, textEventValueChangedWithoutText, f)
 }
 
 // dispatchValueChanged dispatches a value-changed event, suppressing it when
@@ -263,6 +280,7 @@ func (t *Text) dispatchValueChanged(committed, snapshot bool) {
 	guigui.DispatchEventLazy(t, textEventValueChanged, func() (string, bool) {
 		return t.stringValue(), committed
 	})
+	guigui.DispatchEvent(t, textEventValueChangedWithoutText, committed)
 }
 
 func (t *Text) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {

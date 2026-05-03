@@ -41,8 +41,20 @@ type TextInput struct {
 // A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
 // An uncommitted change occurs on every keystroke or text modification during editing.
 // Note that the handler might be called even when the text content has not actually changed.
+//
+// If the handler does not need the text payload, prefer
+// [TextInput.OnValueChangedWithoutText] to avoid materializing the value on
+// every change.
 func (t *TextInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	t.textInput.OnValueChanged(f)
+}
+
+// OnValueChangedWithoutText sets a handler that fires under the same
+// conditions as [TextInput.OnValueChanged] but is not given the current text.
+// Use this when the handler only needs to know that the value changed so the
+// underlying value is not materialized into a string on every change.
+func (t *TextInput) OnValueChangedWithoutText(f func(context *guigui.Context, committed bool)) {
+	t.textInput.OnValueChangedWithoutText(f)
 }
 
 func (t *TextInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
@@ -341,6 +353,10 @@ type textInput struct {
 
 func (t *textInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
 	t.text.Text().OnValueChanged(f)
+}
+
+func (t *textInput) OnValueChangedWithoutText(f func(context *guigui.Context, committed bool)) {
+	t.text.Text().OnValueChangedWithoutText(f)
 }
 
 func (t *textInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
