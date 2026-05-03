@@ -252,6 +252,88 @@ func (l *LineByteOffsets) Reset() {
 	l.offsets = l.offsets[:0]
 }
 
+// Replace updates the offsets to reflect a splice that replaced the source
+// text's [start, end) byte range with newText. The caller must invoke
+// Replace immediately after applying the same splice to the underlying
+// source.
+//
+// startCtx is the up-to-2-byte slice of pre-splice text immediately before
+// start (positions [max(0, start-2), start)); it is used to derive the
+// scanner's entry state at start so a partial break ending at the splice
+// boundary disambiguates correctly. endCtx is the up-to-3-byte slice of
+// post-splice text immediately after newText (positions [start+len(newText),
+// start+len(newText)+3)); it provides the lookahead the scanner needs for
+// breaks formed at the splice's far boundary. atEOT must be true iff
+// endCtx reaches end-of-text (i.e. start+len(newText)+3 ≥ post-splice
+// length).
+//
+// After Replace returns, the offsets describe the post-splice text.
+func (l *LineByteOffsets) Replace(newText string, start, end int, startCtx, endCtx string, atEOT bool) {
+	n := len(l.offsets)
+	if n == 0 {
+		return
+	}
+	delta := len(newText) - (end - start)
+
+	// Derive the scanner's entry state at start from the trailing bytes of
+	// startCtx. AfterE280 needs both bytes; the others depend only on the
+	// last byte. Anything else leaves the scanner in Normal state.
+	state := streamStateNormal
+	if m := len(startCtx); m > 0 {
+		switch startCtx[m-1] {
+		case 0x0d:
+			state = streamStateAfterCR
+		case 0xc2:
+			state = streamStateAfterC2
+		case 0xe2:
+			state = streamStateAfterE2
+		case 0x80:
+			if m >= 2 && startCtx[m-2] == 0xe2 {
+				state = streamStateAfterE280
+			}
+		}
+	}
+
+	// Replace offsets at indices [replaceStart, shiftStart) by re-emitting
+	// them from the rescan. replaceStart starts one past the line
+	// containing start (whose offset is ≤ start and stays put) and is
+	// pulled back by one when the scanner enters in AfterCR state and
+	// offsets[replaceStart-1] equals start — the original break's CRLF/
+	// bare-CR disambiguation can flip once the byte at start changes.
+	// shiftStart is the first line whose offset is far enough past end
+	// (≥ end+3, the longest break length) that no break of any kind
+	// can have its lead byte inside the splice and its end byte at
+	// offsets[shiftStart]-1.
+	startLine := l.LineIndexForByteOffset(start)
+	replaceStart := startLine + 1
+	if state == streamStateAfterCR && startLine > 0 && l.offsets[startLine] == start {
+		replaceStart = startLine
+	}
+	shiftStart, _ := slices.BinarySearch(l.offsets, end+3)
+
+	var shifted []int
+	if shiftStart < n {
+		shifted = make([]int, n-shiftStart)
+		for i := range shifted {
+			shifted[i] = l.offsets[shiftStart+i] + delta
+		}
+	}
+
+	l.offsets = l.offsets[:replaceStart]
+	w := &lineByteOffsetsWriter{l: l, streamOff: start, state: state}
+	_, _ = w.Write([]byte(newText + endCtx))
+	if atEOT && w.state == streamStateAfterCR {
+		l.offsets = append(l.offsets, w.streamOff)
+	}
+	if len(shifted) > 0 && len(l.offsets) > replaceStart && l.offsets[len(l.offsets)-1] == shifted[0] {
+		// Last rescan emit coincides with the first shifted entry (e.g.,
+		// a CRLF spanning the rescan boundary); drop the duplicate so
+		// the result stays strictly increasing.
+		l.offsets = l.offsets[:len(l.offsets)-1]
+	}
+	l.offsets = append(l.offsets, shifted...)
+}
+
 // LineCount returns the number of logical lines.
 //
 // The empty string has one logical line. A trailing line break creates an

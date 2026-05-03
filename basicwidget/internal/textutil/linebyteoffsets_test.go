@@ -259,6 +259,155 @@ func TestLineByteOffsetsStreamingMatchesRebuild(t *testing.T) {
 	}
 }
 
+func TestLineByteOffsetsReplaceMatchesRebuild(t *testing.T) {
+	// Inputs span the cases that exercise every line-break shape, including
+	// breaks that may sit at or straddle the splice's boundaries.
+	bases := []string{
+		"",
+		"abc",
+		"abc\n",
+		"abc\ndef",
+		"abc\ndef\n",
+		"\n\n\n",
+		"abc\r\ndef",
+		"abc\rdef",
+		"abc\r",
+		"\r\n",
+		"\r\r\n",
+		"a\u2028b\u2028c",
+		"a\u0085b\u0085c",
+		"a\u2029b\u2029c",
+		"a\vb\fc",
+		"一\n二\n三",
+		"a‰b‱c\nd",
+		// Adjacent multi-byte breaks of mixed kinds.
+		"\u0085\u2028\u2029",
+		"a\u0085\u2028b",
+	}
+	patches := []string{
+		"",
+		"X",
+		"\n",
+		"\r",
+		"\r\n",
+		"\u2028",
+		"\u0085",
+		"\u2029",
+		"X\nY",
+		"\nX\n",
+		"\n\n",
+		// Partial / orphan break-lead bytes that may combine with
+		// surrounding base bytes to form (or fail to form) a break.
+		"\xc2",
+		"\x85",
+		"\xe2",
+		"\xe2\x80",
+		"\xa8",
+	}
+	for _, base := range bases {
+		for _, patch := range patches {
+			for start := 0; start <= len(base); start++ {
+				for end := start; end <= len(base); end++ {
+					post := base[:start] + patch + base[end:]
+
+					var l textutil.LineByteOffsets
+					l.RebuildFromString(base)
+					startCtx := base[max(0, start-2):start]
+					endCtxStart := start + len(patch)
+					endCtxEnd := min(endCtxStart+3, len(post))
+					endCtx := post[endCtxStart:endCtxEnd]
+					atEOT := endCtxStart+3 >= len(post)
+					l.Replace(patch, start, end, startCtx, endCtx, atEOT)
+					gotReplace := make([]int, l.LineCount())
+					for i := range gotReplace {
+						gotReplace[i] = l.ByteOffsetByLineIndex(i)
+					}
+
+					var ref textutil.LineByteOffsets
+					ref.RebuildFromString(post)
+					want := make([]int, ref.LineCount())
+					for i := range want {
+						want[i] = ref.ByteOffsetByLineIndex(i)
+					}
+
+					if !slices.Equal(gotReplace, want) {
+						t.Errorf("base=%q splice [%d,%d)=%q -> post=%q: Replace=%v, want %v",
+							base, start, end, patch, post, gotReplace, want)
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestLineByteOffsetsReplaceSequence(t *testing.T) {
+	// Apply a sequence of edits and verify the offsets stay in sync with a
+	// fresh rebuild of the cumulative result, exercising suffix shifts.
+	cur := "alpha\nbeta\ngamma\n"
+	var l textutil.LineByteOffsets
+	l.RebuildFromString(cur)
+
+	steps := []struct {
+		start, end int
+		patch      string
+	}{
+		{
+			start: 6,
+			end:   6,
+			patch: "BB",
+		},
+		{
+			start: 0,
+			end:   5,
+			patch: "ALPHA",
+		},
+		{
+			start: 8,
+			end:   8,
+			patch: "Q\n",
+		},
+		{
+			start: 2,
+			end:   8,
+			patch: "",
+		},
+		{
+			start: 0,
+			end:   0,
+			patch: "\r\n",
+		},
+		{
+			start: 0,
+			end:   1,
+			patch: "",
+		},
+	}
+	for i, s := range steps {
+		next := cur[:s.start] + s.patch + cur[s.end:]
+		startCtx := cur[max(0, s.start-2):s.start]
+		endCtxStart := s.start + len(s.patch)
+		endCtxEnd := min(endCtxStart+3, len(next))
+		endCtx := next[endCtxStart:endCtxEnd]
+		atEOT := endCtxStart+3 >= len(next)
+		l.Replace(s.patch, s.start, s.end, startCtx, endCtx, atEOT)
+		got := make([]int, l.LineCount())
+		for j := range got {
+			got[j] = l.ByteOffsetByLineIndex(j)
+		}
+		var ref textutil.LineByteOffsets
+		ref.RebuildFromString(next)
+		want := make([]int, ref.LineCount())
+		for j := range want {
+			want[j] = ref.ByteOffsetByLineIndex(j)
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("step %d (splice [%d,%d)=%q on %q): got %v, want %v",
+				i, s.start, s.end, s.patch, cur, got, want)
+		}
+		cur = next
+	}
+}
+
 func TestLineByteOffsetsLargeBuffer(t *testing.T) {
 	// Sanity-check correctness on a multi-thousand-line buffer that exercises
 	// the binary-search path without being slow.

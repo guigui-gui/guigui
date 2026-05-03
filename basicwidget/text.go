@@ -724,6 +724,15 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		return
 	}
 	t.field.ReplaceText(text, start, end)
+	if t.lineByteOffsets.LineCount() > 0 {
+		startCtx := t.stringValueWithRange(max(0, start-2), start)
+		endCtxStart := start + len(text)
+		endCtxEnd := endCtxStart + 3
+		endCtx := t.stringValueWithRange(endCtxStart, endCtxEnd)
+		atEOT := endCtxEnd >= t.field.TextLengthInBytes()
+		t.lineByteOffsets.Replace(text, start, end, startCtx, endCtx, atEOT)
+		t.lineByteOffsetsFieldGeneration = t.field.Generation()
+	}
 
 	t.resetCachedTextSize()
 	t.dispatchValueChanged(false, false)
