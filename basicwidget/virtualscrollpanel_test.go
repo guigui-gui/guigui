@@ -13,7 +13,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 	type testCase struct {
 		name        string
 		heights     []int
-		fallback    int
 		startIndex  int
 		startOffset int
 		deltaPx     int
@@ -33,7 +32,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "zero delta is a no-op",
 			heights:     uniform(10, 20),
-			fallback:    20,
 			startIndex:  3,
 			startOffset: -5,
 			deltaPx:     0,
@@ -43,7 +41,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform forward, exact viewport",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     100,
@@ -53,7 +50,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform forward, mid-item landing",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     105,
@@ -63,7 +59,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform forward from non-zero offset",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  2,
 			startOffset: -10,
 			deltaPx:     100,
@@ -73,7 +68,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform backward overshoots top, clamped",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  3,
 			startOffset: 0,
 			deltaPx:     -200,
@@ -83,7 +77,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform backward, exact",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  5,
 			startOffset: 0,
 			deltaPx:     -60,
@@ -93,7 +86,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "uniform backward, mid-item landing",
 			heights:     uniform(20, 20),
-			fallback:    20,
 			startIndex:  5,
 			startOffset: 0,
 			deltaPx:     -65,
@@ -105,7 +97,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 			// stays put, only offset advances. The original bug.
 			name:        "tall single item, forward keeps same index",
 			heights:     []int{500},
-			fallback:    500,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     100,
@@ -115,7 +106,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "tall single item, repeated forward accumulates offset",
 			heights:     []int{500},
-			fallback:    500,
 			startIndex:  0,
 			startOffset: -100,
 			deltaPx:     100,
@@ -126,7 +116,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 			// Backward by less than the offset stays inside the same item.
 			name:        "tall single item, backward partial",
 			heights:     []int{500},
-			fallback:    500,
 			startIndex:  0,
 			startOffset: -200,
 			deltaPx:     -100,
@@ -136,7 +125,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "heterogeneous heights forward",
 			heights:     []int{10, 20, 30, 40, 50},
-			fallback:    25,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     35,
@@ -146,7 +134,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 		{
 			name:        "heterogeneous heights backward",
 			heights:     []int{10, 20, 30, 40, 50},
-			fallback:    25,
 			startIndex:  4,
 			startOffset: 0,
 			deltaPx:     -55,
@@ -158,7 +145,6 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 			// must step past it without consuming any of the offset.
 			name:        "zero-height items are walked past",
 			heights:     []int{0, 0, 20, 20},
-			fallback:    20,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     5,
@@ -166,22 +152,9 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 			wantOffset:  -5,
 		},
 		{
-			// Defensive: contract says in-range returns >= 0; a negative
-			// return signals "no measurement" and falls back.
-			name:        "negative measured height falls back",
-			heights:     []int{-1, -1, -1, -1, -1},
-			fallback:    20,
-			startIndex:  0,
-			startOffset: 0,
-			deltaPx:     60,
-			wantIndex:   3,
-			wantOffset:  0,
-		},
-		{
 			// Layout's bottom clamp finishes the job; the walk just stops.
 			name:        "forward stops at totalCount-1",
 			heights:     uniform(5, 20),
-			fallback:    20,
 			startIndex:  0,
 			startOffset: 0,
 			deltaPx:     1000,
@@ -193,12 +166,9 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			measure := func(i int) int {
-				if i < 0 || i >= len(tc.heights) {
-					return -1
-				}
 				return tc.heights[i]
 			}
-			gotIdx, gotOff := basicwidget.TopItemAfterPixelScroll(measure, tc.fallback, len(tc.heights), tc.startIndex, tc.startOffset, tc.deltaPx)
+			gotIdx, gotOff := basicwidget.TopItemAfterPixelScroll(measure, len(tc.heights), tc.startIndex, tc.startOffset, tc.deltaPx)
 			if gotIdx != tc.wantIndex || gotOff != tc.wantOffset {
 				t.Errorf("TopItemAfterPixelScroll start=(%d,%d) delta=%d => (%d,%d); want (%d,%d)",
 					tc.startIndex, tc.startOffset, tc.deltaPx, gotIdx, gotOff, tc.wantIndex, tc.wantOffset)

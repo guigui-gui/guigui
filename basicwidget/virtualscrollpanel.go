@@ -692,21 +692,20 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 				s.draggingStartOffset = topOff
 				return guigui.HandleInputByWidget(s)
 			}
-			// Clicked on track — jump by one viewport in pixels. Walking
-			// real heights matters when a single item (e.g. a wrapped
-			// logical line) is taller than the viewport: in that case the
-			// index stays put and only topItemOffset advances. A naive
-			// bounds.Dy()/estimatedItemHeight quantum would round to 0
-			// and the page jump would be a no-op.
+			// Clicked on track — jump by one viewport in pixels.
 			if !tb.Empty() {
 				deltaPx := bounds.Dy()
 				if y < tb.Min.Y {
 					deltaPx = -deltaPx
 				}
 				measure := func(i int) int {
-					return s.panel.content.measureItemHeight(context, i)
+					h := s.panel.content.measureItemHeight(context, i)
+					if h < 0 {
+						return s.panel.estimatedItemHeight
+					}
+					return h
 				}
-				newIdx, newOff := topItemAfterPixelScroll(measure, s.panel.estimatedItemHeight, totalCount, topIdx, topOff, deltaPx)
+				newIdx, newOff := topItemAfterPixelScroll(measure, totalCount, topIdx, topOff, deltaPx)
 				s.panel.setTopItem(newIdx, newOff)
 				return guigui.HandleInputByWidget(s)
 			}
@@ -735,8 +734,10 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 				// walk re-traverses the same items every tick. The
 				// content's Layout is expected to normalize (topIdx,
 				// topOff) against real heights over its visible region.
-				measure := func(int) int { return -1 }
-				newIdx, newOff := topItemAfterPixelScroll(measure, s.panel.estimatedItemHeight, totalCount, s.draggingStartIndex, s.draggingStartOffset, deltaScrollPos)
+				measure := func(int) int {
+					return s.panel.estimatedItemHeight
+				}
+				newIdx, newOff := topItemAfterPixelScroll(measure, totalCount, s.draggingStartIndex, s.draggingStartOffset, deltaScrollPos)
 				s.panel.forceSetTopItem(newIdx, newOff, true)
 			}
 		}
@@ -776,18 +777,15 @@ func (s *virtualScrollVBar) Draw(context *guigui.Context, widgetBounds *guigui.W
 // Positive deltaPx scrolls forward in document order. The computation steps
 // through items using real heights from measure, so it remains correct when
 // items are heterogeneous or when a single item is taller than the
-// viewport. measure follows the [virtualScrollContent.measureItemHeight]
-// contract: in-range indices return >= 0 (zero is a valid height for an
-// empty/collapsed item); a negative return indicates "no measurement"
-// and falls back to fallbackHeight as defensive guard against contract
-// violation.
+// viewport. measure must return a non-negative height for each in-range
+// index.
 //
 // The returned index stays within [0, totalCount-1]. Forward scrolling
 // stops at totalCount-1 even if the remaining delta would consume more
 // items; the caller's layout pass is responsible for any bottom-edge clamp
 // against the viewport size. Backward scrolling clamps to (0, 0) at the
 // document top.
-func topItemAfterPixelScroll(measure func(index int) int, fallbackHeight, totalCount, startIndex, startOffset, deltaPx int) (newIndex, newOffset int) {
+func topItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (newIndex, newOffset int) {
 	newIndex = startIndex
 	newOffset = startOffset - deltaPx
 	if deltaPx > 0 {
@@ -795,9 +793,6 @@ func topItemAfterPixelScroll(measure func(index int) int, fallbackHeight, totalC
 		// negative than the current item's height.
 		for newIndex < totalCount-1 {
 			h := measure(newIndex)
-			if h < 0 {
-				h = fallbackHeight
-			}
 			if -newOffset < h {
 				break
 			}
@@ -809,9 +804,6 @@ func topItemAfterPixelScroll(measure func(index int) int, fallbackHeight, totalC
 		for newOffset > 0 && newIndex > 0 {
 			newIndex--
 			h := measure(newIndex)
-			if h < 0 {
-				h = fallbackHeight
-			}
 			newOffset -= h
 		}
 		if newIndex == 0 && newOffset > 0 {
