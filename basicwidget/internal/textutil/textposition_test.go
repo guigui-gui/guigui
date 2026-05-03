@@ -205,7 +205,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 		{"two lines trailing", "abc\ndef\n"},
 		{"three lines", "abc\ndef\nghi"},
 		{"CRLF", "abc\r\ndef"},
-		{"multibyte", "下\n中\n上"},
+		{"multibyte", "一\n二\n三"},
 		{"empty trailing", "\n"},
 		{"only breaks", "\n\n\n"},
 	}

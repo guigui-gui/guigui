@@ -80,7 +80,7 @@ func TestLineByteOffsetsRebuildFromString(t *testing.T) {
 		},
 		{
 			name:   "multibyte runes between breaks",
-			input:  "下\n中",
+			input:  "一\n二",
 			starts: []int{0, 4},
 		},
 	}
@@ -192,17 +192,17 @@ func TestLineByteOffsetsStreamingMatchesRebuild(t *testing.T) {
 		"abc\r",
 		"\r\n",
 		"\r\r\n",
-		"abc def",
-		"abc def",
-		"abcdef",
+		"abc\u2028def",
+		"abc\u2029def",
+		"abc\u0085def",
 		"a\vb\fc",
-		"下\n中",
-		"   ",
-		"a b cd",
+		"一\n二",
+		"\u2028\u2028\u2028",
+		"a\u2028b\u2029c\u0085d",
 		// 0xC2 / 0xE2 followed by non-break continuations to exercise
 		// the false-positive paths.
-		"a b",   // NBSP starts with 0xC2 0xA0.
-		"a‰b‱c", // PER-MILLE / PER-TEN-THOUSAND start with 0xE2 0x80 0xB0/0xB1.
+		"a\u00a0b", // NBSP starts with 0xC2 0xA0.
+		"a‰b‱c",    // PER-MILLE / PER-TEN-THOUSAND start with 0xE2 0x80 0xB0/0xB1.
 	}
 	for _, s := range inputs {
 		t.Run(s, func(t *testing.T) {

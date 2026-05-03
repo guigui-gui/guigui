@@ -56,7 +56,7 @@ func TestMeasureLogicalLineHeightParity(t *testing.T) {
 		{"two lines trailing", "abc\ndef\n"},
 		{"three lines", "abc\ndef\nghi"},
 		{"CRLF", "abc\r\ndef"},
-		{"multibyte", "下\n中\n"},
+		{"multibyte", "一\n二\n"},
 	}
 
 	for _, autoWrap := range []bool{false, true} {

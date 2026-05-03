@@ -40,7 +40,7 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 		{"two lines", "abc\ndef"},
 		{"trailing LF", "abc\n"},
 		{"three lines", "abc\ndef\nghi"},
-		{"multibyte", "下\n中\n上"},
+		{"multibyte", "一\n二\n三"},
 	}
 
 	for _, autoWrap := range []bool{false, true} {
