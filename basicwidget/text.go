@@ -2472,6 +2472,16 @@ func (t *textCursor) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		return
 	}
 	b := widgetBounds.Bounds()
+	if b.Empty() {
+		return
+	}
+	w := textCursorWidth(context)
+	region := t.textWidgetBoundsRect
+	region.Min.X -= w
+	region.Max.X += w
+	if !b.In(region) {
+		return
+	}
 	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.SemanticColorAccent, 0.5, 0.6), alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }
