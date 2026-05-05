@@ -1092,22 +1092,6 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	// autoWrap text on dense walks.
 	t.measureMaxWidthForViewport(context)
 
-	// Per-logical-line height for the panel's scroll bar sizing, sampled
-	// from the lines just measured during the normalize / bottom-clamp
-	// loops above (i.e. the viewport region). For autoWrap text where one
-	// logical line wraps into several visual lines this is a representative
-	// average; otherwise it equals lineHeight.
-	estimatedH := lh
-	if len(t.measuredLineHeights) > 0 {
-		var sum int
-		for _, h := range t.measuredLineHeights {
-			sum += h
-		}
-		if avg := sum / len(t.measuredLineHeights); avg > estimatedH {
-			estimatedH = avg
-		}
-	}
-	t.panel.setEstimatedItemHeight(estimatedH)
 }
 
 func (t *textInputText) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

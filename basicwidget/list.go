@@ -704,17 +704,10 @@ func (l *listContent[T]) itemCount() int {
 // available-item index, or -1 if the index is out of range. Implements
 // [virtualScrollContent.measureItemHeight].
 func (l *listContent[T]) measureItemHeight(context *guigui.Context, availableIndex int) int {
-	var idx int
-	for i := range l.abstractList.ItemCount() {
-		if !l.isItemAvailable(i) {
-			continue
-		}
-		if idx == availableIndex {
-			return l.measureItemHeightWithContentWidth(context, i, l.contentWidth(context))
-		}
-		idx++
+	if availableIndex < 0 || availableIndex >= len(l.tmpAvailableIndices) {
+		return -1
 	}
-	return -1
+	return l.measureItemHeightWithContentWidth(context, l.tmpAvailableIndices[availableIndex], l.contentWidth(context))
 }
 
 func (l *listContent[T]) contentWidth(_ *guigui.Context) int {
@@ -1063,10 +1056,6 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	// Start Y at the top of the viewport plus the topItemOffset.
 	y := viewportTop + RoundedCornerRadius(context) + topOff
 
-	// Track total measured height for average calculation.
-	var totalMeasuredHeight int
-	var measuredCount int
-
 	// Lay out items downward from topIdx.
 	for ai := topIdx; ai < len(availableIndices); ai++ {
 		if y >= viewportBottom {
@@ -1074,8 +1063,6 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 		}
 		i := availableIndices[ai]
 		itemH := l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
-		totalMeasuredHeight += itemH
-		measuredCount++
 		if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
 			y += int(float64(itemH) * animRate)
 		} else {
@@ -1088,26 +1075,15 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	for ai := topIdx - 1; ai >= 0; ai-- {
 		i := availableIndices[ai]
 		itemH := l.measureItemHeightWithContentWidth(context, i, cw)
-		totalMeasuredHeight += itemH
-		measuredCount++
-
 		if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
 			y -= int(float64(itemH) * animRate)
 		} else {
 			y -= itemH
 		}
 		l.layoutItem(context, widgetBounds, layouter, i, baseX, y, cw)
-
 		if y <= viewportTop {
 			break
 		}
-	}
-
-	// Report average measured height to the panel.
-	if measuredCount > 0 {
-		l.listPanel.setEstimatedItemHeight(totalMeasuredHeight / measuredCount)
-	} else {
-		l.listPanel.setEstimatedItemHeight(0)
 	}
 }
 

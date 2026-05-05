@@ -252,10 +252,37 @@ func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation 
 	}
 }
 
-// setEstimatedItemHeight records the estimated item height, used to
-// estimate scroll bar thumb size and viewport item count.
-func (p *virtualScrollPanel) setEstimatedItemHeight(h int) {
-	p.estimatedItemHeight = h
+// updateEstimatedItemHeight samples item heights from a window spanning
+// ±5 viewports around the current top item and stores the average.
+// Called from Layout after the content child has been laid out, so
+// measureItemHeight sees warm caches for viewport items.
+func (p *virtualScrollPanel) updateEstimatedItemHeight(context *guigui.Context, panelBounds image.Rectangle) {
+	totalCount := p.content.itemCount()
+	if totalCount == 0 {
+		p.estimatedItemHeight = 0
+		return
+	}
+
+	// Estimate viewport item count from the previous height (or 1 if unknown).
+	viewportCount := 1
+	if p.estimatedItemHeight > 0 && panelBounds.Dy() > 0 {
+		viewportCount = max(1, panelBounds.Dy()/p.estimatedItemHeight)
+	}
+
+	extendCount := 5 * viewportCount
+	start := max(0, p.topItemIndex-extendCount)
+	end := min(totalCount-1, p.topItemIndex+viewportCount+extendCount)
+
+	var sum, count int
+	for i := start; i <= end; i++ {
+		if h := p.content.measureItemHeight(context, i); h >= 0 {
+			sum += h
+			count++
+		}
+	}
+	if count > 0 {
+		p.estimatedItemHeight = sum / count
+	}
 }
 
 func (p *virtualScrollPanel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -326,6 +353,7 @@ func (p *virtualScrollPanel) Layout(context *guigui.Context, widgetBounds *guigu
 		Min: pt,
 		Max: pt.Add(contentSize),
 	})
+	p.updateEstimatedItemHeight(context, bounds)
 
 	// Set content size for horizontal scroll bar only.
 	hContentSize := image.Pt(cw, bounds.Dy())
