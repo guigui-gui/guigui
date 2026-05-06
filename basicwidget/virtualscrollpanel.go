@@ -252,10 +252,7 @@ func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation 
 	}
 }
 
-// updateEstimatedItemHeight samples item heights from a window spanning
-// ±5 viewports around the current top item and stores the average.
-// Called from Layout after the content child has been laid out, so
-// measureItemHeight sees warm caches for viewport items.
+// updateEstimatedItemHeight updates p.estimatedItemHeight.
 func (p *virtualScrollPanel) updateEstimatedItemHeight(context *guigui.Context, panelBounds image.Rectangle) {
 	totalCount := p.content.itemCount()
 	if totalCount == 0 {
@@ -269,7 +266,8 @@ func (p *virtualScrollPanel) updateEstimatedItemHeight(context *guigui.Context, 
 		viewportCount = max(1, panelBounds.Dy()/p.estimatedItemHeight)
 	}
 
-	extendCount := 5 * viewportCount
+	// Sample heights from a window spanning at least 10 items, and 5 viewports, on each side of the top item.
+	extendCount := max(10, 5*viewportCount)
 	start := max(0, p.topItemIndex-extendCount)
 	end := min(totalCount-1, p.topItemIndex+viewportCount+extendCount)
 
