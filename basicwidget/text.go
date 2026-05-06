@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/zeebo/xxh3"
@@ -81,7 +80,7 @@ func repeat(duration int) bool {
 type Text struct {
 	guigui.DefaultWidget
 
-	field             textinput.Field
+	field             textField
 	valueBuilder      bytes.Buffer
 	valueEqualChecker stringEqualChecker
 
@@ -137,7 +136,7 @@ type Text struct {
 	contentHasher xxh3.Hasher128
 
 	// contentHashCache memoizes the most recently computed hash, keyed by
-	// [textinput.Field.Generation]. While the field has not been mutated, repeated
+	// [textField.Generation]. While the field has not been mutated, repeated
 	// [Text.WriteStateKey] calls return the cached value without re-hashing.
 	contentHashCache           xxh3.Uint128
 	contentHashFieldGeneration int64
@@ -146,7 +145,7 @@ type Text struct {
 	// in the field's committed text. Used by virtualized layout paths that
 	// need to walk a window of logical lines without rescanning the whole
 	// buffer. Refreshed lazily by ensureLineByteOffsets when
-	// [textinput.Field.Generation] advances past
+	// [textField.Generation] advances past
 	// lineByteOffsetsFieldGeneration.
 	lineByteOffsets                textutil.LineByteOffsets
 	lineByteOffsetsFieldGeneration int64
@@ -166,13 +165,13 @@ type Text struct {
 	onFocusChanged      func(context *guigui.Context, focused bool)
 	onHandleButtonInput func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
 
-	// lastDispatchedUncommittedGen is the [textinput.Field.Generation] value
+	// lastDispatchedUncommittedGen is the [textField.Generation] value
 	// at the most recent uncommitted dispatch. Used to suppress redundant
 	// uncommitted dispatches (e.g., IME state replays that don't modify the
 	// text).
 	lastDispatchedUncommittedGen int64
 
-	// lastDispatchedCommittedGen is the [textinput.Field.Generation] value
+	// lastDispatchedCommittedGen is the [textField.Generation] value
 	// at the most recent committed dispatch. setText also advances it as if
 	// it had dispatched, treating the programmatic value as a self-committed
 	// snapshot. Committed dispatches are suppressed when the field hasn't
@@ -308,7 +307,7 @@ func (t *Text) contentHashForStateKey() xxh3.Uint128 {
 
 // ensureLineByteOffsets refreshes t.lineByteOffsets if the field has been
 // mutated since the last call. The offsets are built from the committed text
-// only (no IME composition), matching what [textinput.Field.WriteTextTo]
+// only (no IME composition), matching what [textField.WriteTextTo]
 // returns.
 func (t *Text) ensureLineByteOffsets() {
 	generation := t.field.Generation()
@@ -468,7 +467,7 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 // stringValueForRenderingRange returns the bytes of the rendering text
 // (committed text with the active IME composition spliced in) in
 // [start, end). Coordinates are in rendering space; clamped by
-// [textinput.Field.WriteTextForRenderingRangeTo].
+// [textField.WriteTextForRenderingRangeTo].
 func (t *Text) stringValueForRenderingRange(start, end int) string {
 	t.valueBuilder.Reset()
 	_, _ = t.field.WriteTextForRenderingRangeTo(&t.valueBuilder, start, end)
@@ -1356,10 +1355,12 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 
 	if t.editable {
 		start, _ := t.field.Selection()
-		var processed bool
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
 			t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
-			processed = t.field.Handled()
+		}
+		processed, err := t.field.Update()
+		if err != nil {
+			slog.Error(err.Error())
 		}
 		if processed {
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
