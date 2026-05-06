@@ -603,17 +603,19 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 		// barHeight > 0 guarantees estimatedItemHeight > 0 (see vThumbHeight)
 		// and totalCount > 0.
 		//
-		// scrollPos approximates the panel viewport top in document space
-		// using topItemIndex*estimatedItemHeight, matching the estimate
-		// scrollMax uses (so for uniform-height content the rate is still
-		// exact). An exact prefix-sum of measured item heights would
-		// require walking [0, topItemIndex) every Layout — O(topItemIndex)
-		// per Layout — defeating the point of virtualizing.
-		scrollPos := float64(p.topItemIndex*p.estimatedItemHeight - p.topItemOffset)
-		scrollMax := float64(totalCount*p.estimatedItemHeight - bounds.Dy())
+		// fracIdx is the top item index plus the fraction of that item
+		// scrolled off the top, using the item's measured height. This
+		// stays continuous across the (topItemIndex+1, topItemOffset+h_top)
+		// normalization, avoiding the (estH - h_actual) jump per boundary
+		// that a pixel-based formula would have on heterogeneous content.
+		fracIdx := float64(p.topItemIndex)
+		if h := p.content.measureItemHeight(context, p.topItemIndex); h > 0 {
+			fracIdx += float64(-p.topItemOffset) / float64(h)
+		}
+		scrollMaxItems := float64(totalCount) - float64(bounds.Dy())/float64(p.estimatedItemHeight)
 		var rate float64
-		if scrollMax > 0 {
-			rate = min(max(scrollPos/scrollMax, 0), 1)
+		if scrollMaxItems > 0 {
+			rate = min(max(fracIdx/scrollMaxItems, 0), 1)
 		}
 		y0 := float64(bounds.Min.Y) + padding + rate*(float64(bounds.Dy())-2*padding-barHeight)
 		y1 := y0 + barHeight
@@ -746,24 +748,33 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 		_, y := ebiten.CursorPosition()
 		dy := y - s.draggingStartPosition
 		if dy != 0 && trackHeight > 0 {
-			// Map cursor drag to a document-pixel scroll delta. dy maps
-			// 1:1 to the thumb's position on the track; the thumb's
-			// rate is scrollPos/scrollMax (see
-			// [virtualScrollPanel.thumbBounds]), so a thumb move of dy
-			// implies a scrollPos change of dy*scrollMax/trackHeight.
-			scrollMax := totalCount*s.panel.estimatedItemHeight - bounds.Dy()
-			if scrollMax > 0 {
-				deltaScrollPos := int(float64(dy) * float64(scrollMax) / trackHeight)
-
-				// Walk with uniform estimatedItemHeight: per-step
-				// measurement can be expensive, and the drag-anchored
-				// walk re-traverses the same items every tick. The
-				// content's Layout is expected to normalize (topIdx,
-				// topOff) against real heights over its visible region.
-				measure := func(int) int {
-					return s.panel.estimatedItemHeight
+			// Map cursor drag to a fractional-index delta, the inverse of
+			// the forward formula in [virtualScrollPanel.thumbBounds]:
+			// the full track length corresponds to scrollMaxItems items.
+			estH := s.panel.estimatedItemHeight
+			scrollMaxItems := float64(totalCount) - float64(bounds.Dy())/float64(estH)
+			if scrollMaxItems > 0 {
+				startFrac := float64(s.draggingStartIndex)
+				if h := s.panel.content.measureItemHeight(context, s.draggingStartIndex); h > 0 {
+					startFrac += float64(-s.draggingStartOffset) / float64(h)
 				}
-				newIdx, newOff := topItemAfterPixelScroll(measure, totalCount, s.draggingStartIndex, s.draggingStartOffset, deltaScrollPos)
+				newFrac := startFrac + float64(dy)*scrollMaxItems/trackHeight
+				if newFrac < 0 {
+					newFrac = 0
+				}
+				maxFrac := float64(totalCount - 1)
+				if newFrac > maxFrac {
+					newFrac = maxFrac
+				}
+				newIdx := int(newFrac)
+				if newIdx >= totalCount {
+					newIdx = totalCount - 1
+				}
+				frac := newFrac - float64(newIdx)
+				newOff := 0
+				if h := s.panel.content.measureItemHeight(context, newIdx); h > 0 {
+					newOff = -int(frac * float64(h))
+				}
 				s.panel.forceSetTopItem(newIdx, newOff, true)
 			}
 		}
