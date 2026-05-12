@@ -8,7 +8,6 @@ import (
 	"image"
 	"os"
 	"slices"
-	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -23,8 +22,8 @@ type Toast struct {
 	popup   basicwidget.Popup
 	content toastContent
 
-	openedAt      time.Time
-	duration      time.Duration
+	openedTicks   int
+	durationTicks int
 	message       string
 	semanticColor basicwidgetdraw.SemanticColor
 }
@@ -50,7 +49,7 @@ func (t *Toast) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 }
 
 func (t *Toast) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if t.popup.IsOpen() && t.duration > 0 {
+	if t.popup.IsOpen() && t.durationTicks > 0 {
 		// Check if the cursor is on the toast by a simple geometric check.
 		// IsHitAtCursor is not suitable here because the popup content is in a higher layer,
 		// which blocks the Toast widget from being considered "hit".
@@ -58,9 +57,12 @@ func (t *Toast) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 		// but this has not been decided yet.
 		if image.Pt(ebiten.CursorPosition()).In(widgetBounds.VisibleBounds()) {
 			// Reset the timer while the cursor is on the toast.
-			t.openedAt = time.Now()
-		} else if time.Since(t.openedAt) >= t.duration {
-			t.popup.SetOpen(false)
+			t.openedTicks = 0
+		} else {
+			t.openedTicks++
+			if t.openedTicks >= t.durationTicks {
+				t.popup.SetOpen(false)
+			}
 		}
 	}
 	return nil
@@ -83,8 +85,8 @@ func (t *Toast) SetHasCloseButton(hasCloseButton bool) {
 	t.content.hasCloseButton = hasCloseButton
 }
 
-func (t *Toast) SetDuration(duration time.Duration) {
-	t.duration = duration
+func (t *Toast) SetDurationInTicks(ticks int) {
+	t.durationTicks = ticks
 }
 
 func (t *Toast) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
@@ -93,7 +95,7 @@ func (t *Toast) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 
 func (t *Toast) SetOpen(open bool) {
 	if open {
-		t.openedAt = time.Now()
+		t.openedTicks = 0
 	}
 	t.popup.SetOpen(open)
 }
@@ -245,7 +247,7 @@ func (r *Root) showToast(context *guigui.Context) {
 	t := r.toasts.At(idx)
 	t.SetMessage(fmt.Sprintf("Toast #%d", r.toastCounter))
 	t.SetHasCloseButton(hasCloseButton)
-	t.SetDuration(3 * time.Second)
+	t.SetDurationInTicks(3 * ebiten.TPS())
 	t.SetSemanticColor(r.semanticColor)
 
 	// Grow the offsets slice if needed.
