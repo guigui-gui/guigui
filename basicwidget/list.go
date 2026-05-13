@@ -1892,6 +1892,11 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				}
 			}
 			if start := l.pressStartPlus1.Sub(image.Pt(1, 1)); start.Y != c.Y {
+				pressedBounds := l.itemBounds(context, index)
+				// Reject stale press state whose start is no longer on the pressed item.
+				if start.Y < pressedBounds.Min.Y || start.Y >= pressedBounds.Max.Y {
+					return guigui.AbortHandlingInputByWidget(l)
+				}
 				itemBoundsMin := l.itemBounds(context, l.tmpSelectedIndices[0])
 				itemBoundsMax := l.itemBounds(context, l.tmpSelectedIndices[len(l.tmpSelectedIndices)-1])
 				minY := min((itemBoundsMin.Min.Y+start.Y)/2, (itemBoundsMin.Min.Y+itemBoundsMin.Max.Y)/2)
@@ -1927,6 +1932,14 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 }
 
 func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	// Clear press tracking once the button is released, in case a wrapping widget consumed the release frame.
+	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && !inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+		l.pressStartPlus1 = image.Point{}
+		l.startPressingIndexPlus1 = 0
+		l.dragSrcIndexPlus1 = 0
+		l.dragDstIndexPlus1 = 0
+	}
+
 	// Jump to the item if requested.
 	// This is done in Tick to wait for the list items are updated, or an item cannot be measured correctly.
 	if l.jumpTick > 0 && ebiten.Tick() >= l.jumpTick {
