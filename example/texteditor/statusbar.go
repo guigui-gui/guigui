@@ -16,9 +16,21 @@ type statusBar struct {
 	guigui.DefaultWidget
 
 	text basicwidget.Text
+	seg  segmenter.Segmenter
 }
 
-func (s *statusBar) SetText(text string) {
+func (s *statusBar) SetStatus(line int, lineBytes []byte) {
+	col := 1
+	if err := s.seg.InitWithBytes(lineBytes); err != nil {
+		// Invalid UTF-8: fall back to byte-based column.
+		col = len(lineBytes) + 1
+	} else {
+		it := s.seg.GraphemeIterator()
+		for it.Next() {
+			col++
+		}
+	}
+	text := fmt.Sprintf("Line %d, Column %d", line+1, col)
 	s.text.SetValue(text)
 }
 
@@ -34,19 +46,4 @@ func (s *statusBar) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	b.Min.X += u / 2
 	b.Max.X -= u / 2
 	layouter.LayoutWidget(&s.text, b)
-}
-
-func formatPosition(line int, lineBytes []byte) string {
-	col := 1
-	var seg segmenter.Segmenter
-	if err := seg.InitWithBytes(lineBytes); err != nil {
-		// Invalid UTF-8: fall back to byte-based column.
-		col = len(lineBytes) + 1
-	} else {
-		it := seg.GraphemeIterator()
-		for it.Next() {
-			col++
-		}
-	}
-	return fmt.Sprintf("Line %d, Column %d", line+1, col)
 }

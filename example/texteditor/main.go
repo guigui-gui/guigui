@@ -180,7 +180,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, start); err != nil {
 		return err
 	}
-	r.statusBar.SetText(formatPosition(line, r.scratchBuf.Bytes()))
+	r.statusBar.SetStatus(line, r.scratchBuf.Bytes())
 
 	if r.findDialog.IsOpen() {
 		r.updateFindCount()
