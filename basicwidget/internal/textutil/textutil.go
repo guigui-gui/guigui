@@ -47,13 +47,11 @@ func advance(str string, indexInBytes int, face text.Face, tabWidth float64, kee
 	for pos < end {
 		i := strings.IndexByte(str[pos:end], '\t')
 		if i < 0 {
-			head := str[pos:end]
-			width += text.AdvanceAt(head, len(head), face)
+			width += text.AdvanceAt(str, end, face) - text.AdvanceAt(str, pos, face)
 			break
 		}
 		tabIdx := pos + i
-		head := str[pos:tabIdx]
-		width += text.AdvanceAt(head, len(head), face)
+		width += text.AdvanceAt(str, tabIdx, face) - text.AdvanceAt(str, pos, face)
 		width = nextIndentPosition(width, tabWidth)
 		pos = tabIdx + 1
 	}

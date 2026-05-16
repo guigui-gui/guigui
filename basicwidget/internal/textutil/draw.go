@@ -182,17 +182,21 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			op.PrimaryAlign = text.AlignStart
 			x := oneLineLeft(bounds.Dx(), vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 			op.GeoM.Translate(x, 0)
+			origVlStr := vlStr
 			var origX float64
+			var pos int
 			for {
 				head, tail, ok := strings.Cut(vlStr, "\t")
 				text.Draw(dst, head, options.Face, op)
 				if !ok {
 					break
 				}
-				x := origX + text.AdvanceAt(head, len(head), options.Face)
+				tabIdx := pos + len(head)
+				x := origX + text.AdvanceAt(origVlStr, tabIdx, options.Face) - text.AdvanceAt(origVlStr, pos, options.Face)
 				nextX := nextIndentPosition(x, options.TabWidth)
 				op.GeoM.Translate(nextX-origX, 0)
 				origX = nextX
+				pos = tabIdx + 1
 				vlStr = tail
 			}
 		}
