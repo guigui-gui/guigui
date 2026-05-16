@@ -909,7 +909,8 @@ func (t *Text) actualTabWidth(context *guigui.Context) float64 {
 		return t.cachedDefaultTabWidth
 	}
 	face := t.face(context, false)
-	t.cachedDefaultTabWidth = text.Advance("        ", face)
+	const defaultTabSpaces = "        "
+	t.cachedDefaultTabWidth = text.AdvanceAt(defaultTabSpaces, len(defaultTabSpaces), face)
 	return t.cachedDefaultTabWidth
 }
 

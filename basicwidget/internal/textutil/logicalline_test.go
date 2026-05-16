@@ -129,7 +129,7 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 	const narrowWidth = 80
 
 	advance := func(s string) float64 {
-		return text.Advance(s, face)
+		return text.AdvanceAt(s, len(s), face)
 	}
 	// Sanity-check: this line really does need to wrap at narrowWidth.
 	if advance(logical) <= float64(narrowWidth) {

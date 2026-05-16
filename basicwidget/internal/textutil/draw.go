@@ -63,8 +63,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	op.GeoM.Translate(0, yOffset)
 
 	theCachedVisualLines = theCachedVisualLines[:0]
-	for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string) float64 {
-		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+	for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string, indexInBytes int) float64 {
+		return advance(str, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}) {
 		theCachedVisualLines = append(theCachedVisualLines, vl)
 	}
@@ -156,7 +156,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if !options.KeepTailingSpace {
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
-		if options.EllipsisString != "" && advance(vlStr, options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
+		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face, options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
 			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(bounds.Dx()), options.Face, options.TabWidth)
 		}
 		// Ebitengine's text.Draw does not handle tab characters, so lines
@@ -189,7 +189,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				if !ok {
 					break
 				}
-				x := origX + text.Advance(head, options.Face)
+				x := origX + text.AdvanceAt(head, len(head), options.Face)
 				nextX := nextIndentPosition(x, options.TabWidth)
 				op.GeoM.Translate(nextX-origX, 0)
 				origX = nextX

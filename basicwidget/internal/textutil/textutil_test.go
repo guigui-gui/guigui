@@ -101,8 +101,8 @@ func TestAutoWrapInvalidUTF8(t *testing.T) {
 		t.Fatal(err)
 	}
 	face := &text.GoTextFace{Source: source, Size: 16}
-	advance := func(s string) float64 {
-		return text.Advance(s, face)
+	advance := func(s string, indexInBytes int) float64 {
+		return text.AdvanceAt(s, indexInBytes, face)
 	}
 
 	cases := []string{

@@ -247,8 +247,8 @@ func textIndexFromPosition(width int, position image.Point, str string, options 
 	var pos int
 	var vlStr string
 	var vlIndex int
-	for l := range visualLines(width, str, options.WrapMode, func(str string) float64 {
-		return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+	for l := range visualLines(width, str, options.WrapMode, func(str string, indexInBytes int) float64 {
+		return advance(str, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos

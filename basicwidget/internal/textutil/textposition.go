@@ -295,8 +295,8 @@ func textPositionFromIndex(width int, str string, vls iter.Seq[visualLine], inde
 		return TextPosition{}, TextPosition{}, 0
 	}
 	if vls == nil {
-		vls = visualLines(width, str, options.WrapMode, func(str string) float64 {
-			return advance(str, options.Face, options.TabWidth, options.KeepTailingSpace)
+		vls = visualLines(width, str, options.WrapMode, func(str string, indexInBytes int) float64 {
+			return advance(str, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 		})
 	}
 
@@ -342,7 +342,7 @@ func textPositionFromIndex(width int, str string, vls iter.Seq[visualLine], inde
 	var pos0, pos1 TextPosition
 	if found0 {
 		x0 := oneLineLeft(width, line0, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-		x0 += advance(line0[:indexInLine0], options.Face, options.TabWidth, true)
+		x0 += advance(line0, indexInLine0, options.Face, options.TabWidth, true)
 		pos0 = TextPosition{
 			X:      x0,
 			Top:    y0 + paddingY,
@@ -351,7 +351,7 @@ func textPositionFromIndex(width int, str string, vls iter.Seq[visualLine], inde
 	}
 	if found1 {
 		x1 := oneLineLeft(width, line1, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-		x1 += advance(line1[:indexInLine1], options.Face, options.TabWidth, true)
+		x1 += advance(line1, indexInLine1, options.Face, options.TabWidth, true)
 		pos1 = TextPosition{
 			X:      x1,
 			Top:    y1 + paddingY,

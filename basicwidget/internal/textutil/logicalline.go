@@ -32,10 +32,10 @@ import (
 // An empty logicalLine yields a single empty visual line. A logicalLine that
 // contains a mid-line hard break violates the contract; the iterator stops
 // at the first mandatory break it encounters.
-func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, advance func(str string) float64) iter.Seq[visualLine] {
+func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[visualLine] {
 	// Fast path: a single visual line. Avoids invoking the segmenter for
 	// short content that fits, including the empty-line case.
-	if wrapMode == WrapModeNone || width == math.MaxInt || advance(logicalLine) <= float64(width) {
+	if wrapMode == WrapModeNone || width == math.MaxInt || advance(logicalLine, len(logicalLine)) <= float64(width) {
 		return func(yield func(visualLine) bool) {
 			yield(visualLine{pos: 0, str: logicalLine})
 		}
@@ -57,7 +57,7 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 		emit := func(segment string, isMandatoryBreak bool) (cont bool) {
 			if vlEnd-vlStart > 0 {
 				candidate := sanitized[vlStart : vlEnd+len(segment)]
-				if advance(candidate[:len(candidate)-tailingLineBreakLen(candidate)]) > float64(width) {
+				if advance(candidate, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
 					if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
 						return false
 					}
@@ -111,8 +111,8 @@ func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, 
 // [WrapModeNone] (or when the line fits) the result is always 1.
 func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face text.Face, tabWidth float64, keepTailingSpace bool) int {
 	var count int
-	for range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string) float64 {
-		return advance(s, face, tabWidth, keepTailingSpace)
+	for range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, face, tabWidth, keepTailingSpace)
 	}) {
 		count++
 	}
@@ -123,17 +123,17 @@ func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapM
 // line at the given width. Per-logical-line counterpart of [Measure].
 func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string) float64 {
-		return advance(s, face, tabWidth, keepTailingSpace)
+	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, face, tabWidth, keepTailingSpace)
 	}) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
 		}
-		vlWidth := advance(vlStr, face, tabWidth, keepTailingSpace)
+		vlWidth := advance(vlStr, len(vlStr), face, tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
 			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face, tabWidth)
-			vlWidth = advance(vlStr, face, tabWidth, false)
+			vlWidth = advance(vlStr, len(vlStr), face, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		height += lineHeight
@@ -152,8 +152,8 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndex(width, logicalLine, visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string) float64 {
-		return advance(s, options.Face, options.TabWidth, options.KeepTailingSpace)
+	return textPositionFromIndex(width, logicalLine, visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}), index, options)
 }
 
@@ -168,8 +168,8 @@ func TextIndexFromPositionInLogicalLine(width int, position image.Point, logical
 	var pos int
 	var vlStr string
 	var vlIndex int
-	for l := range visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string) float64 {
-		return advance(s, options.Face, options.TabWidth, options.KeepTailingSpace)
+	for l := range visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos

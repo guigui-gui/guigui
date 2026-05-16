@@ -24,30 +24,42 @@ func nextIndentPosition(position float64, indentWidth float64) float64 {
 	return float64(int(position/indentWidth)+1) * indentWidth
 }
 
-func advance(str string, face text.Face, tabWidth float64, keepTailingSpace bool) float64 {
+func advance(str string, indexInBytes int, face text.Face, tabWidth float64, keepTailingSpace bool) float64 {
+	end := indexInBytes
 	var hasLineBreak bool
 	if !keepTailingSpace {
-		str = strings.TrimRightFunc(str, unicode.IsSpace)
-	} else if l := tailingLineBreakLen(str); l > 0 {
-		str = str[:len(str)-l]
+		for end > 0 {
+			r, s := utf8.DecodeLastRuneInString(str[:end])
+			if s == 0 || !unicode.IsSpace(r) {
+				break
+			}
+			end -= s
+		}
+	} else if l := tailingLineBreakLen(str[:end]); l > 0 {
+		end -= l
 		hasLineBreak = true
 	}
 	if tabWidth == 0 {
-		return text.Advance(str, face)
+		return text.AdvanceAt(str, end, face)
 	}
 	var width float64
-	for {
-		head, tail, ok := strings.Cut(str, "\t")
-		width += text.Advance(head, face)
-		if !ok {
+	var pos int
+	for pos < end {
+		i := strings.IndexByte(str[pos:end], '\t')
+		if i < 0 {
+			head := str[pos:end]
+			width += text.AdvanceAt(head, len(head), face)
 			break
 		}
+		tabIdx := pos + i
+		head := str[pos:tabIdx]
+		width += text.AdvanceAt(head, len(head), face)
 		width = nextIndentPosition(width, tabWidth)
-		str = tail
+		pos = tabIdx + 1
 	}
 	if hasLineBreak {
 		// Always add the advance of a space for the line break for a consistent behavior.
-		width += text.Advance(" ", face)
+		width += text.AdvanceAt(" ", 1, face)
 	}
 	return width
 }
@@ -56,12 +68,12 @@ func advance(str string, face text.Face, tabWidth float64, keepTailingSpace bool
 // The truncation is done at grapheme cluster boundaries.
 // If ellipsis itself is wider than maxWidth, the ellipsis string is returned as-is.
 func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face text.Face, tabWidth float64) string {
-	if advance(str, face, tabWidth, false) <= maxWidth {
+	if advance(str, len(str), face, tabWidth, false) <= maxWidth {
 		return str
 	}
 
 	// Find the longest prefix of str that fits within maxWidth - ellipsisWidth.
-	ellipsisWidth := advance(ellipsis, face, tabWidth, false)
+	ellipsisWidth := advance(ellipsis, len(ellipsis), face, tabWidth, false)
 	targetWidth := maxWidth - ellipsisWidth
 	if targetWidth <= 0 {
 		return ellipsis
@@ -77,7 +89,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 		g := it.Grapheme()
 		s := string(g.Text)
 		candidateEnd := bytePos + len(s)
-		if advance(str[:candidateEnd], face, tabWidth, false) > targetWidth {
+		if advance(str, candidateEnd, face, tabWidth, false) > targetWidth {
 			break
 		}
 		lastFittingEnd = candidateEnd
@@ -228,11 +240,11 @@ func init() {
 // segments may further split at width-based wrap opportunities — at Unicode
 // line break opportunities for the former, at any grapheme cluster boundary
 // for the latter.
-func visualLines(width int, str string, wrapMode WrapMode, advance func(str string) float64) iter.Seq[visualLine] {
+func visualLines(width int, str string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[visualLine] {
 	// Fast path: single visual line that fits within width.
 	// Returns a cached iter.Seq to avoid closure allocation.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str) <= float64(width) {
+		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, len(str)) <= float64(width) {
 			theCachedSingleVisualLineSeq.visualLine = visualLine{pos: 0, str: str}
 			return theCachedSingleVisualLineSeq.seq
 		}
@@ -281,7 +293,7 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 				if lineEnd-lineStart > 0 {
 					candidate := origStr[lineStart : lineEnd+len(segment)]
 					// TODO: Consider a line alignment and/or editable/selectable states when calculating the width.
-					if advance(candidate[:len(candidate)-tailingLineBreakLen(candidate)]) > float64(width) {
+					if advance(candidate, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
 						if !yield(visualLine{
 							pos: pos,
 							str: origStr[lineStart:lineEnd],
@@ -357,11 +369,11 @@ func oneLineLeft(width int, vlStr string, face text.Face, hAlign HorizontalAlign
 		// For RTL languages, HorizontalAlignStart should be the same as HorizontalAlignRight.
 		return 0
 	case HorizontalAlignCenter:
-		w := advance(vlStr[:len(vlStr)-tailingLineBreakLen(vlStr)], face, tabWidth, keepTailingSpace)
+		w := advance(vlStr, len(vlStr)-tailingLineBreakLen(vlStr), face, tabWidth, keepTailingSpace)
 		return (float64(width) - w) / 2
 	case HorizontalAlignEnd, HorizontalAlignRight:
 		// For RTL languages, HorizontalAlignEnd should be the same as HorizontalAlignLeft.
-		w := advance(vlStr[:len(vlStr)-tailingLineBreakLen(vlStr)], face, tabWidth, keepTailingSpace)
+		w := advance(vlStr, len(vlStr)-tailingLineBreakLen(vlStr), face, tabWidth, keepTailingSpace)
 		return float64(width) - w
 	default:
 		panic(fmt.Sprintf("textutil: invalid HorizontalAlign: %d", hAlign))
@@ -571,14 +583,14 @@ func visualLineCount(width int, str string, wrapMode WrapMode, face text.Face, t
 	// Fast path: single visual line that fits within width.
 	// This avoids allocating a closure for the advance function.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, face, tabWidth, keepTailingSpace) <= float64(width) {
+		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, len(str), face, tabWidth, keepTailingSpace) <= float64(width) {
 			return 1
 		}
 	}
 
 	var count int
-	for range visualLines(width, str, wrapMode, func(str string) float64 {
-		return advance(str, face, tabWidth, keepTailingSpace)
+	for range visualLines(width, str, wrapMode, func(str string, indexInBytes int) float64 {
+		return advance(str, indexInBytes, face, tabWidth, keepTailingSpace)
 	}) {
 		count++
 	}
@@ -595,17 +607,17 @@ func MeasureHeight(width int, str string, wrapMode WrapMode, face text.Face, lin
 
 func Measure(width int, str string, wrapMode WrapMode, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range visualLines(width, str, wrapMode, func(str string) float64 {
-		return advance(str, face, tabWidth, keepTailingSpace)
+	for l := range visualLines(width, str, wrapMode, func(str string, indexInBytes int) float64 {
+		return advance(str, indexInBytes, face, tabWidth, keepTailingSpace)
 	}) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
 		}
-		vlWidth := advance(vlStr, face, tabWidth, keepTailingSpace)
+		vlWidth := advance(vlStr, len(vlStr), face, tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
 			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face, tabWidth)
-			vlWidth = advance(vlStr, face, tabWidth, false)
+			vlWidth = advance(vlStr, len(vlStr), face, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
