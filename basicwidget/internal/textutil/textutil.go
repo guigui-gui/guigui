@@ -130,34 +130,37 @@ const (
 )
 
 // appendVisibleGlyphs appends the shaped clusters of str to glyphs. Each '\t'
-// is emitted as a synthetic [text.Glyph] (Image == nil) whose AdvanceX spans
-// to the next tab stop.
-func appendVisibleGlyphs(glyphs []text.Glyph, str string, face text.Face, tabWidth float64) []text.Glyph {
+// is emitted as a synthetic [text.LazyGlyph] (Image returns nil) whose
+// AdvanceX spans to the next tab stop. Glyph rasterization is deferred — this
+// function is used only for layout and hit testing, never for drawing.
+func appendVisibleGlyphs(glyphs []text.LazyGlyph, str string, face text.Face, tabWidth float64) []text.LazyGlyph {
 	var originX float64
 	var byteOffset int
 	for {
 		head, tail, ok := strings.Cut(str, "\t")
 		before := len(glyphs)
-		glyphs = text.AppendGlyphs(glyphs, head, face, nil)
+		glyphs = text.AppendLazyGlyphs(glyphs, head, face, nil)
 		for i := before; i < len(glyphs); i++ {
 			glyphs[i].StartIndexInBytes += byteOffset
 			glyphs[i].EndIndexInBytes += byteOffset
 			glyphs[i].OriginX += originX
-			glyphs[i].X += originX
 		}
 		byteOffset += len(head)
 		if !ok {
 			break
 		}
 		// The guard handles empty heads (leading or consecutive tabs)
-		// where AppendGlyphs returned nothing.
+		// where AppendLazyGlyphs returned nothing.
 		tabStart := originX
 		if n := len(glyphs); n > before {
 			last := glyphs[n-1]
 			tabStart = last.OriginX + last.AdvanceX
 		}
 		nextX := nextIndentPosition(tabStart, tabWidth)
-		glyphs = append(glyphs, text.Glyph{
+		// Placeholder glyph for the tab: imager and ImageBounds stay zero so
+		// Image() returns nil, but the byte range and advance let hit-testing
+		// and cursor positioning treat the tab like a real cluster.
+		glyphs = append(glyphs, text.LazyGlyph{
 			StartIndexInBytes: byteOffset,
 			EndIndexInBytes:   byteOffset + 1,
 			OriginX:           tabStart,
@@ -170,12 +173,14 @@ func appendVisibleGlyphs(glyphs []text.Glyph, str string, face text.Face, tabWid
 	return glyphs
 }
 
+var theCachedGlyphs []text.LazyGlyph
+
 // indexFromXInVisualLine returns the byte index within vlStr at the cluster
 // boundary nearest target, where target is the click X measured from the
 // visual line's left edge.
 func indexFromXInVisualLine(vlStr string, target float64, options *Options) int {
 	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, options.Face, options.TabWidth)
-	// Drop image refs on exit so the pooled slice doesn't pin glyph bitmaps.
+	// Drop imager refs on exit so the pooled slice doesn't pin face state.
 	defer func() {
 		theCachedGlyphs = slices.Delete(theCachedGlyphs, 0, len(theCachedGlyphs))
 	}()

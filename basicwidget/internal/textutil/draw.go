@@ -42,61 +42,18 @@ type DrawOptions struct {
 	VisibleBounds image.Rectangle
 }
 
-var (
-	theCachedVisualLines []visualLine
-	theCachedGlyphs      []text.Glyph
-)
-
-// drawTextLine draws str, skipping glyphs that don't overlap visibleBounds.
-// op.GeoM must be a pure translation; drawTextLine panics otherwise.
-func drawTextLine(dst *ebiten.Image, str string, face text.Face, op *text.DrawOptions, visibleBounds image.Rectangle) {
-	if op.GeoM.Element(0, 0) != 1 || op.GeoM.Element(0, 1) != 0 ||
-		op.GeoM.Element(1, 0) != 0 || op.GeoM.Element(1, 1) != 1 {
-		panic("textutil: drawTextLine requires op.GeoM to be a pure translation")
-	}
-	theCachedGlyphs = text.AppendGlyphs(theCachedGlyphs[:0], str, face, &op.LayoutOptions)
-	// Drop image refs on exit so the pooled slice doesn't pin glyph bitmaps.
-	defer func() {
-		theCachedGlyphs = slices.Delete(theCachedGlyphs, 0, len(theCachedGlyphs))
-	}()
-	tx := op.GeoM.Element(0, 2)
-	ty := op.GeoM.Element(1, 2)
-	var drawOp ebiten.DrawImageOptions
-	drawOp.ColorScale = op.ColorScale
-	drawOp.Filter = op.Filter
-	drawOp.Blend = op.Blend
-	for _, g := range theCachedGlyphs {
-		if g.Image == nil {
-			continue
-		}
-		b := g.Image.Bounds()
-		x0 := tx + g.X
-		y0 := ty + g.Y
-		glyphRect := image.Rect(
-			int(math.Floor(x0)),
-			int(math.Floor(y0)),
-			int(math.Ceil(x0+float64(b.Dx()))),
-			int(math.Ceil(y0+float64(b.Dy()))),
-		)
-		if !glyphRect.Overlaps(visibleBounds) {
-			continue
-		}
-		drawOp.GeoM.Reset()
-		drawOp.GeoM.Translate(g.X, g.Y)
-		drawOp.GeoM.Concat(op.GeoM)
-		dst.DrawImage(g.Image, &drawOp)
-	}
-}
+var theCachedVisualLines []visualLine
 
 func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOptions) {
-	if options.VisibleBounds.Empty() {
+	clip := bounds.Intersect(options.VisibleBounds)
+	if clip.Empty() {
 		return
 	}
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
 	op.ColorScale.ScaleWithColor(options.TextColor)
-	if dst.Bounds() != bounds {
-		dst = dst.RecyclableSubImage(bounds)
+	if dst.Bounds() != clip {
+		dst = dst.RecyclableSubImage(clip)
 		defer dst.Recycle()
 	}
 
@@ -112,18 +69,15 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		theCachedVisualLines = append(theCachedVisualLines, vl)
 	}
 
-	clipMinY := max(bounds.Min.Y, options.VisibleBounds.Min.Y)
-	clipMaxY := min(bounds.Max.Y, options.VisibleBounds.Max.Y)
-
 	for _, vl := range theCachedVisualLines {
 		y := op.GeoM.Element(1, 2)
-		if int(math.Ceil(y+options.LineHeight)) < clipMinY {
+		if int(math.Ceil(y+options.LineHeight)) < clip.Min.Y {
 			// Advance to the next line so the loop terminates; the bottom-of-body
 			// translation is skipped by [continue].
 			op.GeoM.Translate(0, options.LineHeight)
 			continue
 		}
-		if int(math.Floor(y)) >= clipMaxY {
+		if int(math.Floor(y)) >= clip.Max.Y {
 			break
 		}
 
@@ -223,7 +177,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			default:
 				op.PrimaryAlign = text.AlignStart
 			}
-			drawTextLine(dst, vlStr, options.Face, op, options.VisibleBounds)
+			text.Draw(dst, vlStr, options.Face, op)
 		} else {
 			op.PrimaryAlign = text.AlignStart
 			x := oneLineLeft(bounds.Dx(), vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
@@ -231,7 +185,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			var origX float64
 			for {
 				head, tail, ok := strings.Cut(vlStr, "\t")
-				drawTextLine(dst, head, options.Face, op, options.VisibleBounds)
+				text.Draw(dst, head, options.Face, op)
 				if !ok {
 					break
 				}
