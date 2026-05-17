@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"image"
 	"log/slog"
+	"math"
 	"os"
 	"runtime"
 	"slices"
@@ -93,6 +94,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			return
 		}
 		r.doc.MarkDirty()
+		r.statusBar.InvalidateCache()
 	})
 	r.editor.OnHandleButtonInput(r.handleHotkeys)
 
@@ -179,11 +181,15 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	start, _ := r.editor.Selection()
 	line := r.editor.LineIndexFromTextIndexInBytes(start)
 	lineStart := r.editor.LineStartInBytes(line)
+	lineEnd := math.MaxInt
+	if line+1 < r.editor.LineCount() {
+		lineEnd = r.editor.LineStartInBytes(line + 1)
+	}
 	r.scratchBuf.Reset()
-	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, start); err != nil {
+	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, lineEnd); err != nil {
 		return err
 	}
-	r.statusBar.SetStatus(line, r.scratchBuf.Bytes())
+	r.statusBar.SetStatus(line, r.scratchBuf.Bytes(), start-lineStart)
 
 	if r.findDialog.IsOpen() {
 		r.updateFindCount()
@@ -272,6 +278,8 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("open: %w", res.err))
 			default:
+				// LoadInto re-clears dirty after streaming, overriding the
+				// MarkDirty triggered by OnValueChangedWithoutText during the read.
 				if e := r.doc.LoadInto(res.path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("open: %w", e))
 				}
@@ -344,6 +352,8 @@ func (r *Root) handleConfirmNew(save bool) {
 
 func (r *Root) doNew() {
 	r.editor.ForceSetValue("")
+	// ForceSetValue may have triggered OnValueChangedWithoutText → MarkDirty.
+	// New() resets dirty afterward.
 	r.doc.New()
 }
 
