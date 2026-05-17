@@ -91,9 +91,8 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.editor.OnValueChangedWithoutText(func(context *guigui.Context, _ bool) {
 		// Every dispatch is a real buffer change (the gen-tracker filters
-		// non-mutating events), so react regardless of the committed flag —
-		// typing is uncommitted but does change the buffer.
-		r.statusBar.InvalidateCache()
+		// non-mutating events), so mark dirty regardless of the committed
+		// flag — typing is uncommitted but does change the buffer.
 		r.doc.MarkDirty()
 	})
 	r.editor.OnHandleButtonInput(r.handleHotkeys)
