@@ -39,26 +39,19 @@ func advance(str string, indexInBytes int, face text.Face, tabWidth float64, kee
 		end -= l
 		hasLineBreak = true
 	}
-	// text.AdvanceAt doesn't treat multiple lines, so drop any trailing
-	// line break from the slice it sees before measuring.
-	shapedStr := str
-	if l := tailingLineBreakLen(shapedStr); l > 0 {
-		shapedStr = shapedStr[:len(shapedStr)-l]
-		end = min(end, len(shapedStr))
-	}
 	if tabWidth == 0 {
-		return text.AdvanceAt(shapedStr, end, face)
+		return text.AdvanceAt(str, end, face)
 	}
 	var width float64
 	var pos int
 	for pos < end {
-		i := strings.IndexByte(shapedStr[pos:end], '\t')
+		i := strings.IndexByte(str[pos:end], '\t')
 		if i < 0 {
-			width += text.AdvanceAt(shapedStr, end, face) - text.AdvanceAt(shapedStr, pos, face)
+			width += text.AdvanceAt(str, end, face) - text.AdvanceAt(str, pos, face)
 			break
 		}
 		tabIdx := pos + i
-		width += text.AdvanceAt(shapedStr, tabIdx, face) - text.AdvanceAt(shapedStr, pos, face)
+		width += text.AdvanceAt(str, tabIdx, face) - text.AdvanceAt(str, pos, face)
 		width = nextIndentPosition(width, tabWidth)
 		pos = tabIdx + 1
 	}
