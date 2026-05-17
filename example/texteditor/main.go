@@ -89,6 +89,9 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	r.editor.OnValueChangedWithoutText(func(context *guigui.Context, committed bool) {
+		if !committed {
+			return
+		}
 		r.doc.MarkDirty()
 	})
 	r.editor.OnHandleButtonInput(r.handleHotkeys)
@@ -269,8 +272,6 @@ func (r *Root) drainDialogs() error {
 			case res.err != nil:
 				err = errors.Join(err, fmt.Errorf("open: %w", res.err))
 			default:
-				// LoadInto re-clears dirty after streaming, overriding the
-				// MarkDirty triggered by OnValueChangedWithoutText during the read.
 				if e := r.doc.LoadInto(res.path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("open: %w", e))
 				}
@@ -343,8 +344,6 @@ func (r *Root) handleConfirmNew(save bool) {
 
 func (r *Root) doNew() {
 	r.editor.ForceSetValue("")
-	// ForceSetValue may have triggered OnValueChangedWithoutText → MarkDirty.
-	// New() resets dirty afterward.
 	r.doc.New()
 }
 
