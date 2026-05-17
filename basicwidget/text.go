@@ -220,12 +220,11 @@ type Text struct {
 	lastDispatchedUncommittedGen int64
 
 	// lastDispatchedCommittedGen is the [textField.Generation] value
-	// at the most recent committed dispatch. setText also advances it as if
-	// it had dispatched, treating the programmatic value as a self-committed
-	// snapshot. Committed dispatches are suppressed when the field hasn't
-	// advanced past this point — that filters focus-loss commits on unchanged
-	// buffers without swallowing the legitimate commit that follows a user
-	// edit at the same generation as the prior uncommitted dispatch.
+	// at the most recent committed dispatch. Committed dispatches are
+	// suppressed when the field hasn't advanced past this point — that
+	// filters focus-loss commits on unchanged buffers without swallowing
+	// the legitimate commit that follows a user edit at the same generation
+	// as the prior uncommitted dispatch.
 	lastDispatchedCommittedGen int64
 
 	// firstLogicalLineInViewport is the logical-line index that sits
@@ -268,8 +267,10 @@ func newTextSizeCacheKey(wrapMode WrapMode, bold bool) textSizeCacheKey {
 
 // OnValueChanged sets the event handler that is called when the text value changes.
 // The handler receives the current text and whether the change is committed.
-// A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
-// An uncommitted change occurs on every keystroke or text modification during editing.
+// A committed change is a finalized value: the user presses Enter (for single-line
+// text), the text input loses focus, or the value is set programmatically via
+// [Text.ForceSetValue] / [Text.ReadValueFrom] (and equivalent paths on wrapping
+// widgets). An uncommitted change is a mid-flight edit such as IME composition.
 //
 // The handler fires only when the text content actually advances. Input
 // activity that doesn't modify the text — caret moves, focus changes, IME
@@ -300,12 +301,7 @@ func (t *Text) OnValueChangedWithoutText(f func(context *guigui.Context, committ
 // at the same generation are filtered); committed dispatches are gated on
 // lastDispatchedCommittedGen (so focus-loss commits on unchanged buffers are
 // filtered, while still firing the commit that follows a real edit).
-//
-// snapshot only applies when committed is false. It marks the new value as a
-// self-committed programmatic snapshot — lastDispatchedCommittedGen is
-// advanced alongside the uncommitted tracker so a subsequent focus-loss
-// commit at the same generation stays suppressed.
-func (t *Text) dispatchValueChanged(committed, snapshot bool) {
+func (t *Text) dispatchValueChanged(committed bool) {
 	gen := t.field.Generation()
 	if committed {
 		if gen == t.lastDispatchedCommittedGen {
@@ -317,9 +313,6 @@ func (t *Text) dispatchValueChanged(committed, snapshot bool) {
 			return
 		}
 		t.lastDispatchedUncommittedGen = gen
-		if snapshot {
-			t.lastDispatchedCommittedGen = gen
-		}
 	}
 	guigui.DispatchEventLazy(t, textEventValueChanged, func() (string, bool) {
 		return t.stringValue(), committed
@@ -728,7 +721,7 @@ func (t *Text) ReadValueFrom(r io.Reader) (int64, error) {
 	t.nextTextSet = false
 	t.textInited = true
 	t.resetCachedTextSize()
-	t.dispatchValueChanged(false, true)
+	t.dispatchValueChanged(true)
 	return n, err
 }
 
@@ -743,7 +736,7 @@ func (t *Text) ReplaceValueAtSelection(text string) {
 func (t *Text) CommitWithCurrentInputValue() {
 	t.nextText = ""
 	t.nextTextSet = false
-	t.dispatchValueChanged(true, false)
+	t.dispatchValueChanged(true)
 }
 
 func (t *Text) selectAll() {
@@ -814,7 +807,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 	}
 
 	t.resetCachedTextSize()
-	t.dispatchValueChanged(false, false)
+	t.dispatchValueChanged(false)
 
 	t.nextText = ""
 	t.nextTextSet = false
@@ -848,7 +841,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 			t.field.SetSelection(start, end)
 		}
 		t.resetCachedTextSize()
-		t.dispatchValueChanged(false, true)
+		t.dispatchValueChanged(true)
 	} else {
 		t.field.SetSelection(0, len(text))
 	}
@@ -1461,7 +1454,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if processed {
 			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
 			t.resetCachedTextSize()
-			t.dispatchValueChanged(false, false)
+			t.dispatchValueChanged(false)
 			return guigui.HandleInputByWidget(t)
 		}
 
@@ -1696,7 +1689,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) commit() {
-	t.dispatchValueChanged(true, false)
+	t.dispatchValueChanged(true)
 	t.nextText = ""
 	t.nextTextSet = false
 }
