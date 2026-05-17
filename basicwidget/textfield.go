@@ -258,8 +258,12 @@ func (f *textField) SetBounds(bounds image.Rectangle) {
 	f.bounds = bounds
 }
 
-// Update drives the IME composer for one tick. Returns handled=true when the
-// IME consumed input; the caller should suppress its own key handlers in
+// Update drives the IME composer for one tick. Call Update at least once
+// when the field gains focus so the session is established at the
+// platform layer (e.g. makeFirstResponder on macOS) before the OS
+// dispatches the next key event, and once per tick that has key input so
+// platform IME events are drained. Returns handled=true when the IME
+// consumed input; the caller should suppress its own key handlers in
 // that case.
 func (f *textField) Update() (handled bool, err error) {
 	if f.err != nil {

@@ -448,6 +448,21 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 				if start < 0 || end < 0 {
 					t.doSelectAll()
 				}
+				// Bootstrap the IME session right at focus gain so the
+				// platform IME (e.g. makeFirstResponder on macOS) is in
+				// place before the OS dispatches the next key event.
+				// Otherwise the first key after the click is routed by
+				// the platform to whatever default text-input target
+				// the window provides (on macOS this lands in
+				// [ebiten.AppendInputChars]) instead of the field's
+				// IME, and is lost from the field.
+				sel, _ := t.field.Selection()
+				if pos, ok := t.textPosition(context, t.widgetBoundsRect, sel, false); ok {
+					t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
+				}
+				if _, err := t.field.Update(); err != nil {
+					slog.Error(err.Error())
+				}
 			} else {
 				t.commit()
 			}
