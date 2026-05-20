@@ -272,9 +272,11 @@ func newTextSizeCacheKey(wrapMode WrapMode, bold bool) textSizeCacheKey {
 // [Text.ForceSetValue] / [Text.ReadValueFrom] (and equivalent paths on wrapping
 // widgets). An uncommitted change is a mid-flight edit such as IME composition.
 //
-// The handler fires only when the text content actually advances. Input
-// activity that doesn't modify the text — caret moves, focus changes, IME
-// state replays, redundant commit gestures — does not trigger the handler.
+// Pressing Enter on single-line text always dispatches a committed change,
+// even when the value equals the last committed value. Every other path fires
+// only when the text content actually advances: input activity that doesn't
+// modify the text — caret moves, focus changes, IME state replays, a focus-loss
+// commit on an unchanged buffer — does not trigger the handler.
 //
 // If the handler does not need the text payload, prefer
 // [Text.OnValueChangedWithoutText] to avoid materializing the value on every
@@ -301,10 +303,14 @@ func (t *Text) OnValueChangedWithoutText(f func(context *guigui.Context, committ
 // at the same generation are filtered); committed dispatches are gated on
 // lastDispatchedCommittedGen (so focus-loss commits on unchanged buffers are
 // filtered, while still firing the commit that follows a real edit).
-func (t *Text) dispatchValueChanged(committed bool) {
+//
+// force bypasses the committed gate, so an explicit commit gesture (pressing
+// Enter) is dispatched even when the value equals the last committed value.
+// force is meaningful only for committed dispatches.
+func (t *Text) dispatchValueChanged(committed bool, force bool) {
 	gen := t.field.Generation()
 	if committed {
-		if gen == t.lastDispatchedCommittedGen {
+		if !force && gen == t.lastDispatchedCommittedGen {
 			return
 		}
 		t.lastDispatchedCommittedGen = gen
@@ -449,7 +455,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 					t.doSelectAll()
 				}
 			} else {
-				t.commit()
+				t.commit(false)
 			}
 		}
 	}
@@ -721,7 +727,7 @@ func (t *Text) ReadValueFrom(r io.Reader) (int64, error) {
 	t.nextTextSet = false
 	t.textInited = true
 	t.resetCachedTextSize()
-	t.dispatchValueChanged(true)
+	t.dispatchValueChanged(true, false)
 	return n, err
 }
 
@@ -736,7 +742,7 @@ func (t *Text) ReplaceValueAtSelection(text string) {
 func (t *Text) CommitWithCurrentInputValue() {
 	t.nextText = ""
 	t.nextTextSet = false
-	t.dispatchValueChanged(true)
+	t.dispatchValueChanged(true, false)
 }
 
 func (t *Text) selectAll() {
@@ -807,7 +813,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 	}
 
 	t.resetCachedTextSize()
-	t.dispatchValueChanged(false)
+	t.dispatchValueChanged(false, false)
 
 	t.nextText = ""
 	t.nextTextSet = false
@@ -841,7 +847,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 			t.field.SetSelection(start, end)
 		}
 		t.resetCachedTextSize()
-		t.dispatchValueChanged(true)
+		t.dispatchValueChanged(true, false)
 	} else {
 		t.field.SetSelection(0, len(text))
 	}
@@ -1446,7 +1452,7 @@ func (t *Text) updateIMEComposer(context *guigui.Context, widgetBounds *guigui.W
 	if processed {
 		// Reset the cached size before the scroll offset is adjusted so the text size is correct.
 		t.resetCachedTextSize()
-		t.dispatchValueChanged(false)
+		t.dispatchValueChanged(false, false)
 	}
 	return processed
 }
@@ -1480,7 +1486,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			if t.multiline {
 				t.replaceTextAtSelection("\n")
 			} else {
-				t.commit()
+				t.commit(true)
 			}
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyBackspace) ||
@@ -1697,8 +1703,8 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	return guigui.HandleInputResult{}
 }
 
-func (t *Text) commit() {
-	t.dispatchValueChanged(true)
+func (t *Text) commit(force bool) {
+	t.dispatchValueChanged(true, force)
 	t.nextText = ""
 	t.nextTextSet = false
 }
