@@ -50,13 +50,16 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 		sanitized := initSegmenterWithString(seg, logicalLine)
 
 		var vlStart, vlEnd, pos int
-		// emit returns cont=false to stop the outer iteration. The
-		// mandatory-break path always returns false (the contract says
-		// at most one mandatory break, at the very end), so the caller
-		// breaks out as soon as the trailing break is consumed.
-		emit := func(segment string, isMandatoryBreak bool) (cont bool) {
+		// emit consumes the next segment, identified only by its byte
+		// length, and yields a visual line whenever the accumulated
+		// content would overflow width. Returns cont=false to stop the
+		// outer iteration. The mandatory-break path always returns
+		// false (the contract says at most one mandatory break, at the
+		// very end), so the caller breaks out as soon as the trailing
+		// break is consumed.
+		emit := func(segLenInBytes int, isMandatoryBreak bool) (cont bool) {
 			if vlEnd-vlStart > 0 {
-				candidate := sanitized[vlStart : vlEnd+len(segment)]
+				candidate := sanitized[vlStart : vlEnd+segLenInBytes]
 				if advance(candidate, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
 					if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
 						return false
@@ -65,9 +68,11 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 					vlStart = vlEnd
 				}
 			}
-			vlEnd += len(segment)
+			vlEnd += segLenInBytes
 			if isMandatoryBreak {
-				yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]})
+				if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
+					return false
+				}
 				return false
 			}
 			return true
@@ -77,7 +82,7 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 			it := seg.LineIterator()
 			for it.Next() {
 				l := it.Line()
-				if !emit(string(l.Text), l.IsMandatoryBreak) {
+				if !emit(l.LengthInBytes, l.IsMandatoryBreak) {
 					return
 				}
 			}
@@ -85,15 +90,17 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 			it := seg.GraphemeIterator()
 			for it.Next() {
 				g := it.Grapheme()
-				t := string(g.Text)
-				if !emit(t, tailingLineBreakLen(t) > 0) {
+				graphemeText := sanitized[g.OffsetInBytes : g.OffsetInBytes+g.LengthInBytes]
+				if !emit(g.LengthInBytes, tailingLineBreakLen(graphemeText) > 0) {
 					return
 				}
 			}
 		}
 		// No trailing break: emit the remaining content as the final visual line.
 		if vlEnd-vlStart > 0 {
-			yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]})
+			if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
+				return
+			}
 		}
 	}
 }
