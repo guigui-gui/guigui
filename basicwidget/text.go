@@ -448,21 +448,6 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 				if start < 0 || end < 0 {
 					t.doSelectAll()
 				}
-				// Bootstrap the IME session right at focus gain so the
-				// platform IME (e.g. makeFirstResponder on macOS) is in
-				// place before the OS dispatches the next key event.
-				// Otherwise the first key after the click is routed by
-				// the platform to whatever default text-input target
-				// the window provides (on macOS this lands in
-				// [ebiten.AppendInputChars]) instead of the field's
-				// IME, and is lost from the field.
-				sel, _ := t.field.Selection()
-				if pos, ok := t.textPosition(context, t.widgetBoundsRect, sel, false); ok {
-					t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
-				}
-				if _, err := t.field.Update(); err != nil {
-					slog.Error(err.Error())
-				}
 			} else {
 				t.commit()
 			}
@@ -1446,6 +1431,26 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	return r
 }
 
+// updateIMEComposer pumps the IME composer for one tick and folds a resulting
+// composition or commit into the cached text size and the value-changed
+// listeners. It reports whether the IME consumed input this tick.
+func (t *Text) updateIMEComposer(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	start, _ := t.field.Selection()
+	if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
+		t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
+	}
+	processed, err := t.field.Update()
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	if processed {
+		// Reset the cached size before the scroll offset is adjusted so the text size is correct.
+		t.resetCachedTextSize()
+		t.dispatchValueChanged(false)
+	}
+	return processed
+}
+
 func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if t.onHandleButtonInput != nil {
 		if r := t.onHandleButtonInput(context, widgetBounds); r.IsHandled() {
@@ -1458,18 +1463,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	if t.editable {
-		start, _ := t.field.Selection()
-		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
-			t.field.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))
-		}
-		processed, err := t.field.Update()
-		if err != nil {
-			slog.Error(err.Error())
-		}
-		if processed {
-			// Reset the cache size before adjust the scroll offset in order to get the correct text size.
-			t.resetCachedTextSize()
-			t.dispatchValueChanged(false)
+		if t.updateIMEComposer(context, widgetBounds) {
 			return guigui.HandleInputByWidget(t)
 		}
 
@@ -1512,7 +1506,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			return guigui.HandleInputByWidget(t)
 		case isKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
-			if _, end := t.field.Selection(); end < t.field.TextLengthInBytes() {
+			if start, end := t.field.Selection(); end < t.field.TextLengthInBytes() {
 				pos := t.nextPositionOnGraphemes(end)
 				t.replaceTextAt("", start, pos)
 			}
@@ -1723,6 +1717,14 @@ func (t *Text) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 	if (!t.editable || !context.IsFocused(t)) && t.nextTextSet {
 		t.setText(t.nextText, t.nextSelectAll)
 		t.nextSelectAll = false
+	}
+
+	// Pump the IME composer every tick while focused so a composition the OS
+	// reports without a key event is drained and rendered. HandleButtonInput
+	// only runs on ticks with key activity, which an IME owning the keyboard
+	// suppresses.
+	if t.editable && t.field.IsFocused() {
+		t.updateIMEComposer(context, widgetBounds)
 	}
 
 	// Adjust the scroll offset for cases not covered by HandleButtonInput,

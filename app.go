@@ -418,14 +418,14 @@ func (a *app) Update() error {
 			}
 		}
 	}
-	// TODO: A focused IME composer ([textinput.Composer]) needs its
-	// platform session in place before the OS dispatches the next key
-	// event, but isButtonActive doesn't fire on click-only ticks. Today
-	// widgets bootstrap that themselves at focus gain (see
-	// basicwidget.Text's OnFocusChanged). If Ebitengine exposes IME
-	// state (e.g. a `textinput.HasPendingInput` accessor), fold it into
-	// this gate so HandleButtonInput drives the composer uniformly and
-	// the per-widget focus hook can go away.
+	// This gate covers only key handling, which depends on key input. A focused
+	// IME composer ([textinput.Composer]) is instead pumped every tick by its
+	// host widget (see basicwidget.Text's Tick), since an IME owning the
+	// keyboard reports composition updates with no key event.
+	//
+	// TODO: Run handleInputWidget on IME activity too (e.g. once Ebitengine
+	// exposes pending-IME-input state) so the composer is driven here uniformly
+	// and host widgets need no per-tick pump.
 	if a.inputState.isButtonActive() {
 		a.setButtonInputReceptiveAncestorFlags()
 		if r := a.handleInputWidget(handleInputTypeButton); r.widget != nil {
