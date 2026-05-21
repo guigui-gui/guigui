@@ -22,8 +22,8 @@ func adjustedWheel() (float64, float64) {
 		x *= 2
 		y *= 2
 	case "windows":
-		x *= 4
-		y *= 4
+		x *= 10
+		y *= 10
 	}
 	return x, y
 }
