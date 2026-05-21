@@ -33,7 +33,8 @@ const (
 	requestRedrawReasonStateKeyChanged
 	requestRedrawReasonRedrawWidget
 	requestRedrawReasonLayout
-	requestRedrawReasonFocus
+	requestRedrawReasonWidgetFocus
+	requestRedrawReasonAppFocus
 	requestRedrawReasonScreenSize
 	requestRedrawReasonScreenDeviceScale
 	requestRedrawReasonAppScale
@@ -53,8 +54,10 @@ func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason,
 			slog.Info("request redrawing", "reason", "redraw widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
 		case requestRedrawReasonLayout:
 			slog.Info("request redrawing", "reason", "layout", "region", region)
-		case requestRedrawReasonFocus:
-			slog.Info("request redrawing", "reason", "focus", "region", region)
+		case requestRedrawReasonWidgetFocus:
+			slog.Info("request redrawing", "reason", "widget focus", "region", region)
+		case requestRedrawReasonAppFocus:
+			slog.Info("request redrawing", "reason", "app focus", "region", region)
 		case requestRedrawReasonScreenSize:
 			slog.Info("request redrawing", "reason", "screen size", "region", region)
 		case requestRedrawReasonScreenDeviceScale:

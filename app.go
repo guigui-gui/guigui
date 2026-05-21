@@ -130,6 +130,7 @@ type app struct {
 	lastScreenHeight   float64
 	lastCursorPosition image.Point
 	lastColorMode      ebiten.ColorMode
+	lastFocused        bool
 
 	inputState inputState
 
@@ -276,8 +277,8 @@ func (a *app) focusWidget(widget Widget) {
 	a.setFocusAncestorFlags()
 
 	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
-	// requestRedrawReasonFocus also requests rebuilding a tree.
-	a.requestRedraw(a.bounds(), requestRedrawReasonFocus, nil)
+	// requestRedrawReasonWidgetFocus also requests rebuilding a tree.
+	a.requestRedraw(a.bounds(), requestRedrawReasonWidgetFocus, nil)
 }
 
 func (a *app) clearFocusAncestorFlags() {
@@ -392,6 +393,17 @@ func (a *app) Update() error {
 	if a.context.ColorMode() != a.lastColorMode {
 		a.lastColorMode = a.context.ColorMode()
 		a.requestRebuild(a.root.widgetState(), requestRedrawReasonColorMode)
+	}
+
+	if focused := ebiten.IsFocused(); focused != a.lastFocused {
+		a.lastFocused = focused
+		// On regaining focus, redraw the entire screen: the screen is not cleared
+		// every frame, so regions changed while unfocused (e.g. a popup fading out
+		// off-screen) would otherwise never be repainted.
+		// requestRedrawReasonAppFocus also requests rebuilding a tree.
+		if focused {
+			a.requestRedraw(a.bounds(), requestRedrawReasonAppFocus, nil)
+		}
 	}
 
 	rootState := a.root.widgetState()
