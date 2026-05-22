@@ -68,6 +68,8 @@ type virtualScrollPanel struct {
 	scrollHBar scrollBar
 	scrollVBar virtualScrollVBar
 
+	horizontalBarHidden bool
+
 	// topItemIndex is the index of the topmost visible item.
 	topItemIndex int
 
@@ -139,6 +141,12 @@ func (p *virtualScrollPanel) WriteStateKey(w *guigui.StateKeyWriter) {
 
 func (p *virtualScrollPanel) setContent(content virtualScrollContent) {
 	p.content = content
+}
+
+// setHorizontalBarHidden sets whether the horizontal scroll bar thumb is
+// suppressed regardless of content width.
+func (p *virtualScrollPanel) setHorizontalBarHidden(hidden bool) {
+	p.horizontalBarHidden = hidden
 }
 
 // scrollOffset returns (offsetX, 0). Only the horizontal offset is pixel-based.
@@ -766,7 +774,7 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 	var horizontalBarBounds, verticalBarBounds image.Rectangle
 
 	// Horizontal thumb.
-	if cw := p.content.contentWidth(context); cw > bounds.Dx() {
+	if cw := p.content.contentWidth(context); !p.horizontalBarHidden && cw > bounds.Dx() {
 		trackLength := float64(bounds.Dx()) - 2*padding
 		barWidth := trackLength * float64(bounds.Dx()) / float64(cw)
 		barWidth = max(barWidth, scrollThumbMinSize(context, trackLength))

@@ -577,6 +577,7 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	adder.AddWidget(&t.frame)
 
 	t.panel.setContent(&t.text)
+	t.panel.setHorizontalBarHidden(!t.text.Text().IsMultiline())
 	t.text.setPanel(&t.panel)
 
 	t.background.setEditable(!t.readonly)
