@@ -53,9 +53,9 @@ const (
 	// text introduce new visual lines.
 	WrapModeNone WrapMode = WrapMode(textutil.WrapModeNone)
 
-	// WrapModeWord wraps at Unicode line break opportunities, keeping
-	// individual words intact when possible.
-	WrapModeWord WrapMode = WrapMode(textutil.WrapModeWord)
+	// WrapModeNormal wraps at Unicode line break opportunities. These
+	// coincide with word boundaries in most cases, but not always.
+	WrapModeNormal WrapMode = WrapMode(textutil.WrapModeNormal)
 
 	// WrapModeAnywhere wraps at any grapheme cluster boundary, breaking
 	// inside words when needed to fit the available width.

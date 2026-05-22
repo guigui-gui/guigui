@@ -96,7 +96,7 @@ func TestComputeCompositionInfo_SameLineReplacement(t *testing.T) {
 }
 
 func TestComputeCompositionInfo_CrossLineSelectionWrap(t *testing.T) {
-	// WrapModeWord with a multi-line selection. The function must reject
+	// WrapModeNormal with a multi-line selection. The function must reject
 	// (ok=false) without ever reading the selection-line fields, since
 	// the caller can't safely compute them when ce+byteDelta would
 	// underflow. Pass empty selection-line strings to verify the
@@ -109,7 +109,7 @@ func TestComputeCompositionInfo_CrossLineSelectionWrap(t *testing.T) {
 		LineByteOffsets:        &offsets,
 		SelectionStart:         2, // line 0
 		SelectionEnd:           8, // line 2; byteDelta = 1 - 6 = -5
-		WrapMode:               textutil.WrapModeWord,
+		WrapMode:               textutil.WrapModeNormal,
 		CommittedSelectionLine: "",
 		RenderingSelectionLine: "",
 		Face:                   face,
@@ -122,7 +122,7 @@ func TestComputeCompositionInfo_CrossLineSelectionWrap(t *testing.T) {
 }
 
 func TestComputeCompositionInfo_WrapNoWrapChange(t *testing.T) {
-	// WrapModeWord with a wide enough width that the composition doesn't
+	// WrapModeNormal with a wide enough width that the composition doesn't
 	// add any wrap → CompDelta == 0.
 	face := newTestFace(t)
 	var offsets textutil.LineByteOffsets
@@ -132,7 +132,7 @@ func TestComputeCompositionInfo_WrapNoWrapChange(t *testing.T) {
 		LineByteOffsets:        &offsets,
 		SelectionStart:         2,
 		SelectionEnd:           2,
-		WrapMode:               textutil.WrapModeWord,
+		WrapMode:               textutil.WrapModeNormal,
 		CommittedSelectionLine: "abcdef",
 		RenderingSelectionLine: "abXYcdef",
 		Face:                   face,
@@ -269,7 +269,7 @@ func TestVisibleRangeInViewport_WrapModeNone(t *testing.T) {
 	}
 }
 
-func TestVisibleRangeInViewport_WrapModeWord(t *testing.T) {
+func TestVisibleRangeInViewport_WrapModeNormal(t *testing.T) {
 	// Walk forward from an anchor, measuring per-line heights with a
 	// real face. Use a narrow width to force the long middle line to
 	// wrap; verify the walker stops once the cumulative height covers
@@ -284,7 +284,7 @@ func TestVisibleRangeInViewport_WrapModeWord(t *testing.T) {
 	// Sanity: the long middle line wraps into multiple visual lines.
 	midStart := lbo.ByteOffsetByLineIndex(1)
 	midEnd := lbo.ByteOffsetByLineIndex(2)
-	wraps := textutil.VisualLineCountForLogicalLine(narrowWidth, str[midStart:midEnd], textutil.WrapModeWord, face, 0, false)
+	wraps := textutil.VisualLineCountForLogicalLine(narrowWidth, str[midStart:midEnd], textutil.WrapModeNormal, face, 0, false)
 	if wraps < 2 {
 		t.Fatalf("expected the middle line to wrap; got wraps=%d", wraps)
 	}
@@ -300,7 +300,7 @@ func TestVisibleRangeInViewport_WrapModeWord(t *testing.T) {
 		ViewportSize: image.Pt(narrowWidth, int(lineHeight+lineHeight*float64(wraps))),
 		Face:         face,
 		LineHeight:   lineHeight,
-		WrapMode:     textutil.WrapModeWord,
+		WrapMode:     textutil.WrapModeNormal,
 	}
 	r, ok := textutil.VisibleRangeInViewport(&p)
 	if !ok {

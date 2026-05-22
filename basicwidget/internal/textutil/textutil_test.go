@@ -115,7 +115,7 @@ func TestAutoWrapInvalidUTF8(t *testing.T) {
 		t.Run(fmt.Sprintf("%q", s), func(t *testing.T) {
 			// Iterating must not panic. The exact line breakdown is not part
 			// of the contract; this only verifies that Lines completes.
-			for range textutil.VisualLines(100, s, textutil.WrapModeWord, advance) {
+			for range textutil.VisualLines(100, s, textutil.WrapModeNormal, advance) {
 			}
 		})
 	}

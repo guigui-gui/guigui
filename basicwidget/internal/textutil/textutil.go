@@ -115,8 +115,8 @@ type WrapMode int
 const (
 	// WrapModeNone disables automatic wrapping.
 	WrapModeNone WrapMode = iota
-	// WrapModeWord wraps at Unicode line break opportunities.
-	WrapModeWord
+	// WrapModeNormal wraps at Unicode line break opportunities.
+	WrapModeNormal
 	// WrapModeAnywhere wraps at any grapheme cluster boundary.
 	WrapModeAnywhere
 )
@@ -234,7 +234,7 @@ func init() {
 }
 
 // visualLines yields the visual sublines (rendered rows) of str at the given
-// width. For [WrapModeWord] and [WrapModeAnywhere], hard-break-delimited
+// width. For [WrapModeNormal] and [WrapModeAnywhere], hard-break-delimited
 // segments may further split at width-based wrap opportunities — at Unicode
 // line break opportunities for the former, at any grapheme cluster boundary
 // for the latter.
@@ -273,7 +273,7 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 				}
 				pos += p + l
 			}
-		case WrapModeWord, WrapModeAnywhere:
+		case WrapModeNormal, WrapModeAnywhere:
 			var lineStart int
 			var lineEnd int
 			var pos int
@@ -316,7 +316,7 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 				return true
 			}
 
-			if wrapMode == WrapModeWord {
+			if wrapMode == WrapModeNormal {
 				it := seg.LineIterator()
 				for it.Next() {
 					l := it.Line()

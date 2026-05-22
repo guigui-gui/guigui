@@ -213,7 +213,7 @@ func (t *textWithSubText) Build(context *guigui.Context, adder *guigui.ChildAdde
 	adder.AddWidget(&t.subText)
 	t.subText.SetScale(0.875)
 	t.subText.SetMultiline(true)
-	t.subText.SetWrapMode(basicwidget.WrapModeWord)
+	t.subText.SetWrapMode(basicwidget.WrapModeNormal)
 	t.subText.SetOpacity(0.675)
 	return nil
 }

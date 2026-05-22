@@ -39,7 +39,7 @@ type leftPanelContent struct {
 func (l *leftPanelContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&l.text)
 	l.text.SetValue("Left panel: " + dummyText)
-	l.text.SetWrapMode(basicwidget.WrapModeWord)
+	l.text.SetWrapMode(basicwidget.WrapModeNormal)
 	l.text.SetSelectable(true)
 	return nil
 }

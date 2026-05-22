@@ -128,8 +128,8 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			Value: basicwidget.WrapModeNone,
 		},
 		{
-			Text:  "Word",
-			Value: basicwidget.WrapModeWord,
+			Text:  "Normal",
+			Value: basicwidget.WrapModeNormal,
 		},
 		{
 			Text:  "Anywhere",
@@ -139,7 +139,7 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.wrapModeSegmentedControl.OnItemSelected(func(context *guigui.Context, index int) {
 		item, ok := t.wrapModeSegmentedControl.ItemByIndex(index)
 		if !ok {
-			model.Texts().SetWrapMode(basicwidget.WrapModeWord)
+			model.Texts().SetWrapMode(basicwidget.WrapModeNormal)
 			return
 		}
 		model.Texts().SetWrapMode(item.Value)

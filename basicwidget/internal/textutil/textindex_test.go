@@ -43,7 +43,7 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 		{"multibyte", "一\n二\n三"},
 	}
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord, textutil.WrapModeAnywhere} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
@@ -82,12 +82,12 @@ func TestTextIndexFromPositionSidecarParity(t *testing.T) {
 	}
 }
 
-// TestTextIndexFromPositionSidecarWordWrap exercises the [WrapModeWord]
+// TestTextIndexFromPositionSidecarWordWrap exercises the [WrapModeNormal]
 // path with real width-induced wrapping in the middle line.
 func TestTextIndexFromPositionSidecarWordWrap(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeWord}
+	op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeNormal}
 
 	const narrowWidth = 80
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
@@ -102,7 +102,7 @@ func TestTextIndexFromPositionSidecarWordWrap(t *testing.T) {
 		LineByteOffsets:     &l,
 	}
 
-	totalVL := textutil.MeasureHeight(narrowWidth, str, textutil.WrapModeWord, face, lineHeight, 0, false) / lineHeight
+	totalVL := textutil.MeasureHeight(narrowWidth, str, textutil.WrapModeNormal, face, lineHeight, 0, false) / lineHeight
 	for vl := 0; vl < int(totalVL)+1; vl++ {
 		for _, x := range []int{-10, 0, 30, 200} {
 			params.Position = image.Pt(x, int(float64(vl)*lineHeight))
@@ -131,10 +131,10 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 		wrapMode textutil.WrapMode
 	}{
 		{"three lines no wrap", "abc\ndef\nghi", math.MaxInt, textutil.WrapModeNone},
-		{"three lines wordWrap no wrap", "abc\ndef\nghi", math.MaxInt, textutil.WrapModeWord},
-		{"middle line wraps", "first\nthe quick brown fox jumps over the lazy dog\nlast", 80, textutil.WrapModeWord},
+		{"three lines wordWrap no wrap", "abc\ndef\nghi", math.MaxInt, textutil.WrapModeNormal},
+		{"middle line wraps", "first\nthe quick brown fox jumps over the lazy dog\nlast", 80, textutil.WrapModeNormal},
 		{"middle line wraps anywhere", "first\nthequickbrownfoxjumpsoverthelazydog\nlast", 80, textutil.WrapModeAnywhere},
-		{"trailing LF", "abc\ndef\n", math.MaxInt, textutil.WrapModeWord},
+		{"trailing LF", "abc\ndef\n", math.MaxInt, textutil.WrapModeNormal},
 	}
 
 	for _, tc := range cases {
@@ -194,7 +194,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 	}
 	str := string(sb)
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets

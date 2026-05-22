@@ -78,7 +78,7 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 			return true
 		}
 
-		if wrapMode == WrapModeWord {
+		if wrapMode == WrapModeNormal {
 			it := seg.LineIterator()
 			for it.Next() {
 				l := it.Line()

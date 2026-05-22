@@ -59,7 +59,7 @@ func TestMeasureLogicalLineHeightParity(t *testing.T) {
 		{"multibyte", "一\n二\n"},
 	}
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord, textutil.WrapModeAnywhere} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
@@ -136,15 +136,15 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 		t.Fatalf("test setup: line fits in %d px (advance=%v); pick a narrower width", narrowWidth, advance(logical))
 	}
 
-	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeWord, face, lineHeight, 0, false)
+	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeNormal, face, lineHeight, 0, false)
 	if h <= lineHeight {
-		t.Errorf("MeasureLogicalLineHeight with WrapModeWord = %v, expected > %v (single visual subline)", h, lineHeight)
+		t.Errorf("MeasureLogicalLineHeight with WrapModeNormal = %v, expected > %v (single visual subline)", h, lineHeight)
 	}
 
 	// Parity with the whole-document MeasureHeight on the same single line.
-	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeWord, face, lineHeight, 0, false)
+	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeNormal, face, lineHeight, 0, false)
 	if h != whole {
-		t.Errorf("WrapModeWord MeasureLogicalLineHeight = %v, MeasureHeight whole = %v", h, whole)
+		t.Errorf("WrapModeNormal MeasureLogicalLineHeight = %v, MeasureHeight whole = %v", h, whole)
 	}
 }
 
@@ -307,7 +307,7 @@ func wrapModeSuffix(wrapMode textutil.WrapMode) string {
 	switch wrapMode {
 	case textutil.WrapModeNone:
 		return "/noWrap"
-	case textutil.WrapModeWord:
+	case textutil.WrapModeNormal:
 		return "/wrapWord"
 	case textutil.WrapModeAnywhere:
 		return "/wrapAnywhere"

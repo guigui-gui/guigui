@@ -89,7 +89,7 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 		t.tableRows[i].Cells[0].TextStyle.Tabular = true
 
 		t.tableRows[i].Cells[1].Text = item.Name
-		t.tableRows[i].Cells[1].TextStyle.WrapMode = basicwidget.WrapModeWord
+		t.tableRows[i].Cells[1].TextStyle.WrapMode = basicwidget.WrapModeNormal
 
 		t.tableRows[i].Cells[2].Text = strconv.Itoa(item.Amount)
 		t.tableRows[i].Cells[2].TextStyle.HorizontalAlign = basicwidget.HorizontalAlignRight

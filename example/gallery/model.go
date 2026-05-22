@@ -218,7 +218,7 @@ func (t *TextsModel) SetVerticalAlign(align basicwidget.VerticalAlign) {
 
 func (t *TextsModel) WrapMode() basicwidget.WrapMode {
 	if !t.wrapModeSet {
-		return basicwidget.WrapModeWord
+		return basicwidget.WrapModeNormal
 	}
 	return t.wrapMode
 }
@@ -325,7 +325,7 @@ func (t *TextInputsModel) SetVerticalAlign(align basicwidget.VerticalAlign) {
 
 func (t *TextInputsModel) WrapMode() basicwidget.WrapMode {
 	if !t.wrapModeSet {
-		return basicwidget.WrapModeWord
+		return basicwidget.WrapModeNormal
 	}
 	return t.wrapMode
 }

@@ -210,7 +210,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 		{"only breaks", "\n\n\n"},
 	}
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord, textutil.WrapModeAnywhere} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
@@ -249,7 +249,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 	}
 }
 
-// TestTextPositionFromIndexSidecarWordWrap exercises the [WrapModeWord]
+// TestTextPositionFromIndexSidecarWordWrap exercises the [WrapModeNormal]
 // path with real width-induced wrapping: a single long logical line that
 // wraps at a narrow width into multiple visual sublines. The sidecar
 // path must produce the same Y/X across every visual subline boundary.
@@ -259,7 +259,7 @@ func TestTextPositionFromIndexSidecarWordWrap(t *testing.T) {
 	op := &textutil.Options{
 		Face:       face,
 		LineHeight: lineHeight,
-		WrapMode:   textutil.WrapModeWord,
+		WrapMode:   textutil.WrapModeNormal,
 	}
 
 	// Multiple logical lines, the middle one wraps.
@@ -313,7 +313,7 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 	}
 	str := string(sb)
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
 			op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets
@@ -395,7 +395,7 @@ func TestTextPositionFromIndexSidecarComposition(t *testing.T) {
 		{"insert at line1 start", "abc\ndef", comp{sStart: 4, sEnd: 4, compLen: 2, composition: "YZ"}},
 	}
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
@@ -556,7 +556,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 		},
 	}
 
-	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeWord, textutil.WrapModeAnywhere} {
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt

@@ -156,7 +156,7 @@ func (m *editorMenubar) Build(context *guigui.Context, adder *guigui.ChildAdder)
 		},
 		{
 			{Text: "No Wrap", Value: "wrap-none", Checked: m.wrapMode == basicwidget.WrapModeNone},
-			{Text: "Word Wrap", Value: "wrap-word", Checked: m.wrapMode == basicwidget.WrapModeWord},
+			{Text: "Normal Wrap", Value: "wrap-normal", Checked: m.wrapMode == basicwidget.WrapModeNormal},
 			{Text: "Wrap Anywhere", Value: "wrap-anywhere", Checked: m.wrapMode == basicwidget.WrapModeAnywhere},
 		},
 		{
@@ -203,8 +203,8 @@ func (m *editorMenubar) Build(context *guigui.Context, adder *guigui.ChildAdder)
 		case "wrap-none":
 			guigui.DispatchEvent(m, editorMenubarEventWrapModeSel, basicwidget.WrapModeNone)
 			return
-		case "wrap-word":
-			guigui.DispatchEvent(m, editorMenubarEventWrapModeSel, basicwidget.WrapModeWord)
+		case "wrap-normal":
+			guigui.DispatchEvent(m, editorMenubarEventWrapModeSel, basicwidget.WrapModeNormal)
 			return
 		case "wrap-anywhere":
 			guigui.DispatchEvent(m, editorMenubarEventWrapModeSel, basicwidget.WrapModeAnywhere)
