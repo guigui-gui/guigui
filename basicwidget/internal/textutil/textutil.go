@@ -14,6 +14,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/chunk"
 )
 
 func nextIndentPosition(position float64, indentWidth float64) float64 {
@@ -77,21 +79,13 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 		return ellipsis
 	}
 
+	str = sanitizedForCache(str)
 	var lastFittingEnd int
-	seg := pushSegmenter()
-	defer popSegmenter()
-	str = initSegmenterWithString(seg, str)
-	it := seg.GraphemeIterator()
-	var bytePos int
-	for it.Next() {
-		g := it.Grapheme()
-		s := string(g.Text)
-		candidateEnd := bytePos + len(s)
-		if advance(str, candidateEnd, face, tabWidth, false) > targetWidth {
+	for end := range theSegmentCache.graphemeBoundaries(str) {
+		if advance(str, end, face, tabWidth, false) > targetWidth {
 			break
 		}
-		lastFittingEnd = candidateEnd
-		bytePos = candidateEnd
+		lastFittingEnd = end
 	}
 
 	return str[:lastFittingEnd] + ellipsis
@@ -278,13 +272,9 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 			var lineEnd int
 			var pos int
 
-			seg := pushSegmenter()
-			defer popSegmenter()
-			// If str is not valid UTF-8, the sanitized string returned here
-			// is what the segmenter actually iterates over. Use it as origStr
-			// so byte offsets from the segmenter align with the string being
-			// sliced.
-			str = initSegmenterWithString(seg, str)
+			// The cache requires valid UTF-8; operate on the sanitized string
+			// (as origStr) so byte offsets align with the string being sliced.
+			str = sanitizedForCache(str)
 			origStr = str
 
 			emit := func(segment string, isMandatoryBreak bool) bool {
@@ -316,26 +306,20 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 				return true
 			}
 
-			if wrapMode == WrapModeNormal {
-				it := seg.LineIterator()
-				for it.Next() {
-					l := it.Line()
-					if !emit(string(l.Text), l.IsMandatoryBreak) {
-						return
-					}
+			// WrapModeNormal wraps at line-break opportunities, WrapModeAnywhere
+			// at grapheme boundaries; both feed the same packing loop, with the
+			// mandatory-break flag taken from each segment's trailing break.
+			boundaries := theSegmentCache.softLineBreakBoundaries
+			if wrapMode != WrapModeNormal {
+				boundaries = theSegmentCache.graphemeBoundaries
+			}
+			var segStart int
+			for end := range boundaries(origStr) {
+				segment := origStr[segStart:end]
+				if !emit(segment, tailingLineBreakLen(segment) > 0) {
+					return
 				}
-			} else {
-				it := seg.GraphemeIterator()
-				for it.Next() {
-					g := it.Grapheme()
-					t := string(g.Text)
-					// A hard line break is its own grapheme cluster
-					// (CRLF stays a single cluster), so detecting a
-					// trailing break length covers all hard breaks.
-					if !emit(t, tailingLineBreakLen(t) > 0) {
-						return
-					}
-				}
+				segStart = end
 			}
 
 			if lineEnd-lineStart > 0 {
@@ -648,23 +632,33 @@ func textPositionYOffset(size image.Point, str string, options *Options) float64
 }
 
 func FindWordBoundaries(text string, idx int) (start, end int) {
-	seg := pushSegmenter()
-	defer popSegmenter()
-	if sanitized := initSegmenterWithString(seg, text); sanitized != text {
-		// Invalid UTF-8: byte offsets reported by the segmenter are into
-		// the sanitized string and would not be meaningful in the original.
+	if !utf8.ValidString(text) {
+		// Invalid UTF-8: byte offsets from segmentation are into the
+		// sanitized string and would not be meaningful in the original.
 		return idx, idx
 	}
-	it := seg.WordIterator()
-
-	for it.Next() {
-		w := it.Word()
-		wordStart := w.OffsetInBytes
-		wordEnd := w.OffsetInBytes + w.LengthInBytes
-		if wordStart <= idx && idx <= wordEnd {
-			return wordStart, wordEnd
+	// A word never crosses a chunk boundary (every chunk boundary is also a
+	// UAX #29 word boundary), so the word containing idx lies within the single
+	// chunk that contains idx; segmenting just that chunk avoids a whole-line
+	// pass. A position on an interior chunk boundary belongs to the chunk that
+	// begins there, where its word starts.
+	var chunkStart, chunkEnd int
+	for _, b := range chunk.AppendBoundaries(nil, text) {
+		chunkEnd = b
+		if idx < b || b == len(text) {
+			break
 		}
+		chunkStart = b
 	}
 
+	seg := pushSegmenter()
+	defer popSegmenter()
+	initSegmenterWithString(seg, text[chunkStart:chunkEnd])
+	for it := seg.WordIterator(); it.Next(); {
+		w := it.Word()
+		if s, e := chunkStart+w.OffsetInBytes, chunkStart+w.OffsetInBytes+w.LengthInBytes; s <= idx && idx <= e {
+			return s, e
+		}
+	}
 	return idx, idx
 }

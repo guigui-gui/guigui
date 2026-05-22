@@ -42,12 +42,9 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 	}
 
 	return func(yield func(visualLine) bool) {
-		seg := pushSegmenter()
-		defer popSegmenter()
-		// initSegmenterWithString may sanitize the input if it isn't valid UTF-8.
-		// Operate on the (possibly sanitized) string so byte offsets reported
-		// by the segmenter align with the slices yielded below.
-		sanitized := initSegmenterWithString(seg, logicalLine)
+		// The cache requires valid UTF-8; operate on the sanitized string so
+		// byte offsets align with the slices yielded below.
+		sanitized := sanitizedForCache(logicalLine)
 
 		var vlStart, vlEnd, pos int
 		// emit consumes the next segment, identified only by its byte
@@ -78,23 +75,21 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 			return true
 		}
 
-		if wrapMode == WrapModeNormal {
-			it := seg.LineIterator()
-			for it.Next() {
-				l := it.Line()
-				if !emit(l.LengthInBytes, l.IsMandatoryBreak) {
-					return
-				}
+		// WrapModeNormal wraps at line-break opportunities, WrapModeAnywhere at
+		// grapheme boundaries; both feed the same packing loop. A logical line
+		// has at most a trailing hard break, so the mandatory-break flag is
+		// taken from each segment's own trailing line break.
+		boundaries := theSegmentCache.softLineBreakBoundaries
+		if wrapMode != WrapModeNormal {
+			boundaries = theSegmentCache.graphemeBoundaries
+		}
+		var segStart int
+		for end := range boundaries(sanitized) {
+			segText := sanitized[segStart:end]
+			if !emit(end-segStart, tailingLineBreakLen(segText) > 0) {
+				return
 			}
-		} else {
-			it := seg.GraphemeIterator()
-			for it.Next() {
-				g := it.Grapheme()
-				graphemeText := sanitized[g.OffsetInBytes : g.OffsetInBytes+g.LengthInBytes]
-				if !emit(g.LengthInBytes, tailingLineBreakLen(graphemeText) > 0) {
-					return
-				}
-			}
+			segStart = end
 		}
 		// No trailing break: emit the remaining content as the final visual line.
 		if vlEnd-vlStart > 0 {

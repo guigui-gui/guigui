@@ -3,71 +3,36 @@
 
 package textutil
 
-import (
-	"iter"
-)
-
-func graphemes(str string) iter.Seq[string] {
-	return func(yield func(s string) bool) {
-		seg := pushSegmenter()
-		defer popSegmenter()
-		initSegmenterWithString(seg, str)
-		it := seg.GraphemeIterator()
-		for it.Next() {
-			g := it.Grapheme()
-			if !yield(string(g.Text)) {
-				return
-			}
-		}
-	}
-}
+import "unicode/utf8"
 
 func PrevPositionOnGraphemes(str string, position int) int {
-	seg := pushSegmenter()
-	defer popSegmenter()
-	if sanitized := initSegmenterWithString(seg, str); sanitized != str {
-		// Invalid UTF-8: byte offsets from the segmenter would be into the
-		// sanitized string. Fall back to the input position to avoid returning
-		// a mismatched index.
+	if !utf8.ValidString(str) {
+		// Invalid UTF-8: byte offsets from segmentation would be into a
+		// sanitized string and would not match the input position.
 		return position
 	}
-	it := seg.GraphemeIterator()
-	var bytePos int
-	for it.Next() {
-		g := it.Grapheme()
-		s := string(g.Text)
-		startPos := bytePos
-		endPos := bytePos + len(s)
-		if position > endPos {
-			bytePos = endPos
-			continue
+	var start int
+	for end := range theSegmentCache.graphemeBoundaries(str) {
+		if position <= end {
+			return start
 		}
-		return startPos
+		start = end
 	}
 	return position
 }
 
 func NextPositionOnGraphemes(str string, position int) int {
-	seg := pushSegmenter()
-	defer popSegmenter()
-	if sanitized := initSegmenterWithString(seg, str); sanitized != str {
-		// Invalid UTF-8: byte offsets from the segmenter would be into the
-		// sanitized string. Fall back to the input position to avoid returning
-		// a mismatched index.
+	if !utf8.ValidString(str) {
+		// Invalid UTF-8: byte offsets from segmentation would be into a
+		// sanitized string and would not match the input position.
 		return position
 	}
-	it := seg.GraphemeIterator()
-	var bytePos int
-	for it.Next() {
-		g := it.Grapheme()
-		s := string(g.Text)
-		startPos := bytePos
-		endPos := bytePos + len(s)
-		if position > startPos {
-			bytePos = endPos
-			continue
+	var start int
+	for end := range theSegmentCache.graphemeBoundaries(str) {
+		if position <= start {
+			return end
 		}
-		return endPos
+		start = end
 	}
 	return position
 }
