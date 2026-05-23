@@ -283,9 +283,9 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	// rounded shape to clip its contents to.
 	l.inner.SetCornderRouneded(l.content.Style() != ListStyleSidebar)
 
+	selectedIndex := l.SelectedItemIndex()
 	for i := range l.listItemWidgets.Len() {
-		item := l.listItemWidgets.At(i)
-		item.text.SetBold(item.item.Header || l.content.Style() == ListStyleSidebar && l.SelectedItemIndex() == i)
+		l.listItemWidgets.At(i).setSelected(selectedIndex == i)
 	}
 
 	return nil
@@ -431,6 +431,7 @@ type listItemWidget[T comparable] struct {
 	item        ListItem[T]
 	heightPlus1 int
 	style       ListStyle
+	selected    bool
 
 	layout             guigui.LinearLayout
 	layoutItems        []guigui.LinearLayoutItem
@@ -444,6 +445,7 @@ func (l *listItemWidget[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	l.item.writeStateKey(w)
 	w.WriteInt(l.heightPlus1)
 	w.WriteUint64(uint64(l.style))
+	w.WriteBool(l.selected)
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
@@ -470,6 +472,10 @@ func (l *listItemWidget[T]) setStyle(style ListStyle) {
 	l.resetLayout()
 }
 
+func (l *listItemWidget[T]) setSelected(selected bool) {
+	l.selected = selected
+}
+
 func (l *listItemWidget[T]) setText(text string) {
 	l.item.Text = text
 }
@@ -489,7 +495,7 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	l.text.SetValue(l.item.Text)
 	l.text.SetHorizontalAlign(l.item.TextStyle.HorizontalAlign)
 	l.text.SetVerticalAlign(l.item.TextStyle.VerticalAlign)
-	l.text.SetBold(l.item.TextStyle.Bold)
+	l.text.SetBold(l.item.TextStyle.Bold || l.item.Header || l.style == ListStyleSidebar && l.selected)
 	l.text.SetTabular(l.item.TextStyle.Tabular)
 	l.text.SetWrapMode(l.item.TextStyle.WrapMode)
 	l.keyText.SetOpacity(0.5)
