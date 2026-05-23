@@ -61,7 +61,7 @@ func TestTextPositionFromIndex(t *testing.T) {
 	}
 	face := &text.GoTextFace{Source: source, Size: 16}
 	const lineHeight = 24.0
-	op := &textutil.Options{
+	op := textutil.Options{
 		Face:       face,
 		LineHeight: lineHeight,
 	}
@@ -214,7 +214,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
-				op := &textutil.Options{
+				op := textutil.Options{
 					Face:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
@@ -256,7 +256,7 @@ func TestTextPositionFromIndexSidecarParity(t *testing.T) {
 func TestTextPositionFromIndexSidecarWordWrap(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{
+	op := textutil.Options{
 		Face:       face,
 		LineHeight: lineHeight,
 		WrapMode:   textutil.WrapModeNormal,
@@ -315,7 +315,7 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 
 	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
-			op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+			op := textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, str)
 			precVL := precedingVisualLineCountFromString(str, math.MaxInt, wrapMode, face, 0, false)
@@ -399,7 +399,7 @@ func TestTextPositionFromIndexSidecarComposition(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
-				op := &textutil.Options{
+				op := textutil.Options{
 					Face:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
@@ -450,7 +450,7 @@ func TestTextPositionFromIndexSidecarComposition(t *testing.T) {
 func TestTextPositionFromIndexSidecarCompositionWithLineBreak(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{Face: face, LineHeight: lineHeight}
+	op := textutil.Options{Face: face, LineHeight: lineHeight}
 
 	committed := "abc\ndef"
 	// Composition with an embedded LF: replaces position 4..4 with "X\nY" (3 bytes).
@@ -493,7 +493,7 @@ func TestTextPositionFromIndexSidecarCompositionWithLineBreak(t *testing.T) {
 func TestTextPositionFromIndexSidecarOutOfRange(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{Face: face, LineHeight: lineHeight}
+	op := textutil.Options{Face: face, LineHeight: lineHeight}
 
 	str := "abc"
 	var l textutil.LineByteOffsets
@@ -560,7 +560,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
-				op := &textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+				op := textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.str)
 				precVL := precedingVisualLineCountFromString(tc.str, width, wrapMode, face, 0, false)
@@ -630,7 +630,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 func TestTextPositionFromIndexNilSidecar(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{Face: face, LineHeight: lineHeight}
+	op := textutil.Options{Face: face, LineHeight: lineHeight}
 
 	str := "abc\ndef"
 	const width = math.MaxInt

@@ -32,7 +32,7 @@ type TextIndexFromPositionParams struct {
 
 	// Options carries face, lineHeight, wrap mode, alignment, tab
 	// width, etc.
-	Options *Options
+	Options Options
 
 	// CommittedTextRange returns committed[start:end). Required when
 	// CompositionLen > 0; ignored otherwise.
@@ -91,11 +91,11 @@ type TextIndexFromPositionParams struct {
 // the fast path.
 func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	if p.LineByteOffsets == nil {
-		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), p.Options)
+		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
 	n := p.LineByteOffsets.LineCount()
 	if n == 0 {
-		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), p.Options)
+		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
 
 	// Resolve composition shifts so the committed-text sidecar is
@@ -141,7 +141,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 			WrapWidth:              p.Width,
 		})
 		if !ok {
-			return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), p.Options)
+			return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 		}
 		compInfo = info
 		hasComp = true
@@ -230,7 +230,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	// TextIndexFromPositionInLogicalLine picks the right visual
 	// subline.
 	localY := p.Position.Y - int(float64(logicalLineVisualOriginIndex)*p.Options.LineHeight)
-	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(p.Position.X, localY), line, p.Options)
+	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(p.Position.X, localY), line, &p.Options)
 	return renderingLineStart + pos
 }
 

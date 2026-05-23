@@ -34,7 +34,7 @@ type TextPositionParams struct {
 
 	// Options carries face, lineHeight, wrap mode, alignment, tab
 	// width, etc.
-	Options *Options
+	Options Options
 
 	// CommittedTextRange returns committed[start:end). Required when
 	// CompositionLen > 0; ignored otherwise.
@@ -89,7 +89,7 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextPositionParams) 
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine = index - renderingLineStart
 
-	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, p.Options)
+	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, &p.Options)
 	if count == 0 {
 		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
@@ -127,7 +127,7 @@ func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosi
 		vls := visualLines(p.Width, str, p.Options.WrapMode, func(s string, indexInBytes int) float64 {
 			return advance(s, indexInBytes, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
 		})
-		return textPositionFromIndexInVisualLines(p.Width, vls, p.Index, p.Options)
+		return textPositionFromIndexInVisualLines(p.Width, vls, p.Index, &p.Options)
 	}
 
 	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p)
@@ -178,7 +178,7 @@ func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosi
 		prevLogicalLineIdx := logicalLineIdx - 1
 		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevLogicalLineIdx)
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
-		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), p.Options)
+		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), &p.Options)
 		if prevCount > 0 {
 			prevYOffset := p.Options.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
 			prevPos0.Top += prevYOffset

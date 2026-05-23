@@ -2210,7 +2210,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 
 	width := textContentBounds.Dx()
-	op := &textutil.Options{
+	op := textutil.Options{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
@@ -2260,7 +2260,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := textBounds.Dx()
-	op := &textutil.Options{
+	op := textutil.Options{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
@@ -2352,7 +2352,7 @@ type caretScrollTarget struct {
 func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (target caretScrollTarget, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := textBounds.Dx()
-	op := &textutil.Options{
+	op := textutil.Options{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),

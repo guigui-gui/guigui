@@ -151,7 +151,7 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{
+	op := textutil.Options{
 		Face:       face,
 		LineHeight: lineHeight,
 	}
@@ -183,7 +183,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 				within := idx - lineStart
 				originY := float64(lineIdx) * lineHeight
 
-				lp0, _, lpCount := textutil.TextPositionFromIndexInLogicalLine(width, lines[lineIdx], within, op)
+				lp0, _, lpCount := textutil.TextPositionFromIndexInLogicalLine(width, lines[lineIdx], within, &op)
 				if lpCount == 0 {
 					t.Errorf("idx=%d: per-logical count=0", idx)
 					continue
@@ -233,7 +233,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := &textutil.Options{
+	op := textutil.Options{
 		Face:       face,
 		LineHeight: lineHeight,
 	}
@@ -264,7 +264,7 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 			originY := float64(q.lineIndex) * lineHeight
 			// Local Y near the top of the per-logical line maps to a whole-doc
 			// Y of originY.
-			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], op)
+			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], &op)
 			whole := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
 				Position:            image.Pt(q.x, int(originY)),
 				RenderingTextRange:  func(start, end int) string { return str[start:end] },
