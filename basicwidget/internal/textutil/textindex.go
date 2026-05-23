@@ -11,7 +11,7 @@ import (
 // TextIndexFromPositionParams describes the inputs for
 // [TextIndexFromPosition]. The first group of fields is always
 // required; the second group is optional state that enables the
-// sidecar-accelerated fast path.
+// fast path backed by the precomputed logical-line offsets.
 type TextIndexFromPositionParams struct {
 	// Position is the (x, y) point in the rendering plane to query.
 	// Y is measured from the top of the rendered text.
@@ -38,10 +38,10 @@ type TextIndexFromPositionParams struct {
 	// CompositionLen > 0; ignored otherwise.
 	CommittedTextRange func(start, end int) string
 
-	// LineByteOffsets is the logical-line layout of the committed text.
+	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
 	// Optional; when nil [TextIndexFromPosition] falls back to an
 	// O(documentLen) walk of every visual line.
-	LineByteOffsets *LineByteOffsets
+	PrecomputedLineByteOffsets *LineByteOffsets
 
 	// SelectionStart, SelectionEnd, CompositionLen describe an active
 	// IME composition: bytes [SelectionStart, SelectionEnd) in the
@@ -67,38 +67,39 @@ type TextIndexFromPositionParams struct {
 	// Both fields are optional. The zero value means "start from line
 	// 0," equivalent to walking from the top of the document — correct
 	// but O(documentLen) when the click is far down. Used only when
-	// LineByteOffsets is set.
+	// PrecomputedLineByteOffsets is set.
 	LogicalLineIndexHint int
 	VisualLineIndexHint  int
 }
 
 // TextIndexFromPosition returns the byte offset in the rendering text
-// closest to p.Position. When p.LineByteOffsets is supplied, the
+// closest to p.Position. When p.PrecomputedLineByteOffsets is supplied, the
 // visual-line walk is localized: it starts from
 // (p.LogicalLineIndexHint, p.VisualLineIndexHint) and steps forward
 // (or backward) one logical line at a time until the line covering
 // p.Position.Y is found. With the hint placed inside the viewport
 // this costs O(visible lines) of typesetting per query, instead of
-// the O(documentLen) full scan the sidecar-less fallback performs.
+// the O(documentLen) full scan performed when no precomputed
+// logical-line offsets are supplied.
 //
 // When an active IME composition splices into the rendering text, the
-// committed-text sidecar is reused: byte/visual-line shifts derived
-// from [ComputeCompositionInfo] map between committed and rendering
-// coordinates without rebuilding the sidecar. Falls back to the
-// unrestricted whole-document walk when the composition crosses a
-// logical-line boundary, when no sidecar is supplied, or when the
-// document is empty. The fallback is observationally equivalent to
-// the fast path.
+// precomputed committed-text logical-line offsets are reused:
+// byte/visual-line shifts derived from [ComputeCompositionInfo] map
+// between committed and rendering coordinates without rebuilding the
+// offsets. Falls back to the unrestricted whole-document walk when the
+// composition crosses a logical-line boundary, when no precomputed
+// logical-line offsets are supplied, or when the document is empty. The
+// fallback is observationally equivalent to the fast path.
 func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
-	if p.LineByteOffsets == nil {
+	if p.PrecomputedLineByteOffsets == nil {
 		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
-	n := p.LineByteOffsets.LineCount()
+	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
 		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
 
-	// Resolve composition shifts so the committed-text sidecar is
+	// Resolve composition shifts so the precomputed logical-line offsets are
 	// usable as-is. selectionLineVisualCountDelta carries the wrap-
 	// count difference between the rendering and committed selection
 	// lines (0 for [WrapModeNone] or compositions that don't change the
@@ -107,12 +108,12 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	var hasComp bool
 	var selectionLineVisualCountDelta int
 	if p.CompositionLen > 0 {
-		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
-		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
+		selectionLineIdx := p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
+		cs := p.PrecomputedLineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
 		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
 		ce := p.RenderingTextLength - byteDelta
 		if selectionLineIdx+1 < n {
-			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
+			ce = p.PrecomputedLineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
 		}
 		// The selection-line slices are only valid when the selection
 		// lies inside a single logical line; otherwise ce+byteDelta
@@ -121,14 +122,14 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		// returns false before reading them, and the caller falls back
 		// below.
 		var committedSelectionLine, renderingSelectionLine string
-		if p.Options.WrapMode != WrapModeNone && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
+		if p.Options.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
 			committedSelectionLine = p.CommittedTextRange(cs, ce)
 			renderingSelectionLine = p.RenderingTextRange(cs, ce+byteDelta)
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
 			CompositionText:        p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
-			LineByteOffsets:        p.LineByteOffsets,
+			LineByteOffsets:        p.PrecomputedLineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
 			WrapMode:               p.Options.WrapMode,
@@ -168,7 +169,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	}
 
 	m := &logicalLineMeasurer{
-		offsets:            p.LineByteOffsets,
+		offsets:            p.PrecomputedLineByteOffsets,
 		logicalLineCount:   n,
 		committedTextLen:   committedTextLen,
 		renderingTextRange: p.RenderingTextRange,
@@ -237,7 +238,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 // textIndexFromPosition is the unrestricted whole-document
 // implementation: it walks every visual line in str to find the one
 // covering position.Y. O(documentLen) per call and only suitable when
-// no [LineByteOffsets] sidecar is available; the public
+// no precomputed [LineByteOffsets] is available; the public
 // [TextIndexFromPosition] uses this as a fallback.
 func textIndexFromPosition(width int, position image.Point, str string, options *Options) int {
 	// Determine the visual line first.

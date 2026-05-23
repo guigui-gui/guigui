@@ -14,7 +14,7 @@ type TextPosition struct {
 // TextPositionParams describes the inputs for
 // [TextPositionFromIndex]. The first group of fields is always
 // required; the second group is optional state that enables the
-// sidecar-accelerated fast path.
+// fast path backed by the precomputed logical-line offsets.
 type TextPositionParams struct {
 	// Index is the byte offset in the rendering text to query.
 	Index int
@@ -40,10 +40,10 @@ type TextPositionParams struct {
 	// CompositionLen > 0; ignored otherwise.
 	CommittedTextRange func(start, end int) string
 
-	// LineByteOffsets is the logical-line layout of the committed text.
+	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
 	// Optional; when nil [TextPositionFromIndex] falls back to an
 	// O(documentLen) walk of every visual line.
-	LineByteOffsets *LineByteOffsets
+	PrecomputedLineByteOffsets *LineByteOffsets
 
 	// SelectionStart, SelectionEnd, CompositionLen describe an active
 	// IME composition: bytes [SelectionStart, SelectionEnd) in the
@@ -68,7 +68,7 @@ type TextPositionParams struct {
 	// The walk is bounded by the logical-line distance between the
 	// hint and the line containing Index, so a caller that pins the
 	// hint inside its viewport pays only O(visible) typesetting per
-	// query. Used only when LineByteOffsets is set and Options.WrapMode
+	// query. Used only when PrecomputedLineByteOffsets is set and Options.WrapMode
 	// is not [WrapModeNone].
 	LogicalLineIndexHint int
 	VisualLineIndexHint  int
@@ -100,10 +100,10 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextPositionParams) 
 // visual position(s). pos.Top / pos.Bottom are measured from the start of the
 // line at lineIdx, not the document top.
 //
-// count==0 when the result is unavailable: index out of range, no sidecar,
-// empty document, or composition straddling a logical-line boundary. Callers
-// needing the slow whole-document fallback in that case should call
-// [TextPositionFromIndex].
+// count==0 when the result is unavailable: index out of range, no precomputed
+// logical-line offsets, empty document, or composition straddling a logical-line
+// boundary. Callers needing the slow whole-document fallback in that case should
+// call [TextPositionFromIndex].
 func PositionWithinLogicalLine(p *TextPositionParams) (lineIdx int, position0, position1 TextPosition, count int) {
 	m, ok := newLogicalLineMeasurer(p)
 	if !ok {

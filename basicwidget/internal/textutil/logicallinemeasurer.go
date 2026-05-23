@@ -35,45 +35,45 @@ type logicalLineMeasurer struct {
 	compositionRenderingEndPlus1 int
 }
 
-// newLogicalLineMeasurer builds the measurement context for p's committed-text
-// sidecar, resolving any active composition once so individual line queries
-// need not redo it. ok is false when the sidecar is absent or empty, or the
-// composition straddles a logical-line boundary; the caller must then fall
-// back to the unrestricted walk.
+// newLogicalLineMeasurer builds the measurement context from the precomputed
+// logical-line offsets of p's committed text, resolving any active composition
+// once so individual line queries need not redo it. ok is false when the offsets
+// are absent or empty, or the composition straddles a logical-line boundary; the
+// caller must then fall back to the unrestricted walk.
 func newLogicalLineMeasurer(p *TextPositionParams) (*logicalLineMeasurer, bool) {
-	if p.LineByteOffsets == nil {
+	if p.PrecomputedLineByteOffsets == nil {
 		return nil, false
 	}
-	n := p.LineByteOffsets.LineCount()
+	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
 		return nil, false
 	}
 
-	// Resolve composition shifts so the committed-text sidecar is usable
-	// without a rebuild. compInfo carries the selection line and the byte
+	// Resolve composition shifts so the precomputed logical-line offsets are
+	// usable without a rebuild. compInfo carries the selection line and the byte
 	// shifts applied to lines past the splice.
 	var compInfo CompositionInfo
 	var compRenderingStartPlus1, compRenderingEndPlus1 int
 	if p.CompositionLen > 0 {
-		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
-		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
+		selectionLineIdx := p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
+		cs := p.PrecomputedLineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
 		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
 		ce := p.RenderingTextLength - byteDelta
 		if selectionLineIdx+1 < n {
-			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
+			ce = p.PrecomputedLineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
 		}
 		// Compute the selection-line slices only when the selection lies
 		// inside a single logical line; otherwise ce+byteDelta underflows.
 		// [ComputeCompositionInfo] rejects the multi-line case before reading them.
 		var committedSelectionLine, renderingSelectionLine string
-		if p.Options.WrapMode != WrapModeNone && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
+		if p.Options.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
 			committedSelectionLine = p.CommittedTextRange(cs, ce)
 			renderingSelectionLine = p.RenderingTextRange(cs, ce+byteDelta)
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
 			CompositionText:        p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
-			LineByteOffsets:        p.LineByteOffsets,
+			LineByteOffsets:        p.PrecomputedLineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
 			WrapMode:               p.Options.WrapMode,
@@ -94,7 +94,7 @@ func newLogicalLineMeasurer(p *TextPositionParams) (*logicalLineMeasurer, bool) 
 	}
 
 	return &logicalLineMeasurer{
-		offsets:                        p.LineByteOffsets,
+		offsets:                        p.PrecomputedLineByteOffsets,
 		logicalLineCount:               n,
 		committedTextLen:               p.RenderingTextLength - compInfo.RenderingByteShift,
 		renderingTextRange:             p.RenderingTextRange,

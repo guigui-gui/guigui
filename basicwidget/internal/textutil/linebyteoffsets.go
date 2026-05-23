@@ -208,8 +208,8 @@ func (w *lineByteOffsetsWriter) Write(p []byte) (int, error) {
 
 // LineByteOffsets holds the byte offsets where each logical line (segment
 // separated by hard line breaks) begins within a source string. It is a
-// precomputed sidecar that enables O(log n) line<->byte-offset lookups
-// without rescanning the text.
+// precomputed logical-line offset index that enables O(log n)
+// line<->byte-offset lookups without rescanning the text.
 //
 // After a rebuild the first entry is always 0 and the entries are
 // strictly increasing. A trailing line break in the source string

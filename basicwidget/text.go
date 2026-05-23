@@ -1874,7 +1874,7 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 	} else {
 		// Fallback when an active composition contains a hard line break
 		// or straddles a logical-line boundary — the rendering text's
-		// logical-line shape doesn't match the committed sidecar.
+		// logical-line shape doesn't match the committed-text logical-line offsets.
 		txt := t.textToDraw(context, true)
 		h := textutil.MeasureHeight(constraintWidth, txt, textutil.WrapMode(t.wrapMode), t.face(context, bold), lineH, t.actualTabWidth(context), t.keepTailingSpace)
 		hi = int(math.Ceil(h))
@@ -2239,17 +2239,17 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		readCommitted = t.stringValueWithRange
 	}
 	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
-		Position:             position,
-		RenderingTextRange:   readRendering,
-		RenderingTextLength:  renderingLength,
-		Width:                width,
-		Options:              op,
-		CommittedTextRange:   readCommitted,
-		LineByteOffsets:      &t.lineByteOffsets,
-		SelectionStart:       sStart,
-		SelectionEnd:         sEnd,
-		CompositionLen:       compLen,
-		LogicalLineIndexHint: hintLL,
+		Position:                   position,
+		RenderingTextRange:         readRendering,
+		RenderingTextLength:        renderingLength,
+		Width:                      width,
+		Options:                    op,
+		CommittedTextRange:         readCommitted,
+		PrecomputedLineByteOffsets: &t.lineByteOffsets,
+		SelectionStart:             sStart,
+		SelectionEnd:               sEnd,
+		CompositionLen:             compLen,
+		LogicalLineIndexHint:       hintLL,
 	})
 	if idx < 0 || idx > renderingLength {
 		return -1
@@ -2270,12 +2270,12 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		KeepTailingSpace: t.keepTailingSpace,
 	}
 
-	// Pass the cached lineByteOffsets sidecar and the
+	// Pass the cached lineByteOffsets and the
 	// firstLogicalLineInViewport hint so
 	// [textutil.TextPositionFromIndex] walks only the logical lines
 	// between the viewport's first line and the caret's line. The
-	// sidecar-less fallback walks every visual line in the document;
-	// for multi-megabyte buffers caretPosition / adjustScrollOffset
+	// fallback without precomputed offsets walks every visual line in the
+	// document; for multi-megabyte buffers caretPosition / adjustScrollOffset
 	// call this every tick and that fallback dominates CPU.
 	t.ensureLineByteOffsets()
 
@@ -2305,17 +2305,17 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	// caret's line, which is a viewport's worth of lines for carets
 	// visible on screen.
 	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionParams{
-		Index:                index,
-		RenderingTextRange:   readRendering,
-		RenderingTextLength:  renderingLength,
-		Width:                width,
-		Options:              op,
-		CommittedTextRange:   readCommitted,
-		LineByteOffsets:      &t.lineByteOffsets,
-		SelectionStart:       sStart,
-		SelectionEnd:         sEnd,
-		CompositionLen:       compLen,
-		LogicalLineIndexHint: t.firstLogicalLineInViewport,
+		Index:                      index,
+		RenderingTextRange:         readRendering,
+		RenderingTextLength:        renderingLength,
+		Width:                      width,
+		Options:                    op,
+		CommittedTextRange:         readCommitted,
+		PrecomputedLineByteOffsets: &t.lineByteOffsets,
+		SelectionStart:             sStart,
+		SelectionEnd:               sEnd,
+		CompositionLen:             compLen,
+		LogicalLineIndexHint:       t.firstLogicalLineInViewport,
 	})
 	if count == 0 {
 		return textutil.TextPosition{}, false
@@ -2381,16 +2381,16 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		readCommitted = t.stringValueWithRange
 	}
 	li, pos0, pos1, count := textutil.PositionWithinLogicalLine(&textutil.TextPositionParams{
-		Index:               index,
-		RenderingTextRange:  readRendering,
-		RenderingTextLength: renderingLength,
-		Width:               width,
-		Options:             op,
-		CommittedTextRange:  readCommitted,
-		LineByteOffsets:     &t.lineByteOffsets,
-		SelectionStart:      sStart,
-		SelectionEnd:        sEnd,
-		CompositionLen:      compLen,
+		Index:                      index,
+		RenderingTextRange:         readRendering,
+		RenderingTextLength:        renderingLength,
+		Width:                      width,
+		Options:                    op,
+		CommittedTextRange:         readCommitted,
+		PrecomputedLineByteOffsets: &t.lineByteOffsets,
+		SelectionStart:             sStart,
+		SelectionEnd:               sEnd,
+		CompositionLen:             compLen,
 	})
 	if count == 0 {
 		return caretScrollTarget{}, false
