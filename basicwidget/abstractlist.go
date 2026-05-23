@@ -112,9 +112,13 @@ func (a *abstractList[Value, Item]) SetItems(items []Item) {
 	a.items = adjustSliceSize(items, len(items))
 	copy(a.items, items)
 
+	origLen := len(a.selectedIndices)
 	maps.DeleteFunc(a.selectedIndices, func(idx int, _ struct{}) bool {
 		return !a.isItemIndexSelectable(idx)
 	})
+	if len(a.selectedIndices) != origLen {
+		a.refreshSelectionString()
+	}
 }
 
 func (a *abstractList[Value, Item]) ItemCount() int {

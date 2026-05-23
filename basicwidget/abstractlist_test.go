@@ -241,6 +241,36 @@ func TestAbstractListSelectionSliceCopy(t *testing.T) {
 	}
 }
 
+func TestAbstractListSetItemsRefreshesSelectionStateKey(t *testing.T) {
+	type Item = basicwidget.AbstractListTestItem[string]
+	var l basicwidget.AbstractList[string, Item]
+
+	l.SetItems([]Item{
+		{Value: "foo", Selectable: true, Visible: true},
+		{Value: "bar", Selectable: true, Visible: true},
+	})
+	l.SelectItemByIndex(1, false)
+	if got, want := l.SelectedItemIndex(), 1; got != want {
+		t.Fatalf("SelectedItemIndex() = %d, want %d", got, want)
+	}
+
+	before := l.SelectionStateKey()
+
+	// Re-populate so the previously selected index 1 no longer exists. SetItems
+	// must prune the selection and refresh the fingerprint that WriteStateKey
+	// exposes; otherwise the selection change is invisible to rebuilds.
+	l.SetItems([]Item{
+		{Value: "foo", Selectable: true, Visible: true},
+	})
+	if got, want := l.SelectedItemCount(), 0; got != want {
+		t.Fatalf("SelectedItemCount() = %d, want %d", got, want)
+	}
+
+	if after := l.SelectionStateKey(); after == before {
+		t.Errorf("SelectionStateKey() did not change after SetItems dropped the selected index: still %q", after)
+	}
+}
+
 func TestAbstractListToggleItemSelectionByIndex(t *testing.T) {
 	type Item = basicwidget.AbstractListTestItem[string]
 	var l basicwidget.AbstractList[string, Item]
