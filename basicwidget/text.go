@@ -176,7 +176,7 @@ type Text struct {
 	cachedTextWidths      [8][4]cachedTextWidthEntry
 	cachedTextHeights     [8][4]cachedTextHeightEntry
 	cachedDefaultTabWidth float64
-	lastFaceCacheKey      faceCacheKey
+	lastFaceCacheKey      textutil.FaceKey
 	lastScale             float64
 
 	// contentHasher is a reusable xxh3 streaming hasher used by [Text.WriteStateKey]
@@ -1058,7 +1058,7 @@ func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rect
 	return t.textContentBounds(context, bounds)
 }
 
-func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKey {
+func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) textutil.FaceKey {
 	size := FontSize(context) * (t.scaleMinus1 + 1)
 	weight := text.WeightMedium
 	if t.bold || forceBold {
@@ -1074,13 +1074,17 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKe
 	} else {
 		lang = context.FirstLocale()
 	}
-	return faceCacheKey{
-		font:   t.font,
-		size:   size,
-		weight: weight,
-		liga:   liga,
-		tnum:   tnum,
-		lang:   lang,
+	var fontID uint64
+	if t.font != nil {
+		fontID = t.font.id
+	}
+	return textutil.FaceKey{
+		FontID: fontID,
+		Size:   size,
+		Weight: weight,
+		Liga:   liga,
+		Tnum:   tnum,
+		Lang:   lang,
 	}
 }
 
@@ -1088,9 +1092,9 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) faceCacheKe
 func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
 	key := t.lastFaceCacheKey
 	if forceBold {
-		key.weight = text.WeightBold
+		key.Weight = text.WeightBold
 	}
-	return fontFace(context, key)
+	return fontFace(context, key, t.font)
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {

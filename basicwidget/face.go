@@ -14,6 +14,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
 //go:generate go run gen.go
@@ -100,17 +101,8 @@ func (f *Font) ID() uint64 {
 	return f.id
 }
 
-type faceCacheKey struct {
-	font   *Font
-	size   float64
-	weight text.Weight
-	liga   bool
-	tnum   bool
-	lang   language.Tag
-}
-
 var (
-	theFaceCache map[faceCacheKey]text.Face
+	theFaceCache map[textutil.FaceKey]text.Face
 )
 
 var (
@@ -122,7 +114,7 @@ var (
 	prevLocales []language.Tag
 )
 
-func fontFace(context *guigui.Context, key faceCacheKey) text.Face {
+func fontFace(context *guigui.Context, key textutil.FaceKey, font *Font) text.Face {
 	// As font entires registered by [RegisterFonts] might be affected by locales,
 	// clear the cache when the locales change.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
@@ -137,9 +129,9 @@ func fontFace(context *guigui.Context, key faceCacheKey) text.Face {
 	}
 
 	tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
-	if key.font != nil {
-		tmpFaceSourceEntries = append(tmpFaceSourceEntries, key.font.entries...)
-		if key.font.useFallback {
+	if font != nil {
+		tmpFaceSourceEntries = append(tmpFaceSourceEntries, font.entries...)
+		if font.useFallback {
 			tmpFaceSourceEntries = appendFontFaceEntries(tmpFaceSourceEntries, context)
 		}
 	} else {
@@ -150,16 +142,16 @@ func fontFace(context *guigui.Context, key faceCacheKey) text.Face {
 	for _, entry := range tmpFaceSourceEntries {
 		gtf := &text.GoTextFace{
 			Source:   entry.FaceSource,
-			Size:     key.size,
-			Language: key.lang,
+			Size:     key.Size,
+			Language: key.Lang,
 		}
-		gtf.SetVariation(tagWght, float32(key.weight))
-		if key.liga {
+		gtf.SetVariation(tagWght, float32(key.Weight))
+		if key.Liga {
 			gtf.SetFeature(tagLiga, 1)
 		} else {
 			gtf.SetFeature(tagLiga, 0)
 		}
-		if key.tnum {
+		if key.Tnum {
 			gtf.SetFeature(tagTnum, 1)
 		} else {
 			gtf.SetFeature(tagTnum, 0)
@@ -183,7 +175,7 @@ func fontFace(context *guigui.Context, key faceCacheKey) text.Face {
 	}
 
 	if theFaceCache == nil {
-		theFaceCache = map[faceCacheKey]text.Face{}
+		theFaceCache = map[textutil.FaceKey]text.Face{}
 	}
 	theFaceCache[key] = mf
 
