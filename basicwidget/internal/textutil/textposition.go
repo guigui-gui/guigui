@@ -74,144 +74,46 @@ type TextPositionParams struct {
 	VisualLineIndexHint  int
 }
 
-// resolveCaretLine maps p.Index to its committed logical-line index and
-// shapes that one line. slowPath=true tells the caller to fall back to the
-// unrestricted walk: no sidecar, empty document, or composition straddles a
-// logical-line boundary. count==0 with slowPath=false means the index was
-// out of range. m is non-nil iff count > 0.
-func resolveCaretLine(p *TextPositionParams) (
-	m *lineMeasurer, committedLineIdx, indexInLine int,
-	pos0, pos1 TextPosition, count int, slowPath bool,
-) {
+// logicalLineAndCaretPosition maps p.Index to its logical line through m, shapes that
+// one line, and returns the line-local caret position(s). pos0 and pos1 are
+// line-local: Top and Bottom are measured from the line's top, not the
+// document top. count is 1, or 2 at a soft-wrap boundary; count==0 means
+// p.Index is out of range.
+func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextPositionParams) (logicalLineIdx, indexInLine int, pos0, pos1 TextPosition, count int) {
 	index := p.Index
 	if index < 0 || index > p.RenderingTextLength {
-		return nil, 0, 0, TextPosition{}, TextPosition{}, 0, false
+		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
-	if p.LineByteOffsets == nil {
-		return nil, 0, 0, TextPosition{}, TextPosition{}, 0, true
-	}
-	n := p.LineByteOffsets.LineCount()
-	if n == 0 {
-		return nil, 0, 0, TextPosition{}, TextPosition{}, 0, true
-	}
-
-	// Resolve composition shifts so the committed-text sidecar is
-	// usable without a rebuild. compInfo carries the selection line
-	// and the constant byte shifts applied to lines past it; hasComp
-	// tracks whether to apply them at all. The visual-line-count delta
-	// the old code maintained explicitly is now folded into the
-	// per-line walk via lineMeasurer.visualLineCount — measuring the
-	// rendering content at compInfo.LineIndex picks up the delta
-	// naturally.
-	var compInfo CompositionInfo
-	var hasComp bool
-	var compStart, compRenderingEnd int
-	if p.CompositionLen > 0 {
-		selectionLineIdx := p.LineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
-		cs := p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
-		byteDelta := p.CompositionLen - (p.SelectionEnd - p.SelectionStart)
-		ce := p.RenderingTextLength - byteDelta
-		if selectionLineIdx+1 < n {
-			ce = p.LineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx + 1)
-		}
-		// The selection-line slices are only valid when the selection
-		// lies inside a single logical line; otherwise ce+byteDelta
-		// underflows. When the selection crosses lines the slices stay
-		// empty — [ComputeCompositionInfo]'s own multi-line check
-		// returns false before reading them, and the caller falls back
-		// to the slow path.
-		var committedSelectionLine, renderingSelectionLine string
-		if p.Options.WrapMode != WrapModeNone && p.LineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
-			committedSelectionLine = p.CommittedTextRange(cs, ce)
-			renderingSelectionLine = p.RenderingTextRange(cs, ce+byteDelta)
-		}
-
-		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			CompositionText:        p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
-			LineByteOffsets:        p.LineByteOffsets,
-			SelectionStart:         p.SelectionStart,
-			SelectionEnd:           p.SelectionEnd,
-			WrapMode:               p.Options.WrapMode,
-			CommittedSelectionLine: committedSelectionLine,
-			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Options.Face,
-			LineHeight:             p.Options.LineHeight,
-			TabWidth:               p.Options.TabWidth,
-			KeepTailingSpace:       p.Options.KeepTailingSpace,
-			WrapWidth:              p.Width,
-		})
-		if !ok {
-			// Composition straddles a logical-line boundary: the
-			// committed sidecar's logical-line shape doesn't match
-			// the rendering text. Fall back to the unrestricted walk.
-			return nil, 0, 0, TextPosition{}, TextPosition{}, 0, true
-		}
-		compInfo = info
-		hasComp = true
-		compStart = p.SelectionStart
-		compRenderingEnd = p.SelectionStart + p.CompositionLen
-	}
-
-	// Map rendering index to a committed byte offset for line lookup.
-	// The composition replaces committed[sStart:sEnd] with rendering
-	// bytes [compStart, compRenderingEnd); lines on either side are
-	// unaffected other than a constant byte shift past the splice.
-	if hasComp {
-		switch {
-		case index < compStart:
-			committedLineIdx = p.LineByteOffsets.LineIndexForByteOffset(index)
-		case index <= compRenderingEnd:
-			committedLineIdx = compInfo.LineIndex
-		default:
-			committedLineIdx = p.LineByteOffsets.LineIndexForByteOffset(index - compInfo.RenderingByteShift)
-		}
-	} else {
-		committedLineIdx = p.LineByteOffsets.LineIndexForByteOffset(index)
-	}
-
-	committedTextLen := p.RenderingTextLength
-	if hasComp {
-		committedTextLen -= compInfo.RenderingByteShift
-	}
-
-	m = &lineMeasurer{
-		offsets:            p.LineByteOffsets,
-		logicalLineCount:   n,
-		committedTextLen:   committedTextLen,
-		renderingTextRange: p.RenderingTextRange,
-		width:              p.Width,
-		face:               p.Options.Face,
-		tabWidth:           p.Options.TabWidth,
-		keepTailingSpace:   p.Options.KeepTailingSpace,
-		wrapMode:           p.Options.WrapMode,
-		composition:        compInfo,
-	}
-
-	renderingLineStart, renderingLineEnd := m.renderingRange(committedLineIdx)
+	logicalLineIdx = m.logicalLineIndexForRenderingIndex(index)
+	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIdx)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine = index - renderingLineStart
 
 	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, p.Options)
 	if count == 0 {
-		return nil, 0, 0, TextPosition{}, TextPosition{}, 0, false
+		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
-	return m, committedLineIdx, indexInLine, pos0, pos1, count, false
+	return logicalLineIdx, indexInLine, pos0, pos1, count
 }
 
-// PositionWithinLogicalLine returns the caret's committed-text logical-line
-// index and its visual position(s). pos.Top / pos.Bottom are measured from
-// the start of the line at lineIdx, not the document top.
+// PositionWithinLogicalLine returns the caret's logical-line index and its
+// visual position(s). pos.Top / pos.Bottom are measured from the start of the
+// line at lineIdx, not the document top.
 //
 // count==0 when the result is unavailable: index out of range, no sidecar,
 // empty document, or composition straddling a logical-line boundary. Callers
 // needing the slow whole-document fallback in that case should call
 // [TextPositionFromIndex].
 func PositionWithinLogicalLine(p *TextPositionParams) (lineIdx int, position0, position1 TextPosition, count int) {
-	_, committedLineIdx, _, pos0, pos1, c, slowPath := resolveCaretLine(p)
-	if slowPath || c == 0 {
+	m, ok := newLogicalLineMeasurer(p)
+	if !ok {
 		return 0, TextPosition{}, TextPosition{}, 0
 	}
-	return committedLineIdx, pos0, pos1, c
+	logicalLineIdx, _, pos0, pos1, c := logicalLineAndCaretPosition(m, p)
+	if c == 0 {
+		return 0, TextPosition{}, TextPosition{}, 0
+	}
+	return logicalLineIdx, pos0, pos1, c
 }
 
 // TextPositionFromIndex returns the visual position(s) for p.Index in the
@@ -219,24 +121,25 @@ func PositionWithinLogicalLine(p *TextPositionParams) (lineIdx int, position0, p
 // (p.LogicalLineIndexHint, p.VisualLineIndexHint); count is 1, or 2 at line-
 // break boundaries.
 func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosition, count int) {
-	m, committedLineIdx, indexInLine, pos0, pos1, c, slowPath := resolveCaretLine(p)
-	if slowPath {
+	m, ok := newLogicalLineMeasurer(p)
+	if !ok {
 		str := p.RenderingTextRange(0, p.RenderingTextLength)
 		vls := visualLines(p.Width, str, p.Options.WrapMode, func(s string, indexInBytes int) float64 {
 			return advance(s, indexInBytes, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
 		})
 		return textPositionFromIndexInVisualLines(p.Width, vls, p.Index, p.Options)
 	}
+
+	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p)
 	if c == 0 {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	n := p.LineByteOffsets.LineCount()
 
 	// visualLineIndexAt walks from the caller-supplied hint to
 	// targetLine, accumulating per-line wrap counts so the result
 	// is the visual-line index where targetLine starts in the
 	// caller's coordinate system.
-	hintLine := min(max(p.LogicalLineIndexHint, 0), n-1)
+	hintLine := min(max(p.LogicalLineIndexHint, 0), m.logicalLineCount-1)
 	visualLineIndexAt := func(targetLine int) int {
 		v := p.VisualLineIndexHint
 		if targetLine == hintLine {
@@ -253,7 +156,7 @@ func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosi
 		}
 		return v
 	}
-	precedingVisualLines := visualLineIndexAt(committedLineIdx)
+	precedingVisualLines := visualLineIndexAt(logicalLineIdx)
 	yOffset := p.Options.LineHeight * float64(precedingVisualLines)
 
 	pos0.Top += yOffset
@@ -271,13 +174,13 @@ func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosi
 	// (pos0=tail, pos1=head, count=2). Soft-wrap boundaries within a
 	// single logical line are already handled by
 	// [TextPositionFromIndexInLogicalLine].
-	if c == 1 && indexInLine == 0 && committedLineIdx > 0 {
-		prevCommittedLineIdx := committedLineIdx - 1
-		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevCommittedLineIdx)
+	if c == 1 && indexInLine == 0 && logicalLineIdx > 0 {
+		prevLogicalLineIdx := logicalLineIdx - 1
+		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevLogicalLineIdx)
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
 		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), p.Options)
 		if prevCount > 0 {
-			prevYOffset := p.Options.LineHeight * float64(visualLineIndexAt(prevCommittedLineIdx))
+			prevYOffset := p.Options.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
 			prevPos0.Top += prevYOffset
 			prevPos0.Bottom += prevYOffset
 			pos1 = pos0

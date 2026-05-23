@@ -211,7 +211,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 	}
 	first := min(max(p.FirstLogicalLineInViewport, 0), n-1)
 
-	m := &lineMeasurer{
+	m := &logicalLineMeasurer{
 		offsets:            p.LineByteOffsets,
 		logicalLineCount:   n,
 		committedTextLen:   p.RenderingTextLength - p.Composition.RenderingByteShift,

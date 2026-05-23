@@ -167,7 +167,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 		committedTextLen -= compInfo.RenderingByteShift
 	}
 
-	m := &lineMeasurer{
+	m := &logicalLineMeasurer{
 		offsets:            p.LineByteOffsets,
 		logicalLineCount:   n,
 		committedTextLen:   committedTextLen,
