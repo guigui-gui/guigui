@@ -254,7 +254,7 @@ func TestAbstractListSetItemsRefreshesSelectionStateKey(t *testing.T) {
 		t.Fatalf("SelectedItemIndex() = %d, want %d", got, want)
 	}
 
-	before := l.SelectionStateKey()
+	before := slices.Clone(l.SelectionStateKey())
 
 	// Re-populate so the previously selected index 1 no longer exists. SetItems
 	// must prune the selection and refresh the fingerprint that WriteStateKey
@@ -266,8 +266,8 @@ func TestAbstractListSetItemsRefreshesSelectionStateKey(t *testing.T) {
 		t.Fatalf("SelectedItemCount() = %d, want %d", got, want)
 	}
 
-	if after := l.SelectionStateKey(); after == before {
-		t.Errorf("SelectionStateKey() did not change after SetItems dropped the selected index: still %q", after)
+	if after := l.SelectionStateKey(); slices.Equal(after, before) {
+		t.Errorf("SelectionStateKey() did not change after SetItems dropped the selected index: still %v", after)
 	}
 }
 

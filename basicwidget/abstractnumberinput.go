@@ -20,19 +20,6 @@ type abstractNumberInput struct {
 	step    big.Int
 	stepSet bool
 
-	// Cached base-10 string representations for [abstractNumberInput.writeStateKey].
-	// These are refreshed only when the corresponding big.Int is actually changed,
-	// so [abstractNumberInput.writeStateKey] can feed the writer without
-	// re-stringifying on every call.
-	//
-	// An empty string means "not set": for value it is equivalent to the zero-value
-	// big.Int until the first mutation; for min/max/step it is equivalent to the
-	// *Set flag being false.
-	valueString string
-	minString   string
-	maxString   string
-	stepString  string
-
 	onValueChanged       func(value int, committed bool)
 	onValueChangedString func(value string, force bool)
 	onValueChangedBigInt func(value *big.Int, committed bool)
@@ -41,10 +28,19 @@ type abstractNumberInput struct {
 }
 
 func (a *abstractNumberInput) writeStateKey(w *guigui.StateKeyWriter) {
-	w.WriteString(a.valueString)
-	w.WriteString(a.minString)
-	w.WriteString(a.maxString)
-	w.WriteString(a.stepString)
+	w.WriteBigInt(&a.value)
+	w.WriteBool(a.minSet)
+	if a.minSet {
+		w.WriteBigInt(&a.min)
+	}
+	w.WriteBool(a.maxSet)
+	if a.maxSet {
+		w.WriteBigInt(&a.max)
+	}
+	w.WriteBool(a.stepSet)
+	if a.stepSet {
+		w.WriteBigInt(&a.step)
+	}
 }
 
 func (a *abstractNumberInput) OnValueChanged(f func(value int, committed bool)) {
@@ -170,7 +166,6 @@ func (a *abstractNumberInput) setValue(value *big.Int, force bool, committed boo
 		return
 	}
 	a.value.Set(value)
-	a.valueString = a.value.Text(10)
 	a.dispatchValueChangeEvents(force, committed)
 }
 
@@ -184,7 +179,6 @@ func (a *abstractNumberInput) MinimumValueBigInt() *big.Int {
 func (a *abstractNumberInput) SetMinimumValue(minimum int) {
 	a.min.SetInt64(int64(minimum))
 	a.minSet = true
-	a.minString = a.min.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
@@ -192,26 +186,22 @@ func (a *abstractNumberInput) SetMinimumValueBigInt(minimum *big.Int) {
 	if minimum == nil {
 		a.min = big.Int{}
 		a.minSet = false
-		a.minString = ""
 		return
 	}
 	a.min.Set(minimum)
 	a.minSet = true
-	a.minString = a.min.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
 func (a *abstractNumberInput) SetMinimumValueInt64(minimum int64) {
 	a.min.SetInt64(minimum)
 	a.minSet = true
-	a.minString = a.min.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
 func (a *abstractNumberInput) SetMinimumValueUint64(minimum uint64) {
 	a.min.SetUint64(minimum)
 	a.minSet = true
-	a.minString = a.min.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
@@ -225,7 +215,6 @@ func (a *abstractNumberInput) MaximumValueBigInt() *big.Int {
 func (a *abstractNumberInput) SetMaximumValue(maximum int) {
 	a.max.SetInt64(int64(maximum))
 	a.maxSet = true
-	a.maxString = a.max.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
@@ -233,76 +222,48 @@ func (a *abstractNumberInput) SetMaximumValueBigInt(maximum *big.Int) {
 	if maximum == nil {
 		a.max = big.Int{}
 		a.maxSet = false
-		a.maxString = ""
 		return
 	}
 	a.max.Set(maximum)
 	a.maxSet = true
-	a.maxString = a.max.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
 func (a *abstractNumberInput) SetMaximumValueInt64(maximum int64) {
 	a.max.SetInt64(maximum)
 	a.maxSet = true
-	a.maxString = a.max.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
 func (a *abstractNumberInput) SetMaximumValueUint64(maximum uint64) {
 	a.max.SetUint64(maximum)
 	a.maxSet = true
-	a.maxString = a.max.Text(10)
 	a.SetValueBigInt((&big.Int{}).Set(&a.value), true)
 }
 
 func (a *abstractNumberInput) SetStep(step int) {
-	oldSet := a.stepSet
-	oldStep := a.step
 	a.step.SetInt64(int64(step))
 	a.stepSet = true
-	if !oldSet || oldStep.Cmp(&a.step) != 0 {
-		a.stepString = a.step.Text(10)
-	}
 }
 
 func (a *abstractNumberInput) SetStepBigInt(step *big.Int) {
-	oldSet := a.stepSet
-	oldStep := a.step
 	if step == nil {
 		a.step = big.Int{}
 		a.stepSet = false
-	} else {
-		a.step.Set(step)
-		a.stepSet = true
+		return
 	}
-	if oldSet != a.stepSet || oldStep.Cmp(&a.step) != 0 {
-		if a.stepSet {
-			a.stepString = a.step.Text(10)
-		} else {
-			a.stepString = ""
-		}
-	}
+	a.step.Set(step)
+	a.stepSet = true
 }
 
 func (a *abstractNumberInput) SetStepInt64(step int64) {
-	oldSet := a.stepSet
-	oldStep := a.step
 	a.step.SetInt64(step)
 	a.stepSet = true
-	if !oldSet || oldStep.Cmp(&a.step) != 0 {
-		a.stepString = a.step.Text(10)
-	}
 }
 
 func (a *abstractNumberInput) SetStepUint64(step uint64) {
-	oldSet := a.stepSet
-	oldStep := a.step
 	a.step.SetUint64(step)
 	a.stepSet = true
-	if !oldSet || oldStep.Cmp(&a.step) != 0 {
-		a.stepString = a.step.Text(10)
-	}
 }
 
 func (a *abstractNumberInput) clamp(value *big.Int) {

@@ -7,8 +7,6 @@ import (
 	"maps"
 	"math"
 	"slices"
-	"strconv"
-	"strings"
 
 	"github.com/guigui-gui/guigui"
 )
@@ -43,35 +41,29 @@ type abstractList[Value comparable, Item valuer[Value]] struct {
 	anchorIndex          int
 	lastExtendIndexPlus1 int
 
-	// selectionString is a comparable fingerprint of the selected-indices set,
-	// refreshed only when [abstractList.selectItemsByIndices] actually changes
-	// the selection. Callers include it in their [Widget.WriteStateKey] so selection
-	// changes trigger automatic rebuilds without explicit [guigui.RequestRebuild]
+	// selectionFingerprint is the sorted selected-indices set, refreshed only
+	// when [abstractList.selectItemsByIndices] actually changes the selection.
+	// Callers include it in their [Widget.WriteStateKey] so selection changes
+	// trigger automatic rebuilds without explicit [guigui.RequestRebuild]
 	// calls — and without the false positives a bump counter would produce.
-	selectionString string
+	selectionFingerprint []int
 }
 
 func (a *abstractList[Value, Item]) writeStateKey(w *guigui.StateKeyWriter) {
-	w.WriteString(a.selectionString)
+	w.WriteInt(len(a.selectionFingerprint))
+	for _, idx := range a.selectionFingerprint {
+		w.WriteInt(idx)
+	}
 }
 
-// refreshSelectionString encodes the current selectedIndices as a sorted,
-// comma-separated decimal string. Called only at the points where the
-// selection is actually mutated.
-func (a *abstractList[Value, Item]) refreshSelectionString() {
-	a.tmpIndexSlice = a.tmpIndexSlice[:0]
+// refreshSelectionFingerprint stores the current selectedIndices as a sorted
+// slice. Called only at the points where the selection is actually mutated.
+func (a *abstractList[Value, Item]) refreshSelectionFingerprint() {
+	a.selectionFingerprint = a.selectionFingerprint[:0]
 	for idx := range a.selectedIndices {
-		a.tmpIndexSlice = append(a.tmpIndexSlice, idx)
+		a.selectionFingerprint = append(a.selectionFingerprint, idx)
 	}
-	slices.Sort(a.tmpIndexSlice)
-	var sb strings.Builder
-	for i, idx := range a.tmpIndexSlice {
-		if i > 0 {
-			sb.WriteByte(',')
-		}
-		sb.WriteString(strconv.Itoa(idx))
-	}
-	a.selectionString = sb.String()
+	slices.Sort(a.selectionFingerprint)
 }
 
 func (a *abstractList[Value, Item]) isItemIndexSelectable(index int) bool {
@@ -117,7 +109,7 @@ func (a *abstractList[Value, Item]) SetItems(items []Item) {
 		return !a.isItemIndexSelectable(idx)
 	})
 	if len(a.selectedIndices) != origLen {
-		a.refreshSelectionString()
+		a.refreshSelectionFingerprint()
 	}
 }
 
@@ -314,7 +306,7 @@ func (a *abstractList[Value, Item]) selectItemsByIndices(indices map[int]struct{
 			a.onItemSelected(newFirstIndex)
 		}
 	}
-	a.refreshSelectionString()
+	a.refreshSelectionFingerprint()
 }
 
 func (a *abstractList[Value, Item]) SelectItemByValue(value Value, forceFireEvents bool) {

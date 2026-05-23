@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"unsafe"
 
 	"github.com/zeebo/xxh3"
@@ -137,6 +138,16 @@ func (w *StateKeyWriter) WriteFloat64(v float64) {
 func (w *StateKeyWriter) WriteString(s string) {
 	w.WriteInt(len(s))
 	_, _ = io.WriteString(&w.h, s)
+}
+
+// WriteBigInt writes the value of a [big.Int] into the writer.
+func (w *StateKeyWriter) WriteBigInt(v *big.Int) {
+	w.WriteInt(v.Sign())
+	bits := v.Bits()
+	w.WriteInt(len(bits))
+	for _, word := range bits {
+		w.WriteUint(uint(word))
+	}
 }
 
 // WriteWidget writes the identity of a [Widget] into the writer.

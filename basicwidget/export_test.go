@@ -26,8 +26,8 @@ type AbstractList[Value comparable, Item AbstractListValuer[Value]] struct {
 // SelectionStateKey returns the fingerprint that writeStateKey feeds into the
 // StateKeyWriter, so tests can detect whether a selection change is observable
 // through the state-key machinery.
-func (a *AbstractList[Value, Item]) SelectionStateKey() string {
-	return a.selectionString
+func (a *AbstractList[Value, Item]) SelectionStateKey() []int {
+	return a.selectionFingerprint
 }
 
 type AbstractListTestItem[T comparable] struct {
