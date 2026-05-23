@@ -18,7 +18,7 @@ import (
 // logical-line offset fields cleared. Parity tests use this to drive the
 // unrestricted whole-document fallback inside [textutil.TextPositionFromIndex]
 // as the reference value they compare the offset-accelerated path against.
-func withoutLineOffsets(p *textutil.TextPositionParams) *textutil.TextPositionParams {
+func withoutLineOffsets(p *textutil.TextLayoutParams) *textutil.TextLayoutParams {
 	q := *p
 	q.PrecomputedLineByteOffsets = nil
 	q.LogicalLineIndexHint = 0
@@ -69,13 +69,12 @@ func TestTextPositionFromIndex(t *testing.T) {
 	// Baseline: position at index 0 of a single-line string sits on visual
 	// line 0. Use it to derive line N's Top without hard-coding the face's
 	// vertical padding.
-	baseline, _, _ := textutil.TextPositionFromIndex(&textutil.TextPositionParams{
-		Index:               0,
+	baseline, _, _ := textutil.TextPositionFromIndex(&textutil.TextLayoutParams{
 		RenderingTextRange:  func(start, end int) string { return "a"[start:end] },
 		RenderingTextLength: 1,
 		Width:               1000,
 		Options:             op,
-	})
+	}, 0)
 	topOfLine := func(n int) float64 {
 		return baseline.Top + float64(n)*lineHeight
 	}
@@ -149,13 +148,12 @@ func TestTextPositionFromIndex(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionParams{
-				Index:               tc.index,
+			pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextLayoutParams{
 				RenderingTextRange:  func(start, end int) string { return tc.text[start:end] },
 				RenderingTextLength: len(tc.text),
 				Width:               1000,
 				Options:             op,
-			})
+			}, tc.index)
 			if count != tc.wantCount {
 				t.Fatalf("count: got %d, want %d", count, tc.wantCount)
 			}
@@ -221,7 +219,7 @@ func TestTextPositionFromIndexLineOffsetsParity(t *testing.T) {
 				}
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.str)
-				params := &textutil.TextPositionParams{
+				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      width,
@@ -230,9 +228,8 @@ func TestTextPositionFromIndexLineOffsetsParity(t *testing.T) {
 				}
 
 				for idx := 0; idx <= len(tc.str); idx++ {
-					params.Index = idx
-					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params))
-					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 					if gotCount != wantCount {
 						t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
 						continue
@@ -268,7 +265,7 @@ func TestTextPositionFromIndexLineOffsetsWordWrap(t *testing.T) {
 
 	var l textutil.LineByteOffsets
 	rebuildFromString(&l, str)
-	params := &textutil.TextPositionParams{
+	params := &textutil.TextLayoutParams{
 		RenderingTextRange:         func(start, end int) string { return str[start:end] },
 		RenderingTextLength:        len(str),
 		Width:                      narrowWidth,
@@ -277,9 +274,8 @@ func TestTextPositionFromIndexLineOffsetsWordWrap(t *testing.T) {
 	}
 
 	for idx := 0; idx <= len(str); idx++ {
-		params.Index = idx
-		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params))
-		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 		if gotCount != wantCount {
 			t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
 			continue
@@ -323,8 +319,7 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
 				offset := float64(precVL(firstVisible)) * lineHeight
 				for _, idx := range []int{0, 1, 5, 30, 60, len(str) - 1, len(str)} {
-					params := &textutil.TextPositionParams{
-						Index:                      idx,
+					params := &textutil.TextLayoutParams{
 						RenderingTextRange:         func(start, end int) string { return str[start:end] },
 						RenderingTextLength:        len(str),
 						Width:                      math.MaxInt,
@@ -333,8 +328,8 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 						LogicalLineIndexHint:       firstVisible,
 						VisualLineIndexHint:        0,
 					}
-					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params))
-					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 
 					// The hint shifts pos.Top by the visual-line count
 					// preceding firstVisible, but X is unaffected.
@@ -410,7 +405,7 @@ func TestTextPositionFromIndexLineOffsetsComposition(t *testing.T) {
 				}
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.committed)
-				params := &textutil.TextPositionParams{
+				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return rendering[start:end] },
 					RenderingTextLength:        len(rendering),
 					Width:                      width,
@@ -423,9 +418,8 @@ func TestTextPositionFromIndexLineOffsetsComposition(t *testing.T) {
 				}
 
 				for idx := 0; idx <= len(rendering); idx++ {
-					params.Index = idx
-					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params))
-					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 					if gotCount != wantCount {
 						t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
 						continue
@@ -459,7 +453,7 @@ func TestTextPositionFromIndexLineOffsetsCompositionWithLineBreak(t *testing.T) 
 
 	var l textutil.LineByteOffsets
 	rebuildFromString(&l, committed)
-	params := &textutil.TextPositionParams{
+	params := &textutil.TextLayoutParams{
 		RenderingTextRange:         func(start, end int) string { return rendering[start:end] },
 		RenderingTextLength:        len(rendering),
 		Width:                      width,
@@ -472,9 +466,8 @@ func TestTextPositionFromIndexLineOffsetsCompositionWithLineBreak(t *testing.T) 
 	}
 
 	for idx := 0; idx <= len(rendering); idx++ {
-		params.Index = idx
-		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params))
-		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 		if gotCount != wantCount {
 			t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
 			continue
@@ -498,7 +491,7 @@ func TestTextPositionFromIndexLineOffsetsOutOfRange(t *testing.T) {
 	str := "abc"
 	var l textutil.LineByteOffsets
 	rebuildFromString(&l, str)
-	params := &textutil.TextPositionParams{
+	params := &textutil.TextLayoutParams{
 		RenderingTextRange:         func(start, end int) string { return str[start:end] },
 		RenderingTextLength:        len(str),
 		Width:                      math.MaxInt,
@@ -507,8 +500,7 @@ func TestTextPositionFromIndexLineOffsetsOutOfRange(t *testing.T) {
 	}
 
 	for _, idx := range []int{-1, len(str) + 1, 1000} {
-		params.Index = idx
-		_, _, c := textutil.TextPositionFromIndex(params)
+		_, _, c := textutil.TextPositionFromIndex(params, idx)
 		if c != 0 {
 			t.Errorf("idx=%d: count=%d, want 0", idx, c)
 		}
@@ -564,7 +556,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.str)
 				precVL := precedingVisualLineCountFromString(tc.str, width, wrapMode, face, 0, false)
-				params := &textutil.TextPositionParams{
+				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      width,
@@ -573,9 +565,8 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 				}
 
 				for idx := 0; idx <= len(tc.str); idx++ {
-					params.Index = idx
-					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(params)
-					gotLine, gotP0, gotP1, gotCount := textutil.PositionWithinLogicalLine(params)
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(params, idx)
+					gotLine, gotP0, gotP1, gotCount := textutil.PositionWithinLogicalLine(params, idx)
 
 					if wantCount == 0 {
 						if gotCount != 0 {
@@ -634,23 +625,21 @@ func TestTextPositionFromIndexNilLineOffsets(t *testing.T) {
 
 	str := "abc\ndef"
 	const width = math.MaxInt
-	params := &textutil.TextPositionParams{
+	params := &textutil.TextLayoutParams{
 		RenderingTextRange:  func(start, end int) string { return str[start:end] },
 		RenderingTextLength: len(str),
 		Width:               width,
 		Options:             op,
 	}
-	noLineOffsets := &textutil.TextPositionParams{
+	noLineOffsets := &textutil.TextLayoutParams{
 		RenderingTextRange:  func(start, end int) string { return str[start:end] },
 		RenderingTextLength: len(str),
 		Width:               width,
 		Options:             op,
 	}
 	for idx := 0; idx <= len(str); idx++ {
-		noLineOffsets.Index = idx
-		params.Index = idx
-		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(noLineOffsets)
-		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params)
+		wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(noLineOffsets, idx)
+		gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
 		if gotCount != wantCount {
 			t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
 			continue

@@ -133,6 +133,67 @@ const (
 	VerticalAlignBottom
 )
 
+// TextLayoutParams carries the text-layout context shared by
+// [TextIndexFromPosition], [TextPositionFromIndex], and
+// [PositionWithinLogicalLine]. The first group of fields is always
+// required; the second group is optional state that enables the fast
+// path backed by the precomputed logical-line offsets.
+type TextLayoutParams struct {
+	// RenderingTextRange returns rendering[start:end), where the
+	// rendering text is the committed text with any active composition
+	// spliced in. RenderingTextLength is the total byte length of the
+	// rendering text. Required: all reads of the rendering text — both
+	// the fast path and the slow-path fallback — go through this
+	// callback so the caller never has to materialize the full
+	// document.
+	RenderingTextRange  func(start, end int) string
+	RenderingTextLength int
+
+	// Width is the rendering width.
+	Width int
+
+	// Options carries face, lineHeight, wrap mode, alignment, tab
+	// width, etc.
+	Options Options
+
+	// CommittedTextRange returns committed[start:end). Required when
+	// CompositionLen > 0; ignored otherwise.
+	CommittedTextRange func(start, end int) string
+
+	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
+	// Optional; when nil the query falls back to an O(documentLen) walk
+	// of every visual line.
+	PrecomputedLineByteOffsets *LineByteOffsets
+
+	// SelectionStart, SelectionEnd, CompositionLen describe an active
+	// IME composition: bytes [SelectionStart, SelectionEnd) in the
+	// committed text are replaced with bytes [SelectionStart,
+	// SelectionStart+CompositionLen) in the rendering text.
+	// CompositionLen == 0 means no active composition; the other
+	// fields are ignored in that case.
+	SelectionStart int
+	SelectionEnd   int
+	CompositionLen int
+
+	// LogicalLineIndexHint / VisualLineIndexHint define the visual-line
+	// coordinate system the walk starts from: the logical line at
+	// LogicalLineIndexHint is treated as starting at visual-line index
+	// VisualLineIndexHint, and the walk steps forward (or backward)
+	// from there to the line the query resolves to. The result is
+	// therefore expressed in the caller's coordinate system — (0, 0)
+	// measures from line 0 (the document top); (firstLogicalLineInViewport, 0)
+	// measures from the first visible line's top, used by virtualized
+	// text.
+	//
+	// The walk is bounded by the logical-line distance between the
+	// hint and the resolved line, so a caller that pins the hint inside
+	// its viewport pays only O(visible) typesetting per query. The zero
+	// value walks from the document top. Used only when
+	// PrecomputedLineByteOffsets is set.
+	LogicalLineIndexHint int
+	VisualLineIndexHint  int
+}
+
 // appendVisibleGlyphs appends the shaped clusters of str to glyphs. Each '\t'
 // is emitted as a synthetic [text.LazyGlyph] (Image returns nil) whose
 // AdvanceX spans to the next tab stop. Glyph rasterization is deferred — this

@@ -16,7 +16,7 @@ import (
 // to drive the unrestricted whole-document fallback inside
 // [textutil.TextIndexFromPosition] as the reference value they compare
 // the offset-accelerated path against.
-func withoutIndexLineOffsets(p *textutil.TextIndexFromPositionParams) *textutil.TextIndexFromPositionParams {
+func withoutIndexLineOffsets(p *textutil.TextLayoutParams) *textutil.TextLayoutParams {
 	q := *p
 	q.PrecomputedLineByteOffsets = nil
 	q.LogicalLineIndexHint = 0
@@ -54,7 +54,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 				}
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.str)
-				params := &textutil.TextIndexFromPositionParams{
+				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      width,
@@ -69,9 +69,9 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 				for line := 0; line < lineCount+1; line++ {
 					for _, x := range []int{-100, 0, 5, 50, 1000} {
 						y := int(float64(line) * lineHeight)
-						params.Position = image.Pt(x, y)
-						want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params))
-						got := textutil.TextIndexFromPosition(params)
+						position := image.Pt(x, y)
+						want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), position)
+						got := textutil.TextIndexFromPosition(params, position)
 						if got != want {
 							t.Errorf("line=%d x=%d: idx=%d, want %d", line, x, got, want)
 						}
@@ -94,7 +94,7 @@ func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 
 	var l textutil.LineByteOffsets
 	rebuildFromString(&l, str)
-	params := &textutil.TextIndexFromPositionParams{
+	params := &textutil.TextLayoutParams{
 		RenderingTextRange:         func(start, end int) string { return str[start:end] },
 		RenderingTextLength:        len(str),
 		Width:                      narrowWidth,
@@ -105,9 +105,9 @@ func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 	totalVL := textutil.MeasureHeight(narrowWidth, str, textutil.WrapModeNormal, face, lineHeight, 0, false) / lineHeight
 	for vl := 0; vl < int(totalVL)+1; vl++ {
 		for _, x := range []int{-10, 0, 30, 200} {
-			params.Position = image.Pt(x, int(float64(vl)*lineHeight))
-			want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params))
-			got := textutil.TextIndexFromPosition(params)
+			position := image.Pt(x, int(float64(vl)*lineHeight))
+			want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), position)
+			got := textutil.TextIndexFromPosition(params, position)
 			if got != want {
 				t.Errorf("vl=%d x=%d: idx=%d, want %d", vl, x, got, want)
 			}
@@ -150,7 +150,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 
 			totalVL := int(textutil.MeasureHeight(tc.width, tc.str, tc.wrapMode, face, lineHeight, 0, false) / lineHeight)
 			for hint := 0; hint < n; hint++ {
-				params := &textutil.TextIndexFromPositionParams{
+				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      tc.width,
@@ -161,9 +161,9 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 				}
 				for vl := 0; vl < totalVL+2; vl++ {
 					for _, x := range []int{-10, 0, 30, 200} {
-						params.Position = image.Pt(x, int(float64(vl)*lineHeight))
-						want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params))
-						got := textutil.TextIndexFromPosition(params)
+						position := image.Pt(x, int(float64(vl)*lineHeight))
+						want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), position)
+						got := textutil.TextIndexFromPosition(params, position)
 						if got != want {
 							t.Errorf("hint=%d vl=%d x=%d: idx=%d, want %d", hint, vl, x, got, want)
 						}
@@ -202,8 +202,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 
 			for _, firstVisible := range []int{0, 1, 10, 30, 49} {
 				for _, vlInViewport := range []int{-50, -5, -1, 0, 1, 5} {
-					params := &textutil.TextIndexFromPositionParams{
-						Position:                   image.Pt(0, int(float64(vlInViewport)*lineHeight)),
+					params := &textutil.TextLayoutParams{
 						RenderingTextRange:         func(start, end int) string { return str[start:end] },
 						RenderingTextLength:        len(str),
 						Width:                      math.MaxInt,
@@ -212,13 +211,13 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 						LogicalLineIndexHint:       firstVisible,
 						VisualLineIndexHint:        0,
 					}
+					position := image.Pt(0, int(float64(vlInViewport)*lineHeight))
 					// Reference: the same click in absolute coords (visual
 					// line firstVisible+vlInViewport from the document top)
 					// resolved by the fallback without precomputed offsets.
-					ref := *params
-					ref.Position = image.Pt(0, int(float64(firstVisible+vlInViewport)*lineHeight))
-					want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(&ref))
-					got := textutil.TextIndexFromPosition(params)
+					refPosition := image.Pt(0, int(float64(firstVisible+vlInViewport)*lineHeight))
+					want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), refPosition)
+					got := textutil.TextIndexFromPosition(params, position)
 					if got != want {
 						t.Errorf("firstVisible=%d vlInViewport=%d: idx=%d, want %d", firstVisible, vlInViewport, got, want)
 					}
@@ -257,7 +256,7 @@ func TestTextIndexFromPositionLineOffsetsComposition(t *testing.T) {
 			rendering := tc.committed[:tc.c.sStart] + tc.c.composition + tc.committed[tc.c.sEnd:]
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, tc.committed)
-			params := &textutil.TextIndexFromPositionParams{
+			params := &textutil.TextLayoutParams{
 				RenderingTextRange:         func(start, end int) string { return rendering[start:end] },
 				RenderingTextLength:        len(rendering),
 				Width:                      width,
@@ -276,9 +275,9 @@ func TestTextIndexFromPositionLineOffsetsComposition(t *testing.T) {
 			}
 			for line := 0; line < renderingLineCount+1; line++ {
 				for _, x := range []int{0, 5, 50, 1000} {
-					params.Position = image.Pt(x, int(float64(line)*lineHeight))
-					want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params))
-					got := textutil.TextIndexFromPosition(params)
+					position := image.Pt(x, int(float64(line)*lineHeight))
+					want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), position)
+					got := textutil.TextIndexFromPosition(params, position)
 					if got != want {
 						t.Errorf("line=%d x=%d: idx=%d, want %d", line, x, got, want)
 					}

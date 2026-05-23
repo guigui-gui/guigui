@@ -40,7 +40,7 @@ type logicalLineMeasurer struct {
 // once so individual line queries need not redo it. ok is false when the offsets
 // are absent or empty, or the composition straddles a logical-line boundary; the
 // caller must then fall back to the unrestricted walk.
-func newLogicalLineMeasurer(p *TextPositionParams) (*logicalLineMeasurer, bool) {
+func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 	if p.PrecomputedLineByteOffsets == nil {
 		return nil, false
 	}

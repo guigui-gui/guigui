@@ -192,13 +192,12 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 				// Whole-document positions. When count == 2, one of (pos0, pos1)
 				// matches our per-logical query: the head of the next line, at
 				// y == originY.
-				wp0, wp1, wpCount := textutil.TextPositionFromIndex(&textutil.TextPositionParams{
-					Index:               idx,
+				wp0, wp1, wpCount := textutil.TextPositionFromIndex(&textutil.TextLayoutParams{
 					RenderingTextRange:  func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength: len(tc.str),
 					Width:               width,
 					Options:             op,
-				})
+				}, idx)
 
 				expectedTop := lp0.Top + originY
 
@@ -265,13 +264,12 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 			// Local Y near the top of the per-logical line maps to a whole-doc
 			// Y of originY.
 			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], &op)
-			whole := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
-				Position:            image.Pt(q.x, int(originY)),
+			whole := textutil.TextIndexFromPosition(&textutil.TextLayoutParams{
 				RenderingTextRange:  func(start, end int) string { return str[start:end] },
 				RenderingTextLength: len(str),
 				Width:               width,
 				Options:             op,
-			})
+			}, image.Pt(q.x, int(originY)))
 			lineStart := l.ByteOffsetByLineIndex(q.lineIndex)
 			if got, want := perLine+lineStart, whole; got != want {
 				t.Errorf("perLine(%d)+lineStart(%d) = %d, whole = %d",

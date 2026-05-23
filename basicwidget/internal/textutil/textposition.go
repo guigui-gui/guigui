@@ -11,76 +11,12 @@ type TextPosition struct {
 	Bottom float64
 }
 
-// TextPositionParams describes the inputs for
-// [TextPositionFromIndex]. The first group of fields is always
-// required; the second group is optional state that enables the
-// fast path backed by the precomputed logical-line offsets.
-type TextPositionParams struct {
-	// Index is the byte offset in the rendering text to query.
-	Index int
-
-	// RenderingTextRange returns rendering[start:end), where the
-	// rendering text is the committed text with any active composition
-	// spliced in. RenderingTextLength is the total byte length of the
-	// rendering text. Required: all reads of the rendering text — both
-	// the fast path and the slow-path fallback — go through this
-	// callback so the caller never has to materialize the full
-	// document.
-	RenderingTextRange  func(start, end int) string
-	RenderingTextLength int
-
-	// Width is the rendering width.
-	Width int
-
-	// Options carries face, lineHeight, wrap mode, alignment, tab
-	// width, etc.
-	Options Options
-
-	// CommittedTextRange returns committed[start:end). Required when
-	// CompositionLen > 0; ignored otherwise.
-	CommittedTextRange func(start, end int) string
-
-	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
-	// Optional; when nil [TextPositionFromIndex] falls back to an
-	// O(documentLen) walk of every visual line.
-	PrecomputedLineByteOffsets *LineByteOffsets
-
-	// SelectionStart, SelectionEnd, CompositionLen describe an active
-	// IME composition: bytes [SelectionStart, SelectionEnd) in the
-	// committed text are replaced with bytes [SelectionStart,
-	// SelectionStart+CompositionLen) in the rendering text.
-	// CompositionLen == 0 means no active composition; the other
-	// fields are ignored in that case.
-	SelectionStart int
-	SelectionEnd   int
-	CompositionLen int
-
-	// LogicalLineIndexHint / VisualLineIndexHint pin the result's Y
-	// coordinate system: the function treats the logical line at
-	// LogicalLineIndexHint as starting at visual-line index
-	// VisualLineIndexHint, and walks forward (or backward) from there
-	// to whichever line contains Index. The returned position's Top
-	// is therefore measured in the caller's coordinate system —
-	// (0, 0) means "Y is measured from line 0," matching the legacy
-	// behavior; (firstLogicalLineInViewport, 0) means "Y is measured
-	// from the first visible line's top," used by virtualized text.
-	//
-	// The walk is bounded by the logical-line distance between the
-	// hint and the line containing Index, so a caller that pins the
-	// hint inside its viewport pays only O(visible) typesetting per
-	// query. Used only when PrecomputedLineByteOffsets is set and Options.WrapMode
-	// is not [WrapModeNone].
-	LogicalLineIndexHint int
-	VisualLineIndexHint  int
-}
-
-// logicalLineAndCaretPosition maps p.Index to its logical line through m, shapes that
+// logicalLineAndCaretPosition maps index to its logical line through m, shapes that
 // one line, and returns the line-local caret position(s). pos0 and pos1 are
 // line-local: Top and Bottom are measured from the line's top, not the
 // document top. count is 1, or 2 at a soft-wrap boundary; count==0 means
-// p.Index is out of range.
-func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextPositionParams) (logicalLineIdx, indexInLine int, pos0, pos1 TextPosition, count int) {
-	index := p.Index
+// index is out of range.
+func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, index int) (logicalLineIdx, indexInLine int, pos0, pos1 TextPosition, count int) {
 	if index < 0 || index > p.RenderingTextLength {
 		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
@@ -104,33 +40,33 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextPositionParams) 
 // logical-line offsets, empty document, or composition straddling a logical-line
 // boundary. Callers needing the slow whole-document fallback in that case should
 // call [TextPositionFromIndex].
-func PositionWithinLogicalLine(p *TextPositionParams) (lineIdx int, position0, position1 TextPosition, count int) {
+func PositionWithinLogicalLine(p *TextLayoutParams, index int) (lineIdx int, position0, position1 TextPosition, count int) {
 	m, ok := newLogicalLineMeasurer(p)
 	if !ok {
 		return 0, TextPosition{}, TextPosition{}, 0
 	}
-	logicalLineIdx, _, pos0, pos1, c := logicalLineAndCaretPosition(m, p)
+	logicalLineIdx, _, pos0, pos1, c := logicalLineAndCaretPosition(m, p, index)
 	if c == 0 {
 		return 0, TextPosition{}, TextPosition{}, 0
 	}
 	return logicalLineIdx, pos0, pos1, c
 }
 
-// TextPositionFromIndex returns the visual position(s) for p.Index in the
+// TextPositionFromIndex returns the visual position(s) for index in the
 // rendering text. The Y origin is the visual line at
 // (p.LogicalLineIndexHint, p.VisualLineIndexHint); count is 1, or 2 at line-
 // break boundaries.
-func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosition, count int) {
+func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1 TextPosition, count int) {
 	m, ok := newLogicalLineMeasurer(p)
 	if !ok {
 		str := p.RenderingTextRange(0, p.RenderingTextLength)
 		vls := visualLines(p.Width, str, p.Options.WrapMode, func(s string, indexInBytes int) float64 {
 			return advance(s, indexInBytes, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
 		})
-		return textPositionFromIndexInVisualLines(p.Width, vls, p.Index, &p.Options)
+		return textPositionFromIndexInVisualLines(p.Width, vls, index, &p.Options)
 	}
 
-	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p)
+	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p, index)
 	if c == 0 {
 		return TextPosition{}, TextPosition{}, 0
 	}

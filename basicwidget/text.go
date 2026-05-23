@@ -2238,8 +2238,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	if compLen > 0 {
 		readCommitted = t.stringValueWithRange
 	}
-	idx := textutil.TextIndexFromPosition(&textutil.TextIndexFromPositionParams{
-		Position:                   position,
+	idx := textutil.TextIndexFromPosition(&textutil.TextLayoutParams{
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
@@ -2250,7 +2249,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		SelectionEnd:               sEnd,
 		CompositionLen:             compLen,
 		LogicalLineIndexHint:       hintLL,
-	})
+	}, position)
 	if idx < 0 || idx > renderingLength {
 		return -1
 	}
@@ -2304,8 +2303,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	// bounded by the logical-line distance between firstLine and the
 	// caret's line, which is a viewport's worth of lines for carets
 	// visible on screen.
-	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextPositionParams{
-		Index:                      index,
+	pos0, pos1, count := textutil.TextPositionFromIndex(&textutil.TextLayoutParams{
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
@@ -2316,7 +2314,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		SelectionEnd:               sEnd,
 		CompositionLen:             compLen,
 		LogicalLineIndexHint:       t.firstLogicalLineInViewport,
-	})
+	}, index)
 	if count == 0 {
 		return textutil.TextPosition{}, false
 	}
@@ -2380,8 +2378,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	if compLen > 0 {
 		readCommitted = t.stringValueWithRange
 	}
-	li, pos0, pos1, count := textutil.PositionWithinLogicalLine(&textutil.TextPositionParams{
-		Index:                      index,
+	li, pos0, pos1, count := textutil.PositionWithinLogicalLine(&textutil.TextLayoutParams{
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
@@ -2391,7 +2388,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		SelectionStart:             sStart,
 		SelectionEnd:               sEnd,
 		CompositionLen:             compLen,
-	})
+	}, index)
 	if count == 0 {
 		return caretScrollTarget{}, false
 	}

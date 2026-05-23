@@ -8,76 +8,12 @@ import (
 	"math"
 )
 
-// TextIndexFromPositionParams describes the inputs for
-// [TextIndexFromPosition]. The first group of fields is always
-// required; the second group is optional state that enables the
-// fast path backed by the precomputed logical-line offsets.
-type TextIndexFromPositionParams struct {
-	// Position is the (x, y) point in the rendering plane to query.
-	// Y is measured from the top of the rendered text.
-	Position image.Point
-
-	// RenderingTextRange returns rendering[start:end), where the
-	// rendering text is the committed text with any active composition
-	// spliced in. RenderingTextLength is the total byte length of the
-	// rendering text. Required: all reads of the rendering text — both
-	// the fast path and the slow-path fallback — go through this
-	// callback so the caller never has to materialize the full
-	// document.
-	RenderingTextRange  func(start, end int) string
-	RenderingTextLength int
-
-	// Width is the rendering width.
-	Width int
-
-	// Options carries face, lineHeight, wrap mode, alignment, tab
-	// width, etc.
-	Options Options
-
-	// CommittedTextRange returns committed[start:end). Required when
-	// CompositionLen > 0; ignored otherwise.
-	CommittedTextRange func(start, end int) string
-
-	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
-	// Optional; when nil [TextIndexFromPosition] falls back to an
-	// O(documentLen) walk of every visual line.
-	PrecomputedLineByteOffsets *LineByteOffsets
-
-	// SelectionStart, SelectionEnd, CompositionLen describe an active
-	// IME composition: bytes [SelectionStart, SelectionEnd) in the
-	// committed text are replaced with bytes [SelectionStart,
-	// SelectionStart+CompositionLen) in the rendering text.
-	// CompositionLen == 0 means no active composition; the other
-	// fields are ignored in that case.
-	SelectionStart int
-	SelectionEnd   int
-	CompositionLen int
-
-	// LogicalLineIndexHint / VisualLineIndexHint are an optional hint
-	// that tells [TextIndexFromPosition] where to start its per-
-	// logical-line walk instead of starting from line 0.
-	// LogicalLineIndexHint is a logical-line index in committed text;
-	// VisualLineIndexHint is the cumulative number of visual lines
-	// preceding that logical line in committed text. The walk steps
-	// forward (or backward) from the hint measuring one logical line
-	// at a time, so a caller that places the hint inside its viewport
-	// pays O(visible lines) of typesetting per query instead of
-	// walking from the document top.
-	//
-	// Both fields are optional. The zero value means "start from line
-	// 0," equivalent to walking from the top of the document — correct
-	// but O(documentLen) when the click is far down. Used only when
-	// PrecomputedLineByteOffsets is set.
-	LogicalLineIndexHint int
-	VisualLineIndexHint  int
-}
-
 // TextIndexFromPosition returns the byte offset in the rendering text
-// closest to p.Position. When p.PrecomputedLineByteOffsets is supplied, the
+// closest to position. When p.PrecomputedLineByteOffsets is supplied, the
 // visual-line walk is localized: it starts from
 // (p.LogicalLineIndexHint, p.VisualLineIndexHint) and steps forward
 // (or backward) one logical line at a time until the line covering
-// p.Position.Y is found. With the hint placed inside the viewport
+// position.Y is found. With the hint placed inside the viewport
 // this costs O(visible lines) of typesetting per query, instead of
 // the O(documentLen) full scan performed when no precomputed
 // logical-line offsets are supplied.
@@ -90,13 +26,13 @@ type TextIndexFromPositionParams struct {
 // composition crosses a logical-line boundary, when no precomputed
 // logical-line offsets are supplied, or when the document is empty. The
 // fallback is observationally equivalent to the fast path.
-func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
+func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	if p.PrecomputedLineByteOffsets == nil {
-		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
 	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
-		return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 	}
 
 	// Resolve composition shifts so the precomputed logical-line offsets are
@@ -142,7 +78,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 			WrapWidth:              p.Width,
 		})
 		if !ok {
-			return textIndexFromPosition(p.Width, p.Position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+			return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
 		}
 		compInfo = info
 		hasComp = true
@@ -161,7 +97,7 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	// the viewport top to stand still instead of crossing into the
 	// previous logical line.
 	padding := textPadding(p.Options.Face, p.Options.LineHeight)
-	target := int(math.Floor((float64(p.Position.Y) + padding) / p.Options.LineHeight))
+	target := int(math.Floor((float64(position.Y) + padding) / p.Options.LineHeight))
 
 	committedTextLen := p.RenderingTextLength
 	if hasComp {
@@ -230,8 +166,8 @@ func TextIndexFromPosition(p *TextIndexFromPositionParams) int {
 	// Translate the position into the logical line's local Y so
 	// TextIndexFromPositionInLogicalLine picks the right visual
 	// subline.
-	localY := p.Position.Y - int(float64(logicalLineVisualOriginIndex)*p.Options.LineHeight)
-	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(p.Position.X, localY), line, &p.Options)
+	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Options.LineHeight)
+	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(position.X, localY), line, &p.Options)
 	return renderingLineStart + pos
 }
 
