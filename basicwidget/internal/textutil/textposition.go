@@ -221,7 +221,11 @@ func PositionWithinLogicalLine(p *TextPositionParams) (lineIdx int, position0, p
 func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosition, count int) {
 	m, committedLineIdx, indexInLine, pos0, pos1, c, slowPath := resolveCaretLine(p)
 	if slowPath {
-		return textPositionFromIndex(p.Width, p.RenderingTextRange(0, p.RenderingTextLength), nil, p.Index, p.Options)
+		str := p.RenderingTextRange(0, p.RenderingTextLength)
+		vls := visualLines(p.Width, str, p.Options.WrapMode, func(s string, indexInBytes int) float64 {
+			return advance(s, indexInBytes, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+		})
+		return textPositionFromIndexInVisualLines(p.Width, vls, p.Index, p.Options)
 	}
 	if c == 0 {
 		return TextPosition{}, TextPosition{}, 0
@@ -284,22 +288,11 @@ func TextPositionFromIndex(p *TextPositionParams) (position0, position1 TextPosi
 	return pos0, pos1, c
 }
 
-// textPositionFromIndex returns the visual position(s) for index in
-// str, walking the supplied visual lines vls. When vls is nil it falls
-// back to the unrestricted whole-document layout: every visual line in
-// str is walked. O(documentLen) in that case and only suitable when no
-// [LineByteOffsets] sidecar is available; the public
-// [TextPositionFromIndex] uses the nil form as a fallback.
-func textPositionFromIndex(width int, str string, vls iter.Seq[visualLine], index int, options *Options) (position0, position1 TextPosition, count int) {
-	if index < 0 || index > len(str) {
-		return TextPosition{}, TextPosition{}, 0
-	}
-	if vls == nil {
-		vls = visualLines(width, str, options.WrapMode, func(str string, indexInBytes int) float64 {
-			return advance(str, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
-		})
-	}
-
+// textPositionFromIndexInVisualLines returns the visual position(s) at byte
+// offset index within the visual lines vls. count is 1, or 2 when index lands
+// on a line-break boundary, in which case position0 is the tail of one visual
+// line and position1 the head of the next. An out-of-range index yields count 0.
+func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], index int, options *Options) (position0, position1 TextPosition, count int) {
 	var y, y0, y1 float64
 	var indexInLine0, indexInLine1 int
 	var line0, line1 string

@@ -154,7 +154,7 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndex(width, logicalLine, visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
+	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
 		return advance(s, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
 	}), index, options)
 }
