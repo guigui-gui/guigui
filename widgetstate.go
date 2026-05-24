@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"runtime"
 	"slices"
+	"sync/atomic"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/zeebo/xxh3"
@@ -109,9 +110,14 @@ func (w *widgetsAndBounds) requestRedraw(app *app) {
 	}
 }
 
+var theNextWidgetStateID atomic.Uint64
+
 type widgetState struct {
 	root    bool
 	builtAt int64
+
+	// id is a unique identifier assigned lazily on first use.
+	id uint64
 
 	bounds image.Rectangle
 
@@ -203,6 +209,15 @@ func (w *widgetState) internalStateKey() widgetInternalStateKey {
 		layer:                w.layer,
 		transparency:         w.transparency,
 	}
+}
+
+// identifier returns a process-unique identifier for the widgetState,
+// assigning one on first use. The result is never 0.
+func (w *widgetState) identifier() uint64 {
+	if w.id == 0 {
+		w.id = theNextWidgetStateID.Add(1)
+	}
+	return w.id
 }
 
 func (w *widgetState) isInTree(now int64) bool {

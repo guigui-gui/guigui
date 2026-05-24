@@ -9,7 +9,6 @@ import (
 	"io"
 	"math"
 	"math/big"
-	"unsafe"
 
 	"github.com/zeebo/xxh3"
 )
@@ -153,13 +152,9 @@ func (w *StateKeyWriter) WriteBigInt(v *big.Int) {
 // WriteWidget writes the identity of a [Widget] into the writer.
 // A nil widget hashes to zero.
 func (w *StateKeyWriter) WriteWidget(widget Widget) {
-	var p uintptr
+	var id uint64
 	if widget != nil {
-		p = uintptr(unsafe.Pointer(widget.widgetState()))
+		id = widget.widgetState().identifier()
 	}
-	if is32bit {
-		w.WriteUint32(uint32(p))
-	} else {
-		w.WriteUint64(uint64(p))
-	}
+	w.WriteUint64(id)
 }
