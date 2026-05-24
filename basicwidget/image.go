@@ -6,7 +6,6 @@ package basicwidget
 import (
 	"image"
 	"math"
-	"unsafe"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -16,7 +15,8 @@ import (
 type Image struct {
 	guigui.DefaultWidget
 
-	image *ebiten.Image
+	image           *ebiten.Image
+	imageGeneration uint64
 }
 
 func (i *Image) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -60,9 +60,13 @@ func (i *Image) HasImage() bool {
 }
 
 func (i *Image) WriteStateKey(w *guigui.StateKeyWriter) {
-	w.WriteUint64(uint64(uintptr(unsafe.Pointer(i.image))))
+	w.WriteUint64(i.imageGeneration)
 }
 
 func (i *Image) SetImage(image *ebiten.Image) {
+	if i.image == image {
+		return
+	}
 	i.image = image
+	i.imageGeneration++
 }
