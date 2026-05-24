@@ -135,7 +135,7 @@ var (
 	theLocales []language.Tag
 )
 
-func appendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSourceEntry, context *guigui.Context) []basicwidget.FaceSourceEntry {
+func appendRecommendedFaceSourceEntries(context *guigui.Context, adder *basicwidget.FaceSourceEntryAdder) {
 	theLocales = slices.Delete(theLocales, 0, len(theLocales))
 	theLocales = context.AppendLocales(theLocales)
 
@@ -157,62 +157,58 @@ func appendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSour
 	}
 
 	if isCJKPrimary {
-		faceSourceEntries = append(faceSourceEntries,
-			// There are ambiguous glyphs that are different between CJK and Western fonts.
-			// Prefer CJK fonts for such glyphs.
-			// See https://www.unicode.org/L2/L2014/14006-sv-western-vs-cjk.pdf
-			basicwidget.FaceSourceEntry{
-				FaceSource: basicwidget.DefaultFaceSourceEntry().FaceSource,
-				UnicodeRanges: []basicwidget.UnicodeRange{
-					{
-						Min: 0x0000,
-						Max: 0x2013,
-					},
-					// U+2014 EM DASH
-					// U+2015 HORIZONTAL BAR
-					{
-						Min: 0x2016,
-						Max: 0x2017,
-					},
-					// U+2018 LEFT SINGLE QUOTATION MARK
-					// U+2019 RIGHT SINGLE QUOTATION MARK
-					{
-						Min: 0x201a,
-						Max: 0x201b,
-					},
-					// U+201c LEFT DOUBLE QUOTATION MARK
-					// U+201d RIGHT DOUBLE QUOTATION MARK
-					{
-						Min: 0x201e,
-						Max: 0x2025,
-					},
-					// U+2026 HORIZONTAL ELLIPSIS
-					{
-						Min: 0x2027,
-						Max: 0x2e39,
-					},
-					// U+2e3a TWO-EM DASH
-					// U+2e3b THREE-EM DASH
-					{
-						Min: 0x2e3c,
-						Max: 0x7fffffff,
-					},
+		// There are ambiguous glyphs that are different between CJK and Western fonts.
+		// Prefer CJK fonts for such glyphs.
+		// See https://www.unicode.org/L2/L2014/14006-sv-western-vs-cjk.pdf
+		adder.Add(basicwidget.FaceSourceEntry{
+			FaceSource: basicwidget.DefaultFaceSourceEntry().FaceSource,
+			UnicodeRanges: []basicwidget.UnicodeRange{
+				{
+					Min: 0x0000,
+					Max: 0x2013,
+				},
+				// U+2014 EM DASH
+				// U+2015 HORIZONTAL BAR
+				{
+					Min: 0x2016,
+					Max: 0x2017,
+				},
+				// U+2018 LEFT SINGLE QUOTATION MARK
+				// U+2019 RIGHT SINGLE QUOTATION MARK
+				{
+					Min: 0x201a,
+					Max: 0x201b,
+				},
+				// U+201c LEFT DOUBLE QUOTATION MARK
+				// U+201d RIGHT DOUBLE QUOTATION MARK
+				{
+					Min: 0x201e,
+					Max: 0x2025,
+				},
+				// U+2026 HORIZONTAL ELLIPSIS
+				{
+					Min: 0x2027,
+					Max: 0x2e39,
+				},
+				// U+2e3a TWO-EM DASH
+				// U+2e3b THREE-EM DASH
+				{
+					Min: 0x2e3c,
+					Max: 0x7fffffff,
 				},
 			},
-			basicwidget.FaceSourceEntry{
-				FaceSource: cjkFaceSource,
-			})
+		})
+		adder.Add(basicwidget.FaceSourceEntry{
+			FaceSource: cjkFaceSource,
+		})
 	} else {
-		faceSourceEntries = append(faceSourceEntries,
-			basicwidget.DefaultFaceSourceEntry(),
-			basicwidget.FaceSourceEntry{
-				FaceSource: cjkFaceSource,
-			})
+		adder.Add(basicwidget.DefaultFaceSourceEntry())
+		adder.Add(basicwidget.FaceSourceEntry{
+			FaceSource: cjkFaceSource,
+		})
 	}
-
-	return faceSourceEntries
 }
 
 func init() {
-	basicwidget.RegisterFaceSourceEntries(appendRecommendedFaceSourceEntries, basicwidget.FaceSourceEntryPriorityNormal)
+	basicwidget.RegisterFaceSourceEntries(appendRecommendedFaceSourceEntries)
 }

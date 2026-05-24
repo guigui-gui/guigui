@@ -10,6 +10,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
+// UnicodeRange is an inclusive range of code points.
 type UnicodeRange struct {
 	Min rune
 	Max rune
@@ -64,18 +65,33 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 	return fromFontFaceSourceEntry(font.DefaultFaceSourceEntry())
 }
 
-// RegisterFaceSourceEntries registers appendEntries, which contributes face
-// source entries to the fallback resolution stack. A higher priority resolves
-// earlier; equal priorities resolve in registration order.
-func RegisterFaceSourceEntries(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FaceSourceEntryPriority) {
-	font.RegisterFaceSourceEntries(func(entries []font.FaceSourceEntry, context *guigui.Context) []font.FaceSourceEntry {
-		converted := make([]FaceSourceEntry, len(entries))
-		for i, e := range entries {
-			converted[i] = fromFontFaceSourceEntry(e)
-		}
-		converted = appendEntries(converted, context)
-		return toFontFaceSourceEntries(converted)
-	}, font.FaceSourceEntryPriority(priority))
+// FaceSourceEntryAdder collects face source entries for the fallback
+// resolution stack.
+type FaceSourceEntryAdder struct {
+	adder *font.FaceSourceEntryAdder
+}
+
+// Add adds entry to the fallback resolution stack at the adder's current
+// priority, which is [FaceSourceEntryPriorityNormal] until changed by
+// SetPriority.
+func (a *FaceSourceEntryAdder) Add(entry FaceSourceEntry) {
+	a.adder.Add(toFontFaceSourceEntry(entry))
+}
+
+// SetPriority sets the priority applied to entries added afterward. A higher
+// priority resolves earlier; entries of equal priority resolve in the order
+// they are added.
+func (a *FaceSourceEntryAdder) SetPriority(priority FaceSourceEntryPriority) {
+	a.adder.SetPriority(font.FaceSourceEntryPriority(priority))
+}
+
+// RegisterFaceSourceEntries registers add as a contributor to the fallback
+// resolution stack. add adds its face source entries through the provided
+// [FaceSourceEntryAdder].
+func RegisterFaceSourceEntries(add func(*guigui.Context, *FaceSourceEntryAdder)) {
+	font.RegisterFaceSourceEntries(func(context *guigui.Context, a *font.FaceSourceEntryAdder) {
+		add(context, &FaceSourceEntryAdder{adder: a})
+	})
 }
 
 func toFontFaceSourceEntries(entries []FaceSourceEntry) []font.FaceSourceEntry {

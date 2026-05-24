@@ -237,18 +237,8 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 	return theDefaultFaceSource
 }
 
-type appendFunc struct {
-	f         func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry
-	priority1 FaceSourceEntryPriority
-	priority2 int
-}
-
-var (
-	theAppendFuncs []appendFunc
-)
-
-// FaceSourceEntryPriority orders providers registered with
-// [RegisterFaceSourceEntries]; a higher value resolves earlier.
+// FaceSourceEntryPriority orders entries in the fallback resolution stack; a
+// higher value resolves earlier.
 type FaceSourceEntryPriority int
 
 const (
@@ -257,26 +247,57 @@ const (
 	FaceSourceEntryPriorityHigh   FaceSourceEntryPriority = 300
 )
 
-// RegisterFaceSourceEntries registers appendEntries, which contributes face
-// source entries to the fallback resolution stack. A higher priority resolves
-// earlier; equal priorities resolve in registration order.
-func RegisterFaceSourceEntries(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FaceSourceEntryPriority) {
-	theAppendFuncs = append(theAppendFuncs, appendFunc{
-		f:         appendEntries,
-		priority1: priority,
-		priority2: -len(theAppendFuncs),
+type prioritizedFaceSourceEntry struct {
+	entry    FaceSourceEntry
+	priority FaceSourceEntryPriority
+}
+
+// FaceSourceEntryAdder collects face source entries for the fallback
+// resolution stack.
+type FaceSourceEntryAdder struct {
+	entries  []prioritizedFaceSourceEntry
+	priority FaceSourceEntryPriority
+}
+
+// Add adds entry to the fallback resolution stack at the adder's current
+// priority, which is [FaceSourceEntryPriorityNormal] until changed by
+// SetPriority.
+func (a *FaceSourceEntryAdder) Add(entry FaceSourceEntry) {
+	a.entries = append(a.entries, prioritizedFaceSourceEntry{
+		entry:    entry,
+		priority: a.priority,
 	})
 }
 
+// SetPriority sets the priority applied to entries added afterward. A higher
+// priority resolves earlier; entries of equal priority resolve in the order
+// they are added.
+func (a *FaceSourceEntryAdder) SetPriority(priority FaceSourceEntryPriority) {
+	a.priority = priority
+}
+
+var (
+	theAddFuncs []func(*guigui.Context, *FaceSourceEntryAdder)
+)
+
+// RegisterFaceSourceEntries registers add as a contributor to the fallback
+// resolution stack. add adds its face source entries through the provided
+// [FaceSourceEntryAdder].
+func RegisterFaceSourceEntries(add func(*guigui.Context, *FaceSourceEntryAdder)) {
+	theAddFuncs = append(theAddFuncs, add)
+}
+
 func appendFontFaceEntries(entries []FaceSourceEntry, context *guigui.Context) []FaceSourceEntry {
-	slices.SortFunc(theAppendFuncs, func(a, b appendFunc) int {
-		if a.priority1 != b.priority1 {
-			return int(b.priority1 - a.priority1)
-		}
-		return b.priority2 - a.priority2
+	var adder FaceSourceEntryAdder
+	for _, f := range theAddFuncs {
+		adder.priority = FaceSourceEntryPriorityNormal
+		f(context, &adder)
+	}
+	slices.SortStableFunc(adder.entries, func(a, b prioritizedFaceSourceEntry) int {
+		return int(b.priority) - int(a.priority)
 	})
-	for _, f := range theAppendFuncs {
-		entries = f.f(entries, context)
+	for _, pe := range adder.entries {
+		entries = append(entries, pe.entry)
 	}
 	return append(entries, theDefaultFaceSource)
 }
