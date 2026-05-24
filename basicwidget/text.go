@@ -177,8 +177,14 @@ type Text struct {
 	cachedTextWidths      [8][4]cachedTextWidthEntry
 	cachedTextHeights     [8][4]cachedTextHeightEntry
 	cachedDefaultTabWidth float64
-	lastFaceCacheKey      font.Key
-	lastScale             float64
+
+	// lastFaceAttributes and lastFontID together fingerprint the face used to
+	// size text, so cached sizes reset when either the render attributes or
+	// the active font changes.
+	lastFaceAttributes font.Attributes
+	lastFontID         uint64
+
+	lastScale float64
 
 	// contentHasher is a reusable xxh3 streaming hasher used by [Text.WriteStateKey]
 	// to fingerprint the current field contents without allocating a string.
@@ -403,11 +409,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt(selEnd)
 	w.WriteBool(t.field.IsFocused())
 	w.WriteString(t.cachedLocalesString)
-	var fontID uint64
-	if t.font != nil {
-		fontID = t.font.id
-	}
-	w.WriteUint64(fontID)
+	w.WriteUint64(t.fontID())
 	ch := t.contentHashForStateKey()
 	w.WriteUint64(ch.Lo)
 	w.WriteUint64(ch.Hi)
@@ -428,8 +430,11 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		adder.AddWidget(&t.caret)
 	}
 
-	if key := t.faceCacheKey(context, false); t.lastFaceCacheKey != key {
-		t.lastFaceCacheKey = key
+	attrs := t.faceAttributes(context, false)
+	fontID := t.fontID()
+	if t.lastFaceAttributes != attrs || t.lastFontID != fontID {
+		t.lastFaceAttributes = attrs
+		t.lastFontID = fontID
 		t.resetCachedTextSize()
 	}
 	if t.lastScale != context.Scale() {
@@ -1059,7 +1064,14 @@ func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rect
 	return t.textContentBounds(context, bounds)
 }
 
-func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) font.Key {
+func (t *Text) fontID() uint64 {
+	if t.font == nil {
+		return 0
+	}
+	return t.font.f.ID()
+}
+
+func (t *Text) faceAttributes(context *guigui.Context, forceBold bool) font.Attributes {
 	size := FontSize(context) * (t.scaleMinus1 + 1)
 	weight := text.WeightMedium
 	if t.bold || forceBold {
@@ -1075,12 +1087,7 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) font.Key {
 	} else {
 		lang = context.FirstLocale()
 	}
-	var fontID uint64
-	if t.font != nil {
-		fontID = t.font.id
-	}
-	return font.Key{
-		FontID: fontID,
+	return font.Attributes{
 		Size:   size,
 		Weight: weight,
 		Liga:   liga,
@@ -1089,13 +1096,17 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) font.Key {
 	}
 }
 
-// face must be called after [Text.Build], as it relies on lastFaceCacheKey being set.
+// face must be called after [Text.Build], as it relies on lastFaceAttributes being set.
 func (t *Text) face(context *guigui.Context, forceBold bool) font.Face {
-	key := t.lastFaceCacheKey
+	attrs := t.lastFaceAttributes
 	if forceBold {
-		key.Weight = text.WeightBold
+		attrs.Weight = text.WeightBold
 	}
-	return font.NewFace(key, fontFace(context, key, t.font))
+	var fnt *font.Font
+	if t.font != nil {
+		fnt = t.font.f
+	}
+	return font.NewFace(context, fnt, attrs)
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {
