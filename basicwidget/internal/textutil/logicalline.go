@@ -150,28 +150,28 @@ func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face t
 //
 // index is a byte offset in [0, len(logicalLine)]. Out-of-range values yield
 // (TextPosition{}, TextPosition{}, 0).
-func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int, options *Options) (position0, position1 TextPosition, count int) {
+func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int, style *Style) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
-	}), index, options)
+	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, style.Face, style.TabWidth, style.KeepTailingSpace)
+	}), index, style)
 }
 
 // TextIndexFromPositionInLogicalLine returns the byte offset within one logical line
 // closest to the given position. The position's Y is relative to the top of
 // the logical line. Counterpart of [TextIndexFromPosition].
-func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, options *Options) int {
+func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, style *Style) int {
 	// Determine the visual line first.
-	padding := textPadding(options.Face, options.LineHeight)
-	n := int((float64(position.Y) + padding) / options.LineHeight)
+	padding := textPadding(style.Face, style.LineHeight)
+	n := int((float64(position.Y) + padding) / style.LineHeight)
 
 	var pos int
 	var vlStr string
 	var vlIndex int
-	for l := range visualLinesFromLogicalLine(width, logicalLine, options.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
+	for l := range visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, style.Face, style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
@@ -182,7 +182,7 @@ func TextIndexFromPositionInLogicalLine(width int, position image.Point, logical
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, options)
+	left := oneLineLeft(width, vlStr, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
 	return pos
 }

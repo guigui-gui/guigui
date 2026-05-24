@@ -91,7 +91,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 	return str[:lastFittingEnd] + ellipsis
 }
 
-type Options struct {
+type Style struct {
 	WrapMode         WrapMode
 	Face             text.Face
 	LineHeight       float64
@@ -152,9 +152,9 @@ type TextLayoutParams struct {
 	// Width is the rendering width.
 	Width int
 
-	// Options carries face, lineHeight, wrap mode, alignment, tab
+	// Style carries face, lineHeight, wrap mode, alignment, tab
 	// width, etc.
-	Options Options
+	Style Style
 
 	// CommittedTextRange returns committed[start:end). Required when
 	// CompositionLen > 0; ignored otherwise.
@@ -243,8 +243,8 @@ var theCachedGlyphs []text.LazyGlyph
 // indexFromXInVisualLine returns the byte index within vlStr at the cluster
 // boundary nearest target, where target is the click X measured from the
 // visual line's left edge.
-func indexFromXInVisualLine(vlStr string, target float64, options *Options) int {
-	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, options.Face, options.TabWidth)
+func indexFromXInVisualLine(vlStr string, target float64, style *Style) int {
+	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Face, style.TabWidth)
 	// Drop imager refs on exit so the pooled slice doesn't pin face state.
 	defer func() {
 		theCachedGlyphs = slices.Delete(theCachedGlyphs, 0, len(theCachedGlyphs))
@@ -676,17 +676,17 @@ func textPadding(face text.Face, lineHeight float64) float64 {
 	return padding
 }
 
-func textPositionYOffset(size image.Point, str string, options *Options) float64 {
-	yOffset := textPadding(options.Face, options.LineHeight)
-	switch options.VerticalAlign {
+func textPositionYOffset(size image.Point, str string, style *Style) float64 {
+	yOffset := textPadding(style.Face, style.LineHeight)
+	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		c := visualLineCount(size.X, str, options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace)
-		textHeight := options.LineHeight * float64(c)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace)
+		textHeight := style.LineHeight * float64(c)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		c := visualLineCount(size.X, str, options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace)
-		textHeight := options.LineHeight * float64(c)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace)
+		textHeight := style.LineHeight * float64(c)
 		yOffset += float64(size.Y) - textHeight
 	}
 	return yOffset

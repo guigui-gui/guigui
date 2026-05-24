@@ -28,11 +28,11 @@ import (
 // fallback is observationally equivalent to the fast path.
 func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	if p.PrecomputedLineByteOffsets == nil {
-		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
 	}
 	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
-		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
 	}
 
 	// Resolve composition shifts so the precomputed logical-line offsets are
@@ -58,7 +58,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		// returns false before reading them, and the caller falls back
 		// below.
 		var committedSelectionLine, renderingSelectionLine string
-		if p.Options.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
+		if p.Style.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
 			committedSelectionLine = p.CommittedTextRange(cs, ce)
 			renderingSelectionLine = p.RenderingTextRange(cs, ce+byteDelta)
 		}
@@ -68,24 +68,24 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 			LineByteOffsets:        p.PrecomputedLineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
-			WrapMode:               p.Options.WrapMode,
+			WrapMode:               p.Style.WrapMode,
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Options.Face,
-			LineHeight:             p.Options.LineHeight,
-			TabWidth:               p.Options.TabWidth,
-			KeepTailingSpace:       p.Options.KeepTailingSpace,
+			Face:                   p.Style.Face,
+			LineHeight:             p.Style.LineHeight,
+			TabWidth:               p.Style.TabWidth,
+			KeepTailingSpace:       p.Style.KeepTailingSpace,
 			WrapWidth:              p.Width,
 		})
 		if !ok {
-			return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Options)
+			return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
 		}
 		compInfo = info
 		hasComp = true
 
-		if p.Options.WrapMode != WrapModeNone {
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Options.WrapMode, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Options.WrapMode, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+		if p.Style.WrapMode != WrapModeNone {
+			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineVisualCountDelta = renderingCount - committedCount
 		}
 	}
@@ -96,8 +96,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	// and would clamp such Ys onto the hint line, causing arrow-up at
 	// the viewport top to stand still instead of crossing into the
 	// previous logical line.
-	padding := textPadding(p.Options.Face, p.Options.LineHeight)
-	target := int(math.Floor((float64(position.Y) + padding) / p.Options.LineHeight))
+	padding := textPadding(p.Style.Face, p.Style.LineHeight)
+	target := int(math.Floor((float64(position.Y) + padding) / p.Style.LineHeight))
 
 	committedTextLen := p.RenderingTextLength
 	if hasComp {
@@ -110,10 +110,10 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		committedTextLen:   committedTextLen,
 		renderingTextRange: p.RenderingTextRange,
 		width:              p.Width,
-		face:               p.Options.Face,
-		tabWidth:           p.Options.TabWidth,
-		keepTailingSpace:   p.Options.KeepTailingSpace,
-		wrapMode:           p.Options.WrapMode,
+		face:               p.Style.Face,
+		tabWidth:           p.Style.TabWidth,
+		keepTailingSpace:   p.Style.KeepTailingSpace,
+		wrapMode:           p.Style.WrapMode,
 		composition:        compInfo,
 	}
 
@@ -166,8 +166,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	// Translate the position into the logical line's local Y so
 	// TextIndexFromPositionInLogicalLine picks the right visual
 	// subline.
-	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Options.LineHeight)
-	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(position.X, localY), line, &p.Options)
+	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Style.LineHeight)
+	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(position.X, localY), line, &p.Style)
 	return renderingLineStart + pos
 }
 
@@ -176,16 +176,16 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 // covering position.Y. O(documentLen) per call and only suitable when
 // no precomputed [LineByteOffsets] is available; the public
 // [TextIndexFromPosition] uses this as a fallback.
-func textIndexFromPosition(width int, position image.Point, str string, options *Options) int {
+func textIndexFromPosition(width int, position image.Point, str string, style *Style) int {
 	// Determine the visual line first.
-	padding := textPadding(options.Face, options.LineHeight)
-	n := int((float64(position.Y) + padding) / options.LineHeight)
+	padding := textPadding(style.Face, style.LineHeight)
+	n := int((float64(position.Y) + padding) / style.LineHeight)
 
 	var pos int
 	var vlStr string
 	var vlIndex int
-	for l := range visualLines(width, str, options.WrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, options.Face, options.TabWidth, options.KeepTailingSpace)
+	for l := range visualLines(width, str, style.WrapMode, func(str string, indexInBytes int) float64 {
+		return advance(str, indexInBytes, style.Face, style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
@@ -196,7 +196,7 @@ func textIndexFromPosition(width int, position image.Point, str string, options 
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, options)
+	left := oneLineLeft(width, vlStr, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
 	return pos
 }

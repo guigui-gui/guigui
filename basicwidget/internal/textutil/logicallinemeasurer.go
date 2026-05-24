@@ -66,7 +66,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		// inside a single logical line; otherwise ce+byteDelta underflows.
 		// [ComputeCompositionInfo] rejects the multi-line case before reading them.
 		var committedSelectionLine, renderingSelectionLine string
-		if p.Options.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
+		if p.Style.WrapMode != WrapModeNone && p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionEnd) == selectionLineIdx {
 			committedSelectionLine = p.CommittedTextRange(cs, ce)
 			renderingSelectionLine = p.RenderingTextRange(cs, ce+byteDelta)
 		}
@@ -76,13 +76,13 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 			LineByteOffsets:        p.PrecomputedLineByteOffsets,
 			SelectionStart:         p.SelectionStart,
 			SelectionEnd:           p.SelectionEnd,
-			WrapMode:               p.Options.WrapMode,
+			WrapMode:               p.Style.WrapMode,
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Options.Face,
-			LineHeight:             p.Options.LineHeight,
-			TabWidth:               p.Options.TabWidth,
-			KeepTailingSpace:       p.Options.KeepTailingSpace,
+			Face:                   p.Style.Face,
+			LineHeight:             p.Style.LineHeight,
+			TabWidth:               p.Style.TabWidth,
+			KeepTailingSpace:       p.Style.KeepTailingSpace,
 			WrapWidth:              p.Width,
 		})
 		if !ok {
@@ -99,10 +99,10 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		committedTextLen:               p.RenderingTextLength - compInfo.RenderingByteShift,
 		renderingTextRange:             p.RenderingTextRange,
 		width:                          p.Width,
-		face:                           p.Options.Face,
-		tabWidth:                       p.Options.TabWidth,
-		keepTailingSpace:               p.Options.KeepTailingSpace,
-		wrapMode:                       p.Options.WrapMode,
+		face:                           p.Style.Face,
+		tabWidth:                       p.Style.TabWidth,
+		keepTailingSpace:               p.Style.KeepTailingSpace,
+		wrapMode:                       p.Style.WrapMode,
 		composition:                    compInfo,
 		compositionRenderingStartPlus1: compRenderingStartPlus1,
 		compositionRenderingEndPlus1:   compRenderingEndPlus1,

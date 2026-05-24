@@ -1768,17 +1768,17 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	}
 	face := t.face(context, false)
 	op := &t.drawOptions
-	op.Options.WrapMode = textutil.WrapMode(t.wrapMode)
-	op.Options.Face = face
-	op.Options.LineHeight = t.lineHeight(context)
-	op.Options.HorizontalAlign = textutil.HorizontalAlign(t.hAlign)
-	op.Options.VerticalAlign = textutil.VerticalAlign(t.vAlign)
-	op.Options.TabWidth = t.actualTabWidth(context)
-	op.Options.KeepTailingSpace = t.keepTailingSpace
+	op.Style.WrapMode = textutil.WrapMode(t.wrapMode)
+	op.Style.Face = face
+	op.Style.LineHeight = t.lineHeight(context)
+	op.Style.HorizontalAlign = textutil.HorizontalAlign(t.hAlign)
+	op.Style.VerticalAlign = textutil.VerticalAlign(t.vAlign)
+	op.Style.TabWidth = t.actualTabWidth(context)
+	op.Style.KeepTailingSpace = t.keepTailingSpace
 	if !t.editable {
-		op.Options.EllipsisString = t.ellipsisString
+		op.Style.EllipsisString = t.ellipsisString
 	} else {
-		op.Options.EllipsisString = ""
+		op.Style.EllipsisString = ""
 	}
 	op.TextColor = textColor
 	op.VisibleBounds = widgetBounds.VisibleBounds()
@@ -1812,7 +1812,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		// textPositionYOffset the inner Draw would have computed; force
 		// vAlign=Top so it only adds paddingY rather than re-centering /
 		// re-bottom-aligning the restricted text inside the bounds.
-		op.Options.VerticalAlign = textutil.VerticalAlignTop
+		op.Style.VerticalAlign = textutil.VerticalAlignTop
 		if op.DrawSelection {
 			op.SelectionStart -= byteStart
 			op.SelectionEnd -= byteStart
@@ -2210,7 +2210,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 
 	width := textContentBounds.Dx()
-	op := textutil.Options{
+	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
@@ -2242,7 +2242,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
-		Options:                    op,
+		Style:                      s,
 		CommittedTextRange:         readCommitted,
 		PrecomputedLineByteOffsets: &t.lineByteOffsets,
 		SelectionStart:             sStart,
@@ -2259,7 +2259,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := textBounds.Dx()
-	op := textutil.Options{
+	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
@@ -2307,7 +2307,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
-		Options:                    op,
+		Style:                      s,
 		CommittedTextRange:         readCommitted,
 		PrecomputedLineByteOffsets: &t.lineByteOffsets,
 		SelectionStart:             sStart,
@@ -2350,7 +2350,7 @@ type caretScrollTarget struct {
 func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (target caretScrollTarget, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := textBounds.Dx()
-	op := textutil.Options{
+	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
@@ -2382,7 +2382,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		RenderingTextRange:         readRendering,
 		RenderingTextLength:        renderingLength,
 		Width:                      width,
-		Options:                    op,
+		Style:                      s,
 		CommittedTextRange:         readCommitted,
 		PrecomputedLineByteOffsets: &t.lineByteOffsets,
 		SelectionStart:             sStart,

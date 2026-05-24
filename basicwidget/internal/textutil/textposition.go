@@ -25,7 +25,7 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine = index - renderingLineStart
 
-	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, &p.Options)
+	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, &p.Style)
 	if count == 0 {
 		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
@@ -60,10 +60,10 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 	m, ok := newLogicalLineMeasurer(p)
 	if !ok {
 		str := p.RenderingTextRange(0, p.RenderingTextLength)
-		vls := visualLines(p.Width, str, p.Options.WrapMode, func(s string, indexInBytes int) float64 {
-			return advance(s, indexInBytes, p.Options.Face, p.Options.TabWidth, p.Options.KeepTailingSpace)
+		vls := visualLines(p.Width, str, p.Style.WrapMode, func(s string, indexInBytes int) float64 {
+			return advance(s, indexInBytes, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
 		})
-		return textPositionFromIndexInVisualLines(p.Width, vls, index, &p.Options)
+		return textPositionFromIndexInVisualLines(p.Width, vls, index, &p.Style)
 	}
 
 	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p, index)
@@ -93,7 +93,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		return v
 	}
 	precedingVisualLines := visualLineIndexAt(logicalLineIdx)
-	yOffset := p.Options.LineHeight * float64(precedingVisualLines)
+	yOffset := p.Style.LineHeight * float64(precedingVisualLines)
 
 	pos0.Top += yOffset
 	pos0.Bottom += yOffset
@@ -114,9 +114,9 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		prevLogicalLineIdx := logicalLineIdx - 1
 		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevLogicalLineIdx)
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
-		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), &p.Options)
+		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), &p.Style)
 		if prevCount > 0 {
-			prevYOffset := p.Options.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
+			prevYOffset := p.Style.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
 			prevPos0.Top += prevYOffset
 			prevPos0.Bottom += prevYOffset
 			pos1 = pos0
@@ -131,7 +131,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 // offset index within the visual lines vls. count is 1, or 2 when index lands
 // on a line-break boundary, in which case position0 is the tail of one visual
 // line and position1 the head of the next. An out-of-range index yields count 0.
-func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], index int, options *Options) (position0, position1 TextPosition, count int) {
+func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], index int, style *Style) (position0, position1 TextPosition, count int) {
 	var y, y0, y1 float64
 	var indexInLine0, indexInLine1 int
 	var line0, line1 string
@@ -162,32 +162,32 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 			y1 = y
 			break
 		}
-		y += options.LineHeight
+		y += style.LineHeight
 	}
 
 	if !found0 && !found1 {
 		return TextPosition{}, TextPosition{}, 0
 	}
 
-	paddingY := textPadding(options.Face, options.LineHeight)
+	paddingY := textPadding(style.Face, style.LineHeight)
 
 	var pos0, pos1 TextPosition
 	if found0 {
-		x0 := oneLineLeft(width, line0, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-		x0 += advance(line0, indexInLine0, options.Face, options.TabWidth, true)
+		x0 := oneLineLeft(width, line0, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+		x0 += advance(line0, indexInLine0, style.Face, style.TabWidth, true)
 		pos0 = TextPosition{
 			X:      x0,
 			Top:    y0 + paddingY,
-			Bottom: y0 + options.LineHeight - paddingY,
+			Bottom: y0 + style.LineHeight - paddingY,
 		}
 	}
 	if found1 {
-		x1 := oneLineLeft(width, line1, options.Face, options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
-		x1 += advance(line1, indexInLine1, options.Face, options.TabWidth, true)
+		x1 := oneLineLeft(width, line1, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+		x1 += advance(line1, indexInLine1, style.Face, style.TabWidth, true)
 		pos1 = TextPosition{
 			X:      x1,
 			Top:    y1 + paddingY,
-			Bottom: y1 + options.LineHeight - paddingY,
+			Bottom: y1 + style.LineHeight - paddingY,
 		}
 	}
 	if found0 && !found1 {

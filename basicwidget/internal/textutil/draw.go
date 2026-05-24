@@ -17,7 +17,7 @@ import (
 )
 
 type DrawOptions struct {
-	Options
+	Style
 
 	TextColor color.Color
 
@@ -59,7 +59,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 
 	op.LineSpacing = options.LineHeight
 
-	yOffset := textPositionYOffset(bounds.Size(), str, &options.Options)
+	yOffset := textPositionYOffset(bounds.Size(), str, &options.Style)
 	op.GeoM.Translate(0, yOffset)
 
 	theCachedVisualLines = theCachedVisualLines[:0]
@@ -89,8 +89,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -112,8 +112,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -132,8 +132,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Options)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Options)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {

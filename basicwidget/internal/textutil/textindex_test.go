@@ -47,7 +47,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
-				op := textutil.Options{
+				s := textutil.Style{
 					Face:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
@@ -58,7 +58,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      width,
-					Options:                    op,
+					Style:                      s,
 					PrecomputedLineByteOffsets: &l,
 				}
 
@@ -87,7 +87,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	op := textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeNormal}
+	s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeNormal}
 
 	const narrowWidth = 80
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
@@ -98,7 +98,7 @@ func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 		RenderingTextRange:         func(start, end int) string { return str[start:end] },
 		RenderingTextLength:        len(str),
 		Width:                      narrowWidth,
-		Options:                    op,
+		Style:                      s,
 		PrecomputedLineByteOffsets: &l,
 	}
 
@@ -139,7 +139,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name+wrapModeSuffix(tc.wrapMode), func(t *testing.T) {
-			op := textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: tc.wrapMode}
+			s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: tc.wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, tc.str)
 			n := l.LineCount()
@@ -154,7 +154,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },
 					RenderingTextLength:        len(tc.str),
 					Width:                      tc.width,
-					Options:                    op,
+					Style:                      s,
 					PrecomputedLineByteOffsets: &l,
 					LogicalLineIndexHint:       hint,
 					VisualLineIndexHint:        precVL(hint),
@@ -196,7 +196,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 
 	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
-			op := textutil.Options{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+			s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, str)
 
@@ -206,7 +206,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 						RenderingTextRange:         func(start, end int) string { return str[start:end] },
 						RenderingTextLength:        len(str),
 						Width:                      math.MaxInt,
-						Options:                    op,
+						Style:                      s,
 						PrecomputedLineByteOffsets: &l,
 						LogicalLineIndexHint:       firstVisible,
 						VisualLineIndexHint:        0,
@@ -252,7 +252,7 @@ func TestTextIndexFromPositionLineOffsetsComposition(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			const width = math.MaxInt
-			op := textutil.Options{Face: face, LineHeight: lineHeight}
+			s := textutil.Style{Face: face, LineHeight: lineHeight}
 			rendering := tc.committed[:tc.c.sStart] + tc.c.composition + tc.committed[tc.c.sEnd:]
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, tc.committed)
@@ -260,7 +260,7 @@ func TestTextIndexFromPositionLineOffsetsComposition(t *testing.T) {
 				RenderingTextRange:         func(start, end int) string { return rendering[start:end] },
 				RenderingTextLength:        len(rendering),
 				Width:                      width,
-				Options:                    op,
+				Style:                      s,
 				CommittedTextRange:         func(start, end int) string { return tc.committed[start:end] },
 				PrecomputedLineByteOffsets: &l,
 				SelectionStart:             tc.c.sStart,
