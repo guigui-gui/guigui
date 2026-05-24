@@ -61,7 +61,9 @@ type Attributes struct {
 
 // Face is a resolved text face.
 type Face struct {
-	face text.Face
+	face       text.Face
+	family     *Family
+	attributes Attributes
 }
 
 // NewFace resolves the text face for attributes, rendering with fnt's face
@@ -70,7 +72,9 @@ type Face struct {
 // alone.
 func NewFace(context *guigui.Context, fnt *Family, attributes Attributes) Face {
 	return Face{
-		face: resolveFace(context, fnt, attributes),
+		face:       resolveFace(context, fnt, attributes),
+		family:     fnt,
+		attributes: attributes,
 	}
 }
 
@@ -85,6 +89,17 @@ func NewFaceForTest(face text.Face) Face {
 // TextFace returns the resolved face.
 func (f Face) TextFace() text.Face {
 	return f.face
+}
+
+// Family returns the [Family] f was resolved from, or nil when f was resolved
+// without a family.
+func (f Face) Family() *Family {
+	return f.family
+}
+
+// Attributes returns the render attributes f was resolved from.
+func (f Face) Attributes() Attributes {
+	return f.attributes
 }
 
 // UnicodeRange is an inclusive range of code points.
