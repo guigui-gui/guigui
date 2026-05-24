@@ -157,8 +157,8 @@ var (
 )
 
 func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) text.Face {
-	// As font entries registered by [RegisterFonts] might be affected by locales,
-	// clear the cache when the locales change.
+	// As face source entries registered by [RegisterFaceSourceEntries] might be
+	// affected by locales, clear the cache when the locales change.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
 	if !slices.Equal(prevLocales, tmpLocales) {
 		clear(theFaceCache)
@@ -239,7 +239,7 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 
 type appendFunc struct {
 	f         func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry
-	priority1 FontPriority
+	priority1 FaceSourceEntryPriority
 	priority2 int
 }
 
@@ -247,22 +247,20 @@ var (
 	theAppendFuncs []appendFunc
 )
 
-// FontPriority is used to determine the order of the fonts for [RegisterFonts].
-type FontPriority int
+// FaceSourceEntryPriority orders providers registered with
+// [RegisterFaceSourceEntries]; a higher value resolves earlier.
+type FaceSourceEntryPriority int
 
 const (
-	FontPriorityLow    FontPriority = 100
-	FontPriorityNormal FontPriority = 200
-	FontPriorityHigh   FontPriority = 300
+	FaceSourceEntryPriorityLow    FaceSourceEntryPriority = 100
+	FaceSourceEntryPriorityNormal FaceSourceEntryPriority = 200
+	FaceSourceEntryPriorityHigh   FaceSourceEntryPriority = 300
 )
 
-// RegisterFonts registers the fonts.
-//
-// priority is used to determine the order of the fonts.
-// The order of the fonts is determined by the priority.
-// The bigger priority value, the higher priority.
-// If the priority is the same, the order of the fonts is determined by the order of registration.
-func RegisterFonts(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FontPriority) {
+// RegisterFaceSourceEntries registers appendEntries, which contributes face
+// source entries to the fallback resolution stack. A higher priority resolves
+// earlier; equal priorities resolve in registration order.
+func RegisterFaceSourceEntries(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FaceSourceEntryPriority) {
 	theAppendFuncs = append(theAppendFuncs, appendFunc{
 		f:         appendEntries,
 		priority1: priority,

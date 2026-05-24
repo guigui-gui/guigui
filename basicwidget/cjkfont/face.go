@@ -214,5 +214,5 @@ func appendRecommendedFaceSourceEntries(faceSourceEntries []basicwidget.FaceSour
 }
 
 func init() {
-	basicwidget.RegisterFonts(appendRecommendedFaceSourceEntries, basicwidget.FontPriorityNormal)
+	basicwidget.RegisterFaceSourceEntries(appendRecommendedFaceSourceEntries, basicwidget.FaceSourceEntryPriorityNormal)
 }

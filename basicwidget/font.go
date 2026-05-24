@@ -35,13 +35,14 @@ type FontFamily struct {
 	f *font.Family
 }
 
-// FontPriority is used to determine the order of the fonts for [RegisterFonts].
-type FontPriority int
+// FaceSourceEntryPriority orders providers registered with
+// [RegisterFaceSourceEntries]; a higher value resolves earlier.
+type FaceSourceEntryPriority int
 
 const (
-	FontPriorityLow    = FontPriority(font.FontPriorityLow)
-	FontPriorityNormal = FontPriority(font.FontPriorityNormal)
-	FontPriorityHigh   = FontPriority(font.FontPriorityHigh)
+	FaceSourceEntryPriorityLow    = FaceSourceEntryPriority(font.FaceSourceEntryPriorityLow)
+	FaceSourceEntryPriorityNormal = FaceSourceEntryPriority(font.FaceSourceEntryPriorityNormal)
+	FaceSourceEntryPriorityHigh   = FaceSourceEntryPriority(font.FaceSourceEntryPriorityHigh)
 )
 
 // NewFontFamily returns a FontFamily that renders using entries. A nil opts is
@@ -63,21 +64,18 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 	return fromFontFaceSourceEntry(font.DefaultFaceSourceEntry())
 }
 
-// RegisterFonts registers the fonts.
-//
-// priority is used to determine the order of the fonts.
-// The order of the fonts is determined by the priority.
-// The bigger priority value, the higher priority.
-// If the priority is the same, the order of the fonts is determined by the order of registration.
-func RegisterFonts(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FontPriority) {
-	font.RegisterFonts(func(entries []font.FaceSourceEntry, context *guigui.Context) []font.FaceSourceEntry {
+// RegisterFaceSourceEntries registers appendEntries, which contributes face
+// source entries to the fallback resolution stack. A higher priority resolves
+// earlier; equal priorities resolve in registration order.
+func RegisterFaceSourceEntries(appendEntries func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry, priority FaceSourceEntryPriority) {
+	font.RegisterFaceSourceEntries(func(entries []font.FaceSourceEntry, context *guigui.Context) []font.FaceSourceEntry {
 		converted := make([]FaceSourceEntry, len(entries))
 		for i, e := range entries {
 			converted[i] = fromFontFaceSourceEntry(e)
 		}
 		converted = appendEntries(converted, context)
 		return toFontFaceSourceEntries(converted)
-	}, font.FontPriority(priority))
+	}, font.FaceSourceEntryPriority(priority))
 }
 
 func toFontFaceSourceEntries(entries []FaceSourceEntry) []font.FaceSourceEntry {
