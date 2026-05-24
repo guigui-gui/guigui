@@ -139,7 +139,7 @@ type Text struct {
 	bold          bool
 	tabular       bool
 	tabWidth      float64
-	font          *Font
+	fontFamily    *FontFamily
 
 	selectable                  bool
 	editable                    bool
@@ -178,11 +178,11 @@ type Text struct {
 	cachedTextHeights     [8][4]cachedTextHeightEntry
 	cachedDefaultTabWidth float64
 
-	// lastFaceAttributes and lastFontID together fingerprint the face used to
-	// size text, so cached sizes reset when either the render attributes or
-	// the active font changes.
+	// lastFaceAttributes and lastFontFamilyID together fingerprint the face used
+	// to size text, so cached sizes reset when either the render attributes or
+	// the active font family changes.
 	lastFaceAttributes font.Attributes
-	lastFontID         uint64
+	lastFontFamilyID   uint64
 
 	lastScale float64
 
@@ -409,7 +409,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt(selEnd)
 	w.WriteBool(t.field.IsFocused())
 	w.WriteString(t.cachedLocalesString)
-	w.WriteUint64(t.fontID())
+	w.WriteUint64(t.fontFamilyID())
 	ch := t.contentHashForStateKey()
 	w.WriteUint64(ch.Lo)
 	w.WriteUint64(ch.Hi)
@@ -431,10 +431,10 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	attrs := t.faceAttributes(context, false)
-	fontID := t.fontID()
-	if t.lastFaceAttributes != attrs || t.lastFontID != fontID {
+	fontFamilyID := t.fontFamilyID()
+	if t.lastFaceAttributes != attrs || t.lastFontFamilyID != fontFamilyID {
 		t.lastFaceAttributes = attrs
-		t.lastFontID = fontID
+		t.lastFontFamilyID = fontFamilyID
 		t.resetCachedTextSize()
 	}
 	if t.lastScale != context.Scale() {
@@ -888,10 +888,11 @@ func (t *Text) SetBold(bold bool) {
 	t.bold = bold
 }
 
-// SetFont sets the [Font] used to render the Text. Passing nil restores the
-// default behavior of rendering with the registered face source stack.
-func (t *Text) SetFont(font *Font) {
-	t.font = font
+// SetFontFamily sets the [FontFamily] used to render the Text. Passing nil
+// restores the default behavior of rendering with the registered face source
+// stack.
+func (t *Text) SetFontFamily(fontFamily *FontFamily) {
+	t.fontFamily = fontFamily
 }
 
 func (t *Text) SetTabular(tabular bool) {
@@ -1064,11 +1065,11 @@ func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rect
 	return t.textContentBounds(context, bounds)
 }
 
-func (t *Text) fontID() uint64 {
-	if t.font == nil {
+func (t *Text) fontFamilyID() uint64 {
+	if t.fontFamily == nil {
 		return 0
 	}
-	return t.font.f.ID()
+	return t.fontFamily.f.ID()
 }
 
 func (t *Text) faceAttributes(context *guigui.Context, forceBold bool) font.Attributes {
@@ -1102,9 +1103,9 @@ func (t *Text) face(context *guigui.Context, forceBold bool) font.Face {
 	if forceBold {
 		attrs.Weight = text.WeightBold
 	}
-	var fnt *font.Font
-	if t.font != nil {
-		fnt = t.font.f
+	var fnt *font.Family
+	if t.fontFamily != nil {
+		fnt = t.fontFamily.f
 	}
 	return font.NewFace(context, fnt, attrs)
 }
@@ -1297,7 +1298,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			WrapMode:               textutil.WrapMode(t.wrapMode),
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Font:                   t.face(context, false),
+			Face:                   t.face(context, false),
 			LineHeight:             t.lineHeight(context),
 			TabWidth:               t.actualTabWidth(context),
 			KeepTailingSpace:       t.keepTailingSpace,
@@ -1339,7 +1340,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 				width,
 				visibleBounds.Max.Y-textBounds.Min.Y,
 			),
-			Font:             t.face(context, false),
+			Face:             t.face(context, false),
 			LineHeight:       t.lineHeight(context),
 			TabWidth:         t.actualTabWidth(context),
 			KeepTailingSpace: t.keepTailingSpace,
@@ -1381,7 +1382,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			width,
 			visibleBounds.Max.Y-textBounds.Min.Y-alignOffset,
 		),
-		Font:             t.face(context, false),
+		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
@@ -1781,7 +1782,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	face := t.face(context, false)
 	op := &t.drawOptions
 	op.Style.WrapMode = textutil.WrapMode(t.wrapMode)
-	op.Style.Font = face
+	op.Style.Face = face
 	op.Style.LineHeight = t.lineHeight(context)
 	op.Style.HorizontalAlign = textutil.HorizontalAlign(t.hAlign)
 	op.Style.VerticalAlign = textutil.VerticalAlign(t.vAlign)
@@ -2224,7 +2225,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	width := textContentBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Font:             t.face(context, false),
+		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),
@@ -2273,7 +2274,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Font:             t.face(context, false),
+		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),
@@ -2364,7 +2365,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Font:             t.face(context, false),
+		Face:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),

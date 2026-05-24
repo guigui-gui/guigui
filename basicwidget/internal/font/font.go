@@ -49,7 +49,7 @@ var (
 
 // Attributes is a comparable set of text rendering attributes: size, weight,
 // ligatures, tabular numerals, and language. A face is resolved from
-// Attributes together with a [Font]; the attributes alone do not identify a
+// Attributes together with a [Family]; the attributes alone do not identify a
 // font.
 type Attributes struct {
 	Size   float64
@@ -68,7 +68,7 @@ type Face struct {
 // source entries followed by the registered fallback stack (unless fnt
 // disables fallback). A nil fnt resolves using the registered fallback stack
 // alone.
-func NewFace(context *guigui.Context, fnt *Font, attributes Attributes) Face {
+func NewFace(context *guigui.Context, fnt *Family, attributes Attributes) Face {
 	return Face{
 		face: resolveFace(context, fnt, attributes),
 	}
@@ -100,46 +100,46 @@ type FaceSourceEntry struct {
 	UnicodeRanges []UnicodeRange
 }
 
-// FontOptions controls how a [Font] resolves glyphs.
-type FontOptions struct {
-	// DisableFallback restricts rendering to the Font's own entries, skipping
+// FamilyOptions controls how a [Family] resolves glyphs.
+type FamilyOptions struct {
+	// DisableFallback restricts rendering to the Family's own entries, skipping
 	// the fallback stack.
 	DisableFallback bool
 }
 
-// Font is an immutable ordered list of [FaceSourceEntry] values, optionally
+// Family is an immutable ordered list of [FaceSourceEntry] values, optionally
 // followed by the registered fallback stack. Size, weight, language, and
-// OpenType features are not part of a Font; they are applied at render time.
-type Font struct {
+// OpenType features are not part of a Family; they are applied at render time.
+type Family struct {
 	id          uint64
 	entries     []FaceSourceEntry
 	useFallback bool
 }
 
-var theNextFontID atomic.Uint64
+var theNextFamilyID atomic.Uint64
 
-// NewFont returns a Font that renders using entries. A nil opts is treated
-// the same as the zero [FontOptions].
-func NewFont(entries []FaceSourceEntry, opts *FontOptions) *Font {
+// NewFamily returns a Family that renders using entries. A nil opts is treated
+// the same as the zero [FamilyOptions].
+func NewFamily(entries []FaceSourceEntry, opts *FamilyOptions) *Family {
 	var disableFallback bool
 	if opts != nil {
 		disableFallback = opts.DisableFallback
 	}
-	return &Font{
-		id:          theNextFontID.Add(1),
+	return &Family{
+		id:          theNextFamilyID.Add(1),
 		entries:     append([]FaceSourceEntry(nil), entries...),
 		useFallback: !disableFallback,
 	}
 }
 
-// ID returns the Font's process-unique identifier.
-func (f *Font) ID() uint64 {
+// ID returns the Family's process-unique identifier.
+func (f *Family) ID() uint64 {
 	return f.id
 }
 
-// cacheKey identifies a resolved face by font identity and render attributes.
+// cacheKey identifies a resolved face by family identity and render attributes.
 type cacheKey struct {
-	fontID     uint64
+	familyID   uint64
 	attributes Attributes
 }
 
@@ -156,7 +156,7 @@ var (
 	prevLocales []language.Tag
 )
 
-func resolveFace(context *guigui.Context, fnt *Font, attributes Attributes) text.Face {
+func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) text.Face {
 	// As font entries registered by [RegisterFonts] might be affected by locales,
 	// clear the cache when the locales change.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
@@ -166,12 +166,12 @@ func resolveFace(context *guigui.Context, fnt *Font, attributes Attributes) text
 		copy(prevLocales, tmpLocales)
 	}
 
-	var fontID uint64
+	var familyID uint64
 	if fnt != nil {
-		fontID = fnt.id
+		familyID = fnt.id
 	}
 	ck := cacheKey{
-		fontID:     fontID,
+		familyID:   familyID,
 		attributes: attributes,
 	}
 	if f, ok := theFaceCache[ck]; ok {

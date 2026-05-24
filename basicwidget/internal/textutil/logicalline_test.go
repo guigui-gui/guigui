@@ -153,7 +153,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
 	s := textutil.Style{
-		Font:       face,
+		Face:       face,
 		LineHeight: lineHeight,
 	}
 
@@ -234,7 +234,7 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
 	s := textutil.Style{
-		Font:       face,
+		Face:       face,
 		LineHeight: lineHeight,
 	}
 

@@ -94,7 +94,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 
 type Style struct {
 	WrapMode         WrapMode
-	Font             font.Face
+	Face             font.Face
 	LineHeight       float64
 	HorizontalAlign  HorizontalAlign
 	VerticalAlign    VerticalAlign
@@ -245,7 +245,7 @@ var theCachedGlyphs []text.LazyGlyph
 // boundary nearest target, where target is the click X measured from the
 // visual line's left edge.
 func indexFromXInVisualLine(vlStr string, target float64, style *Style) int {
-	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Font.TextFace(), style.TabWidth)
+	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Face.TextFace(), style.TabWidth)
 	// Drop imager refs on exit so the pooled slice doesn't pin face state.
 	defer func() {
 		theCachedGlyphs = slices.Delete(theCachedGlyphs, 0, len(theCachedGlyphs))
@@ -678,15 +678,15 @@ func textPadding(face text.Face, lineHeight float64) float64 {
 }
 
 func textPositionYOffset(size image.Point, str string, style *Style) float64 {
-	yOffset := textPadding(style.Font.TextFace(), style.LineHeight)
+	yOffset := textPadding(style.Face.TextFace(), style.LineHeight)
 	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += float64(size.Y) - textHeight
 	}

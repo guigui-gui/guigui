@@ -20,18 +20,19 @@ type FaceSourceEntry struct {
 	UnicodeRanges []UnicodeRange
 }
 
-// FontOptions controls how a [Font] resolves glyphs.
-type FontOptions struct {
-	// DisableFallback restricts rendering to the Font's own entries, skipping
-	// the fallback stack.
+// FontFamilyOptions controls how a [FontFamily] resolves glyphs.
+type FontFamilyOptions struct {
+	// DisableFallback restricts rendering to the FontFamily's own entries,
+	// skipping the fallback stack.
 	DisableFallback bool
 }
 
-// Font is an immutable ordered list of [FaceSourceEntry] values, optionally
-// followed by the registered fallback stack. Size, weight, language, and
-// OpenType features are not part of a Font; they are applied at render time.
-type Font struct {
-	f *font.Font
+// FontFamily is an immutable ordered list of [FaceSourceEntry] values,
+// optionally followed by the registered fallback stack. Size, weight,
+// language, and OpenType features are not part of a FontFamily; they are
+// applied at render time.
+type FontFamily struct {
+	f *font.Family
 }
 
 // FontPriority is used to determine the order of the fonts for [RegisterFonts].
@@ -43,17 +44,17 @@ const (
 	FontPriorityHigh   = FontPriority(font.FontPriorityHigh)
 )
 
-// NewFont returns a Font that renders using entries. A nil opts is treated
-// the same as the zero [FontOptions].
-func NewFont(entries []FaceSourceEntry, opts *FontOptions) *Font {
-	var fontOpts *font.FontOptions
+// NewFontFamily returns a FontFamily that renders using entries. A nil opts is
+// treated the same as the zero [FontFamilyOptions].
+func NewFontFamily(entries []FaceSourceEntry, opts *FontFamilyOptions) *FontFamily {
+	var familyOpts *font.FamilyOptions
 	if opts != nil {
-		fontOpts = &font.FontOptions{
+		familyOpts = &font.FamilyOptions{
 			DisableFallback: opts.DisableFallback,
 		}
 	}
-	return &Font{
-		f: font.NewFont(toFontFaceSourceEntries(entries), fontOpts),
+	return &FontFamily{
+		f: font.NewFamily(toFontFaceSourceEntries(entries), familyOpts),
 	}
 }
 

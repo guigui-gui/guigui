@@ -71,7 +71,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 			WrapMode:               p.Style.WrapMode,
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Font:                   p.Style.Font,
+			Face:                   p.Style.Face,
 			LineHeight:             p.Style.LineHeight,
 			TabWidth:               p.Style.TabWidth,
 			KeepTailingSpace:       p.Style.KeepTailingSpace,
@@ -84,8 +84,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Font, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Font, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineVisualCountDelta = renderingCount - committedCount
 		}
 	}
@@ -96,7 +96,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	// and would clamp such Ys onto the hint line, causing arrow-up at
 	// the viewport top to stand still instead of crossing into the
 	// previous logical line.
-	padding := textPadding(p.Style.Font.TextFace(), p.Style.LineHeight)
+	padding := textPadding(p.Style.Face.TextFace(), p.Style.LineHeight)
 	target := int(math.Floor((float64(position.Y) + padding) / p.Style.LineHeight))
 
 	committedTextLen := p.RenderingTextLength
@@ -110,7 +110,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		committedTextLen:   committedTextLen,
 		renderingTextRange: p.RenderingTextRange,
 		width:              p.Width,
-		face:               p.Style.Font,
+		face:               p.Style.Face,
 		tabWidth:           p.Style.TabWidth,
 		keepTailingSpace:   p.Style.KeepTailingSpace,
 		wrapMode:           p.Style.WrapMode,
@@ -178,14 +178,14 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 // [TextIndexFromPosition] uses this as a fallback.
 func textIndexFromPosition(width int, position image.Point, str string, style *Style) int {
 	// Determine the visual line first.
-	padding := textPadding(style.Font.TextFace(), style.LineHeight)
+	padding := textPadding(style.Face.TextFace(), style.LineHeight)
 	n := int((float64(position.Y) + padding) / style.LineHeight)
 
 	var pos int
 	var vlStr string
 	var vlIndex int
 	for l := range visualLines(width, str, style.WrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		return advance(str, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
@@ -196,7 +196,7 @@ func textIndexFromPosition(width int, position image.Point, str string, style *S
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, style.Font.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
 	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
 	return pos
 }

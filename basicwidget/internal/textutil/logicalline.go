@@ -155,7 +155,7 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 		return TextPosition{}, TextPosition{}, 0
 	}
 	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		return advance(s, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
 	}), index, style)
 }
 
@@ -164,14 +164,14 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 // the logical line. Counterpart of [TextIndexFromPosition].
 func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, style *Style) int {
 	// Determine the visual line first.
-	padding := textPadding(style.Font.TextFace(), style.LineHeight)
+	padding := textPadding(style.Face.TextFace(), style.LineHeight)
 	n := int((float64(position.Y) + padding) / style.LineHeight)
 
 	var pos int
 	var vlStr string
 	var vlIndex int
 	for l := range visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		return advance(s, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
@@ -182,7 +182,7 @@ func TextIndexFromPositionInLogicalLine(width int, position image.Point, logical
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, style.Font.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
 	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
 	return pos
 }

@@ -64,7 +64,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 
 	theCachedVisualLines = theCachedVisualLines[:0]
 	for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, options.Font.TextFace(), options.TabWidth, options.KeepTailingSpace)
+		return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
 	}) {
 		theCachedVisualLines = append(theCachedVisualLines, vl)
 	}
@@ -156,8 +156,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if !options.KeepTailingSpace {
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
-		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Font.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
-			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(bounds.Dx()), options.Font.TextFace(), options.TabWidth)
+		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
+			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(bounds.Dx()), options.Face.TextFace(), options.TabWidth)
 		}
 		// Ebitengine's text.Draw does not handle tab characters, so lines
 		// containing tabs must use manual alignment via oneLineLeft and GeoM.
@@ -177,22 +177,22 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			default:
 				op.PrimaryAlign = text.AlignStart
 			}
-			text.Draw(dst, vlStr, options.Font.TextFace(), op)
+			text.Draw(dst, vlStr, options.Face.TextFace(), op)
 		} else {
 			op.PrimaryAlign = text.AlignStart
-			x := oneLineLeft(bounds.Dx(), vlStr, options.Font.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			x := oneLineLeft(bounds.Dx(), vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 			op.GeoM.Translate(x, 0)
 			origVlStr := vlStr
 			var origX float64
 			var pos int
 			for {
 				head, tail, ok := strings.Cut(vlStr, "\t")
-				text.Draw(dst, head, options.Font.TextFace(), op)
+				text.Draw(dst, head, options.Face.TextFace(), op)
 				if !ok {
 					break
 				}
 				tabIdx := pos + len(head)
-				x := origX + text.AdvanceAt(origVlStr, tabIdx, options.Font.TextFace()) - text.AdvanceAt(origVlStr, pos, options.Font.TextFace())
+				x := origX + text.AdvanceAt(origVlStr, tabIdx, options.Face.TextFace()) - text.AdvanceAt(origVlStr, pos, options.Face.TextFace())
 				nextX := nextIndentPosition(x, options.TabWidth)
 				op.GeoM.Translate(nextX-origX, 0)
 				origX = nextX

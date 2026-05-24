@@ -32,8 +32,8 @@ type Root struct {
 	goStrictLabel basicwidget.Text
 	goStrictText  basicwidget.Text
 
-	goFont       *basicwidget.Font
-	goStrictFont *basicwidget.Font
+	goFont       *basicwidget.FontFamily
+	goStrictFont *basicwidget.FontFamily
 
 	layoutItems []guigui.LinearLayoutItem
 }
@@ -58,14 +58,14 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.goLabel.SetScale(1.2)
 	r.goText.SetValue(sampleText)
 	r.goText.SetScale(1.5)
-	r.goText.SetFont(r.goFont)
+	r.goText.SetFontFamily(r.goFont)
 
 	r.goStrictLabel.SetValue("Go Regular without fallback:")
 	r.goStrictLabel.SetBold(true)
 	r.goStrictLabel.SetScale(1.2)
 	r.goStrictText.SetValue(sampleText)
 	r.goStrictText.SetScale(1.5)
-	r.goStrictText.SetFont(r.goStrictFont)
+	r.goStrictText.SetFontFamily(r.goStrictFont)
 
 	return nil
 }
@@ -115,7 +115,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}).LayoutWidgets(context, b, layouter)
 }
 
-func newGoFonts() (*basicwidget.Font, *basicwidget.Font, error) {
+func newGoFonts() (*basicwidget.FontFamily, *basicwidget.FontFamily, error) {
 	src, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
 	if err != nil {
 		return nil, nil, err
@@ -123,8 +123,8 @@ func newGoFonts() (*basicwidget.Font, *basicwidget.Font, error) {
 	entries := []basicwidget.FaceSourceEntry{
 		{FaceSource: src},
 	}
-	withFallback := basicwidget.NewFont(entries, nil)
-	withoutFallback := basicwidget.NewFont(entries, &basicwidget.FontOptions{
+	withFallback := basicwidget.NewFontFamily(entries, nil)
+	withoutFallback := basicwidget.NewFontFamily(entries, &basicwidget.FontFamilyOptions{
 		DisableFallback: true,
 	})
 	return withFallback, withoutFallback, nil
