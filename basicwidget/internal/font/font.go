@@ -237,41 +237,6 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 	return theDefaultFaceSource
 }
 
-func areFaceSourceEntriesEqual(a, b []FaceSourceEntry) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i].FaceSource != b[i].FaceSource {
-			return false
-		}
-		if !slices.Equal(a[i].UnicodeRanges, b[i].UnicodeRanges) {
-			return false
-		}
-	}
-	return true
-}
-
-var (
-	theCustomFaceSourceEntries []FaceSourceEntry
-)
-
-// SetFaceSources sets the face sources.
-func SetFaceSources(entries []FaceSourceEntry) {
-	if areFaceSourceEntriesEqual(theCustomFaceSourceEntries, entries) {
-		return
-	}
-
-	if len(theCustomFaceSourceEntries) < len(entries) {
-		theCustomFaceSourceEntries = slices.Grow(theCustomFaceSourceEntries, len(entries))[:len(entries)]
-	} else if len(theCustomFaceSourceEntries) > len(entries) {
-		theCustomFaceSourceEntries = slices.Delete(theCustomFaceSourceEntries, len(entries), len(theCustomFaceSourceEntries))
-	}
-	copy(theCustomFaceSourceEntries, entries)
-
-	clear(theFaceCache)
-}
-
 type appendFunc struct {
 	f         func([]FaceSourceEntry, *guigui.Context) []FaceSourceEntry
 	priority1 FontPriority
@@ -306,8 +271,6 @@ func RegisterFonts(appendEntries func([]FaceSourceEntry, *guigui.Context) []Face
 }
 
 func appendFontFaceEntries(entries []FaceSourceEntry, context *guigui.Context) []FaceSourceEntry {
-	entries = append(entries, theCustomFaceSourceEntries...)
-
 	slices.SortFunc(theAppendFuncs, func(a, b appendFunc) int {
 		if a.priority1 != b.priority1 {
 			return int(b.priority1 - a.priority1)

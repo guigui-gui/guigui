@@ -63,11 +63,6 @@ func DefaultFaceSourceEntry() FaceSourceEntry {
 	return fromFontFaceSourceEntry(font.DefaultFaceSourceEntry())
 }
 
-// SetFaceSources sets the face sources.
-func SetFaceSources(entries []FaceSourceEntry) {
-	font.SetFaceSources(toFontFaceSourceEntries(entries))
-}
-
 // RegisterFonts registers the fonts.
 //
 // priority is used to determine the order of the fonts.
