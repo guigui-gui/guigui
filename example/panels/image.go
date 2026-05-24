@@ -35,12 +35,6 @@ func (i *imageCache) GetMonochrome(name string, colorMode ebiten.ColorMode) (*eb
 	})
 }
 
-func (i *imageCache) Get(name string) (*ebiten.Image, error) {
-	return i.get(imageCacheKey{
-		name: name,
-	})
-}
-
 func (i *imageCache) get(key imageCacheKey) (*ebiten.Image, error) {
 	if img, ok := i.m[key]; ok {
 		return img, nil

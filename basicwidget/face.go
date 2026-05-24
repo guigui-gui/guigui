@@ -94,13 +94,6 @@ func NewFont(entries []FaceSourceEntry, opts *FontOptions) *Font {
 	}
 }
 
-// ID returns a unique identifier for the Font. The identifier is stable
-// across the Font's lifetime and distinct from all other Fonts in the
-// same process.
-func (f *Font) ID() uint64 {
-	return f.id
-}
-
 var (
 	theFaceCache map[font.Key]text.Face
 )

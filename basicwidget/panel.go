@@ -71,10 +71,6 @@ func (p *Panel) SetAutoBorder(auto bool) {
 	p.panel.SetAutoBorder(auto)
 }
 
-func (p *Panel) scrollOffset() (float64, float64) {
-	return p.panel.scrollOffset()
-}
-
 func (p *Panel) SetScrollOffset(offsetX, offsetY float64) {
 	p.panel.SetScrollOffset(offsetX, offsetY)
 }
@@ -97,10 +93,6 @@ func (p *Panel) ForceSetScrollOffsetByDelta(offsetXDelta, offsetYDelta float64) 
 // the top-left of the viewport.
 func (p *Panel) EnsureRectangleVisible(rect image.Rectangle) {
 	p.panel.EnsureRectangleVisible(rect)
-}
-
-func (p *Panel) setScrolBarVisible(visible bool) {
-	p.panel.setScrolVisible(visible)
 }
 
 func (p *Panel) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -253,10 +245,6 @@ func (p *panel) forceSetScrollOffset(x, y float64) {
 	p.isNextOffsetDelta = false
 	p.nextOffsetX = x
 	p.nextOffsetY = y
-}
-
-func (p *panel) setScrolVisible(visible bool) {
-	p.scrollHidden = !visible
 }
 
 func (p *panel) EnsureRectangleVisible(rect image.Rectangle) {

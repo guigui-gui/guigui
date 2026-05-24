@@ -1555,10 +1555,6 @@ func (l *listContent[T]) resetHoveredItemIndex() {
 	l.keyboardHighlightIndexPlus1 = 0
 }
 
-func (l *listContent[T]) keyboardHighlightIndex() int {
-	return l.keyboardHighlightIndexPlus1 - 1
-}
-
 func (l *listContent[T]) setKeyboardHighlightIndex(index int) {
 	if index < 0 {
 		index = -1

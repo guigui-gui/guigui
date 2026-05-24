@@ -364,10 +364,6 @@ func (t *TextInput) setSelection(start, end int) {
 	t.textInput.setSelection(start, end)
 }
 
-func (t *TextInput) setPaddingStart(padding int) {
-	t.textInput.setPaddingStart(padding)
-}
-
 func (t *TextInput) setPaddingEnd(padding int) {
 	t.textInput.setPaddingEnd(padding)
 }
@@ -528,10 +524,6 @@ func (t *textInput) SetEditable(editable bool) {
 
 func (t *textInput) setSelection(start, end int) {
 	t.text.Text().setSelection(start, end, -1, false)
-}
-
-func (t *textInput) setPaddingStart(padding int) {
-	t.paddingStart = padding
 }
 
 func (t *textInput) setPaddingEnd(padding int) {

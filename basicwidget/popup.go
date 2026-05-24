@@ -627,10 +627,6 @@ func (p *popupContentAndFrame) setDrawerEdge(edge DrawerEdge) {
 	p.frame.setDrawerEdge(edge)
 }
 
-func (p *popupContentAndFrame) hasContent() bool {
-	return p.content.hasContent()
-}
-
 func (p *popupContentAndFrame) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&p.content)
 	adder.AddWidget(&p.frame)
@@ -662,10 +658,6 @@ func (p *popupContent) setStyle(style popupStyle) {
 
 func (p *popupContent) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 	p.backgroundSemanticColor = semanticColor
-}
-
-func (p *popupContent) hasContent() bool {
-	return p.content != nil
 }
 
 func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
