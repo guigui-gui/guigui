@@ -16,6 +16,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/chunk"
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 func nextIndentPosition(position float64, indentWidth float64) float64 {
@@ -93,7 +94,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 
 type Style struct {
 	WrapMode         WrapMode
-	Face             text.Face
+	Font             font.Face
 	LineHeight       float64
 	HorizontalAlign  HorizontalAlign
 	VerticalAlign    VerticalAlign
@@ -244,7 +245,7 @@ var theCachedGlyphs []text.LazyGlyph
 // boundary nearest target, where target is the click X measured from the
 // visual line's left edge.
 func indexFromXInVisualLine(vlStr string, target float64, style *Style) int {
-	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Face, style.TabWidth)
+	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Font.TextFace(), style.TabWidth)
 	// Drop imager refs on exit so the pooled slice doesn't pin face state.
 	defer func() {
 		theCachedGlyphs = slices.Delete(theCachedGlyphs, 0, len(theCachedGlyphs))
@@ -644,23 +645,23 @@ func visualLineCount(width int, str string, wrapMode WrapMode, face text.Face, t
 // need to be computed, this avoids per-visual-line shaping calls and is
 // dramatically cheaper for very long text (e.g. a multi-megabyte editor
 // buffer).
-func MeasureHeight(width int, str string, wrapMode WrapMode, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(visualLineCount(width, str, wrapMode, face, tabWidth, keepTailingSpace))
+func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
+	return lineHeight * float64(visualLineCount(width, str, wrapMode, face.TextFace(), tabWidth, keepTailingSpace))
 }
 
-func Measure(width int, str string, wrapMode WrapMode, face text.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func Measure(width int, str string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range visualLines(width, str, wrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, face, tabWidth, keepTailingSpace)
+		return advance(str, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
 	}) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
 		}
-		vlWidth := advance(vlStr, len(vlStr), face, tabWidth, keepTailingSpace)
+		vlWidth := advance(vlStr, len(vlStr), face.TextFace(), tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
-			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face, tabWidth)
-			vlWidth = advance(vlStr, len(vlStr), face, tabWidth, false)
+			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face.TextFace(), tabWidth)
+			vlWidth = advance(vlStr, len(vlStr), face.TextFace(), tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
@@ -677,15 +678,15 @@ func textPadding(face text.Face, lineHeight float64) float64 {
 }
 
 func textPositionYOffset(size image.Point, str string, style *Style) float64 {
-	yOffset := textPadding(style.Face, style.LineHeight)
+	yOffset := textPadding(style.Font.TextFace(), style.LineHeight)
 	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Font.TextFace(), style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += float64(size.Y) - textHeight
 	}

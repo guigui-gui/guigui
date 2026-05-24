@@ -112,7 +112,7 @@ func TestComputeCompositionInfo_CrossLineSelectionWrap(t *testing.T) {
 		WrapMode:               textutil.WrapModeNormal,
 		CommittedSelectionLine: "",
 		RenderingSelectionLine: "",
-		Face:                   face,
+		Font:                   face,
 		LineHeight:             24,
 		WrapWidth:              1000,
 	})
@@ -135,7 +135,7 @@ func TestComputeCompositionInfo_WrapNoWrapChange(t *testing.T) {
 		WrapMode:               textutil.WrapModeNormal,
 		CommittedSelectionLine: "abcdef",
 		RenderingSelectionLine: "abXYcdef",
-		Face:                   face,
+		Font:                   face,
 		LineHeight:             24,
 		WrapWidth:              1000,
 	})
@@ -298,7 +298,7 @@ func TestVisibleRangeInViewport_WrapModeNormal(t *testing.T) {
 		// The walker must not stop until line 1's full height is
 		// accounted for, then include line 2 as the slack.
 		ViewportSize: image.Pt(narrowWidth, int(lineHeight+lineHeight*float64(wraps))),
-		Face:         face,
+		Font:         face,
 		LineHeight:   lineHeight,
 		WrapMode:     textutil.WrapModeNormal,
 	}

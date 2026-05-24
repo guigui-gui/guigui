@@ -61,7 +61,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 	if !ok {
 		str := p.RenderingTextRange(0, p.RenderingTextLength)
 		vls := visualLines(p.Width, str, p.Style.WrapMode, func(s string, indexInBytes int) float64 {
-			return advance(s, indexInBytes, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			return advance(s, indexInBytes, p.Style.Font.TextFace(), p.Style.TabWidth, p.Style.KeepTailingSpace)
 		})
 		return textPositionFromIndexInVisualLines(p.Width, vls, index, &p.Style)
 	}
@@ -169,12 +169,12 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 		return TextPosition{}, TextPosition{}, 0
 	}
 
-	paddingY := textPadding(style.Face, style.LineHeight)
+	paddingY := textPadding(style.Font.TextFace(), style.LineHeight)
 
 	var pos0, pos1 TextPosition
 	if found0 {
-		x0 := oneLineLeft(width, line0, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
-		x0 += advance(line0, indexInLine0, style.Face, style.TabWidth, true)
+		x0 := oneLineLeft(width, line0, style.Font.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+		x0 += advance(line0, indexInLine0, style.Font.TextFace(), style.TabWidth, true)
 		pos0 = TextPosition{
 			X:      x0,
 			Top:    y0 + paddingY,
@@ -182,8 +182,8 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 		}
 	}
 	if found1 {
-		x1 := oneLineLeft(width, line1, style.Face, style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
-		x1 += advance(line1, indexInLine1, style.Face, style.TabWidth, true)
+		x1 := oneLineLeft(width, line1, style.Font.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+		x1 += advance(line1, indexInLine1, style.Font.TextFace(), style.TabWidth, true)
 		pos1 = TextPosition{
 			X:      x1,
 			Top:    y1 + paddingY,

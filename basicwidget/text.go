@@ -22,6 +22,7 @@ import (
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/internal/clipboard"
 )
@@ -176,7 +177,7 @@ type Text struct {
 	cachedTextWidths      [8][4]cachedTextWidthEntry
 	cachedTextHeights     [8][4]cachedTextHeightEntry
 	cachedDefaultTabWidth float64
-	lastFaceCacheKey      textutil.FaceKey
+	lastFaceCacheKey      font.Key
 	lastScale             float64
 
 	// contentHasher is a reusable xxh3 streaming hasher used by [Text.WriteStateKey]
@@ -909,7 +910,7 @@ func (t *Text) actualTabWidth(context *guigui.Context) float64 {
 	}
 	face := t.face(context, false)
 	const defaultTabSpaces = "        "
-	t.cachedDefaultTabWidth = text.AdvanceAt(defaultTabSpaces, len(defaultTabSpaces), face)
+	t.cachedDefaultTabWidth = text.AdvanceAt(defaultTabSpaces, len(defaultTabSpaces), face.TextFace())
 	return t.cachedDefaultTabWidth
 }
 
@@ -1058,7 +1059,7 @@ func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rect
 	return t.textContentBounds(context, bounds)
 }
 
-func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) textutil.FaceKey {
+func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) font.Key {
 	size := FontSize(context) * (t.scaleMinus1 + 1)
 	weight := text.WeightMedium
 	if t.bold || forceBold {
@@ -1078,7 +1079,7 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) textutil.Fa
 	if t.font != nil {
 		fontID = t.font.id
 	}
-	return textutil.FaceKey{
+	return font.Key{
 		FontID: fontID,
 		Size:   size,
 		Weight: weight,
@@ -1089,12 +1090,12 @@ func (t *Text) faceCacheKey(context *guigui.Context, forceBold bool) textutil.Fa
 }
 
 // face must be called after [Text.Build], as it relies on lastFaceCacheKey being set.
-func (t *Text) face(context *guigui.Context, forceBold bool) text.Face {
+func (t *Text) face(context *guigui.Context, forceBold bool) font.Face {
 	key := t.lastFaceCacheKey
 	if forceBold {
 		key.Weight = text.WeightBold
 	}
-	return fontFace(context, key, t.font)
+	return font.NewFace(key, fontFace(context, key, t.font))
 }
 
 func (t *Text) lineHeight(context *guigui.Context) float64 {
@@ -1285,7 +1286,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			WrapMode:               textutil.WrapMode(t.wrapMode),
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   t.face(context, false),
+			Font:                   t.face(context, false),
 			LineHeight:             t.lineHeight(context),
 			TabWidth:               t.actualTabWidth(context),
 			KeepTailingSpace:       t.keepTailingSpace,
@@ -1327,7 +1328,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 				width,
 				visibleBounds.Max.Y-textBounds.Min.Y,
 			),
-			Face:             t.face(context, false),
+			Font:             t.face(context, false),
 			LineHeight:       t.lineHeight(context),
 			TabWidth:         t.actualTabWidth(context),
 			KeepTailingSpace: t.keepTailingSpace,
@@ -1369,7 +1370,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			width,
 			visibleBounds.Max.Y-textBounds.Min.Y-alignOffset,
 		),
-		Face:             t.face(context, false),
+		Font:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
@@ -1769,7 +1770,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	face := t.face(context, false)
 	op := &t.drawOptions
 	op.Style.WrapMode = textutil.WrapMode(t.wrapMode)
-	op.Style.Face = face
+	op.Style.Font = face
 	op.Style.LineHeight = t.lineHeight(context)
 	op.Style.HorizontalAlign = textutil.HorizontalAlign(t.hAlign)
 	op.Style.VerticalAlign = textutil.VerticalAlign(t.vAlign)
@@ -2212,7 +2213,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	width := textContentBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Face:             t.face(context, false),
+		Font:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),
@@ -2261,7 +2262,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Face:             t.face(context, false),
+		Font:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),
@@ -2352,7 +2353,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
-		Face:             t.face(context, false),
+		Font:             t.face(context, false),
 		LineHeight:       t.lineHeight(context),
 		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
 		VerticalAlign:    textutil.VerticalAlign(t.vAlign),

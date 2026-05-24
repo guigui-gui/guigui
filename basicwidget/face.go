@@ -14,7 +14,7 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 //go:generate go run gen.go
@@ -102,7 +102,7 @@ func (f *Font) ID() uint64 {
 }
 
 var (
-	theFaceCache map[textutil.FaceKey]text.Face
+	theFaceCache map[font.Key]text.Face
 )
 
 var (
@@ -114,7 +114,7 @@ var (
 	prevLocales []language.Tag
 )
 
-func fontFace(context *guigui.Context, key textutil.FaceKey, font *Font) text.Face {
+func fontFace(context *guigui.Context, key font.Key, fnt *Font) text.Face {
 	// As font entires registered by [RegisterFonts] might be affected by locales,
 	// clear the cache when the locales change.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
@@ -129,9 +129,9 @@ func fontFace(context *guigui.Context, key textutil.FaceKey, font *Font) text.Fa
 	}
 
 	tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
-	if font != nil {
-		tmpFaceSourceEntries = append(tmpFaceSourceEntries, font.entries...)
-		if font.useFallback {
+	if fnt != nil {
+		tmpFaceSourceEntries = append(tmpFaceSourceEntries, fnt.entries...)
+		if fnt.useFallback {
 			tmpFaceSourceEntries = appendFontFaceEntries(tmpFaceSourceEntries, context)
 		}
 	} else {
@@ -175,7 +175,7 @@ func fontFace(context *guigui.Context, key textutil.FaceKey, font *Font) text.Fa
 	}
 
 	if theFaceCache == nil {
-		theFaceCache = map[textutil.FaceKey]text.Face{}
+		theFaceCache = map[font.Key]text.Face{}
 	}
 	theFaceCache[key] = mf
 

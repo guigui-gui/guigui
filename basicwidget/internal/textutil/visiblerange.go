@@ -7,7 +7,7 @@ import (
 	"image"
 	"math"
 
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 // CompositionInfoParams describes the inputs for [ComputeCompositionInfo].
@@ -40,9 +40,9 @@ type CompositionInfoParams struct {
 	CommittedSelectionLine string
 	RenderingSelectionLine string
 
-	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
+	// Font, LineHeight, TabWidth, KeepTailingSpace are passed through
 	// to [MeasureLogicalLineHeight] when WrapMode is not [WrapModeNone].
-	Face             text.Face
+	Font             font.Face
 	LineHeight       float64
 	TabWidth         float64
 	KeepTailingSpace bool
@@ -103,8 +103,8 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Font, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Font, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{
@@ -171,10 +171,10 @@ type VisibleRangeInViewportParams struct {
 	// off-by-one rounding.
 	ViewportSize image.Point
 
-	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
+	// Font, LineHeight, TabWidth, KeepTailingSpace are passed through
 	// to [VisualLineCountForLogicalLine] when WrapMode is not
 	// [WrapModeNone].
-	Face             text.Face
+	Font             font.Face
 	LineHeight       float64
 	TabWidth         float64
 	KeepTailingSpace bool
@@ -217,7 +217,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		committedTextLen:   p.RenderingTextLength - p.Composition.RenderingByteShift,
 		renderingTextRange: p.RenderingTextRange,
 		width:              p.ViewportSize.X,
-		face:               p.Face,
+		face:               p.Font,
 		tabWidth:           p.TabWidth,
 		keepTailingSpace:   p.KeepTailingSpace,
 		wrapMode:           p.WrapMode,

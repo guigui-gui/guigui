@@ -4,13 +4,10 @@
 package textutil_test
 
 import (
-	"bytes"
 	"math"
 	"testing"
 
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"golang.org/x/image/font/gofont/goregular"
-
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
@@ -30,7 +27,7 @@ func withoutLineOffsets(p *textutil.TextLayoutParams) *textutil.TextLayoutParams
 // committed-text visual-line count from line 0 up to lineIdx — used by
 // tests to compute VisualLineIndexHint values for non-zero
 // LogicalLineIndexHint inputs.
-func precedingVisualLineCountFromString(committed string, width int, wrapMode textutil.WrapMode, face text.Face, tabWidth float64, keepTailingSpace bool) func(int) int {
+func precedingVisualLineCountFromString(committed string, width int, wrapMode textutil.WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) func(int) int {
 	var l textutil.LineByteOffsets
 	rebuildFromString(&l, committed)
 	return func(lineIdx int) int {
@@ -55,14 +52,10 @@ func precedingVisualLineCountFromString(committed string, width int, wrapMode te
 }
 
 func TestTextPositionFromIndex(t *testing.T) {
-	source, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
-	if err != nil {
-		t.Fatal(err)
-	}
-	face := &text.GoTextFace{Source: source, Size: 16}
+	face := newTestFace(t)
 	const lineHeight = 24.0
 	s := textutil.Style{
-		Face:       face,
+		Font:       face,
 		LineHeight: lineHeight,
 	}
 
@@ -213,7 +206,7 @@ func TestTextPositionFromIndexLineOffsetsParity(t *testing.T) {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
 				s := textutil.Style{
-					Face:       face,
+					Font:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
 				}
@@ -254,7 +247,7 @@ func TestTextPositionFromIndexLineOffsetsWordWrap(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
 	s := textutil.Style{
-		Face:       face,
+		Font:       face,
 		LineHeight: lineHeight,
 		WrapMode:   textutil.WrapModeNormal,
 	}
@@ -311,7 +304,7 @@ func TestTextPositionFromIndexViewportRelativeHint(t *testing.T) {
 
 	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
-			s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+			s := textutil.Style{Font: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, str)
 			precVL := precedingVisualLineCountFromString(str, math.MaxInt, wrapMode, face, 0, false)
@@ -395,7 +388,7 @@ func TestTextPositionFromIndexLineOffsetsComposition(t *testing.T) {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
 				s := textutil.Style{
-					Face:       face,
+					Font:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
 				}
@@ -444,7 +437,7 @@ func TestTextPositionFromIndexLineOffsetsComposition(t *testing.T) {
 func TestTextPositionFromIndexLineOffsetsCompositionWithLineBreak(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	s := textutil.Style{Face: face, LineHeight: lineHeight}
+	s := textutil.Style{Font: face, LineHeight: lineHeight}
 
 	committed := "abc\ndef"
 	// Composition with an embedded LF: replaces position 4..4 with "X\nY" (3 bytes).
@@ -486,7 +479,7 @@ func TestTextPositionFromIndexLineOffsetsCompositionWithLineBreak(t *testing.T) 
 func TestTextPositionFromIndexLineOffsetsOutOfRange(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	s := textutil.Style{Face: face, LineHeight: lineHeight}
+	s := textutil.Style{Font: face, LineHeight: lineHeight}
 
 	str := "abc"
 	var l textutil.LineByteOffsets
@@ -552,7 +545,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 		for _, tc := range cases {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
-				s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+				s := textutil.Style{Font: face, LineHeight: lineHeight, WrapMode: wrapMode}
 				var l textutil.LineByteOffsets
 				rebuildFromString(&l, tc.str)
 				precVL := precedingVisualLineCountFromString(tc.str, width, wrapMode, face, 0, false)
@@ -621,7 +614,7 @@ func TestPositionWithinLogicalLineParity(t *testing.T) {
 func TestTextPositionFromIndexNilLineOffsets(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	s := textutil.Style{Face: face, LineHeight: lineHeight}
+	s := textutil.Style{Font: face, LineHeight: lineHeight}
 
 	str := "abc\ndef"
 	const width = math.MaxInt

@@ -12,16 +12,17 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/font/gofont/goregular"
 
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
-func newTestFace(t *testing.T) text.Face {
+func newTestFace(t *testing.T) font.Face {
 	t.Helper()
 	source, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &text.GoTextFace{Source: source, Size: 16}
+	return font.NewFace(font.Key{}, &text.GoTextFace{Source: source, Size: 16})
 }
 
 // logicalLineSlices returns the byte slices of each logical line in s, using
@@ -129,7 +130,7 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 	const narrowWidth = 80
 
 	advance := func(s string) float64 {
-		return text.AdvanceAt(s, len(s), face)
+		return text.AdvanceAt(s, len(s), face.TextFace())
 	}
 	// Sanity-check: this line really does need to wrap at narrowWidth.
 	if advance(logical) <= float64(narrowWidth) {
@@ -152,7 +153,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
 	s := textutil.Style{
-		Face:       face,
+		Font:       face,
 		LineHeight: lineHeight,
 	}
 
@@ -233,7 +234,7 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
 	s := textutil.Style{
-		Face:       face,
+		Font:       face,
 		LineHeight: lineHeight,
 	}
 

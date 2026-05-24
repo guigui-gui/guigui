@@ -4,7 +4,7 @@
 package textutil
 
 import (
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 // logicalLineMeasurer maps between committed-text logical-line indices and
@@ -18,7 +18,7 @@ type logicalLineMeasurer struct {
 	committedTextLen   int
 	renderingTextRange func(start, end int) string
 	width              int
-	face               text.Face
+	face               font.Face
 	tabWidth           float64
 	keepTailingSpace   bool
 	wrapMode           WrapMode
@@ -79,7 +79,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 			WrapMode:               p.Style.WrapMode,
 			CommittedSelectionLine: committedSelectionLine,
 			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Style.Face,
+			Font:                   p.Style.Font,
 			LineHeight:             p.Style.LineHeight,
 			TabWidth:               p.Style.TabWidth,
 			KeepTailingSpace:       p.Style.KeepTailingSpace,
@@ -99,7 +99,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		committedTextLen:               p.RenderingTextLength - compInfo.RenderingByteShift,
 		renderingTextRange:             p.RenderingTextRange,
 		width:                          p.Width,
-		face:                           p.Style.Face,
+		face:                           p.Style.Font,
 		tabWidth:                       p.Style.TabWidth,
 		keepTailingSpace:               p.Style.KeepTailingSpace,
 		wrapMode:                       p.Style.WrapMode,

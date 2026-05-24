@@ -48,7 +48,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
 				s := textutil.Style{
-					Face:       face,
+					Font:       face,
 					LineHeight: lineHeight,
 					WrapMode:   wrapMode,
 				}
@@ -87,7 +87,7 @@ func TestTextIndexFromPositionLineOffsetsParity(t *testing.T) {
 func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 	const lineHeight = 24.0
 	face := newTestFace(t)
-	s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeNormal}
+	s := textutil.Style{Font: face, LineHeight: lineHeight, WrapMode: textutil.WrapModeNormal}
 
 	const narrowWidth = 80
 	str := "first\nthe quick brown fox jumps over the lazy dog\nlast"
@@ -139,7 +139,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name+wrapModeSuffix(tc.wrapMode), func(t *testing.T) {
-			s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: tc.wrapMode}
+			s := textutil.Style{Font: face, LineHeight: lineHeight, WrapMode: tc.wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, tc.str)
 			n := l.LineCount()
@@ -196,7 +196,7 @@ func TestTextIndexFromPositionViewportRelativeHint(t *testing.T) {
 
 	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal} {
 		t.Run(wrapModeSuffix(wrapMode), func(t *testing.T) {
-			s := textutil.Style{Face: face, LineHeight: lineHeight, WrapMode: wrapMode}
+			s := textutil.Style{Font: face, LineHeight: lineHeight, WrapMode: wrapMode}
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, str)
 
@@ -252,7 +252,7 @@ func TestTextIndexFromPositionLineOffsetsComposition(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			const width = math.MaxInt
-			s := textutil.Style{Face: face, LineHeight: lineHeight}
+			s := textutil.Style{Font: face, LineHeight: lineHeight}
 			rendering := tc.committed[:tc.c.sStart] + tc.c.composition + tc.committed[tc.c.sEnd:]
 			var l textutil.LineByteOffsets
 			rebuildFromString(&l, tc.committed)
