@@ -151,13 +151,15 @@ func (m *logicalLineMeasurer) logicalLineIndexForRenderingIndex(renderingIndex i
 }
 
 // visualLineCount returns the rendering-plane visual-line count of the
-// logical line at idx. For [WrapModeNone] text this is always 1; for
-// other wrap modes it shapes the line content via
-// VisualLineCountForLogicalLine.
+// logical line at idx. For [WrapModeNone] text this is always 1.
 func (m *logicalLineMeasurer) visualLineCount(idx int) int {
 	if m.wrapMode == WrapModeNone {
 		return 1
 	}
 	s, e := m.renderingRange(idx)
-	return VisualLineCountForLogicalLine(m.width, m.renderingTextRange(s, e), m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace)
+	line := m.renderingTextRange(s, e)
+	if vlStarts, ok := cachedVisualLineStarts(m.width, line, m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace); ok {
+		return len(vlStarts)
+	}
+	return VisualLineCountForLogicalLine(m.width, line, m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace)
 }

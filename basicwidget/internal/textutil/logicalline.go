@@ -7,6 +7,8 @@ import (
 	"image"
 	"iter"
 	"math"
+	"slices"
+	"unicode/utf8"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
@@ -41,38 +43,48 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 		}
 	}
 
-	return func(yield func(visualLine) bool) {
-		// The cache requires valid UTF-8; operate on the sanitized string so
-		// byte offsets align with the slices yielded below.
-		sanitized := sanitizedForCache(logicalLine)
+	// This per-logical-line path does not use the layout cache: it has only an
+	// advance closure (the cache is keyed on a font.Face), and it serves the
+	// content the cache rejects. The cache requires valid UTF-8, so operate on
+	// the sanitized copy; the yielded slices index into it.
+	sanitized := sanitizedForCache(logicalLine)
+	return visualLinesFromStarts(sanitized, visualLineStarts(width, sanitized, wrapMode, advance))
+}
 
-		var vlStart, vlEnd, pos int
-		// emit consumes the next segment, identified only by its byte
-		// length, and yields a visual line whenever the accumulated
-		// content would overflow width. Returns cont=false to stop the
-		// outer iteration. The mandatory-break path always returns
-		// false (the contract says at most one mandatory break, at the
-		// very end), so the caller breaks out as soon as the trailing
-		// break is consumed.
+// visualLineStarts yields the start byte offset of each visual line that line
+// wraps into at the given width, in order. line must be valid UTF-8. The first
+// value is always 0, the number of values equals the visual-line count, and
+// visual line i spans line[start_i:start_{i+1}] (the last spans to len(line)).
+// This describes exactly the same wrapping as visualLinesFromLogicalLine.
+func visualLineStarts(width int, line string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[int] {
+	return func(yield func(int) bool) {
+		// Fast path: a single visual line. Mirrors visualLinesFromLogicalLine.
+		if wrapMode == WrapModeNone || width == math.MaxInt || advance(line, len(line)) <= float64(width) {
+			yield(0)
+			return
+		}
+
+		if !yield(0) {
+			return
+		}
+		var vlStart, vlEnd int
+		// emit consumes the next segment, identified only by its byte length, and
+		// starts a new visual line whenever the accumulated content would overflow
+		// width. Returns cont=false at a mandatory break (the contract allows at
+		// most one, at the very end) or once the consumer stops. A mandatory break
+		// never starts a fresh visual line: its start offset is already yielded.
 		emit := func(segLenInBytes int, isMandatoryBreak bool) (cont bool) {
 			if vlEnd-vlStart > 0 {
-				candidate := sanitized[vlStart : vlEnd+segLenInBytes]
+				candidate := line[vlStart : vlEnd+segLenInBytes]
 				if advance(candidate, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
-					if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
+					vlStart = vlEnd
+					if !yield(vlStart) {
 						return false
 					}
-					pos += vlEnd - vlStart
-					vlStart = vlEnd
 				}
 			}
 			vlEnd += segLenInBytes
-			if isMandatoryBreak {
-				if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
-					return false
-				}
-				return false
-			}
-			return true
+			return !isMandatoryBreak
 		}
 
 		// WrapModeNormal wraps at line-break opportunities, WrapModeAnywhere at
@@ -84,20 +96,69 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 			boundaries = theSegmentCache.graphemeBoundaries
 		}
 		var segStart int
-		for end := range boundaries(sanitized) {
-			segText := sanitized[segStart:end]
+		for end := range boundaries(line) {
+			segText := line[segStart:end]
 			if !emit(end-segStart, tailingLineBreakLen(segText) > 0) {
-				return
+				break
 			}
 			segStart = end
 		}
-		// No trailing break: emit the remaining content as the final visual line.
-		if vlEnd-vlStart > 0 {
-			if !yield(visualLine{pos: pos, str: sanitized[vlStart:vlEnd]}) {
+	}
+}
+
+// visualLinesFromStarts yields the visual lines described by the start offsets in
+// vlStarts (as produced by visualLineStarts) over line. line must be
+// the same string the offsets were computed against. No shaping is performed.
+func visualLinesFromStarts(line string, vlStarts iter.Seq[int]) iter.Seq[visualLine] {
+	return func(yield func(visualLine) bool) {
+		started := false
+		var prev int
+		for s := range vlStarts {
+			if !started {
+				prev = s
+				started = true
+				continue
+			}
+			if !yield(visualLine{pos: prev, str: line[prev:s]}) {
 				return
 			}
+			prev = s
+		}
+		if started {
+			yield(visualLine{pos: prev, str: line[prev:]})
 		}
 	}
+}
+
+// cachedVisualLineStarts returns the visual-line start offsets for line at the
+// given layout parameters, memoized by content in [theLayoutCache]. The face's
+// recipe fingerprints the entry; a face with no recipe (zero attributes)
+// computes without caching. ok is false for non-UTF-8 lines (whose offsets would
+// index into a sanitized copy, not line) so callers fall back to their shaping
+// path; in that case vlStarts is nil.
+func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, ok bool) {
+	k := layoutKey{
+		text:             line,
+		faceID:           face.ID(),
+		width:            width,
+		wrapMode:         wrapMode,
+		tabWidth:         tabWidth,
+		keepTailingSpace: keepTailingSpace,
+	}
+	if s, hit := theLayoutCache.get(k); hit {
+		return s, true
+	}
+	if !utf8.ValidString(line) {
+		return nil, false
+	}
+	// line is valid UTF-8, so the segmenter can run on it directly and the
+	// offsets index into line without a sanitized copy.
+	tf := face.TextFace()
+	vlStarts = slices.Collect(visualLineStarts(width, line, wrapMode, func(s string, indexInBytes int) float64 {
+		return advance(s, indexInBytes, tf, tabWidth, keepTailingSpace)
+	}))
+	theLayoutCache.put(k, vlStarts)
+	return vlStarts, true
 }
 
 // MeasureLogicalLineHeight returns the rendered height of one logical line
@@ -113,12 +174,26 @@ func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, 
 // [WrapModeNone] (or when the line fits) the result is always 1.
 func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
 	var count int
-	for range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string, indexInBytes int) float64 {
+	for range visualLineStarts(width, sanitizedForCache(logicalLine), wrapMode, func(s string, indexInBytes int) float64 {
 		return advance(s, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
 	}) {
 		count++
 	}
 	return count
+}
+
+// CachedVisualLineCount is [VisualLineCountForLogicalLine] backed by the
+// content-keyed layout cache. For [WrapModeNone] (no packing) or a non-UTF-8
+// line it falls back to the uncached count. Use this for per-tick height
+// measurement of a logical line whose wrap layout the other cached paths (draw,
+// caret, hit-test) also touch, so they share one cache entry.
+func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
+	if wrapMode != WrapModeNone {
+		if vlStarts, ok := cachedVisualLineStarts(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace); ok {
+			return len(vlStarts)
+		}
+	}
+	return VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace)
 }
 
 // MeasureLogicalLine returns the rendered width and height of one logical
@@ -163,26 +238,7 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 // closest to the given position. The position's Y is relative to the top of
 // the logical line. Counterpart of [TextIndexFromPosition].
 func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, style *Style) int {
-	// Determine the visual line first.
-	padding := textPadding(style.Face.TextFace(), style.LineHeight)
-	n := int((float64(position.Y) + padding) / style.LineHeight)
-
-	var pos int
-	var vlStr string
-	var vlIndex int
-	for l := range visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
+	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
 		return advance(s, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
-	}) {
-		vlStr = l.str
-		pos = l.pos
-		if vlIndex >= n {
-			break
-		}
-		vlIndex++
-	}
-
-	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
-	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
-	return pos
+	}), style)
 }

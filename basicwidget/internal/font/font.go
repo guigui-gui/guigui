@@ -64,6 +64,7 @@ type Face struct {
 	face       text.Face
 	family     *Family
 	attributes Attributes
+	id         uint64
 }
 
 // NewFace resolves the text face for attributes, rendering with fnt's face
@@ -71,18 +72,22 @@ type Face struct {
 // disables fallback). A nil fnt resolves using the registered fallback stack
 // alone.
 func NewFace(context *guigui.Context, fnt *Family, attributes Attributes) Face {
+	face, id := resolveFace(context, fnt, attributes)
 	return Face{
-		face:       resolveFace(context, fnt, attributes),
+		face:       face,
 		family:     fnt,
 		attributes: attributes,
+		id:         id,
 	}
 }
 
-// NewFaceForTest wraps face directly, bypassing font resolution. It is
-// intended for tests that supply a specific [text.Face].
-func NewFaceForTest(face text.Face) Face {
+// NewFaceForTest wraps face directly with attributes, bypassing font
+// resolution. It is intended for tests that supply a specific [text.Face].
+func NewFaceForTest(face text.Face, attributes Attributes) Face {
 	return Face{
-		face: face,
+		face:       face,
+		attributes: attributes,
+		id:         theNextFaceID.Add(1),
 	}
 }
 
@@ -100,6 +105,14 @@ func (f Face) Family() *Family {
 // Attributes returns the render attributes f was resolved from.
 func (f Face) Attributes() Attributes {
 	return f.attributes
+}
+
+// ID returns a process-unique identifier of this resolved face. Faces that
+// resolve identically share an ID, and re-resolving after a locale change
+// yields a new one; the zero Face has ID 0. It identifies a face for caching
+// results that depend on the face's metrics.
+func (f Face) ID() uint64 {
+	return f.id
 }
 
 // UnicodeRange is an inclusive range of code points.
@@ -158,8 +171,15 @@ type cacheKey struct {
 	attributes Attributes
 }
 
+// cachedFace is a resolved face together with its process-unique id.
+type cachedFace struct {
+	face text.Face
+	id   uint64
+}
+
 var (
-	theFaceCache map[cacheKey]text.Face
+	theFaceCache  map[cacheKey]cachedFace
+	theNextFaceID atomic.Uint64
 )
 
 var (
@@ -171,9 +191,11 @@ var (
 	prevLocales []language.Tag
 )
 
-func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) text.Face {
+func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (text.Face, uint64) {
 	// As face source entries registered by [RegisterFaceSourceEntries] might be
-	// affected by locales, clear the cache when the locales change.
+	// affected by locales, clear the cache when the locales change. Dropping the
+	// entries re-resolves faces, which assigns them fresh ids so cache entries
+	// keyed on a face id fall out of use naturally.
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
 	if !slices.Equal(prevLocales, tmpLocales) {
 		clear(theFaceCache)
@@ -190,7 +212,7 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) te
 		attributes: attributes,
 	}
 	if f, ok := theFaceCache[ck]; ok {
-		return f
+		return f.face, f.id
 	}
 
 	tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
@@ -240,11 +262,12 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) te
 	}
 
 	if theFaceCache == nil {
-		theFaceCache = map[cacheKey]text.Face{}
+		theFaceCache = map[cacheKey]cachedFace{}
 	}
-	theFaceCache[ck] = mf
+	id := theNextFaceID.Add(1)
+	theFaceCache[ck] = cachedFace{face: mf, id: id}
 
-	return mf
+	return mf, id
 }
 
 // DefaultFaceSourceEntry returns the entry for the bundled default face.

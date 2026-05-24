@@ -932,14 +932,15 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 			width = math.MaxInt
 		}
 
-		_, h := textutil.MeasureLogicalLine(
+		// Only the height is needed here ([textInputText.contentWidth]
+		// short-circuits to containerBounds.Dx() for wrapped text and never
+		// reads measuredMaxWidth), so take the visual-line count from the
+		// content-keyed layout cache rather than re-packing every Layout.
+		count := textutil.CachedVisualLineCount(
 			width, logicalLine, textutil.WrapMode(txt.wrapMode), txt.face(context, false),
-			txt.lineHeight(context), txt.actualTabWidth(context), txt.keepTailingSpace, "",
+			txt.actualTabWidth(context), txt.keepTailingSpace,
 		)
-		height = int(math.Ceil(h))
-		// For wrapped text, [textInputText.contentWidth] short-circuits to
-		// containerBounds.Dx() and never reads measuredMaxWidth, so there
-		// is no width to track here.
+		height = int(math.Ceil(txt.lineHeight(context) * float64(count)))
 	}
 
 	if t.measuredLineHeights == nil {

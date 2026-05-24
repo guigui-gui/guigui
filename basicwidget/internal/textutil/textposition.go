@@ -3,7 +3,10 @@
 
 package textutil
 
-import "iter"
+import (
+	"iter"
+	"slices"
+)
 
 type TextPosition struct {
 	X      float64
@@ -24,6 +27,16 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIdx)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine = index - renderingLineStart
+
+	if p.Style.WrapMode != WrapModeNone {
+		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
+			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, slices.Values(vlStarts)), indexInLine, &p.Style)
+			if count == 0 {
+				return 0, 0, TextPosition{}, TextPosition{}, 0
+			}
+			return logicalLineIdx, indexInLine, pos0, pos1, count
+		}
+	}
 
 	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, &p.Style)
 	if count == 0 {

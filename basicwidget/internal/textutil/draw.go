@@ -14,6 +14,8 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 type DrawOptions struct {
@@ -42,7 +44,44 @@ type DrawOptions struct {
 	VisibleBounds image.Rectangle
 }
 
-var theCachedVisualLines []visualLine
+var theVisualLinesBuffer []visualLine
+
+// appendVisualLinesFromCachedStarts reproduces visualLines for str by reading
+// each logical line's wrap points from the layout cache (cachedVisualLineStarts)
+// instead of shaping. str is split at hard breaks (the break stays with the
+// preceding line), including the trailing empty line after a final break. ok is
+// false (dst left unchanged) when a line's starts are unavailable, so the caller
+// falls back to shaping.
+func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (lines []visualLine, ok bool) {
+	base := len(dst)
+	var pos int
+	for {
+		p, l := FirstLineBreakPositionAndLen(str[pos:])
+		last := p == -1
+		lineEnd := len(str)
+		if !last {
+			lineEnd = pos + p + l
+		}
+		line := str[pos:lineEnd]
+		s, sok := cachedVisualLineStarts(width, line, wrapMode, face, tabWidth, keepTailingSpace)
+		if !sok {
+			return dst[:base], false
+		}
+		for i := range s {
+			rs := pos + s[i]
+			re := lineEnd
+			if i+1 < len(s) {
+				re = pos + s[i+1]
+			}
+			dst = append(dst, visualLine{pos: rs, str: str[rs:re]})
+		}
+		if last {
+			break
+		}
+		pos = lineEnd
+	}
+	return dst, true
+}
 
 func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOptions) {
 	clip := bounds.Intersect(options.VisibleBounds)
@@ -62,14 +101,24 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	yOffset := textPositionYOffset(bounds.Size(), str, &options.Style)
 	op.GeoM.Translate(0, yOffset)
 
-	theCachedVisualLines = theCachedVisualLines[:0]
-	for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
-	}) {
-		theCachedVisualLines = append(theCachedVisualLines, vl)
+	theVisualLinesBuffer = theVisualLinesBuffer[:0]
+	var built bool
+	if options.WrapMode != WrapModeNone {
+		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, bounds.Dx(), options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
+			theVisualLinesBuffer = vls
+			built = true
+		}
+	}
+	if !built {
+		theVisualLinesBuffer = theVisualLinesBuffer[:0]
+		for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string, indexInBytes int) float64 {
+			return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
+		}) {
+			theVisualLinesBuffer = append(theVisualLinesBuffer, vl)
+		}
 	}
 
-	for _, vl := range theCachedVisualLines {
+	for _, vl := range theVisualLinesBuffer {
 		y := op.GeoM.Element(1, 2)
 		if int(math.Ceil(y+options.LineHeight)) < clip.Min.Y {
 			// Advance to the next line so the loop terminates; the bottom-of-body
@@ -89,8 +138,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -112,8 +161,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -132,8 +181,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theCachedVisualLines), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {

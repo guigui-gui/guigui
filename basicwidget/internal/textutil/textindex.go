@@ -5,7 +5,9 @@ package textutil
 
 import (
 	"image"
+	"iter"
 	"math"
+	"slices"
 )
 
 // TextIndexFromPosition returns the byte offset in the rendering text
@@ -163,12 +165,45 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIndex)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 
-	// Translate the position into the logical line's local Y so
-	// TextIndexFromPositionInLogicalLine picks the right visual
-	// subline.
+	// Translate the position into the logical line's local Y so the per-line
+	// resolution picks the right visual subline.
 	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Style.LineHeight)
-	pos := TextIndexFromPositionInLogicalLine(p.Width, image.Pt(position.X, localY), line, &p.Style)
+	localPos := image.Pt(position.X, localY)
+	var pos int
+	if p.Style.WrapMode != WrapModeNone {
+		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
+			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, slices.Values(vlStarts)), &p.Style)
+			return renderingLineStart + pos
+		}
+	}
+	pos = TextIndexFromPositionInLogicalLine(p.Width, localPos, line, &p.Style)
 	return renderingLineStart + pos
+}
+
+// textIndexFromPositionInVisualLines returns the byte offset within a logical
+// line closest to position, given that line's visual lines. The position's Y is
+// relative to the top of the logical line.
+func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], style *Style) int {
+	// Determine the visual line first.
+	padding := textPadding(style.Face.TextFace(), style.LineHeight)
+	n := int((float64(position.Y) + padding) / style.LineHeight)
+
+	var pos int
+	var vlStr string
+	var vlIndex int
+	for l := range vls {
+		vlStr = l.str
+		pos = l.pos
+		if vlIndex >= n {
+			break
+		}
+		vlIndex++
+	}
+
+	// Determine the index within the visual line.
+	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
+	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
+	return pos
 }
 
 // textIndexFromPosition is the unrestricted whole-document

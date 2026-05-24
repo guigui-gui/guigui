@@ -6,6 +6,8 @@ package textutil
 import (
 	"iter"
 	"slices"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
 type VisualLine struct {
@@ -28,6 +30,56 @@ func VisualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 
 func NextIndentPosition(position float64, indentWidth float64) float64 {
 	return nextIndentPosition(position, indentWidth)
+}
+
+// AdvanceForTest exposes the internal advance with tabWidth 0 and
+// keepTailingSpace false, matching the closure VisualLines is fed in Draw.
+func AdvanceForTest(str string, indexInBytes int, face font.Face) float64 {
+	return advance(str, indexInBytes, face.TextFace(), 0, false)
+}
+
+// VisualLinesFromCachedStarts builds the visual lines via the cache-backed
+// Draw path (appendVisualLinesFromCachedStarts), mirroring what Draw does, so
+// tests can compare it against VisualLines.
+func VisualLinesFromCachedStarts(width int, str string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) ([]VisualLine, bool) {
+	vls, ok := appendVisualLinesFromCachedStarts(nil, str, width, wrapMode, face, tabWidth, keepTailingSpace)
+	out := make([]VisualLine, len(vls))
+	for i, vl := range vls {
+		out[i] = VisualLine{Pos: vl.pos, Str: vl.str}
+	}
+	return out, ok
+}
+
+// LayoutCacheForTest is a test handle over a fresh layoutCache with an
+// injectable tick clock; now may be nil to use the default clock.
+type LayoutCacheForTest struct {
+	c layoutCache
+}
+
+func NewLayoutCacheForTest(softLimit int, now func() int64) *LayoutCacheForTest {
+	return &LayoutCacheForTest{c: layoutCache{softLimit: softLimit, now: now}}
+}
+
+// testFaceID is a constant nonzero face id, so cache entries are distinguished
+// by their text alone.
+const testFaceID = 1
+
+// Touch looks up text, inserting a one-element visual-line-starts slice on a miss.
+func (l *LayoutCacheForTest) Touch(text string) {
+	k := layoutKey{text: text, faceID: testFaceID}
+	if _, ok := l.c.get(k); ok {
+		return
+	}
+	l.c.put(k, []int{0})
+}
+
+func (l *LayoutCacheForTest) Len() int {
+	return len(l.c.entries)
+}
+
+func (l *LayoutCacheForTest) Has(text string) bool {
+	_, ok := l.c.entries[layoutKey{text: text, faceID: testFaceID}]
+	return ok
 }
 
 // EntryAliveTicks exposes entryAliveTicks for the cache-eviction tests.

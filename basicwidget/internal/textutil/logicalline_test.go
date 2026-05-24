@@ -22,7 +22,7 @@ func newTestFace(t *testing.T) font.Face {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return font.NewFaceForTest(&text.GoTextFace{Source: source, Size: 16})
+	return font.NewFaceForTest(&text.GoTextFace{Source: source, Size: 16}, font.Attributes{Size: 16})
 }
 
 // logicalLineSlices returns the byte slices of each logical line in s, using
