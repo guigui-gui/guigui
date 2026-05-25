@@ -238,6 +238,9 @@ var (
 // ra.line[a:b]. The table aliases shared scratch, valid only until the next build.
 func (ra *rangeAdvancer) buildAdvanceUpTo() {
 	theLazyGlyphsBuffer = text.AppendLazyGlyphs(theLazyGlyphsBuffer[:0], ra.line, ra.face, nil)
+	defer func() {
+		theLazyGlyphsBuffer = slices.Delete(theLazyGlyphsBuffer, 0, len(theLazyGlyphsBuffer))
+	}()
 	n := len(ra.line) + 1
 	if cap(theAdvanceUpToBuffer) < n {
 		theAdvanceUpToBuffer = make([]float64, n)

@@ -102,6 +102,9 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	op.GeoM.Translate(0, yOffset)
 
 	theVisualLinesBuffer = theVisualLinesBuffer[:0]
+	defer func() {
+		theVisualLinesBuffer = slices.Delete(theVisualLinesBuffer, 0, len(theVisualLinesBuffer))
+	}()
 	var built bool
 	if options.WrapMode != WrapModeNone {
 		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, bounds.Dx(), options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
