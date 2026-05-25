@@ -38,21 +38,24 @@ import (
 // An empty logicalLine yields a single empty visual line. A logicalLine that
 // contains a mid-line hard break violates the contract; the iterator stops
 // at the first mandatory break it encounters.
-func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[visualLine] {
+func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) iter.Seq[visualLine] {
 	// Fast path: a single visual line. Avoids invoking the segmenter for
 	// short content that fits, including the empty-line case.
-	if wrapMode == WrapModeNone || width == math.MaxInt || advance(logicalLine, len(logicalLine)) <= float64(width) {
+	if wrapMode == WrapModeNone || width == math.MaxInt || advance(logicalLine, len(logicalLine), face.TextFace(), tabWidth, keepTailingSpace) <= float64(width) {
 		return func(yield func(visualLine) bool) {
 			yield(visualLine{pos: 0, str: logicalLine})
 		}
 	}
 
-	// This per-logical-line path does not use the layout cache: it has only an
-	// advance closure (the cache is keyed on a font.Face), and it serves the
-	// content the cache rejects. The cache requires valid UTF-8, so operate on
-	// the sanitized copy; the yielded slices index into it.
+	// Wrapping needs valid UTF-8 for the segmenter, so operate on the sanitized
+	// copy; the yielded slices index into it. The advance-up-to table is built
+	// once from one whole-line shaping and fully consumed here: it aliases
+	// shared scratch the next build clobbers, so collect the starts eagerly
+	// rather than letting visualLinesFromStarts pull them lazily.
 	sanitized := sanitizedForCache(logicalLine)
-	return visualLinesFromStarts(sanitized, visualLineStarts(width, sanitized, wrapMode, &recomputingRangeAdvancer{line: sanitized, advance: advance}))
+	ra := newRangeAdvancer(sanitized, face, tabWidth, keepTailingSpace)
+	vlStarts := slices.Collect(visualLineStarts(width, sanitized, wrapMode, ra))
+	return visualLinesFromStarts(sanitized, slices.Values(vlStarts))
 }
 
 // visualLineStarts yields the start byte offset of each visual line that line
@@ -60,8 +63,8 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 // value is always 0, the number of values equals the visual-line count, and
 // visual line i spans line[start_i:start_{i+1}] (the last spans to len(line)).
 // This describes exactly the same wrapping as visualLinesFromLogicalLine. ra
-// measures each candidate range (see [rangeAdvancer]).
-func visualLineStarts(width int, line string, wrapMode WrapMode, ra rangeAdvancer) iter.Seq[int] {
+// measures each candidate range.
+func visualLineStarts(width int, line string, wrapMode WrapMode, ra *rangeAdvancer) iter.Seq[int] {
 	return func(yield func(int) bool) {
 		// Fast path: a single visual line. Mirrors visualLinesFromLogicalLine.
 		if wrapMode == WrapModeNone || width == math.MaxInt || ra.rangeAdvance(0, len(line)) <= float64(width) {
@@ -136,34 +139,14 @@ func visualLinesFromStarts(line string, vlStarts iter.Seq[int]) iter.Seq[visualL
 	}
 }
 
-// rangeAdvancer reports the wrap width of line[start:start+innerEnd]: its advance
-// with the trailing hard break removed and, unless KeepTailingSpace, trailing
-// spaces trimmed.
-type rangeAdvancer interface {
-	rangeAdvance(start, innerEnd int) float64
-}
-
-// recomputingRangeAdvancer reshapes line[start:start+innerEnd] on each call: the
-// general path, used for tabs and content the layout cache rejects.
-type recomputingRangeAdvancer struct {
-	// line is the logical line the offsets index into.
-	line string
-	// advance is the package advance for a substring, with face and settings bound in.
-	advance func(str string, indexInBytes int) float64
-}
-
-func (r *recomputingRangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
-	return r.advance(r.line[start:start+innerEnd], innerEnd)
-}
-
-// precomputedRangeAdvancer measures by subtracting entries of a precomputed
+// rangeAdvancer measures by subtracting entries of a precomputed
 // advance-up-to table, so each call is a trim and one or a few subtractions, not
 // a reshape. With a nonzero tab width it scans for tabs and snaps at each stop.
 //
 // It measures against the whole-line shaping, so a ligature or cursive join
 // straddling a visual-line edge can shift the chosen break by about one glyph;
 // the break is still a line-break opportunity.
-type precomputedRangeAdvancer struct {
+type rangeAdvancer struct {
 	// line is the logical line the offsets index into.
 	line string
 	// face shapes line when the advance-up-to table is first built.
@@ -178,64 +161,84 @@ type precomputedRangeAdvancer struct {
 	keepTailingSpace bool
 }
 
-func (p *precomputedRangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
-	if p.advanceUpTo == nil {
-		p.buildAdvanceUpTo()
+// newRangeAdvancer returns a rangeAdvancer that measures ranges of line shaped
+// with face. line must be valid UTF-8.
+func newRangeAdvancer(line string, face font.Face, tabWidth float64, keepTailingSpace bool) *rangeAdvancer {
+	tf := face.TextFace()
+	var spaceAdvance float64
+	if tabWidth != 0 {
+		spaceAdvance = text.AdvanceAt(" ", 1, tf)
+	}
+	return &rangeAdvancer{
+		line:             line,
+		face:             tf,
+		tabWidth:         tabWidth,
+		spaceAdvance:     spaceAdvance,
+		keepTailingSpace: keepTailingSpace,
+	}
+}
+
+// rangeAdvance reports the wrap width of line[start:start+innerEnd]: its advance
+// with the trailing hard break removed and, unless keepTailingSpace, trailing
+// spaces trimmed.
+func (ra *rangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
+	if ra.advanceUpTo == nil {
+		ra.buildAdvanceUpTo()
 	}
 	e := start + innerEnd
 	var hasBreak bool
-	if !p.keepTailingSpace {
+	if !ra.keepTailingSpace {
 		for e > start {
-			r, s := utf8.DecodeLastRuneInString(p.line[start:e])
+			r, s := utf8.DecodeLastRuneInString(ra.line[start:e])
 			if s == 0 || !unicode.IsSpace(r) {
 				break
 			}
 			e -= s
 		}
-	} else if l := tailingLineBreakLen(p.line[start:e]); l > 0 {
+	} else if l := tailingLineBreakLen(ra.line[start:e]); l > 0 {
 		e -= l
 		hasBreak = true
 	}
 	var w float64
-	if p.tabWidth == 0 {
-		w = p.advanceUpTo[e] - p.advanceUpTo[start]
+	if ra.tabWidth == 0 {
+		w = ra.advanceUpTo[e] - ra.advanceUpTo[start]
 	} else {
 		// Tabs snap to the next stop measured from the visual-line left edge
 		// (w = 0 at start), so accumulate each non-tab span from the table and
 		// snap at every tab; the tab's own glyph advance is skipped.
 		pos := start
 		for pos < e {
-			i := strings.IndexByte(p.line[pos:e], '\t')
+			i := strings.IndexByte(ra.line[pos:e], '\t')
 			if i < 0 {
-				w += p.advanceUpTo[e] - p.advanceUpTo[pos]
+				w += ra.advanceUpTo[e] - ra.advanceUpTo[pos]
 				break
 			}
 			tabIndexInBytes := pos + i
-			w += p.advanceUpTo[tabIndexInBytes] - p.advanceUpTo[pos]
-			w = nextIndentPosition(w, p.tabWidth)
+			w += ra.advanceUpTo[tabIndexInBytes] - ra.advanceUpTo[pos]
+			w = nextIndentPosition(w, ra.tabWidth)
 			pos = tabIndexInBytes + 1
 		}
 	}
-	if hasBreak && p.tabWidth != 0 {
-		w += p.spaceAdvance
+	if hasBreak && ra.tabWidth != 0 {
+		w += ra.spaceAdvance
 	}
 	return w
 }
 
-// Scratch for [precomputedRangeAdvancer.buildAdvanceUpTo], reused across calls
+// Scratch for [rangeAdvancer.buildAdvanceUpTo], reused across calls
 // (the UI is single-threaded; each table is consumed before the next build).
 var (
 	theLazyGlyphsBuffer  []text.LazyGlyph
 	theAdvanceUpToBuffer []float64
 )
 
-// buildAdvanceUpTo fills p.advanceUpTo from one shaping of p.line: advanceUpTo[i]
+// buildAdvanceUpTo fills ra.advanceUpTo from one shaping of ra.line: advanceUpTo[i]
 // is the summed advance of every cluster ending at or before byte i. Summing
 // advances is bidi-invariant, so advanceUpTo[b]-advanceUpTo[a] is the width of
-// p.line[a:b]. The table aliases shared scratch, valid only until the next build.
-func (p *precomputedRangeAdvancer) buildAdvanceUpTo() {
-	theLazyGlyphsBuffer = text.AppendLazyGlyphs(theLazyGlyphsBuffer[:0], p.line, p.face, nil)
-	n := len(p.line) + 1
+// ra.line[a:b]. The table aliases shared scratch, valid only until the next build.
+func (ra *rangeAdvancer) buildAdvanceUpTo() {
+	theLazyGlyphsBuffer = text.AppendLazyGlyphs(theLazyGlyphsBuffer[:0], ra.line, ra.face, nil)
+	n := len(ra.line) + 1
 	if cap(theAdvanceUpToBuffer) < n {
 		theAdvanceUpToBuffer = make([]float64, n)
 	}
@@ -252,7 +255,7 @@ func (p *precomputedRangeAdvancer) buildAdvanceUpTo() {
 		run += advanceUpTo[i]
 		advanceUpTo[i] = run
 	}
-	p.advanceUpTo = advanceUpTo
+	ra.advanceUpTo = advanceUpTo
 }
 
 // cachedVisualLineStarts returns the visual-line start offsets for line at the
@@ -278,20 +281,7 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 	}
 	// line is valid UTF-8, so the segmenter can run on it directly and the
 	// offsets index into line without a sanitized copy.
-	tf := face.TextFace()
-
-	var spaceAdvance float64
-	if tabWidth != 0 {
-		spaceAdvance = text.AdvanceAt(" ", 1, tf)
-	}
-	ra := &precomputedRangeAdvancer{
-		line:             line,
-		face:             tf,
-		tabWidth:         tabWidth,
-		spaceAdvance:     spaceAdvance,
-		keepTailingSpace: keepTailingSpace,
-	}
-
+	ra := newRangeAdvancer(line, face, tabWidth, keepTailingSpace)
 	vlStarts = slices.Collect(visualLineStarts(width, line, wrapMode, ra))
 	theLayoutCache.put(k, vlStarts)
 	return vlStarts, true
@@ -310,12 +300,7 @@ func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, 
 // [WrapModeNone] (or when the line fits) the result is always 1.
 func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
 	line := sanitizedForCache(logicalLine)
-	ra := &recomputingRangeAdvancer{
-		line: line,
-		advance: func(s string, indexInBytes int) float64 {
-			return advance(s, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
-		},
-	}
+	ra := newRangeAdvancer(line, face, tabWidth, keepTailingSpace)
 	var count int
 	for range visualLineStarts(width, line, wrapMode, ra) {
 		count++
@@ -341,9 +326,7 @@ func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, fac
 // line at the given width. Per-logical-line counterpart of [Measure].
 func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
-	}) {
+	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
@@ -370,16 +353,12 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
-	}), index, style)
+	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace), index, style)
 }
 
 // TextIndexFromPositionInLogicalLine returns the byte offset within one logical line
 // closest to the given position. The position's Y is relative to the top of
 // the logical line. Counterpart of [TextIndexFromPosition].
 func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, style *Style) int {
-	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, func(s string, indexInBytes int) float64 {
-		return advance(s, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
-	}), style)
+	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace), style)
 }
