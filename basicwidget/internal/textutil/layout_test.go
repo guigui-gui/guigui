@@ -30,27 +30,37 @@ func TestVisualLinesFromCachedStartsMatchesVisualLines(t *testing.T) {
 		"\n",
 		"\n\n",
 		"trailing spaces   \nmore",
+		"col\tone\ttwo three four five six seven eight",
+		"\ta\tb\tcdef ghij klmn opqr stuv wxyz more words here\n",
+		"abc אבג def דה ghi", // LTR with embedded RTL (Hebrew) runs
+		"אבג דהו זח",         // RTL (Hebrew) text that wraps
 	}
 	widths := []int{40, 80, 200, 100000}
 	wrapModes := []textutil.WrapMode{textutil.WrapModeNormal, textutil.WrapModeAnywhere}
+	tabWidths := []float64{0, 32}
+	keepTailings := []bool{false, true}
 
 	for _, wrapMode := range wrapModes {
 		for _, width := range widths {
-			for _, str := range strs {
-				adv := func(s string, idx int) float64 {
-					return textutil.AdvanceForTest(s, idx, face)
-				}
-				var want []textutil.VisualLine
-				for vl := range textutil.VisualLines(width, str, wrapMode, adv) {
-					want = append(want, vl)
-				}
-				got, ok := textutil.VisualLinesFromCachedStarts(width, str, wrapMode, face, 0, false)
-				if !ok {
-					t.Errorf("VisualLinesFromCachedStarts ok=false for str=%q width=%d wrap=%v", str, width, wrapMode)
-					continue
-				}
-				if !slices.Equal(got, want) {
-					t.Errorf("mismatch str=%q width=%d wrap=%v\n got=%v\nwant=%v", str, width, wrapMode, got, want)
+			for _, tabWidth := range tabWidths {
+				for _, keepTailingSpace := range keepTailings {
+					for _, str := range strs {
+						adv := func(s string, idx int) float64 {
+							return textutil.AdvanceForTestParams(s, idx, face, tabWidth, keepTailingSpace)
+						}
+						var want []textutil.VisualLine
+						for vl := range textutil.VisualLines(width, str, wrapMode, adv) {
+							want = append(want, vl)
+						}
+						got, ok := textutil.VisualLinesFromCachedStarts(width, str, wrapMode, face, tabWidth, keepTailingSpace)
+						if !ok {
+							t.Errorf("VisualLinesFromCachedStarts ok=false for str=%q width=%d wrap=%v tab=%v keep=%v", str, width, wrapMode, tabWidth, keepTailingSpace)
+							continue
+						}
+						if !slices.Equal(got, want) {
+							t.Errorf("mismatch str=%q width=%d wrap=%v tab=%v keep=%v\n got=%v\nwant=%v", str, width, wrapMode, tabWidth, keepTailingSpace, got, want)
+						}
+					}
 				}
 			}
 		}

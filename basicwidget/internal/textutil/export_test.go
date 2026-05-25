@@ -32,6 +32,13 @@ func NextIndentPosition(position float64, indentWidth float64) float64 {
 	return nextIndentPosition(position, indentWidth)
 }
 
+// AdvanceForTestParams exposes the internal advance with explicit tabWidth and
+// keepTailingSpace, so a test can build the linear shaping packer's reference
+// for the same parameters VisualLinesFromCachedStarts is given.
+func AdvanceForTestParams(str string, indexInBytes int, face font.Face, tabWidth float64, keepTailingSpace bool) float64 {
+	return advance(str, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
+}
+
 // AdvanceForTest exposes the internal advance with tabWidth 0 and
 // keepTailingSpace false, matching the closure VisualLines is fed in Draw.
 func AdvanceForTest(str string, indexInBytes int, face font.Face) float64 {
