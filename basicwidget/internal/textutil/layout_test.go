@@ -32,8 +32,10 @@ func TestVisualLinesFromCachedStartsMatchesVisualLines(t *testing.T) {
 		"trailing spaces   \nmore",
 		"col\tone\ttwo three four five six seven eight",
 		"\ta\tb\tcdef ghij klmn opqr stuv wxyz more words here\n",
-		"abc אבג def דה ghi", // LTR with embedded RTL (Hebrew) runs
-		"אבג דהו זח",         // RTL (Hebrew) text that wraps
+		"\t\t\t\t",              // only tabs
+		"word word word\tend\t", // trailing bare tab (trimmed unless KeepTailingSpace)
+		"abc אבג def דה ghi",    // LTR with embedded RTL (Hebrew) runs
+		"אבג דהו זח",            // RTL (Hebrew) text that wraps
 	}
 	widths := []int{40, 80, 200, 100000}
 	wrapModes := []textutil.WrapMode{textutil.WrapModeNormal, textutil.WrapModeAnywhere}

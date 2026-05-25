@@ -156,8 +156,9 @@ func (r *recomputingRangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
 	return r.advance(r.line[start:start+innerEnd], innerEnd)
 }
 
-// precomputedRangeAdvancer measures by subtracting two entries of a precomputed
-// advance-up-to table, so each call is a trim plus a subtraction, not a reshape.
+// precomputedRangeAdvancer measures by subtracting entries of a precomputed
+// advance-up-to table, so each call is a trim and one or a few subtractions, not
+// a reshape. With a nonzero tab width it scans for tabs and snaps at each stop.
 //
 // It measures against the whole-line shaping, so a ligature or cursive join
 // straddling a visual-line edge can shift the chosen break by about one glyph;
@@ -167,14 +168,14 @@ type precomputedRangeAdvancer struct {
 	line string
 	// face shapes line when the advance-up-to table is first built.
 	face text.Face
+	// tabWidth is the tab stop width; 0 disables tab snapping and the break space.
+	tabWidth float64
 	// advanceUpTo is line's advance-up-to table, built lazily on first use; nil until then.
 	advanceUpTo []float64
-	// spaceAdvance is one space's advance, added for a dropped break when addBreakSpace is set.
+	// spaceAdvance is one space's advance, added for a dropped trailing break when tabWidth is nonzero.
 	spaceAdvance float64
 	// keepTailingSpace keeps trailing spaces in the measured width.
 	keepTailingSpace bool
-	// addBreakSpace adds spaceAdvance for a dropped trailing break.
-	addBreakSpace bool
 }
 
 func (p *precomputedRangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
@@ -195,8 +196,27 @@ func (p *precomputedRangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
 		e -= l
 		hasBreak = true
 	}
-	w := p.advanceUpTo[e] - p.advanceUpTo[start]
-	if hasBreak && p.addBreakSpace {
+	var w float64
+	if p.tabWidth == 0 {
+		w = p.advanceUpTo[e] - p.advanceUpTo[start]
+	} else {
+		// Tabs snap to the next stop measured from the visual-line left edge
+		// (w = 0 at start), so accumulate each non-tab span from the table and
+		// snap at every tab; the tab's own glyph advance is skipped.
+		pos := start
+		for pos < e {
+			i := strings.IndexByte(p.line[pos:e], '\t')
+			if i < 0 {
+				w += p.advanceUpTo[e] - p.advanceUpTo[pos]
+				break
+			}
+			tabIndexInBytes := pos + i
+			w += p.advanceUpTo[tabIndexInBytes] - p.advanceUpTo[pos]
+			w = nextIndentPosition(w, p.tabWidth)
+			pos = tabIndexInBytes + 1
+		}
+	}
+	if hasBreak && p.tabWidth != 0 {
 		w += p.spaceAdvance
 	}
 	return w
@@ -260,30 +280,16 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 	// offsets index into line without a sanitized copy.
 	tf := face.TextFace()
 
-	// Tabs need per-visual-line stops that a single line-wide advance-up-to table
-	// can't express, so a line mixing tabs with a nonzero tab width keeps the
-	// reshaping path; everything else uses the precomputed table.
-	var ra rangeAdvancer
-	if tabWidth == 0 || !strings.ContainsRune(line, '\t') {
-		var spaceAdvance float64
-		addBreakSpace := tabWidth != 0
-		if addBreakSpace {
-			spaceAdvance = text.Advance(" ", tf)
-		}
-		ra = &precomputedRangeAdvancer{
-			line:             line,
-			face:             tf,
-			spaceAdvance:     spaceAdvance,
-			keepTailingSpace: keepTailingSpace,
-			addBreakSpace:    addBreakSpace,
-		}
-	} else {
-		ra = &recomputingRangeAdvancer{
-			line: line,
-			advance: func(s string, indexInBytes int) float64 {
-				return advance(s, indexInBytes, tf, tabWidth, keepTailingSpace)
-			},
-		}
+	var spaceAdvance float64
+	if tabWidth != 0 {
+		spaceAdvance = text.Advance(" ", tf)
+	}
+	ra := &precomputedRangeAdvancer{
+		line:             line,
+		face:             tf,
+		tabWidth:         tabWidth,
+		spaceAdvance:     spaceAdvance,
+		keepTailingSpace: keepTailingSpace,
 	}
 
 	vlStarts = slices.Collect(visualLineStarts(width, line, wrapMode, ra))
