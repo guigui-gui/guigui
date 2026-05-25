@@ -282,7 +282,7 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 
 	var spaceAdvance float64
 	if tabWidth != 0 {
-		spaceAdvance = text.Advance(" ", tf)
+		spaceAdvance = text.AdvanceAt(" ", 1, tf)
 	}
 	ra := &precomputedRangeAdvancer{
 		line:             line,
