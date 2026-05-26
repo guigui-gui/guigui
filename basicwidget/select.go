@@ -38,6 +38,8 @@ type Select[T comparable] struct {
 
 	indexAtOpen int
 
+	itemSelectedDispatchedFromPopupMenu bool
+
 	onDown                  func(context *guigui.Context)
 	onPopupMenuItemSelected func(context *guigui.Context, index int)
 }
@@ -113,6 +115,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 
 	if s.onPopupMenuItemSelected == nil {
 		s.onPopupMenuItemSelected = func(context *guigui.Context, index int) {
+			s.itemSelectedDispatchedFromPopupMenu = true
 			guigui.DispatchEvent(s, selectEventItemSelected, index)
 		}
 	}
@@ -172,11 +175,27 @@ func (s *Select[T]) SelectedItemIndex() int {
 }
 
 func (s *Select[T]) SelectItemByIndex(index int) {
+	prev := s.popupMenu.SelectedItemIndex()
+	// The popup menu dispatches the event only while its handler chain is wired (during
+	// the child widgets' Build, and only when open), so reset the flag and let the check
+	// below dispatch it if the chain stayed silent.
+	s.itemSelectedDispatchedFromPopupMenu = false
 	s.popupMenu.SelectItemByIndex(index)
+	if cur := s.popupMenu.SelectedItemIndex(); cur != prev && cur >= 0 && !s.itemSelectedDispatchedFromPopupMenu {
+		guigui.DispatchEvent(s, selectEventItemSelected, cur)
+	}
 }
 
 func (s *Select[T]) SelectItemByValue(value T) {
+	prev := s.popupMenu.SelectedItemIndex()
+	// The popup menu dispatches the event only while its handler chain is wired (during
+	// the child widgets' Build, and only when open), so reset the flag and let the check
+	// below dispatch it if the chain stayed silent.
+	s.itemSelectedDispatchedFromPopupMenu = false
 	s.popupMenu.SelectItemByValue(value)
+	if cur := s.popupMenu.SelectedItemIndex(); cur != prev && cur >= 0 && !s.itemSelectedDispatchedFromPopupMenu {
+		guigui.DispatchEvent(s, selectEventItemSelected, cur)
+	}
 }
 
 func (s *Select[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
