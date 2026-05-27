@@ -73,7 +73,12 @@ const testFaceID = 1
 
 // Touch looks up text, inserting a one-element visual-line-starts slice on a miss.
 func (l *LayoutCacheForTest) Touch(text string) {
-	k := layoutKey{text: text, faceID: testFaceID}
+	k := layoutKey{
+		text: text,
+		layoutStyleKey: layoutStyleKey{
+			faceID: testFaceID,
+		},
+	}
 	if _, ok := l.c.get(k); ok {
 		return
 	}
@@ -85,12 +90,24 @@ func (l *LayoutCacheForTest) Len() int {
 }
 
 func (l *LayoutCacheForTest) Has(text string) bool {
-	_, ok := l.c.entries[layoutKey{text: text, faceID: testFaceID}]
+	_, ok := l.c.entries[layoutKey{
+		text: text,
+		layoutStyleKey: layoutStyleKey{
+			faceID: testFaceID,
+		},
+	}]
 	return ok
 }
 
 // EntryAliveTicks exposes entryAliveTicks for the cache-eviction tests.
 const EntryAliveTicks = entryAliveTicks
+
+// LastMeasuredLineLenForTest returns the byte length of the layout cache's
+// last-measured line, for asserting that a short line laid out at the same
+// parameters does not evict a long one.
+func LastMeasuredLineLenForTest() int {
+	return len(theLayoutCache.lastMeasured.line)
+}
 
 // SegmentCacheForTest is a test handle over a fresh segmentCache with an
 // injectable tick clock; now may be nil to use the default clock.

@@ -48,10 +48,7 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 	}
 
 	// Wrapping needs valid UTF-8 for the segmenter, so operate on the sanitized
-	// copy; the yielded slices index into it. The advance-up-to table is built
-	// once from one whole-line shaping and fully consumed here: it aliases
-	// shared scratch the next build clobbers, so collect the starts eagerly
-	// rather than letting visualLinesFromStarts pull them lazily.
+	// copy; the yielded slices index into it.
 	sanitized := sanitizedForCache(logicalLine)
 	ra := newRangeAdvancer(sanitized, face, tabWidth, keepTailingSpace)
 	vlStarts := slices.Collect(visualLineStarts(width, sanitized, wrapMode, ra))
@@ -140,7 +137,7 @@ func visualLinesFromStarts(line string, vlStarts iter.Seq[int]) iter.Seq[visualL
 }
 
 // rangeAdvancer measures by subtracting entries of a precomputed
-// advance-up-to table, so each call is a trim and one or a few subtractions, not
+// advance-up-to array, so each call is a trim and one or a few subtractions, not
 // a reshape. With a nonzero tab width it scans for tabs and snaps at each stop.
 //
 // It measures against the whole-line shaping, so a ligature or cursive join
@@ -149,11 +146,11 @@ func visualLinesFromStarts(line string, vlStarts iter.Seq[int]) iter.Seq[visualL
 type rangeAdvancer struct {
 	// line is the logical line the offsets index into.
 	line string
-	// face shapes line when the advance-up-to table is first built.
+	// face shapes line when the advance-up-to array is first built.
 	face text.Face
 	// tabWidth is the tab stop width; 0 disables tab snapping and the break space.
 	tabWidth float64
-	// advanceUpTo is line's advance-up-to table, built lazily on first use; nil until then.
+	// advanceUpTo is line's advance-up-to array, built lazily on first use; nil until then.
 	advanceUpTo []float64
 	// spaceAdvance is one space's advance, added for a dropped trailing break when tabWidth is nonzero.
 	spaceAdvance float64
@@ -161,8 +158,9 @@ type rangeAdvancer struct {
 	keepTailingSpace bool
 }
 
-// newRangeAdvancer returns a rangeAdvancer that measures ranges of line shaped
-// with face. line must be valid UTF-8.
+// newRangeAdvancer returns a rangeAdvancer for line whose advance-up-to array is
+// built lazily on first measure (see [rangeAdvancer.buildAdvanceUpTo]). line must
+// be valid UTF-8.
 func newRangeAdvancer(line string, face font.Face, tabWidth float64, keepTailingSpace bool) *rangeAdvancer {
 	tf := face.TextFace()
 	var spaceAdvance float64
@@ -182,7 +180,9 @@ func newRangeAdvancer(line string, face font.Face, tabWidth float64, keepTailing
 // with the trailing hard break removed and, unless keepTailingSpace, trailing
 // spaces trimmed.
 func (ra *rangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
-	if ra.advanceUpTo == nil {
+	// A built advanceUpTo has length len(line)+1 ≥ 1; length 0 means it is not built
+	// yet (a fresh advancer), so build it.
+	if len(ra.advanceUpTo) == 0 {
 		ra.buildAdvanceUpTo()
 	}
 	e := start + innerEnd
@@ -204,7 +204,7 @@ func (ra *rangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
 		w = ra.advanceUpTo[e] - ra.advanceUpTo[start]
 	} else {
 		// Tabs snap to the next stop measured from the visual-line left edge
-		// (w = 0 at start), so accumulate each non-tab span from the table and
+		// (w = 0 at start), so accumulate each non-tab span from advanceUpTo and
 		// snap at every tab; the tab's own glyph advance is skipped.
 		pos := start
 		for pos < e {
@@ -225,56 +225,61 @@ func (ra *rangeAdvancer) rangeAdvance(start, innerEnd int) float64 {
 	return w
 }
 
-// Scratch for [rangeAdvancer.buildAdvanceUpTo], reused across calls
-// (the UI is single-threaded; each table is consumed before the next build).
-var (
-	theLazyGlyphsBuffer  []text.LazyGlyph
-	theAdvanceUpToBuffer []float64
-)
+// theLazyGlyphsBuffer is scratch for shaping a line into glyphs, reused across
+// builds and cleared after each (the UI is single-threaded). Clearing releases
+// the per-glyph references the backing array would otherwise pin.
+var theLazyGlyphsBuffer []text.LazyGlyph
 
-// buildAdvanceUpTo fills ra.advanceUpTo from one shaping of ra.line: advanceUpTo[i]
-// is the summed advance of every cluster ending at or before byte i. Summing
-// advances is bidi-invariant, so advanceUpTo[b]-advanceUpTo[a] is the width of
-// ra.line[a:b]. The table aliases shared scratch, valid only until the next build.
+// buildAdvanceUpTo builds ra.advanceUpTo from one shaping of ra.line. Serves the
+// uncached callers; the cached layout path patches the last-measured line's own
+// advanceUpTo in [layoutCache.relayout].
 func (ra *rangeAdvancer) buildAdvanceUpTo() {
-	theLazyGlyphsBuffer = text.AppendLazyGlyphs(theLazyGlyphsBuffer[:0], ra.line, ra.face, nil)
+	ra.advanceUpTo = appendAdvanceUpTo(ra.advanceUpTo[:0], ra.line, ra.face)
+}
+
+// appendAdvanceUpTo appends line's advance-up-to array to dst and returns the
+// extended slice: entry i of the appended run is the summed advance of every
+// cluster ending at or before byte i, so run[b]-run[a] is the width of line[a:b].
+// Summing advances is bidi-invariant. line must be valid UTF-8 and is shaped
+// once. The appended run has length len(line)+1.
+func appendAdvanceUpTo(dst []float64, line string, face text.Face) []float64 {
+	theLazyGlyphsBuffer = text.AppendLazyGlyphs(theLazyGlyphsBuffer[:0], line, face, nil)
 	defer func() {
 		theLazyGlyphsBuffer = slices.Delete(theLazyGlyphsBuffer, 0, len(theLazyGlyphsBuffer))
 	}()
-	n := len(ra.line) + 1
-	if cap(theAdvanceUpToBuffer) < n {
-		theAdvanceUpToBuffer = make([]float64, n)
-	}
-	advanceUpTo := theAdvanceUpToBuffer[:n]
-	for i := range advanceUpTo {
-		advanceUpTo[i] = 0
-	}
+	base := len(dst)
+	dst = slices.Grow(dst, len(line)+1)[:base+len(line)+1]
+	clear(dst[base:])
 	for i := range theLazyGlyphsBuffer {
 		g := &theLazyGlyphsBuffer[i]
-		advanceUpTo[g.EndIndexInBytes] += g.AdvanceX
+		dst[base+g.EndIndexInBytes] += g.AdvanceX
 	}
 	var run float64
-	for i := range advanceUpTo {
-		run += advanceUpTo[i]
-		advanceUpTo[i] = run
+	for i := base; i < len(dst); i++ {
+		run += dst[i]
+		dst[i] = run
 	}
-	ra.advanceUpTo = advanceUpTo
+	return dst
 }
 
 // cachedVisualLineStarts returns the visual-line start offsets for line at the
-// given layout parameters, memoized by content in [theLayoutCache]. The face's
-// recipe fingerprints the entry; a face with no recipe (zero attributes)
-// computes without caching. ok is false for non-UTF-8 lines (whose offsets would
+// given layout parameters, memoized by content in [theLayoutCache] and keyed by
+// the resolved face's ID. ok is false for non-UTF-8 lines (whose offsets would
 // index into a sanitized copy, not line) so callers fall back to their shaping
-// path; in that case vlStarts is nil.
+// path; in that case vlStarts is nil. face must be resolved (non-zero ID).
 func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, ok bool) {
 	k := layoutKey{
-		text:             line,
-		faceID:           face.ID(),
-		width:            width,
-		wrapMode:         wrapMode,
-		tabWidth:         tabWidth,
-		keepTailingSpace: keepTailingSpace,
+		text: line,
+		layoutStyleKey: layoutStyleKey{
+			faceID:           face.ID(),
+			width:            width,
+			wrapMode:         wrapMode,
+			tabWidth:         tabWidth,
+			keepTailingSpace: keepTailingSpace,
+		},
+	}
+	if k.faceID == 0 {
+		panic("textutil: cachedVisualLineStarts requires a resolved face (face ID 0)")
 	}
 	if s, hit := theLayoutCache.get(k); hit {
 		return s, true
@@ -282,10 +287,7 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 	if !utf8.ValidString(line) {
 		return nil, false
 	}
-	// line is valid UTF-8, so the segmenter can run on it directly and the
-	// offsets index into line without a sanitized copy.
-	ra := newRangeAdvancer(line, face, tabWidth, keepTailingSpace)
-	vlStarts = slices.Collect(visualLineStarts(width, line, wrapMode, ra))
+	vlStarts = theLayoutCache.relayout(k, face)
 	theLayoutCache.put(k, vlStarts)
 	return vlStarts, true
 }
