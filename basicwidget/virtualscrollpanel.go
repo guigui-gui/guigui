@@ -15,49 +15,30 @@ import (
 )
 
 // virtualScrollContent is the interface that [virtualScrollPanel] requires
-// from its content widget. Concrete content types (list cells, multiline
-// text, etc.) implement these so the panel can size its scroll bar thumb,
-// estimate viewport population, and drive drag-to-scroll without knowing
-// the item type's specifics.
+// from its content widget.
 type virtualScrollContent interface {
 	guigui.Widget
 
-	// contentWidth returns the rendered content width used to size the
-	// horizontal scroll bar's thumb. Implementations may compute this on
-	// demand (e.g. by calling Measure for a single line) or cache from a
-	// prior Layout pass.
+	// contentWidth returns the rendered content width.
 	contentWidth(context *guigui.Context) int
 
-	// itemCount returns the total number of scrollable items. For list
-	// widgets this is the number of currently-visible (filtered) items;
-	// for multiline text it is the logical-line count.
+	// itemCount returns the total number of scrollable items.
 	itemCount() int
 
-	// measureItemHeight returns the rendered height of the item at the
-	// given index. Called by [virtualScrollPanel] when computing thumb
-	// position and during scroll-bar drag.
-	//
-	// For an in-range index (0 <= index < itemCount()) the returned value
-	// must be >= 0; zero is a valid height (e.g. a collapsed or empty
-	// item). For an out-of-range index the implementation must return -1.
+	// measureItemHeight returns the rendered height of the item at the given
+	// index. For an in-range index (0 <= index < itemCount()) the returned
+	// value must be >= 0; zero is a valid height. For an out-of-range index
+	// it must return -1.
 	measureItemHeight(context *guigui.Context, index int) int
 
 	// viewportPaddingY returns the total vertical padding the content
-	// reserves inside the panel viewport (e.g. rounded-corner padding for
-	// lists, top/bottom padding for text). The panel subtracts this when
-	// computing the canonical bottom fracIdx so the thumb at the track
-	// bottom matches the layout's actual settled max-scroll position.
+	// reserves inside the panel viewport.
 	viewportPaddingY(context *guigui.Context) int
 }
 
-// virtualScrollPanel is a scroll panel that uses virtual scrolling: instead
-// of measuring all items to compute total content height, it tracks the
-// topmost visible item's index and its pixel offset.
-//
-// Scroll wheel input is handled directly (delta applied to topItemOffset).
-// Scroll bar dragging maps position directly to item index. This avoids
-// lossy round-trips through virtual pixel offsets and keeps scrolling
-// stable across heterogeneous item heights.
+// virtualScrollPanel is a scroll panel that uses virtual scrolling: it tracks
+// the topmost visible item's index and pixel offset instead of measuring all
+// items to compute total content height.
 //
 // "Item" here is whatever unit the [virtualScrollContent] implementation
 // chooses — a list row, a logical line of text, etc.
@@ -112,6 +93,13 @@ type virtualScrollPanel struct {
 	// viewport item count.
 	estimatedItemHeight int
 
+	// estimatedTotalHeightInPixels is the estimated total content height: the
+	// per-item average over the sample window scaled to the full item count.
+	// Float-valued so the thumb size does not step with estimatedItemHeight's
+	// rounding; converges to accurateTotalHeightInPixels once the window
+	// covers every item.
+	estimatedTotalHeightInPixels float64
+
 	// allHeightsMeasured reports whether the most recent layout's sample
 	// window covered every item, making the accurate* fields below exact
 	// rather than estimated.
@@ -165,10 +153,8 @@ func (p *virtualScrollPanel) forceSetScrollOffsetX(x float64) {
 	p.nextOffsetX = x
 }
 
-// forceSetScrollOffset satisfies [scrollOffsetGetSetter], used by the horizontal
-// scroll bar. Y is ignored because vertical scroll is item-based, not
-// pixel-based (see [virtualScrollPanel.forceSetTopItem] /
-// [virtualScrollPanel.setTopItem]).
+// forceSetScrollOffset satisfies [scrollOffsetGetSetter]. Y is ignored because
+// vertical scroll is item-based, not pixel-based.
 func (p *virtualScrollPanel) forceSetScrollOffset(x, _ float64) {
 	p.forceSetScrollOffsetX(x)
 }
@@ -250,15 +236,9 @@ func (p *virtualScrollPanel) topItem() (int, int) {
 // forceSetTopItem writes the top item position directly.
 //
 // When cancelAnimation is true, any pending vertical change and in-flight
-// animation are cleared. Used by direct/user input (e.g. scroll-bar drag)
-// that should supersede the animation.
-//
-// When cancelAnimation is false, the animation is preserved. This is layout
-// bookkeeping — normalization derives canonical (index, offset) from real
-// item heights so that readers like the scroll bar thumb see a consistent
-// position, and that derivation must not cancel the animation target. Callers
-// must ensure no pending vertical change is queued (verified by the assert).
-// In practice Layout runs applyPendingScrollOffset before child layout.
+// animation are cleared. When cancelAnimation is false, the animation is
+// preserved and the caller must ensure no pending vertical change is queued
+// (verified by the assert).
 func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation bool) {
 	if !cancelAnimation && p.nextTopItemSet {
 		panic("basicwidget: forceSetTopItem(cancelAnimation=false) called with a pending vertical change; callers must run applyPendingScrollOffset first")
@@ -276,27 +256,15 @@ func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation 
 }
 
 // layoutTopItem resolves the panel's (topItemIndex, topItemOffset) to its
-// canonical layout-ready form and commits it via forceSetTopItem. Returns the
-// committed values for caller convenience.
+// canonical layout-ready form, commits it via forceSetTopItem, and returns the
+// committed values.
 //
-// In one pass it: clamps topItemIndex into [0, n-1]; absorbs topItemOffset
-// into topItemIndex via forward/backward walks until the offset is within
-// [-itemH, 0]; bottom-clamps so the document's last item, when visible,
-// aligns with the viewport content bottom rather than leaving a gap.
+// apparentItemHeight returns the per-item height as it appears in the viewport;
+// callers wrap [virtualScrollContent.measureItemHeight] to apply per-item
+// visual effects such as a list's expand-animation scaling.
 //
-// apparentItemHeight returns the per-item height as it appears in the
-// viewport right now — callers wrap [virtualScrollContent.measureItemHeight]
-// to apply per-item visual effects (e.g. list's expand-animation scaling).
-// For content without such effects, the wrapped function just returns the
-// real height.
-//
-// During a scroll animation the normalize walks substitute
-// estimatedItemHeight to avoid re-measuring every item the eased pixel
-// delta passes over (wrapped text shapes each line). The settling Layout
-// (vAnimCount == 0) goes through apparentItemHeight again.
-//
-// viewportInner is the content area height — panel bounds minus any padding
-// the content reserves (i.e. content.viewportPaddingY).
+// viewportInner is the content area height: panel bounds minus
+// content.viewportPaddingY.
 func (p *virtualScrollPanel) layoutTopItem(context *guigui.Context, viewportInner int, apparentItemHeight func(ai int) int) (idx, offset int) {
 	n := p.content.itemCount()
 	idx = p.topItemIndex
@@ -315,6 +283,10 @@ func (p *virtualScrollPanel) layoutTopItem(context *guigui.Context, viewportInne
 		offset = 0
 	}
 
+	// During a scroll animation, substitute estimatedItemHeight in the
+	// normalize walks to avoid re-measuring every item the eased pixel delta
+	// passes over (wrapped text shapes each line). The settling Layout
+	// (vAnimCount == 0) walks apparentItemHeight again.
 	measure := func(i int) int {
 		if p.vAnimCount > 0 && p.estimatedItemHeight > 0 {
 			return p.estimatedItemHeight
@@ -373,6 +345,7 @@ func (p *virtualScrollPanel) updateHeightMetrics(context *guigui.Context, panelB
 	totalCount := p.content.itemCount()
 	if totalCount == 0 {
 		p.estimatedItemHeight = 0
+		p.estimatedTotalHeightInPixels = 0
 		p.allHeightsMeasured = false
 		p.accurateTotalHeightInPixels = 0
 		p.accurateHeightAboveTopInPixels = 0
@@ -385,11 +358,21 @@ func (p *virtualScrollPanel) updateHeightMetrics(context *guigui.Context, panelB
 		return
 	}
 
-	// Estimate viewport item count from the previous height (or 1 if unknown).
-	viewportCount := 1
-	if p.estimatedItemHeight > 0 && panelBounds.Dy() > 0 {
-		viewportCount = max(1, panelBounds.Dy()/p.estimatedItemHeight)
+	// Count the items filling the viewport by walking measured heights, not by
+	// dividing by estimatedItemHeight: sizing the window from the estimate it
+	// feeds can oscillate as the estimate crosses integer boundaries. These
+	// items are on-screen, so their heights are already cached.
+	var viewportCount int
+	var y int
+	for i := p.topItemIndex; i < totalCount && y < panelBounds.Dy(); i++ {
+		h := p.content.measureItemHeight(context, i)
+		if h < 0 {
+			break
+		}
+		y += h
+		viewportCount++
 	}
+	viewportCount = max(1, viewportCount)
 
 	// Sample heights from a window spanning at least 10 items, and 5 viewports, on each side of the top item.
 	extendCount := max(10, 5*viewportCount)
@@ -412,6 +395,7 @@ func (p *virtualScrollPanel) updateHeightMetrics(context *guigui.Context, panelB
 	}
 	if count > 0 {
 		p.estimatedItemHeight = sum / count
+		p.estimatedTotalHeightInPixels = float64(sum) / float64(count) * float64(totalCount)
 	}
 	p.allHeightsMeasured = allMeasured
 	if allMeasured {
@@ -646,16 +630,11 @@ func (p *virtualScrollPanel) Tick(context *guigui.Context, widgetBounds *guigui.
 	return nil
 }
 
-// advanceScrollAnimation advances the vertical scroll animation by one tick.
-// Each tick applies the eased increment of vAnimDelta to topItemOffset only;
-// topItemIndex is updated by the content's normalization between ticks using
-// real measured heights. This avoids visual jumps when items have
-// heterogeneous heights — a virtual-pixel-space interpolation can otherwise
-// step topItemIndex on a tick where the actual item heights say it should
-// not yet have advanced (or vice versa), producing a backward jump in the
-// rendered position. The final tick snaps (topItemIndex, topItemOffset) to
-// the exact target so any approximation in vAnimDelta (cross-index
-// animations using estH) lands cleanly.
+// advanceScrollAnimation advances the vertical scroll animation by one tick and
+// reports whether an animation was in flight. Each tick applies the eased
+// increment of vAnimDelta to topItemOffset only; topItemIndex is updated
+// between ticks by the content's normalization using real measured heights. The
+// final tick snaps (topItemIndex, topItemOffset) to the exact target.
 func (p *virtualScrollPanel) advanceScrollAnimation() bool {
 	if p.vAnimCount <= 0 {
 		return false
@@ -705,28 +684,20 @@ func (p *virtualScrollPanel) vThumbHeight(context *guigui.Context, panelBounds i
 	}
 	padding := scrollThumbPadding(context)
 	trackLength := float64(panelBounds.Dy()) - 2*padding
-	if p.allHeightsMeasured {
-		if p.accurateTotalHeightInPixels <= panelBounds.Dy() {
-			return 0
-		}
-		barHeight := trackLength * float64(panelBounds.Dy()) / float64(p.accurateTotalHeightInPixels)
-		return max(barHeight, scrollThumbMinSize(context, trackLength))
-	}
-	if p.estimatedItemHeight <= 0 {
+	// Size the thumb proportionally to the estimated total content height. It
+	// equals the exact total whenever the sample window covers every item, so
+	// the size stays continuous across the boundary where positioning switches
+	// modes.
+	totalHeight := p.estimatedTotalHeightInPixels
+	if totalHeight <= float64(panelBounds.Dy()) {
 		return 0
 	}
-	viewportItems := float64(panelBounds.Dy()) / float64(p.estimatedItemHeight)
-	if viewportItems >= float64(totalCount) {
-		return 0
-	}
-	// Pin to the minimum size in estimated mode: a proportional height
-	// would jitter as the height-sample window slides.
-	return scrollThumbMinSize(context, trackLength)
+	barHeight := trackLength * float64(panelBounds.Dy()) / totalHeight
+	return max(barHeight, scrollThumbMinSize(context, trackLength))
 }
 
 // bottomFracIdx returns the fracIdx reached when the last item's bottom
-// aligns with the viewport bottom. Used to map the scroll-bar track length
-// to the actual scrollable range.
+// aligns with the viewport bottom.
 func (p *virtualScrollPanel) bottomFracIdx(context *guigui.Context, viewportHeight int) float64 {
 	totalCount := p.content.itemCount()
 	measure := func(i int) int {
@@ -736,8 +707,7 @@ func (p *virtualScrollPanel) bottomFracIdx(context *guigui.Context, viewportHeig
 }
 
 // bottomFracIdx is the free-function core of
-// [virtualScrollPanel.bottomFracIdx], split out so tests can drive it
-// without a panel instance. measure must return -1 for out-of-range
+// [virtualScrollPanel.bottomFracIdx]. measure must return -1 for out-of-range
 // indices and a non-negative height otherwise.
 func bottomFracIdx(measure func(index int) int, totalCount, viewportHeight int) float64 {
 	if totalCount == 0 || viewportHeight <= 0 {
@@ -839,9 +809,8 @@ func (p *virtualScrollPanel) thumbBounds(context *guigui.Context, widgetBounds *
 	return horizontalBarBounds, verticalBarBounds
 }
 
-// virtualScrollVBar is a child widget that draws and handles input for
-// the vertical scroll bar of a [virtualScrollPanel]. It maps drag position
-// directly to item index, avoiding lossy virtual offset conversions.
+// virtualScrollVBar is a child widget that draws and handles input for the
+// vertical scroll bar of a [virtualScrollPanel].
 type virtualScrollVBar struct {
 	guigui.DefaultWidget
 
@@ -849,13 +818,8 @@ type virtualScrollVBar struct {
 	thumbBounds image.Rectangle
 	alpha       float64
 
-	// panelBoundsRect is the parent panel's bounds rectangle, captured by
-	// [virtualScrollPanel.Layout]. Used so [virtualScrollVBar.HandlePointingInput]
-	// can query [virtualScrollPanel.vThumbHeight] against the panel's bounds
-	// rather than the VBar's own (X-narrowed) bounds.
-	//
-	// The value is invalid and unavailable during the Build phase, as it is only
-	// populated once [virtualScrollPanel.Layout] runs.
+	// panelBoundsRect is the parent panel's bounds, captured by
+	// [virtualScrollPanel.Layout]. It is unset until Layout has run.
 	panelBoundsRect image.Rectangle
 
 	dragging              bool
@@ -1035,13 +999,11 @@ func (s *virtualScrollVBar) Draw(context *guigui.Context, widgetBounds *guigui.W
 	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
 }
 
-// accurateTopItemFromScrollPos returns (topIndex, topOffset) for an
-// absolute pixel scroll position scrollPos, the distance from the top
-// of item 0 to the top of the viewport. measure must return a
-// non-negative height for every in-range index — only valid when the
-// caller is in accurate mode (allHeightsMeasured). The returned offset
-// follows [virtualScrollPanel.topItemOffset]'s convention: negative
-// when the top item is partially scrolled off the top.
+// accurateTopItemFromScrollPos returns (topIndex, topOffset) for an absolute
+// pixel scroll position scrollPos, the distance from the top of item 0 to the
+// top of the viewport. measure must return a non-negative height for every
+// in-range index. The returned offset follows
+// [virtualScrollPanel.topItemOffset]'s convention.
 func accurateTopItemFromScrollPos(measure func(index int) int, totalCount, scrollPos int) (newIndex, newOffset int) {
 	if totalCount == 0 || scrollPos <= 0 {
 		return 0, 0
@@ -1062,12 +1024,11 @@ func accurateTopItemFromScrollPos(measure func(index int) int, totalCount, scrol
 	return idx, -rem
 }
 
-// topItemAfterPixelScroll returns (topIndex, topOffset) after scrolling
-// by deltaPx (positive = forward) from (startIndex, startOffset). The
-// returned offset follows [virtualScrollPanel.topItemOffset]'s
-// convention; measure must return a non-negative height for each
-// in-range index. The returned index stays within [0, totalCount-1];
-// the caller's layout pass clamps against the viewport bottom.
+// topItemAfterPixelScroll returns (topIndex, topOffset) after scrolling by
+// deltaPx (positive = forward) from (startIndex, startOffset). The returned
+// offset follows [virtualScrollPanel.topItemOffset]'s convention; measure must
+// return a non-negative height for each in-range index. The returned index
+// stays within [0, totalCount-1].
 func topItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (newIndex, newOffset int) {
 	newIndex = startIndex
 	newOffset = startOffset - deltaPx
