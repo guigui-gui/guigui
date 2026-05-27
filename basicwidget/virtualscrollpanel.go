@@ -100,9 +100,8 @@ type virtualScrollPanel struct {
 	// covers every item.
 	estimatedTotalHeightInPixels float64
 
-	// allHeightsMeasured reports whether the most recent layout's sample
-	// window covered every item, making the accurate* fields below exact
-	// rather than estimated.
+	// allHeightsMeasured reports whether every item's height was measured this
+	// layout, making the accurate* fields below exact rather than estimated.
 	allHeightsMeasured bool
 
 	// accurateTotalHeightInPixels is the exact total content height in
@@ -339,8 +338,8 @@ func (p *virtualScrollPanel) layoutTopItem(context *guigui.Context, viewportInne
 }
 
 // updateHeightMetrics samples item heights and refreshes the cached
-// scroll-bar metrics: estimatedItemHeight always, and the accurate*
-// fields when the sample window covers every item.
+// scroll-bar metrics: estimatedItemHeight always, and the accurate* fields when
+// every item's height was measured.
 func (p *virtualScrollPanel) updateHeightMetrics(context *guigui.Context, panelBounds image.Rectangle) {
 	totalCount := p.content.itemCount()
 	if totalCount == 0 {
@@ -358,29 +357,41 @@ func (p *virtualScrollPanel) updateHeightMetrics(context *guigui.Context, panelB
 		return
 	}
 
-	// Count the items filling the viewport by walking measured heights, not by
-	// dividing by estimatedItemHeight: sizing the window from the estimate it
-	// feeds can oscillate as the estimate crosses integer boundaries. These
-	// items are on-screen, so their heights are already cached.
-	var viewportCount int
-	var y int
-	for i := p.topItemIndex; i < totalCount && y < panelBounds.Dy(); i++ {
-		h := p.content.measureItemHeight(context, i)
-		if h < 0 {
-			break
+	// Measure every item when the list is small enough, making the accurate*
+	// metrics exact for pixel-accurate thumb positioning. The threshold is a
+	// fixed count, not a test of whether the sliding sample window covers every
+	// item: window coverage depends on the scroll position, so it would flip
+	// allHeightsMeasured mid-scroll and snap the thumb between positioning modes.
+	const maxFullyMeasuredItemCount = 256
+	allMeasured := totalCount <= maxFullyMeasuredItemCount
+	var start, end int
+	if allMeasured {
+		start = 0
+		end = totalCount - 1
+	} else {
+		// Count the items filling the viewport by walking measured heights, not by
+		// dividing by estimatedItemHeight: sizing the window from the estimate it
+		// feeds can oscillate as the estimate crosses integer boundaries. These
+		// items are on-screen, so their heights are already cached.
+		var viewportCount int
+		var y int
+		for i := p.topItemIndex; i < totalCount && y < panelBounds.Dy(); i++ {
+			h := p.content.measureItemHeight(context, i)
+			if h < 0 {
+				break
+			}
+			y += h
+			viewportCount++
 		}
-		y += h
-		viewportCount++
-	}
-	viewportCount = max(1, viewportCount)
+		viewportCount = max(1, viewportCount)
 
-	// Sample heights from a window spanning at least 10 items, and 5 viewports, on each side of the top item.
-	extendCount := max(10, 5*viewportCount)
-	start := max(0, p.topItemIndex-extendCount)
-	end := min(totalCount-1, p.topItemIndex+viewportCount+extendCount)
+		// Sample heights from a window spanning at least 10 items, and 5 viewports, on each side of the top item.
+		extendCount := max(10, 5*viewportCount)
+		start = max(0, p.topItemIndex-extendCount)
+		end = min(totalCount-1, p.topItemIndex+viewportCount+extendCount)
+	}
 
 	var sum, count, heightAboveTop int
-	allMeasured := start == 0 && end == totalCount-1
 	for i := start; i <= end; i++ {
 		h := p.content.measureItemHeight(context, i)
 		if h < 0 {
@@ -923,8 +934,9 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 				// item heights to recover (idx, off). The drag-start scroll
 				// position is recomputed each tick from draggingStartIndex
 				// rather than captured at drag start; the mode can flip if
-				// itemCount shifts mid-drag, but allHeightsMeasured implies
-				// totalCount is small so the walk is cheap.
+				// itemCount crosses the full-measure threshold mid-drag, but
+				// allHeightsMeasured implies totalCount is below it so the
+				// walk is cheap.
 				measure := func(i int) int {
 					return s.panel.content.measureItemHeight(context, i)
 				}
