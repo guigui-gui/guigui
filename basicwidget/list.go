@@ -394,6 +394,10 @@ func (l *List[T]) EnsureItemVisibleByIndex(index int) {
 	l.content.EnsureItemVisibleByIndex(index)
 }
 
+func (l *List[T]) ForceEnsureItemVisibleByIndex(index int) {
+	l.content.ForceEnsureItemVisibleByIndex(index)
+}
+
 func (l *List[T]) SetStyle(style ListStyle) {
 	l.content.SetStyle(style)
 	l.inner.Widget().frame.SetStyle(style)
@@ -695,6 +699,7 @@ type listContent[T comparable] struct {
 
 	indexToJumpPlus1          int
 	indexToEnsureVisiblePlus1 int
+	ensureVisibleForce        bool
 	jumpTick                  int64
 	dragSrcIndexPlus1         int
 	dragDstIndexPlus1         int
@@ -1490,10 +1495,19 @@ func (l *listContent[T]) JumpToItemByIndex(index int) {
 }
 
 func (l *listContent[T]) EnsureItemVisibleByIndex(index int) {
+	l.ensureItemVisibleByIndex(index, false)
+}
+
+func (l *listContent[T]) ForceEnsureItemVisibleByIndex(index int) {
+	l.ensureItemVisibleByIndex(index, true)
+}
+
+func (l *listContent[T]) ensureItemVisibleByIndex(index int, force bool) {
 	if index < 0 {
 		return
 	}
 	l.indexToEnsureVisiblePlus1 = index + 1
+	l.ensureVisibleForce = force
 	l.indexToJumpPlus1 = 0
 	l.jumpTick = ebiten.Tick() + 1
 }
@@ -1953,8 +1967,9 @@ func (l *listContent[T]) Tick(context *guigui.Context, widgetBounds *guigui.Widg
 			l.indexToJumpPlus1 = 0
 		}
 		if idx := l.indexToEnsureVisiblePlus1 - 1; idx >= 0 && idx < l.abstractList.ItemCount() {
-			l.scrollToEnsureItemVisible(context, widgetBounds, idx)
+			l.scrollToEnsureItemVisible(context, widgetBounds, idx, l.ensureVisibleForce)
 			l.indexToEnsureVisiblePlus1 = 0
+			l.ensureVisibleForce = false
 		}
 		l.jumpTick = 0
 	}
@@ -1991,7 +2006,8 @@ func (l *listContent[T]) availableIndexForItemIndex(itemIndex int) int {
 }
 
 // scrollToEnsureItemVisible adjusts the panel's topItem to make the given item visible.
-func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds, itemIndex int) {
+// When force is true, the new position is written instantly with no scroll animation.
+func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widgetBounds *guigui.WidgetBounds, itemIndex int, force bool) {
 	ai := l.availableIndexForItemIndex(itemIndex)
 	if ai < 0 {
 		return
@@ -1999,20 +2015,28 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 
 	topIdx, topOff := l.listPanel.topItem()
 
+	setTop := func(idx, off int) {
+		if force {
+			l.listPanel.forceSetTopItem(idx, off, true)
+		} else {
+			l.listPanel.setTopItem(idx, off)
+		}
+	}
+
 	if ai < topIdx {
 		// Item is above viewport — scroll up to it.
-		l.listPanel.setTopItem(ai, 0)
+		setTop(ai, 0)
 		return
 	}
 
 	if ai == topIdx && topOff < 0 {
 		// Item is partially above viewport — align to top.
-		l.listPanel.setTopItem(ai, 0)
+		setTop(ai, 0)
 		return
 	}
 
 	// Check if item is below viewport.
-	// We need to compute the Y position of the item relative to the viewport top.
+	// The Y position of the item relative to the viewport top is needed.
 	bounds := widgetBounds.Bounds()
 	cw := bounds.Dx()
 	if l.contentWidthPlus1 > 0 {
@@ -2031,7 +2055,7 @@ func (l *listContent[T]) scrollToEnsureItemVisible(context *guigui.Context, widg
 			if itemBottom > viewportHeight-RoundedCornerRadius(context) {
 				// Need to scroll down. Set the offset so this item's bottom aligns with viewport bottom.
 				diff := itemBottom - (viewportHeight - RoundedCornerRadius(context))
-				l.listPanel.setTopItem(topIdx, topOff-diff)
+				setTop(topIdx, topOff-diff)
 				// layoutTopItem will fix the indices during the next layout.
 			}
 			return
