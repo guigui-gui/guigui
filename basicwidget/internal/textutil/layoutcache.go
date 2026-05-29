@@ -80,6 +80,9 @@ type measuredLogicalLine struct {
 	// advanceUpToBuf is a reused backing array for the next layout's advanceUpTo
 	// build, so steady-state editing allocates none.
 	advanceUpToBuf []float64
+	// vlStartsLen is this line's visual-line count, used to presize the next
+	// layout's collect so it fills without regrowing.
+	vlStartsLen int
 	// lastTick is the tick this line was last measured, for idle eviction.
 	lastTick int64
 }
@@ -147,12 +150,16 @@ func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
 	tf := face.TextFace()
 
 	var work []float64
+	// capHint presizes the visual-line-starts append to the previous layout's
+	// count, which changes by about one per edit, avoiding regrowth.
+	var capHint int
 	// replaceLastMeasured reports whether the current line becomes the
 	// tracked last-measured line. Which line to keep is a tunable performance
 	// heuristic, not a correctness decision: a wrong guess only costs a full
 	// reshape next tick, never a wrong layout.
 	var replaceLastMeasured bool
 	if c.lastMeasured.valid && c.lastMeasured.style == style {
+		capHint = c.lastMeasured.vlStartsLen
 		var reshapedLengthInBytes int
 		work, reshapedLengthInBytes = patchAdvanceUpTo(c.lastMeasured.advanceUpTo, c.lastMeasured.advanceUpToBuf, c.lastMeasured.line, line, tf)
 		// Replace the last-measured line when the new line is at least as long.
@@ -182,7 +189,7 @@ func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
 	// work is line's advanceUpTo (length len(line)+1), so seeding it lets the packer
 	// measure without reshaping line.
 	ra.advanceUpTo = work
-	vlStarts := slices.Collect(visualLineStarts(k.width, line, k.wrapMode, ra))
+	vlStarts := appendVisualLineStarts(make([]int, 0, capHint), k.width, line, k.wrapMode, ra)
 
 	if replaceLastMeasured {
 		// Swap: the array just built becomes the live one; the previous live array
@@ -193,6 +200,7 @@ func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
 		c.lastMeasured.line = strings.Clone(line)
 		c.lastMeasured.face = face
 		c.lastMeasured.style = style
+		c.lastMeasured.vlStartsLen = len(vlStarts)
 		c.lastMeasured.valid = true
 	} else {
 		// Keep the existing (longer) line as lastMeasured for the next

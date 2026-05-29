@@ -5,7 +5,6 @@ package textutil
 
 import (
 	"iter"
-	"slices"
 )
 
 type TextPosition struct {
@@ -30,7 +29,7 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 
 	if p.Style.WrapMode != WrapModeNone {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, slices.Values(vlStarts)), indexInLine, &p.Style)
+			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, vlStarts), indexInLine, &p.Style)
 			if count == 0 {
 				return 0, 0, TextPosition{}, TextPosition{}, 0
 			}

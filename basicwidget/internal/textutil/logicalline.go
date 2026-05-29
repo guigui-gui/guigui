@@ -51,75 +51,63 @@ func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode
 	// copy; the yielded slices index into it.
 	sanitized := sanitizedForCache(logicalLine)
 	ra := newRangeAdvancer(sanitized, face, tabWidth, keepTailingSpace)
-	vlStarts := slices.Collect(visualLineStarts(width, sanitized, wrapMode, ra))
-	return visualLinesFromStarts(sanitized, slices.Values(vlStarts))
+	vlStarts := appendVisualLineStarts(nil, width, sanitized, wrapMode, ra)
+	return visualLinesFromStarts(sanitized, vlStarts)
 }
 
-// visualLineStarts yields the start byte offset of each visual line that line
-// wraps into at the given width, in order. line must be valid UTF-8. The first
-// value is always 0, the number of values equals the visual-line count, and
-// visual line i spans line[start_i:start_{i+1}] (the last spans to len(line)).
-// This describes exactly the same wrapping as visualLinesFromLogicalLine. ra
-// measures each candidate range.
-func visualLineStarts(width int, line string, wrapMode WrapMode, ra *rangeAdvancer) iter.Seq[int] {
-	return func(yield func(int) bool) {
-		// Fast path: a single visual line. Mirrors visualLinesFromLogicalLine.
-		if wrapMode == WrapModeNone || width == math.MaxInt || ra.rangeAdvance(0, len(line)) <= float64(width) {
-			yield(0)
-			return
-		}
-
-		if !yield(0) {
-			return
-		}
-		var vlStart, vlEnd int
-		// emit consumes the next segment, identified only by its byte length, and
-		// starts a new visual line whenever the accumulated content would overflow
-		// width. Returns cont=false at a mandatory break (the contract allows at
-		// most one, at the very end) or once the consumer stops. A mandatory break
-		// never starts a fresh visual line: its start offset is already yielded.
-		emit := func(segLenInBytes int, isMandatoryBreak bool) (cont bool) {
-			if vlEnd-vlStart > 0 {
-				candEnd := vlEnd + segLenInBytes
-				innerEnd := candEnd - vlStart - tailingLineBreakLen(line[vlStart:candEnd])
-				if ra.rangeAdvance(vlStart, innerEnd) > float64(width) {
-					vlStart = vlEnd
-					if !yield(vlStart) {
-						return false
-					}
-				}
-			}
-			vlEnd += segLenInBytes
-			return !isMandatoryBreak
-		}
-
-		// WrapModeNormal wraps at line-break opportunities, WrapModeAnywhere at
-		// grapheme boundaries; both feed the same packing loop. A logical line
-		// has at most a trailing hard break, so the mandatory-break flag is
-		// taken from each segment's own trailing line break.
-		boundaries := theSegmentCache.softLineBreakBoundaries
-		if wrapMode != WrapModeNormal {
-			boundaries = theSegmentCache.graphemeBoundaries
-		}
-		var segStart int
-		for end := range boundaries(line) {
-			segText := line[segStart:end]
-			if !emit(end-segStart, tailingLineBreakLen(segText) > 0) {
-				break
-			}
-			segStart = end
-		}
+// appendVisualLineStarts appends to dst the start byte offset of each visual line
+// line wraps into at the given width, in order, and returns the extended slice.
+// line must be valid UTF-8. The first appended offset is 0; visual line i spans
+// line[start_i:start_{i+1}], the last to len(line). ra measures each candidate.
+func appendVisualLineStarts(dst []int, width int, line string, wrapMode WrapMode, ra *rangeAdvancer) []int {
+	// Fast path: a single visual line. Mirrors visualLinesFromLogicalLine.
+	if wrapMode == WrapModeNone || width == math.MaxInt || ra.rangeAdvance(0, len(line)) <= float64(width) {
+		return append(dst, 0)
 	}
+
+	dst = append(dst, 0)
+	var vlStart, vlEnd int
+	// WrapModeNormal wraps at line-break opportunities, WrapModeAnywhere at
+	// grapheme boundaries; both feed the same packing loop. A logical line
+	// has at most a trailing hard break, so the mandatory-break flag is
+	// taken from each segment's own trailing line break.
+	boundaries := theSegmentCache.softLineBreakBoundaries
+	if wrapMode != WrapModeNormal {
+		boundaries = theSegmentCache.graphemeBoundaries
+	}
+	var segStart int
+	for end := range boundaries(line) {
+		segText := line[segStart:end]
+		segLenInBytes := end - segStart
+		// Start a new visual line when the accumulated content would overflow
+		// width. A mandatory break never starts a fresh visual line; its start
+		// offset is already recorded.
+		if vlEnd-vlStart > 0 {
+			candEnd := vlEnd + segLenInBytes
+			innerEnd := candEnd - vlStart - tailingLineBreakLen(line[vlStart:candEnd])
+			if ra.rangeAdvance(vlStart, innerEnd) > float64(width) {
+				vlStart = vlEnd
+				dst = append(dst, vlStart)
+			}
+		}
+		vlEnd += segLenInBytes
+		// The contract allows at most one mandatory break, at the very end.
+		if tailingLineBreakLen(segText) > 0 {
+			break
+		}
+		segStart = end
+	}
+	return dst
 }
 
 // visualLinesFromStarts yields the visual lines described by the start offsets in
-// vlStarts (as produced by visualLineStarts) over line. line must be
+// vlStarts (as produced by appendVisualLineStarts) over line. line must be
 // the same string the offsets were computed against. No shaping is performed.
-func visualLinesFromStarts(line string, vlStarts iter.Seq[int]) iter.Seq[visualLine] {
+func visualLinesFromStarts(line string, vlStarts []int) iter.Seq[visualLine] {
 	return func(yield func(visualLine) bool) {
 		started := false
 		var prev int
-		for s := range vlStarts {
+		for _, s := range vlStarts {
 			if !started {
 				prev = s
 				started = true
@@ -304,13 +292,13 @@ func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, 
 // logical line wraps into at the given width. With wrapMode set to
 // [WrapModeNone] (or when the line fits) the result is always 1.
 func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
+	// No packing happens for these, so skip building the layout entirely.
+	if wrapMode == WrapModeNone || width == math.MaxInt {
+		return 1
+	}
 	line := sanitizedForCache(logicalLine)
 	ra := newRangeAdvancer(line, face, tabWidth, keepTailingSpace)
-	var count int
-	for range visualLineStarts(width, line, wrapMode, ra) {
-		count++
-	}
-	return count
+	return len(appendVisualLineStarts(nil, width, line, wrapMode, ra))
 }
 
 // CachedVisualLineCount is [VisualLineCountForLogicalLine] backed by the

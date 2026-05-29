@@ -7,7 +7,6 @@ import (
 	"image"
 	"iter"
 	"math"
-	"slices"
 )
 
 // TextIndexFromPosition returns the byte offset in the rendering text
@@ -172,7 +171,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	var pos int
 	if p.Style.WrapMode != WrapModeNone {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, slices.Values(vlStarts)), &p.Style)
+			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, vlStarts), &p.Style)
 			return renderingLineStart + pos
 		}
 	}
