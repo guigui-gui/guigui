@@ -124,6 +124,12 @@ type Text struct {
 	valueBuilder      bytes.Buffer
 	valueEqualChecker stringEqualChecker
 
+	// stringCache memoizes field substrings keyed by content generation and
+	// range with round-robin replacement, reused until the next edit bumps the
+	// generation.
+	stringCache     [4]stringCacheEntry
+	stringCacheNext int
+
 	nextTextSet   bool
 	nextText      string
 	nextSelectAll bool
@@ -260,6 +266,15 @@ type cachedTextHeightEntry struct {
 	constraintWidth int
 
 	height int
+}
+
+type stringCacheEntry struct {
+	valid        bool
+	forRendering bool
+	generation   int64
+	start        int
+	end          int
+	str          string
 }
 
 type textSizeCacheKey int
@@ -509,12 +524,39 @@ func (t *Text) stringValue() string {
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
+	return t.cachedStringWithRange(start, end, false)
+}
+
+// cachedStringWithRange returns the field substring [start, end) — rendering text
+// when forRendering, else committed — reusing a cached copy until the next edit.
+// A negative end means the text length.
+func (t *Text) cachedStringWithRange(start, end int, forRendering bool) string {
 	if end < 0 {
 		end = t.field.TextLengthInBytes()
 	}
+	gen := t.field.Generation()
+	for i := range t.stringCache {
+		if e := &t.stringCache[i]; e.valid && e.generation == gen && e.forRendering == forRendering && e.start == start && e.end == end {
+			return e.str
+		}
+	}
 	t.valueBuilder.Reset()
-	_, _ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
-	return t.valueBuilder.String()
+	if forRendering {
+		_, _ = t.field.WriteTextForRenderingRangeTo(&t.valueBuilder, start, end)
+	} else {
+		_, _ = t.field.WriteTextRangeTo(&t.valueBuilder, start, end)
+	}
+	str := t.valueBuilder.String()
+	t.stringCache[t.stringCacheNext] = stringCacheEntry{
+		valid:        true,
+		forRendering: forRendering,
+		generation:   gen,
+		start:        start,
+		end:          end,
+		str:          str,
+	}
+	t.stringCacheNext = (t.stringCacheNext + 1) % len(t.stringCache)
+	return str
 }
 
 func (t *Text) bytesValueWithRange(start, end int) []byte {
@@ -531,9 +573,7 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 // [start, end). Coordinates are in rendering space; clamped by
 // [textField.WriteTextForRenderingRangeTo].
 func (t *Text) stringValueForRenderingRange(start, end int) string {
-	t.valueBuilder.Reset()
-	_, _ = t.field.WriteTextForRenderingRangeTo(&t.valueBuilder, start, end)
-	return t.valueBuilder.String()
+	return t.cachedStringWithRange(start, end, true)
 }
 
 // stringValueForLineContaining returns the bytes of the logical line that
