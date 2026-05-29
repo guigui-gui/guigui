@@ -5,6 +5,7 @@ package textutil
 
 import (
 	"iter"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -89,6 +90,15 @@ type segmentCache struct {
 	// now reports the current tick; if nil, [ebiten.Tick] is used. Tests inject
 	// a controllable clock.
 	now func() int64
+	// boundaryStack holds one chunk-partition frame per active boundaries()
+	// iteration so nesting is safe; popped frames stay in capacity for reuse.
+	boundaryStack []boundaryFrame
+}
+
+// boundaryFrame holds one line's chunk partition (see [chunk.AppendBoundaries]).
+type boundaryFrame struct {
+	line       string
+	boundaries []int
 }
 
 func (c *segmentCache) nowTick() int64 {
@@ -127,8 +137,10 @@ func (c *segmentCache) softLineBreakBoundaries(line string) iter.Seq[int] {
 // partition each chunk. The yielded offsets are increasing and end at len(line).
 func (c *segmentCache) boundaries(line string, pick func(*chunkSegments) []int32) iter.Seq[int] {
 	return func(yield func(int) bool) {
+		bounds := c.pushChunkBoundaries(line)
+		defer c.popChunkBoundaries()
 		var start int
-		for _, end := range chunk.AppendBoundaries(nil, line) {
+		for _, end := range bounds {
 			if end == start {
 				// The empty-line case yields a single zero-width chunk.
 				continue
@@ -145,6 +157,28 @@ func (c *segmentCache) boundaries(line string, pick func(*chunkSegments) []int32
 			start = end
 		}
 	}
+}
+
+// pushChunkBoundaries enters a boundaries() nesting level and returns line's
+// chunk partition for it, valid until the balancing popChunkBoundaries.
+func (c *segmentCache) pushChunkBoundaries(line string) []int {
+	n := len(c.boundaryStack)
+	c.boundaryStack = slices.Grow(c.boundaryStack, 1)[:n+1]
+	f := &c.boundaryStack[n]
+	// A pointer-identical line compares in O(1); a length mismatch is rejected
+	// before any byte comparison.
+	if f.boundaries != nil && line == f.line {
+		return f.boundaries
+	}
+	f.boundaries = chunk.AppendBoundaries(f.boundaries[:0], line)
+	f.line = line
+	return f.boundaries
+}
+
+func (c *segmentCache) popChunkBoundaries() {
+	// Reslice rather than clear: the popped frame's line and buffer stay in the
+	// retained capacity so the next push at this depth can reuse them.
+	c.boundaryStack = c.boundaryStack[:len(c.boundaryStack)-1]
 }
 
 // segments returns chunkStr's segmentation, from the cache or by segmenting it

@@ -90,6 +90,24 @@ func TestSegmentCacheMatchesWholeLine(t *testing.T) {
 	}
 }
 
+// TestSegmentCacheBoundariesReentrant checks that a nested boundaries iteration
+// does not corrupt the outer one — each yields the same offsets as standalone.
+func TestSegmentCacheBoundariesReentrant(t *testing.T) {
+	c := textutil.NewSegmentCacheForTest(1<<20, nil)
+	// Multiple chunks each (cut after every ". "), so a clobbered partition shows.
+	outer := "Alpha beta. Gamma delta. Epsilon zeta."
+	inner := "One two. Three four. Five six."
+	wantOuter := c.SoftLineBreakBoundaries(outer)
+	wantInner := c.SoftLineBreakBoundaries(inner)
+	gotOuter, gotInner := c.SoftLineBreakBoundariesNested(outer, inner)
+	if !slices.Equal(gotOuter, wantOuter) {
+		t.Errorf("outer offsets corrupted by nested iteration:\n got=%v\nwant=%v", gotOuter, wantOuter)
+	}
+	if !slices.Equal(gotInner, wantInner) {
+		t.Errorf("inner offsets wrong:\n got=%v\nwant=%v", gotInner, wantInner)
+	}
+}
+
 // TestSegmentCacheKeepsActiveEntries checks that entries used within the alive
 // window are never evicted, even far over the soft limit — so wrapping one long
 // line never evicts the chunks it is still using.

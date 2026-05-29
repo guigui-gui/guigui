@@ -143,3 +143,14 @@ func (s *SegmentCacheForTest) GraphemeBoundaries(line string) []int {
 func (s *SegmentCacheForTest) SoftLineBreakBoundaries(line string) []int {
 	return slices.Collect(s.c.softLineBreakBoundaries(line))
 }
+
+// SoftLineBreakBoundariesNested iterates outer's boundaries and, at each step,
+// fully iterates inner's boundaries, returning outer's offsets and the last
+// inner's. It drives a re-entrant boundaries() call on a different line.
+func (s *SegmentCacheForTest) SoftLineBreakBoundariesNested(outer, inner string) (outerOffsets, innerOffsets []int) {
+	for o := range s.c.softLineBreakBoundaries(outer) {
+		outerOffsets = append(outerOffsets, o)
+		innerOffsets = slices.Collect(s.c.softLineBreakBoundaries(inner))
+	}
+	return outerOffsets, innerOffsets
+}
