@@ -155,6 +155,7 @@ type Text struct {
 	keepTailingSpace            bool
 	selectionVisibleWhenUnfocus bool
 	ellipsisString              string
+	isPassword                  bool
 
 	selectionDragStartPlus1 int
 	selectionDragEndPlus1   int
@@ -343,7 +344,9 @@ func (t *Text) dispatchValueChanged(committed bool, force bool) {
 		t.lastDispatchedUncommittedGen = gen
 	}
 	guigui.DispatchEventLazy(t, textEventValueChanged, func() (string, bool) {
-		return t.stringValue(), committed
+		t.valueBuilder.Reset()
+		_, _ = t.field.WriteTextTo(&t.valueBuilder)
+		return t.valueBuilder.String(), committed
 	})
 	guigui.DispatchEvent(t, textEventValueChangedWithoutText, committed)
 }
@@ -520,11 +523,19 @@ func (t *Text) isEqualToStringValue(text string) bool {
 func (t *Text) stringValue() string {
 	t.valueBuilder.Reset()
 	_, _ = t.field.WriteTextTo(&t.valueBuilder)
-	return t.valueBuilder.String()
+	s := t.valueBuilder.String()
+	if t.isPassword {
+		return maskString(s)
+	}
+	return s
 }
 
 func (t *Text) stringValueWithRange(start, end int) string {
-	return t.cachedStringWithRange(start, end, false)
+	s := t.cachedStringWithRange(start, end, false)
+	if t.isPassword {
+		return maskString(s)
+	}
+	return s
 }
 
 // cachedStringWithRange returns the field substring [start, end) — rendering text
@@ -573,7 +584,11 @@ func (t *Text) bytesValueWithRange(start, end int) []byte {
 // [start, end). Coordinates are in rendering space; clamped by
 // [textField.WriteTextForRenderingRangeTo].
 func (t *Text) stringValueForRenderingRange(start, end int) string {
-	return t.cachedStringWithRange(start, end, true)
+	s := t.cachedStringWithRange(start, end, true)
+	if t.isPassword {
+		return maskString(s)
+	}
+	return s
 }
 
 // stringValueForLineContaining returns the bytes of the logical line that
@@ -678,7 +693,11 @@ func (t *Text) nextPositionOnGraphemes(position int) int {
 func (t *Text) stringValueForRendering() string {
 	t.valueBuilder.Reset()
 	_, _ = t.field.WriteTextForRenderingTo(&t.valueBuilder)
-	return t.valueBuilder.String()
+	s := t.valueBuilder.String()
+	if t.isPassword {
+		return maskString(s)
+	}
+	return s
 }
 
 // Value returns the current value as a string.
@@ -687,7 +706,9 @@ func (t *Text) Value() string {
 	if t.nextTextSet {
 		return t.nextText
 	}
-	return t.stringValue()
+	t.valueBuilder.Reset()
+	_, _ = t.field.WriteTextTo(&t.valueBuilder)
+	return t.valueBuilder.String()
 }
 
 // HasValue reports whether the text has a non-empty value.
@@ -994,6 +1015,14 @@ func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 
 func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
+}
+
+func (t *Text) SetPassword(password bool) {
+	if t.isPassword == password {
+		return
+	}
+	t.isPassword = password
+	t.resetCachedTextSize()
 }
 
 func (t *Text) IsEditable() bool {
@@ -2780,4 +2809,13 @@ func (s *stringEqualChecker) Write(b []byte) (int, error) {
 	}
 	s.pos += len(b)
 	return len(b), nil
+}
+
+func maskString(s string) string {
+	runes := []rune(s)
+	res := make([]rune, len(runes))
+	for i := range res {
+		res[i] = '*'
+	}
+	return string(res)
 }

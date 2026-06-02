@@ -238,6 +238,10 @@ func (t *TextInput) SetError(hasError bool) {
 	t.textInput.frame.setError(hasError)
 }
 
+func (t *TextInput) SetPassword(password bool) {
+	t.textInput.text.Text().SetPassword(password)
+}
+
 // SupportText returns the support text displayed below the text input.
 func (t *TextInput) SupportText() string {
 	return t.supportTextValue
