@@ -15,6 +15,37 @@ func BottomFracIdx(measure func(index int) int, totalCount, viewportHeight int) 
 	return bottomFracIdx(measure, totalCount, viewportHeight)
 }
 
+// VirtualScrollPanel exposes the unexported virtualScrollPanel so tests can
+// exercise the scroll-position primitives that List's public scroll API
+// delegates to.
+type VirtualScrollPanel struct {
+	virtualScrollPanel
+}
+
+func (p *VirtualScrollPanel) TopItem() (int, int) {
+	return p.topItem()
+}
+
+func (p *VirtualScrollPanel) SetTopItem(index, offset int) {
+	p.setTopItem(index, offset)
+}
+
+func (p *VirtualScrollPanel) ForceSetTopItem(index, offset int, cancelAnimation bool) {
+	p.forceSetTopItem(index, offset, cancelAnimation)
+}
+
+func (p *VirtualScrollPanel) ForceSetScrollOffsetX(x float64) {
+	p.forceSetScrollOffsetX(x)
+}
+
+func (p *VirtualScrollPanel) ApplyPendingScrollOffset() {
+	p.applyPendingScrollOffset()
+}
+
+func (p *VirtualScrollPanel) ScrollOffset() (float64, float64) {
+	return p.scrollOffset()
+}
+
 type AbstractListValuer[T comparable] interface {
 	valuer[T]
 }

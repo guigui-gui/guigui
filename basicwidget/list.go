@@ -398,6 +398,54 @@ func (l *List[T]) ForceEnsureItemVisibleByIndex(index int) {
 	l.content.ForceEnsureItemVisibleByIndex(index)
 }
 
+// ListScrollPosition is an opaque snapshot of a list widget's scroll position
+// (e.g. [List] or [Table]), obtained from [List.ScrollPosition] and restored
+// with [List.SetScrollPosition] or [List.ForceSetScrollPosition]. The zero value
+// is the top of the list.
+type ListScrollPosition struct {
+	topItemIndex  int
+	topItemOffset int
+	offsetX       float64
+}
+
+// ScrollPosition returns a snapshot of the current scroll position, restorable
+// with [List.SetScrollPosition] or [List.ForceSetScrollPosition].
+func (l *List[T]) ScrollPosition() ListScrollPosition {
+	p := &l.inner.Widget().panel
+	topItemIndex, topItemOffset := p.topItem()
+	offsetX, _ := p.scrollOffset()
+	return ListScrollPosition{
+		topItemIndex:  topItemIndex,
+		topItemOffset: topItemOffset,
+		offsetX:       offsetX,
+	}
+}
+
+// SetScrollPosition scrolls to the given position with animation.
+func (l *List[T]) SetScrollPosition(position ListScrollPosition) {
+	p := &l.inner.Widget().panel
+	p.setTopItem(position.topItemIndex, position.topItemOffset)
+	p.forceSetScrollOffsetX(position.offsetX)
+}
+
+// ForceSetScrollPosition scrolls to the given position without animation.
+func (l *List[T]) ForceSetScrollPosition(position ListScrollPosition) {
+	p := &l.inner.Widget().panel
+	p.forceSetTopItem(position.topItemIndex, position.topItemOffset, true)
+	p.forceSetScrollOffsetX(position.offsetX)
+}
+
+// OnScroll sets the handler invoked when the scroll position changes.
+func (l *List[T]) OnScroll(callback func(context *guigui.Context, position ListScrollPosition)) {
+	l.inner.Widget().panel.OnScroll(func(context *guigui.Context, topItemIndex, topItemOffset int, offsetX float64) {
+		callback(context, ListScrollPosition{
+			topItemIndex:  topItemIndex,
+			topItemOffset: topItemOffset,
+			offsetX:       offsetX,
+		})
+	})
+}
+
 func (l *List[T]) SetStyle(style ListStyle) {
 	l.content.SetStyle(style)
 	l.inner.Widget().frame.SetStyle(style)

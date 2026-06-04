@@ -178,6 +178,39 @@ func TestTopItemAfterPixelScroll(t *testing.T) {
 	}
 }
 
+func TestVirtualScrollPanelScrollPositionRoundTrip(t *testing.T) {
+	var p basicwidget.VirtualScrollPanel
+
+	// ForceSetTopItem (cancelAnimation=true) writes the vertical position
+	// instantly; this is the path List.ForceSetScrollPosition uses.
+	p.ForceSetTopItem(7, -12, true)
+	if idx, off := p.TopItem(); idx != 7 || off != -12 {
+		t.Errorf("after ForceSetTopItem, TopItem() = (%d, %d); want (7, -12)", idx, off)
+	}
+
+	// SetTopItem falls back to a pending instant change before the first draw;
+	// this is the path List.SetScrollPosition uses.
+	p.SetTopItem(3, -4)
+	if idx, off := p.TopItem(); idx != 7 || off != -12 {
+		t.Errorf("after SetTopItem before apply, TopItem() = (%d, %d); want (7, -12)", idx, off)
+	}
+	p.ApplyPendingScrollOffset()
+	if idx, off := p.TopItem(); idx != 3 || off != -4 {
+		t.Errorf("after SetTopItem and apply, TopItem() = (%d, %d); want (3, -4)", idx, off)
+	}
+
+	// forceSetScrollOffsetX queues a horizontal change applied on the next
+	// layout/tick; scrollOffset reports it only once applied.
+	p.ForceSetScrollOffsetX(-34)
+	if x, _ := p.ScrollOffset(); x != 0 {
+		t.Errorf("ScrollOffset() before apply = %v; want 0", x)
+	}
+	p.ApplyPendingScrollOffset()
+	if x, y := p.ScrollOffset(); x != -34 || y != 0 {
+		t.Errorf("ScrollOffset() after apply = (%v, %v); want (-34, 0)", x, y)
+	}
+}
+
 func TestBottomFracIdx(t *testing.T) {
 	uniform := func(n, h int) []int {
 		s := make([]int, n)

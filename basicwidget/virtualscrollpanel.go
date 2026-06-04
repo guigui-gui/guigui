@@ -14,6 +14,8 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
+var virtualScrollPanelEventScroll guigui.EventKey = guigui.GenerateEventKey()
+
 // virtualScrollContent is the interface that [virtualScrollPanel] requires
 // from its content widget.
 type virtualScrollContent interface {
@@ -60,6 +62,13 @@ type virtualScrollPanel struct {
 
 	// offsetX is the horizontal scroll offset.
 	offsetX float64
+
+	// scrolledTopItemIndex, scrolledTopItemOffset, and scrolledOffsetX record the
+	// scroll position last emitted via virtualScrollPanelEventScroll, so the event
+	// is dispatched only when the position actually changes.
+	scrolledTopItemIndex  int
+	scrolledTopItemOffset int
+	scrolledOffsetX       float64
 
 	// Pending horizontal offset changes.
 	nextOffsetXSet     bool
@@ -140,6 +149,11 @@ func (p *virtualScrollPanel) setHorizontalBarHidden(hidden bool) {
 // Vertical scroll is managed via topItemIndex/topItemOffset.
 func (p *virtualScrollPanel) scrollOffset() (float64, float64) {
 	return p.offsetX, 0
+}
+
+// OnScroll sets the handler invoked when the scroll position changes.
+func (p *virtualScrollPanel) OnScroll(callback func(context *guigui.Context, topItemIndex, topItemOffset int, offsetX float64)) {
+	guigui.SetEventHandler(p, virtualScrollPanelEventScroll, callback)
 }
 
 // forceSetScrollOffsetX sets the horizontal scroll offset.
@@ -602,6 +616,7 @@ func (p *virtualScrollPanel) Tick(context *guigui.Context, widgetBounds *guigui.
 	if p.advanceScrollAnimation() {
 		vChanged = true
 	}
+	p.dispatchScrollEventIfNeeded()
 	if hChanged && p.scrollHBar.isOnceDrawn() {
 		shouldShowHBar = true
 	}
@@ -685,6 +700,22 @@ func (p *virtualScrollPanel) applyPendingScrollOffsetInTick() (bool, bool) {
 	hChanged := p.offsetX != oldOffsetX
 	vChanged := p.topItemIndex != oldTopItemIndex || p.topItemOffset != oldTopItemOffset
 	return hChanged, vChanged
+}
+
+// dispatchScrollEventIfNeeded emits virtualScrollPanelEventScroll when the
+// scroll position has changed since the last dispatch. Comparing against a
+// stored snapshot catches every write path, including direct writes such as a
+// scroll-bar drag that does not set a pending change.
+func (p *virtualScrollPanel) dispatchScrollEventIfNeeded() {
+	if p.topItemIndex == p.scrolledTopItemIndex &&
+		p.topItemOffset == p.scrolledTopItemOffset &&
+		p.offsetX == p.scrolledOffsetX {
+		return
+	}
+	p.scrolledTopItemIndex = p.topItemIndex
+	p.scrolledTopItemOffset = p.topItemOffset
+	p.scrolledOffsetX = p.offsetX
+	guigui.DispatchEvent(p, virtualScrollPanelEventScroll, p.topItemIndex, p.topItemOffset, p.offsetX)
 }
 
 // vThumbHeight returns the vertical thumb height.

@@ -293,6 +293,27 @@ func (t *Table[T]) ForceEnsureItemVisibleByIndex(index int) {
 	t.list.ForceEnsureItemVisibleByIndex(index)
 }
 
+// ScrollPosition returns a snapshot of the current scroll position, restorable
+// with [Table.SetScrollPosition] or [Table.ForceSetScrollPosition].
+func (t *Table[T]) ScrollPosition() ListScrollPosition {
+	return t.list.ScrollPosition()
+}
+
+// SetScrollPosition scrolls to the given position with animation.
+func (t *Table[T]) SetScrollPosition(position ListScrollPosition) {
+	t.list.SetScrollPosition(position)
+}
+
+// ForceSetScrollPosition scrolls to the given position without animation.
+func (t *Table[T]) ForceSetScrollPosition(position ListScrollPosition) {
+	t.list.ForceSetScrollPosition(position)
+}
+
+// OnScroll sets the handler invoked when the scroll position changes.
+func (t *Table[T]) OnScroll(callback func(context *guigui.Context, position ListScrollPosition)) {
+	t.list.OnScroll(callback)
+}
+
 func (t *Table[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	return image.Pt(12*UnitSize(context), 6*UnitSize(context))
 }
