@@ -1663,15 +1663,22 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 - lh
-			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
+			nextIdx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
+			// A genuine move to the previous line lands on an earlier byte
+			// offset. When the caret is already on the first line, the move is
+			// clamped and round-trips to the same offset; move to the head of
+			// the text instead.
+			if nextIdx >= idx {
+				nextIdx = 0
+			}
 			if shift {
 				if moveEnd {
-					t.setSelection(start, idx, idx, true)
+					t.setSelection(start, nextIdx, nextIdx, true)
 				} else {
-					t.setSelection(idx, end, idx, true)
+					t.setSelection(nextIdx, end, nextIdx, true)
 				}
 			} else {
-				t.setSelection(idx, idx, -1, true)
+				t.setSelection(nextIdx, nextIdx, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -1688,15 +1695,22 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
 			y := (pos.Top+pos.Bottom)/2 + lh
-			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
+			nextIdx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
+			// A genuine move to the next line lands on a later byte offset. When
+			// the caret is already on the last line, the move is clamped and
+			// round-trips to the same offset; move to the tail of the text
+			// instead.
+			if nextIdx <= idx {
+				nextIdx = t.field.TextLengthInBytes()
+			}
 			if shift {
 				if moveStart {
-					t.setSelection(idx, end, idx, true)
+					t.setSelection(nextIdx, end, nextIdx, true)
 				} else {
-					t.setSelection(start, idx, idx, true)
+					t.setSelection(start, nextIdx, nextIdx, true)
 				}
 			} else {
-				t.setSelection(idx, idx, -1, true)
+				t.setSelection(nextIdx, nextIdx, -1, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
