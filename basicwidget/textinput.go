@@ -138,6 +138,14 @@ func (t *TextInput) SetMultiline(multiline bool) {
 	t.textInput.SetMultiline(multiline)
 }
 
+// SetMaskRune sets the character drawn in place of each grapheme cluster of the
+// value, masking it for password-style entry. A non-zero rune also disables
+// copy and cut and forces the input to a single line; the zero value restores
+// normal text.
+func (t *TextInput) SetMaskRune(maskRune rune) {
+	t.textInput.SetMaskRune(maskRune)
+}
+
 func (t *TextInput) SetHorizontalAlign(halign HorizontalAlign) {
 	t.textInput.SetHorizontalAlign(halign)
 }
@@ -454,6 +462,10 @@ func (t *textInput) CommitWithCurrentInputValue() {
 
 func (t *textInput) SetMultiline(multiline bool) {
 	t.text.Text().SetMultiline(multiline)
+}
+
+func (t *textInput) SetMaskRune(maskRune rune) {
+	t.text.Text().SetMaskRune(maskRune)
 }
 
 func (t *textInput) SetHorizontalAlign(halign HorizontalAlign) {

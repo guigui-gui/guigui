@@ -271,6 +271,8 @@ type TextInputsModel struct {
 	singleLinetTextSet bool
 	multilineText      string
 	multilineTextSet   bool
+	passwordText       string
+	passwordTextSet    bool
 
 	horizontalAlign basicwidget.HorizontalAlign
 	verticalAlign   basicwidget.VerticalAlign
@@ -291,6 +293,18 @@ func (t *TextInputsModel) SingleLineText() string {
 func (t *TextInputsModel) SetSingleLineText(text string) {
 	t.singleLineText = text
 	t.singleLinetTextSet = true
+}
+
+func (t *TextInputsModel) Password() string {
+	if !t.passwordTextSet {
+		return "password"
+	}
+	return t.passwordText
+}
+
+func (t *TextInputsModel) SetPassword(text string) {
+	t.passwordText = text
+	t.passwordTextSet = true
 }
 
 func (t *TextInputsModel) MultilineText() string {

@@ -165,6 +165,10 @@ type Text struct {
 	selectionVisibleWhenUnfocus bool
 	ellipsisString              string
 
+	// maskRune, when non-zero, is drawn in place of every grapheme cluster of
+	// the value. The zero value disables masking.
+	maskRune rune
+
 	selectionDragStartPlus1 int
 	selectionDragEndPlus1   int
 
@@ -219,6 +223,15 @@ type Text struct {
 	// lineByteOffsetsFieldGeneration.
 	lineByteOffsets                textutil.LineByteOffsets
 	lineByteOffsetsFieldGeneration int64
+
+	// cachedMaskMapping memoizes the masked rendering of the value, keyed by
+	// [textField.Generation], the mask rune, and whether the active IME
+	// composition is included. Rebuilt lazily by maskMappingForRendering when
+	// any key component changes. A zero runeLen means it has not been built yet.
+	cachedMaskMapping                maskMapping
+	cachedMaskMappingGeneration      int64
+	cachedMaskMappingRune            rune
+	cachedMaskMappingWithComposition bool
 
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
@@ -427,6 +440,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(t.keepTailingSpace)
 	w.WriteBool(t.selectionVisibleWhenUnfocus)
 	w.WriteString(t.ellipsisString)
+	w.WriteRune(t.maskRune)
 	writePadding(w, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
 	w.WriteInt(selStart)
@@ -854,7 +868,7 @@ func (t *Text) replaceTextAtSelection(text string) {
 }
 
 func (t *Text) replaceTextAt(text string, start, end int) {
-	if !t.multiline {
+	if !t.IsMultiline() {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
 
@@ -884,7 +898,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 }
 
 func (t *Text) setText(text string, selectAll bool) bool {
-	if !t.multiline {
+	if !t.IsMultiline() {
 		text, _, _ = replaceNewLinesWithSpace(text, 0, 0)
 	}
 
@@ -1035,8 +1049,10 @@ func (t *Text) SetEditable(editable bool) {
 	t.editable = editable
 }
 
+// IsMultiline reports whether the value may span multiple lines. It is always
+// false while masking, which is single-line.
 func (t *Text) IsMultiline() bool {
-	return t.multiline
+	return t.multiline && !t.masking()
 }
 
 func (t *Text) SetMultiline(multiline bool) {
@@ -1076,6 +1092,55 @@ func (t *Text) SetEllipsisString(str string) {
 
 	t.ellipsisString = str
 	t.resetCachedTextSize()
+}
+
+// SetMaskRune sets the character drawn in place of each grapheme cluster of the
+// value. A non-zero rune masks the text and forces it to a single line; the
+// zero value renders it normally.
+func (t *Text) SetMaskRune(maskRune rune) {
+	if t.maskRune == maskRune {
+		return
+	}
+	t.maskRune = maskRune
+	t.resetCachedTextSize()
+}
+
+// masking reports whether the value is rendered as the mask rune.
+func (t *Text) masking() bool {
+	return t.maskRune != 0
+}
+
+// maskStyle returns the textutil style used to lay out the masked string. A
+// masked value never wraps, so the wrap mode is forced to none.
+func (t *Text) maskStyle(context *guigui.Context) textutil.Style {
+	return textutil.Style{
+		WrapMode:         textutil.WrapModeNone,
+		Face:             t.face(context, false),
+		LineHeight:       t.lineHeight(context),
+		HorizontalAlign:  textutil.HorizontalAlign(t.hAlign),
+		VerticalAlign:    textutil.VerticalAlign(t.vAlign),
+		TabWidth:         t.actualTabWidth(context),
+		KeepTailingSpace: t.keepTailingSpace,
+	}
+}
+
+// maskMappingForRendering returns the [maskMapping] for the current rendering
+// text. The returned pointer is owned by the receiver and is invalidated by the
+// next edit, so callers must not retain it.
+func (t *Text) maskMappingForRendering(context *guigui.Context, showComposition bool) *maskMapping {
+	withComposition := showComposition && t.field.UncommittedTextLengthInBytes() > 0
+	gen := t.field.Generation()
+	if t.cachedMaskMapping.runeLen != 0 &&
+		t.cachedMaskMappingGeneration == gen &&
+		t.cachedMaskMappingRune == t.maskRune &&
+		t.cachedMaskMappingWithComposition == withComposition {
+		return &t.cachedMaskMapping
+	}
+	t.cachedMaskMapping.reset(t.textToDraw(context, withComposition), t.maskRune)
+	t.cachedMaskMappingGeneration = gen
+	t.cachedMaskMappingRune = t.maskRune
+	t.cachedMaskMappingWithComposition = withComposition
+	return &t.cachedMaskMapping
 }
 
 func (t *Text) setKeepTailingSpace(keep bool) {
@@ -1137,7 +1202,9 @@ func (t *Text) faceAttributes(context *guigui.Context, forceBold bool) font.Attr
 		weight = text.WeightBold
 	}
 
-	liga := !t.selectable && !t.editable
+	// Disable ligatures for editable, selectable, or masked text so caret
+	// positions land on byte boundaries.
+	liga := !t.selectable && !t.editable && !t.masking()
 	tnum := t.tabular
 
 	var lang language.Tag
@@ -1621,7 +1688,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 
 		switch {
 		case inpututil.IsKeyJustPressed(ebiten.KeyEnter):
-			if t.multiline {
+			if t.IsMultiline() {
 				t.replaceTextAtSelection("\n")
 			} else {
 				t.commit(true)
@@ -1953,6 +2020,27 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.DrawComposition = false
 	}
 
+	if t.masking() {
+		// A masked value is single-line, uniform, and short, so it bypasses
+		// the virtualized restriction path: draw the whole masked string and
+		// remap the selection/composition offsets into masked space.
+		m := t.maskMappingForRendering(context, true)
+		op.Style.WrapMode = textutil.WrapModeNone
+		op.Style.EllipsisString = ""
+		if op.DrawSelection {
+			op.SelectionStart = m.offsetToMasked(op.SelectionStart)
+			op.SelectionEnd = m.offsetToMasked(op.SelectionEnd)
+		}
+		if op.DrawComposition {
+			op.CompositionStart = m.offsetToMasked(op.CompositionStart)
+			op.CompositionEnd = m.offsetToMasked(op.CompositionEnd)
+			op.CompositionActiveStart = m.offsetToMasked(op.CompositionActiveStart)
+			op.CompositionActiveEnd = m.offsetToMasked(op.CompositionActiveEnd)
+		}
+		textutil.Draw(textBounds, dst, m.maskStr, op)
+		return
+	}
+
 	txt, byteStart, yShift, restricted := t.restrictedTextToDraw(context, textBounds, widgetBounds.VisibleBounds())
 	if restricted {
 		textBounds.Min.Y += yShift
@@ -1987,6 +2075,11 @@ func (t *Text) boldTextSize(context *guigui.Context, constraints guigui.Constrai
 // constraints, without computing the width. Skipping width avoids per-line
 // shaping, which dominates the cost for very long text.
 func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraints) int {
+	if t.masking() {
+		// A masked value never wraps, so it is always one visual line.
+		return int(math.Ceil(t.lineHeight(context)))
+	}
+
 	constraintWidth := math.MaxInt
 	if w, ok := constraints.FixedWidth(); ok {
 		constraintWidth = w
@@ -2172,6 +2265,16 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 }
 
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
+	bold := t.bold || forceBold
+
+	if t.masking() {
+		// A masked value is a single uniform line; measure it directly rather
+		// than through the cache, which is populated from the real text.
+		m := t.maskMappingForRendering(context, true)
+		w, h := textutil.Measure(math.MaxInt, m.maskStr, textutil.WrapModeNone, t.face(context, bold), t.lineHeight(context), t.actualTabWidth(context), t.keepTailingSpace, "")
+		return image.Pt(max(int(math.Ceil(w)), 1), int(math.Ceil(h)))
+	}
+
 	constraintWidth := math.MaxInt
 	if w, ok := constraints.FixedWidth(); ok {
 		constraintWidth = w
@@ -2180,7 +2283,6 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		constraintWidth = 1
 	}
 
-	bold := t.bold || forceBold
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
 	var width, height int
@@ -2344,6 +2446,16 @@ func (t *Text) isLogicalLineMaybeVisible(context *guigui.Context, textBounds ima
 func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.Rectangle, position image.Point, showComposition bool) int {
 	textContentBounds := t.contentBoundsForLayout(context, textBounds)
 
+	if t.masking() {
+		m := t.maskMappingForRendering(context, showComposition)
+		s := t.maskStyle(context)
+		mi := textutil.TextIndexFromPositionInLogicalLine(textContentBounds.Dx(), position.Sub(textContentBounds.Min), m.maskStr, &s)
+		if mi < 0 {
+			return -1
+		}
+		return m.offsetFromMasked(mi)
+	}
+
 	// Compute the rendering text's byte length without materializing
 	// it. RenderingTextLength = committedLength + composition byte delta
 	// when composition is active and visible; otherwise == committedLength.
@@ -2406,6 +2518,25 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 
 func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (position textutil.TextPosition, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
+
+	if t.masking() {
+		m := t.maskMappingForRendering(context, showComposition)
+		s := t.maskStyle(context)
+		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, m.offsetToMasked(index), &s)
+		if count == 0 {
+			return textutil.TextPosition{}, false
+		}
+		pos := pos0
+		if count == 2 {
+			pos = pos1
+		}
+		return textutil.TextPosition{
+			X:      pos.X + float64(textBounds.Min.X),
+			Top:    pos.Top + float64(textBounds.Min.Y),
+			Bottom: pos.Bottom + float64(textBounds.Min.Y),
+		}, true
+	}
+
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
@@ -2497,6 +2628,26 @@ type caretScrollTarget struct {
 // the caret sits in the document.
 func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rectangle, index int, showComposition bool) (target caretScrollTarget, ok bool) {
 	textBounds := t.contentBoundsForLayout(context, bounds)
+
+	if t.masking() {
+		m := t.maskMappingForRendering(context, showComposition)
+		s := t.maskStyle(context)
+		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, m.offsetToMasked(index), &s)
+		if count == 0 {
+			return caretScrollTarget{}, false
+		}
+		pos := pos0
+		if count == 2 {
+			pos = pos1
+		}
+		return caretScrollTarget{
+			LogicalLineIndex: 0,
+			X:                pos.X + float64(textBounds.Min.X),
+			Top:              pos.Top,
+			Bottom:           pos.Bottom,
+		}, true
+	}
+
 	width := textBounds.Dx()
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
@@ -2637,11 +2788,17 @@ func (t *Text) CanCut() bool {
 	if !t.editable {
 		return false
 	}
+	if t.masking() {
+		return false
+	}
 	start, end := t.field.Selection()
 	return start != end
 }
 
 func (t *Text) CanCopy() bool {
+	if t.masking() {
+		return false
+	}
 	start, end := t.field.Selection()
 	return start != end
 }
@@ -2673,6 +2830,9 @@ func (t *Text) CanRedo() bool {
 }
 
 func (t *Text) Cut() bool {
+	if t.masking() {
+		return false
+	}
 	start, end := t.field.Selection()
 	if start == end {
 		return false
@@ -2686,6 +2846,9 @@ func (t *Text) Cut() bool {
 }
 
 func (t *Text) Copy() bool {
+	if t.masking() {
+		return false
+	}
 	start, end := t.field.Selection()
 	if start == end {
 		return false

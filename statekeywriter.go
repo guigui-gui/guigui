@@ -122,6 +122,11 @@ func (w *StateKeyWriter) WriteInt(v int) {
 	}
 }
 
+// WriteRune writes a rune into the writer.
+func (w *StateKeyWriter) WriteRune(v rune) {
+	w.WriteInt32(int32(v))
+}
+
 // WriteFloat32 writes a float32 into the writer.
 func (w *StateKeyWriter) WriteFloat32(v float32) {
 	w.WriteUint32(math.Float32bits(v))

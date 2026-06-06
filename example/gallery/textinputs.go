@@ -22,6 +22,8 @@ type TextInputs struct {
 	errorTextInput              guigui.WidgetWithSize[*textInputContainer]
 	singleLineWithIconText      basicwidget.Text
 	singleLineWithIconTextInput guigui.WidgetWithSize[*textInputContainer]
+	passwordText                basicwidget.Text
+	passwordTextInput           guigui.WidgetWithSize[*textInputContainer]
 	multilineText               basicwidget.Text
 	multilineTextInput          guigui.WidgetWithSize[*textInputContainer]
 	inlineText                  basicwidget.Text
@@ -132,6 +134,22 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	context.SetEnabled(&t.singleLineWithIconTextInput, model.TextInputs().Enabled())
 	t.singleLineWithIconTextInput.SetFixedWidth(width)
 
+	t.passwordText.SetValue("Password")
+	t.passwordTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
+		if committed {
+			model.TextInputs().SetPassword(text)
+		}
+	})
+	t.passwordTextInput.Widget().TextInput().SetValue(model.TextInputs().Password())
+	t.passwordTextInput.Widget().TextInput().SetMaskRune('•')
+	t.passwordTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.passwordTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.passwordTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.passwordTextInput.Widget().TextInput().SetCaretBlinking(model.TextInputs().IsCaretBlinking())
+	t.passwordTextInput.Widget().SetContextMenu(true)
+	context.SetEnabled(&t.passwordTextInput, model.TextInputs().Enabled())
+	t.passwordTextInput.SetFixedWidth(width)
+
 	t.multilineText.SetValue("Multiline")
 	t.multilineTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		if committed {
@@ -171,6 +189,10 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 		{
 			PrimaryWidget:   &t.singleLineWithIconText,
 			SecondaryWidget: &t.singleLineWithIconTextInput,
+		},
+		{
+			PrimaryWidget:   &t.passwordText,
+			SecondaryWidget: &t.passwordTextInput,
 		},
 		{
 			PrimaryWidget:   &t.multilineText,
