@@ -117,6 +117,15 @@ func repeat(duration int) bool {
 	return (duration-delay)%4 == 0
 }
 
+// selectionSide identifies one endpoint of a selection.
+type selectionSide int
+
+const (
+	selectionSideNone selectionSide = iota
+	selectionSideStart
+	selectionSideEnd
+)
+
 type Text struct {
 	guigui.DefaultWidget
 
@@ -159,8 +168,8 @@ type Text struct {
 	selectionDragStartPlus1 int
 	selectionDragEndPlus1   int
 
-	// selectionShiftIndexPlus1 is the index (+1) of the selection that is moved by Shift and arrow keys.
-	selectionShiftIndexPlus1 int
+	// shiftSelectionSide is the selection endpoint moved by Shift and arrow keys.
+	shiftSelectionSide selectionSide
 
 	dragging bool
 
@@ -499,9 +508,9 @@ func (t *Text) SetSelectable(selectable bool) {
 	t.selectable = selectable
 	t.selectionDragStartPlus1 = 0
 	t.selectionDragEndPlus1 = 0
-	t.selectionShiftIndexPlus1 = 0
+	t.shiftSelectionSide = selectionSideNone
 	if !t.selectable {
-		t.setSelection(0, 0, -1, false)
+		t.setSelection(0, 0, selectionSideNone, false)
 	}
 }
 
@@ -766,7 +775,7 @@ func (t *Text) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int
 // is returned.
 func (t *Text) ReadValueFrom(r io.Reader) (int64, error) {
 	n, err := t.field.ReadTextFrom(r)
-	t.selectionShiftIndexPlus1 = 0
+	t.shiftSelectionSide = selectionSideNone
 	t.prevStart = 0
 	t.prevEnd = 0
 	t.nextText = ""
@@ -800,7 +809,7 @@ func (t *Text) selectAll() {
 }
 
 func (t *Text) doSelectAll() {
-	t.setSelection(0, t.field.TextLengthInBytes(), -1, false)
+	t.setSelection(0, t.field.TextLengthInBytes(), selectionSideNone, false)
 }
 
 func (t *Text) Selection() (start, end int) {
@@ -808,14 +817,23 @@ func (t *Text) Selection() (start, end int) {
 }
 
 func (t *Text) SetSelection(start, end int) {
-	t.setSelection(start, end, -1, true)
+	t.setSelection(start, end, selectionSideNone, true)
 }
 
-func (t *Text) setSelection(start, end int, shiftIndex int, adjustScroll bool) bool {
-	t.selectionShiftIndexPlus1 = shiftIndex + 1
+// setSelection sets the selection to the range spanned by start and end and
+// records the endpoint moved by Shift and arrow keys. shiftSide names that
+// endpoint among the start and end arguments, before they are reordered.
+func (t *Text) setSelection(start, end int, shiftSide selectionSide, adjustScroll bool) bool {
 	if start > end {
 		start, end = end, start
+		switch shiftSide {
+		case selectionSideStart:
+			shiftSide = selectionSideEnd
+		case selectionSideEnd:
+			shiftSide = selectionSideStart
+		}
 	}
+	t.shiftSelectionSide = shiftSide
 
 	if s, e := t.field.Selection(); s == start && e == end {
 		return false
@@ -840,7 +858,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
 
-	t.selectionShiftIndexPlus1 = 0
+	t.shiftSelectionSide = selectionSideNone
 	if start > end {
 		start, end = end, start
 	}
@@ -870,7 +888,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 		text, _, _ = replaceNewLinesWithSpace(text, 0, 0)
 	}
 
-	t.selectionShiftIndexPlus1 = 0
+	t.shiftSelectionSide = selectionSideNone
 
 	textChanged := !t.isEqualToStringValue(text)
 	if s, e := t.field.Selection(); !textChanged && (!selectAll || s == 0 && e == len(text)) {
@@ -1008,7 +1026,7 @@ func (t *Text) SetEditable(editable bool) {
 	if editable {
 		t.selectionDragStartPlus1 = 0
 		t.selectionDragEndPlus1 = 0
-		t.selectionShiftIndexPlus1 = 0
+		t.shiftSelectionSide = selectionSideNone
 	} else if t.field.IsFocused() {
 		// Blur immediately so Ebitengine's BeforeUpdate hook stops auto-committing
 		// pending input into the field before HandlePointingInput runs next tick.
@@ -1170,10 +1188,19 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 			if t.selectionDragEndPlus1-1 >= 0 {
 				end = max(idx, t.selectionDragEndPlus1-1)
 			}
-			// idx is the dragged-to end, so record it as the moving end. This
-			// keeps the opposite end anchored for a subsequent Shift+click or
-			// Shift+arrow.
-			if t.setSelection(start, end, idx, true) {
+			// idx is the dragged-to position; record whichever endpoint it
+			// became as the moving end so a subsequent Shift+click or
+			// Shift+arrow extends from the opposite, anchored end. While the
+			// cursor stays inside a word- or line-selection, idx matches
+			// neither endpoint and no moving end is tracked.
+			var shiftSide selectionSide
+			switch idx {
+			case start:
+				shiftSide = selectionSideStart
+			case end:
+				shiftSide = selectionSideEnd
+			}
+			if t.setSelection(start, end, shiftSide, true) {
 				return guigui.HandleInputByWidget(t)
 			} else {
 				return guigui.AbortHandlingInputByWidget(t)
@@ -1230,11 +1257,11 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 	// Dragging afterwards keeps extending from the same anchor.
 	if leftClick && idx >= 0 && ebiten.IsKeyPressed(ebiten.KeyShift) && context.IsFocusedOrHasFocusedChild(t) {
 		selStart, selEnd := t.field.Selection()
-		anchor := shiftClickAnchor(selStart, selEnd, t.selectionShiftIndexPlus1-1, idx)
+		anchor := shiftClickAnchor(selStart, selEnd, t.shiftSelectionSide, idx)
 		t.dragging = true
 		t.selectionDragStartPlus1 = anchor + 1
 		t.selectionDragEndPlus1 = anchor + 1
-		t.setSelection(anchor, idx, idx, false)
+		t.setSelection(anchor, idx, selectionSideEnd, false)
 		context.SetFocused(t, true)
 		// Reset the click count so a following plain click is not treated as a
 		// double- or triple-click.
@@ -1267,7 +1294,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		}
 		if leftClick || !context.IsFocusedOrHasFocusedChild(t) {
 			if start, end := t.field.Selection(); start != idx || end != idx {
-				t.setSelection(idx, idx, -1, false)
+				t.setSelection(idx, idx, selectionSideNone, false)
 			}
 		}
 	case 2:
@@ -1275,7 +1302,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 		start, end := t.findWordBoundaries(idx)
 		t.selectionDragStartPlus1 = start + 1
 		t.selectionDragEndPlus1 = end + 1
-		t.setSelection(start, end, -1, false)
+		t.setSelection(start, end, selectionSideNone, false)
 	case 3:
 		t.doSelectAll()
 	}
@@ -1288,16 +1315,16 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 
 // shiftClickAnchor returns the byte offset of the selection [start, end]
 // (start <= end) that stays fixed when a Shift+click at idx extends it; the
-// opposite end becomes the new moving end. shiftIndex is the current moving end,
-// or a value matching neither endpoint when none is tracked.
-func shiftClickAnchor(start, end, shiftIndex, idx int) int {
+// opposite end becomes the new moving end. shiftSide is the endpoint currently
+// moved by Shift, or selectionSideNone when none is tracked.
+func shiftClickAnchor(start, end int, shiftSide selectionSide, idx int) int {
 	switch {
 	case start == end:
 		// A bare caret becomes the anchor.
 		return start
-	case shiftIndex == start:
+	case shiftSide == selectionSideStart:
 		return end
-	case shiftIndex == end:
+	case shiftSide == selectionSideEnd:
 		return start
 	default:
 		// A selection without a tracked moving end (e.g. a word or select-all
@@ -1654,7 +1681,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, start)); i >= 0 {
 			idx = i + l
 		}
-		t.setSelection(idx, end, idx, true)
+		t.setSelection(idx, end, selectionSideStart, true)
 		return guigui.HandleInputByWidget(t)
 	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyRight):
 		idx := t.field.TextLengthInBytes()
@@ -1662,25 +1689,25 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		if i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(end, -1)); i >= 0 {
 			idx = end + i
 		}
-		t.setSelection(start, idx, idx, true)
+		t.setSelection(start, idx, selectionSideEnd, true)
 		return guigui.HandleInputByWidget(t)
 	case isKeyRepeating(ebiten.KeyLeft) ||
 		isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyB):
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			if t.selectionShiftIndexPlus1-1 == end {
+			if t.shiftSelectionSide == selectionSideEnd {
 				pos := t.prevPositionOnGraphemes(end)
-				t.setSelection(start, pos, pos, true)
+				t.setSelection(start, pos, selectionSideEnd, true)
 			} else {
 				pos := t.prevPositionOnGraphemes(start)
-				t.setSelection(pos, end, pos, true)
+				t.setSelection(pos, end, selectionSideStart, true)
 			}
 		} else {
 			if start != end {
-				t.setSelection(start, start, -1, true)
+				t.setSelection(start, start, selectionSideNone, true)
 			} else if start > 0 {
 				pos := t.prevPositionOnGraphemes(start)
-				t.setSelection(pos, pos, -1, true)
+				t.setSelection(pos, pos, selectionSideNone, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -1688,19 +1715,19 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyF):
 		start, end := t.field.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			if t.selectionShiftIndexPlus1-1 == start {
+			if t.shiftSelectionSide == selectionSideStart {
 				pos := t.nextPositionOnGraphemes(start)
-				t.setSelection(pos, end, pos, true)
+				t.setSelection(pos, end, selectionSideStart, true)
 			} else {
 				pos := t.nextPositionOnGraphemes(end)
-				t.setSelection(start, pos, pos, true)
+				t.setSelection(start, pos, selectionSideEnd, true)
 			}
 		} else {
 			if start != end {
-				t.setSelection(end, end, -1, true)
+				t.setSelection(end, end, selectionSideNone, true)
 			} else if start < t.field.TextLengthInBytes() {
 				pos := t.nextPositionOnGraphemes(start)
-				t.setSelection(pos, pos, -1, true)
+				t.setSelection(pos, pos, selectionSideNone, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -1711,7 +1738,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		var moveEnd bool
 		start, end := t.field.Selection()
 		idx := start
-		if shift && t.selectionShiftIndexPlus1-1 == end {
+		if shift && t.shiftSelectionSide == selectionSideEnd {
 			idx = end
 			moveEnd = true
 		}
@@ -1727,12 +1754,12 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 			if shift {
 				if moveEnd {
-					t.setSelection(start, nextIdx, nextIdx, true)
+					t.setSelection(start, nextIdx, selectionSideEnd, true)
 				} else {
-					t.setSelection(nextIdx, end, nextIdx, true)
+					t.setSelection(nextIdx, end, selectionSideStart, true)
 				}
 			} else {
-				t.setSelection(nextIdx, nextIdx, -1, true)
+				t.setSelection(nextIdx, nextIdx, selectionSideNone, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -1743,7 +1770,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		var moveStart bool
 		start, end := t.field.Selection()
 		idx := end
-		if shift && t.selectionShiftIndexPlus1-1 == start {
+		if shift && t.shiftSelectionSide == selectionSideStart {
 			idx = start
 			moveStart = true
 		}
@@ -1759,12 +1786,12 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 			if shift {
 				if moveStart {
-					t.setSelection(nextIdx, end, nextIdx, true)
+					t.setSelection(nextIdx, end, selectionSideStart, true)
 				} else {
-					t.setSelection(start, nextIdx, nextIdx, true)
+					t.setSelection(start, nextIdx, selectionSideEnd, true)
 				}
 			} else {
-				t.setSelection(nextIdx, nextIdx, -1, true)
+				t.setSelection(nextIdx, nextIdx, selectionSideNone, true)
 			}
 		}
 		return guigui.HandleInputByWidget(t)
@@ -1775,9 +1802,9 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx = i + l
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			t.setSelection(idx, end, idx, true)
+			t.setSelection(idx, end, selectionSideStart, true)
 		} else {
-			t.setSelection(idx, idx, -1, true)
+			t.setSelection(idx, idx, selectionSideNone, true)
 		}
 		return guigui.HandleInputByWidget(t)
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyE):
@@ -1787,9 +1814,9 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			idx = end + i
 		}
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
-			t.setSelection(start, idx, idx, true)
+			t.setSelection(start, idx, selectionSideEnd, true)
 		} else {
-			t.setSelection(idx, idx, -1, true)
+			t.setSelection(idx, idx, selectionSideNone, true)
 		}
 		return guigui.HandleInputByWidget(t)
 	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyA) ||

@@ -7,8 +7,16 @@ func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	return replaceNewLinesWithSpace(text, start, end)
 }
 
-func ShiftClickAnchor(start, end, shiftIndex, idx int) int {
-	return shiftClickAnchor(start, end, shiftIndex, idx)
+type SelectionSide = selectionSide
+
+const (
+	SelectionSideNone  = selectionSideNone
+	SelectionSideStart = selectionSideStart
+	SelectionSideEnd   = selectionSideEnd
+)
+
+func ShiftClickAnchor(start, end int, shiftSide SelectionSide, idx int) int {
+	return shiftClickAnchor(start, end, shiftSide, idx)
 }
 
 func TopItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (int, int) {
