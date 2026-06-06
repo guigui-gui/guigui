@@ -440,7 +440,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(t.keepTailingSpace)
 	w.WriteBool(t.selectionVisibleWhenUnfocus)
 	w.WriteString(t.ellipsisString)
-	w.WriteRune(t.maskRune)
+	w.WriteInt32(t.maskRune)
 	writePadding(w, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
 	w.WriteInt(selStart)
