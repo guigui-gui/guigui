@@ -165,6 +165,10 @@ type Text struct {
 	selectionVisibleWhenUnfocus bool
 	ellipsisString              string
 
+	// placeholder is drawn in a subdued color when the value is empty and no
+	// IME composition is active. An empty string disables it.
+	placeholder string
+
 	// maskRune, when non-zero, is drawn in place of every grapheme cluster of
 	// the value. The zero value disables masking.
 	maskRune rune
@@ -440,6 +444,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(t.keepTailingSpace)
 	w.WriteBool(t.selectionVisibleWhenUnfocus)
 	w.WriteString(t.ellipsisString)
+	w.WriteString(t.placeholder)
 	w.WriteInt32(t.maskRune)
 	writePadding(w, t.paddingForScrollOffset)
 	selStart, selEnd := t.field.Selection()
@@ -1092,6 +1097,12 @@ func (t *Text) SetEllipsisString(str string) {
 
 	t.ellipsisString = str
 	t.resetCachedTextSize()
+}
+
+// SetPlaceholder sets the placeholder text shown in a subdued color while the
+// value is empty. The empty string disables the placeholder.
+func (t *Text) SetPlaceholder(placeholder string) {
+	t.placeholder = placeholder
 }
 
 // SetMaskRune sets the character drawn in place of each grapheme cluster of the
@@ -2018,6 +2029,22 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.CompositionBorderWidth = float32(textCaretWidth(context))
 	} else {
 		op.DrawComposition = false
+	}
+
+	// When the value is empty and no IME composition is active, render the
+	// placeholder in a subdued color, reusing the value's layout. This precedes
+	// the masking and virtualized-restriction paths since both draw nothing for
+	// an empty value.
+	if t.placeholder != "" && !t.field.HasText() && t.field.UncommittedTextLengthInBytes() == 0 {
+		clr := basicwidgetdraw.TextColor(context.ColorMode(), false)
+		if t.transparent > 0 {
+			clr = draw.ScaleAlpha(clr, 1-t.transparent)
+		}
+		op.TextColor = clr
+		op.DrawSelection = false
+		op.DrawComposition = false
+		textutil.Draw(textBounds, dst, t.placeholder, op)
+		return
 	}
 
 	if t.masking() {

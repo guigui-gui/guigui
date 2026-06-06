@@ -269,6 +269,7 @@ func (t *TextsModel) SetEllipsis(ellipsis bool) {
 type TextInputsModel struct {
 	singleLineText     string
 	singleLinetTextSet bool
+	placeholderText    string
 	multilineText      string
 	multilineTextSet   bool
 	passwordText       string
@@ -293,6 +294,14 @@ func (t *TextInputsModel) SingleLineText() string {
 func (t *TextInputsModel) SetSingleLineText(text string) {
 	t.singleLineText = text
 	t.singleLinetTextSet = true
+}
+
+func (t *TextInputsModel) PlaceholderText() string {
+	return t.placeholderText
+}
+
+func (t *TextInputsModel) SetPlaceholderText(text string) {
+	t.placeholderText = text
 }
 
 func (t *TextInputsModel) Password() string {

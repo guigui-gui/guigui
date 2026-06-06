@@ -146,6 +146,12 @@ func (t *TextInput) SetMaskRune(maskRune rune) {
 	t.textInput.SetMaskRune(maskRune)
 }
 
+// SetPlaceholder sets the placeholder text shown in a subdued color while the
+// value is empty. The empty string disables the placeholder.
+func (t *TextInput) SetPlaceholder(placeholder string) {
+	t.textInput.SetPlaceholder(placeholder)
+}
+
 func (t *TextInput) SetHorizontalAlign(halign HorizontalAlign) {
 	t.textInput.SetHorizontalAlign(halign)
 }
@@ -466,6 +472,10 @@ func (t *textInput) SetMultiline(multiline bool) {
 
 func (t *textInput) SetMaskRune(maskRune rune) {
 	t.text.Text().SetMaskRune(maskRune)
+}
+
+func (t *textInput) SetPlaceholder(placeholder string) {
+	t.text.Text().SetPlaceholder(placeholder)
 }
 
 func (t *textInput) SetHorizontalAlign(halign HorizontalAlign) {

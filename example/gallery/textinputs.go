@@ -18,6 +18,8 @@ type TextInputs struct {
 	textInputForm               basicwidget.Form
 	singleLineText              basicwidget.Text
 	singleLineTextInput         guigui.WidgetWithSize[*textInputContainer]
+	placeholderText             basicwidget.Text
+	placeholderTextInput        guigui.WidgetWithSize[*textInputContainer]
 	errorText                   basicwidget.Text
 	errorTextInput              guigui.WidgetWithSize[*textInputContainer]
 	singleLineWithIconText      basicwidget.Text
@@ -105,6 +107,22 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	context.SetEnabled(&t.singleLineTextInput, model.TextInputs().Enabled())
 	t.singleLineTextInput.SetFixedWidth(width)
 
+	t.placeholderText.SetValue("With placeholder")
+	t.placeholderTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
+		if committed {
+			model.TextInputs().SetPlaceholderText(text)
+		}
+	})
+	t.placeholderTextInput.Widget().TextInput().SetValue(model.TextInputs().PlaceholderText())
+	t.placeholderTextInput.Widget().TextInput().SetPlaceholder("Type something")
+	t.placeholderTextInput.Widget().TextInput().SetHorizontalAlign(model.TextInputs().HorizontalAlign())
+	t.placeholderTextInput.Widget().TextInput().SetVerticalAlign(model.TextInputs().VerticalAlign())
+	t.placeholderTextInput.Widget().TextInput().SetEditable(model.TextInputs().Editable())
+	t.placeholderTextInput.Widget().TextInput().SetCaretBlinking(model.TextInputs().IsCaretBlinking())
+	t.placeholderTextInput.Widget().SetContextMenu(true)
+	context.SetEnabled(&t.placeholderTextInput, model.TextInputs().Enabled())
+	t.placeholderTextInput.SetFixedWidth(width)
+
 	t.errorText.SetValue("With validation")
 	t.errorTextInput.Widget().TextInput().OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		n := utf8.RuneCountInString(text)
@@ -181,6 +199,10 @@ func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 		{
 			PrimaryWidget:   &t.singleLineText,
 			SecondaryWidget: &t.singleLineTextInput,
+		},
+		{
+			PrimaryWidget:   &t.placeholderText,
+			SecondaryWidget: &t.placeholderTextInput,
 		},
 		{
 			PrimaryWidget:   &t.errorText,
