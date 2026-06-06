@@ -1100,7 +1100,8 @@ func (t *Text) SetEllipsisString(str string) {
 }
 
 // SetPlaceholder sets the placeholder text shown in a subdued color while the
-// value is empty. The empty string disables the placeholder.
+// value is empty and the text is editable. The empty string disables the
+// placeholder.
 func (t *Text) SetPlaceholder(placeholder string) {
 	t.placeholder = placeholder
 }
@@ -2031,11 +2032,11 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.DrawComposition = false
 	}
 
-	// When the value is empty and no IME composition is active, render the
-	// placeholder in a subdued color, reusing the value's layout. This precedes
-	// the masking and virtualized-restriction paths since both draw nothing for
-	// an empty value.
-	if t.placeholder != "" && !t.field.HasText() && t.field.UncommittedTextLengthInBytes() == 0 {
+	// When the text is editable, the value is empty, and no IME composition is
+	// active, render the placeholder in a subdued color, reusing the value's
+	// layout. This precedes the masking and virtualized-restriction paths since
+	// both draw nothing for an empty value.
+	if t.placeholder != "" && t.editable && !t.field.HasText() && t.field.UncommittedTextLengthInBytes() == 0 {
 		clr := basicwidgetdraw.TextColor(context.ColorMode(), false)
 		if t.transparent > 0 {
 			clr = draw.ScaleAlpha(clr, 1-t.transparent)

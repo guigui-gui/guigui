@@ -147,7 +147,8 @@ func (t *TextInput) SetMaskRune(maskRune rune) {
 }
 
 // SetPlaceholder sets the placeholder text shown in a subdued color while the
-// value is empty. The empty string disables the placeholder.
+// value is empty and the text input is editable. The empty string disables the
+// placeholder.
 func (t *TextInput) SetPlaceholder(placeholder string) {
 	t.textInput.SetPlaceholder(placeholder)
 }
