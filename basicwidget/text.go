@@ -1170,7 +1170,10 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 			if t.selectionDragEndPlus1-1 >= 0 {
 				end = max(idx, t.selectionDragEndPlus1-1)
 			}
-			if t.setSelection(start, end, -1, true) {
+			// idx is the dragged-to end, so record it as the moving end. This
+			// keeps the opposite end anchored for a subsequent Shift+click or
+			// Shift+arrow.
+			if t.setSelection(start, end, idx, true) {
 				return guigui.HandleInputByWidget(t)
 			} else {
 				return guigui.AbortHandlingInputByWidget(t)
@@ -1222,6 +1225,25 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, cursorPosition image.Point, leftClick bool) {
 	idx := t.textIndexFromPosition(context, textBounds, cursorPosition, false)
 
+	// Shift+click on a text that already holds a cursor moves one end of the
+	// selection to the clicked position and keeps the opposite end anchored.
+	// Dragging afterwards keeps extending from the same anchor.
+	if leftClick && idx >= 0 && ebiten.IsKeyPressed(ebiten.KeyShift) && context.IsFocusedOrHasFocusedChild(t) {
+		selStart, selEnd := t.field.Selection()
+		anchor := shiftClickAnchor(selStart, selEnd, t.selectionShiftIndexPlus1-1, idx)
+		t.dragging = true
+		t.selectionDragStartPlus1 = anchor + 1
+		t.selectionDragEndPlus1 = anchor + 1
+		t.setSelection(anchor, idx, idx, false)
+		context.SetFocused(t, true)
+		// Reset the click count so a following plain click is not treated as a
+		// double- or triple-click.
+		t.clickCount = 0
+		t.lastClickTick = ebiten.Tick()
+		t.lastClickTextIndex = idx
+		return
+	}
+
 	if leftClick {
 		if ebiten.Tick()-t.lastClickTick < int64(doubleClickLimitInTicks()) && t.lastClickTextIndex == idx {
 			t.clickCount++
@@ -1262,6 +1284,38 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 
 	t.lastClickTick = ebiten.Tick()
 	t.lastClickTextIndex = idx
+}
+
+// shiftClickAnchor returns the byte offset of the selection [start, end]
+// (start <= end) that stays fixed when a Shift+click at idx extends it; the
+// opposite end becomes the new moving end. shiftIndex is the current moving end,
+// or a value matching neither endpoint when none is tracked.
+func shiftClickAnchor(start, end, shiftIndex, idx int) int {
+	switch {
+	case start == end:
+		// A bare caret becomes the anchor.
+		return start
+	case shiftIndex == start:
+		return end
+	case shiftIndex == end:
+		return start
+	default:
+		// A selection without a tracked moving end (e.g. a word or select-all
+		// selection): keep the endpoint farther from the click as the anchor so
+		// the selection extends toward the click.
+		ds := idx - start
+		if ds < 0 {
+			ds = -ds
+		}
+		de := end - idx
+		if de < 0 {
+			de = -de
+		}
+		if ds >= de {
+			return start
+		}
+		return end
+	}
 }
 
 func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string {
