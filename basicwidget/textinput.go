@@ -807,6 +807,11 @@ type textInputText struct {
 	// Cleared at the start of each virtualized Layout.
 	measuredLineHeights map[int]int
 
+	// measuredLineHeightsGeneration is the text field generation the cached
+	// heights were measured against. The cache is keyed by line index, so a
+	// content edit invalidates it.
+	measuredLineHeightsGeneration int64
+
 	// measuredMaxWidth tracks the widest logical line measured during the
 	// current Layout. Used by [textInputText.contentWidth] to size the
 	// panel's horizontal scroll bar without scanning every logical line.
@@ -926,11 +931,21 @@ func (t *textInputText) viewportPaddingY(_ *guigui.Context) int {
 // is populated by [textInputText.measureMaxWidthForViewport] over the
 // viewport lines that Layout has already touched.
 func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int) int {
+	txt := t.text.Widget()
+
+	// The cache is keyed by line index, so a content edit that shifts lines
+	// makes the cached heights stale. Drop them when the field has advanced;
+	// scrollEdgeIntoView reads heights from Tick before the next Layout
+	// repopulates the cache.
+	if gen := txt.field.Generation(); gen > t.measuredLineHeightsGeneration {
+		clear(t.measuredLineHeights)
+		t.measuredLineHeightsGeneration = gen
+	}
+
 	if h, ok := t.measuredLineHeights[lineIndex]; ok {
 		return h
 	}
 
-	txt := t.text.Widget()
 	txt.ensureLineByteOffsets()
 
 	n := txt.lineByteOffsets.LineCount()
