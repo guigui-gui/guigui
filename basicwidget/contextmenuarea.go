@@ -19,8 +19,6 @@ import (
 // The previously focused widget retains focus while the context menu is open,
 // so that widgets like [TextInput] can continue to show their cursor and selection.
 //
-// Keyboard navigation (Up/Down/Enter/Escape) is supported via [guigui.Context.SetButtonInputReceptive].
-//
 // Use [ContextMenuArea.PopupMenu] to configure the menu items.
 type ContextMenuArea[T comparable] struct {
 	guigui.DefaultWidget
@@ -42,7 +40,12 @@ func (c *ContextMenuArea[T]) Build(context *guigui.Context, adder *guigui.ChildA
 		adder.AddWidget(&c.popupMenu)
 	}
 	c.popupMenu.setModal(false)
-	context.SetButtonInputReceptive(c, c.popupMenu.IsOpen())
+	// TODO: This makes the entire popup subtree receptive while unfocused, so a
+	// focus-driven widget in a menu item's Content (e.g. TextInput) would consume
+	// button input while unfocused and conflict with menu navigation. Navigation is
+	// centralized in listContent; scoping receptivity to that navigation widget
+	// (self-only) instead of the whole subtree would avoid this.
+	context.SetButtonInputReceptiveWithDescendants(c, c.popupMenu.IsOpen())
 	return nil
 }
 

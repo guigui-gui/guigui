@@ -112,6 +112,19 @@ func (w *widgetsAndBounds) requestRedraw(app *app) {
 
 var theNextWidgetStateID atomic.Uint64
 
+// buttonInputReceptivity describes whether a widget receives button input while
+// unfocused, and whether that reception extends to its descendants.
+type buttonInputReceptivity int
+
+const (
+	// buttonInputReceptivityNone means the widget receives button input only through focus.
+	buttonInputReceptivityNone buttonInputReceptivity = iota
+	// buttonInputReceptivitySelf means the widget itself receives button input while unfocused, but its descendants do not.
+	buttonInputReceptivitySelf
+	// buttonInputReceptivityWithDescendants means the widget and all its descendants receive button input while unfocused.
+	buttonInputReceptivityWithDescendants
+)
+
 type widgetState struct {
 	root    bool
 	builtAt int64
@@ -126,12 +139,12 @@ type widgetState struct {
 	prev          widgetsAndBounds
 	focusDelegate Widget
 
-	hidden               bool
-	disabled             bool
-	passthrough          bool
-	buttonInputReceptive bool
-	layer                int64
-	transparency         float64
+	hidden                 bool
+	disabled               bool
+	passthrough            bool
+	buttonInputReceptivity buttonInputReceptivity
+	layer                  int64
+	transparency           float64
 
 	// eventHandlers is a collection of event handlers.
 	// eventHandlers is reset whenever the widget is rebuilt.
@@ -192,22 +205,22 @@ type eventHandler struct {
 // and bringToFrontLayer. The app snapshots it after each [Widget.Build] and compares
 // it at settle time so those setters do not need to call [RequestRebuild] themselves.
 type widgetInternalStateKey struct {
-	hidden               bool
-	disabled             bool
-	passthrough          bool
-	buttonInputReceptive bool
-	layer                int64
-	transparency         float64
+	hidden                 bool
+	disabled               bool
+	passthrough            bool
+	buttonInputReceptivity buttonInputReceptivity
+	layer                  int64
+	transparency           float64
 }
 
 func (w *widgetState) internalStateKey() widgetInternalStateKey {
 	return widgetInternalStateKey{
-		hidden:               w.hidden,
-		disabled:             w.disabled,
-		passthrough:          w.passthrough,
-		buttonInputReceptive: w.buttonInputReceptive,
-		layer:                w.layer,
-		transparency:         w.transparency,
+		hidden:                 w.hidden,
+		disabled:               w.disabled,
+		passthrough:            w.passthrough,
+		buttonInputReceptivity: w.buttonInputReceptivity,
+		layer:                  w.layer,
+		transparency:           w.transparency,
 	}
 }
 

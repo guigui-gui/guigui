@@ -256,23 +256,59 @@ func (c *Context) IsEnabled(widget Widget) bool {
 	return widget.widgetState().isEnabled()
 }
 
-// SetButtonInputReceptive sets whether the widget receives button input events
-// even when it is not focused. This is useful for modeless popups like context menus,
-// where the popup needs to handle keyboard navigation (Up/Down/Enter/Escape)
+// SetButtonInputReceptiveWithDescendants sets whether the widget and all its
+// descendants receive button input events even when they are not focused. For
+// example, a modeless popup such as a context menu can handle keyboard navigation
 // while another widget retains focus.
 //
 // A button-input-receptive widget and all its descendants receive button input
 // events via [Widget.HandleButtonInput]. Unlike focus, ancestors of a
 // button-input-receptive widget do not receive button input events themselves;
 // the framework only traverses through them to reach the receptive widget.
-func (c *Context) SetButtonInputReceptive(widget Widget, receptive bool) {
-	widget.widgetState().buttonInputReceptive = receptive
+//
+// To make only the widget itself receptive without extending to its descendants,
+// use [Context.SetButtonInputReceptive].
+func (c *Context) SetButtonInputReceptiveWithDescendants(widget Widget, receptive bool) {
+	if receptive {
+		widget.widgetState().buttonInputReceptivity = buttonInputReceptivityWithDescendants
+	} else {
+		widget.widgetState().buttonInputReceptivity = buttonInputReceptivityNone
+	}
 }
 
-// IsButtonInputReceptive reports whether the widget receives button input events
-// even when it is not focused.
+// IsButtonInputReceptiveWithDescendants reports whether the widget and all its
+// descendants receive button input events even when they are not focused.
+func (c *Context) IsButtonInputReceptiveWithDescendants(widget Widget) bool {
+	return widget.widgetState().buttonInputReceptivity == buttonInputReceptivityWithDescendants
+}
+
+// SetButtonInputReceptive sets whether the widget itself receives button input
+// events even when it is not focused. The effect does not extend to the widget's
+// descendants, which continue to follow normal focus rules. For example, a
+// container can handle a single global key, such as closing on Escape, while its
+// subtree still obeys focus.
+//
+// The widget receives button input events via [Widget.HandleButtonInput]. Unlike
+// focus, ancestors of a button-input-receptive widget do not receive button input
+// events themselves; the framework only traverses through them to reach the
+// receptive widget.
+//
+// For a modeless popup that must delegate keyboard navigation to its descendants
+// while another widget retains focus, use
+// [Context.SetButtonInputReceptiveWithDescendants].
+func (c *Context) SetButtonInputReceptive(widget Widget, receptive bool) {
+	if receptive {
+		widget.widgetState().buttonInputReceptivity = buttonInputReceptivitySelf
+	} else {
+		widget.widgetState().buttonInputReceptivity = buttonInputReceptivityNone
+	}
+}
+
+// IsButtonInputReceptive reports whether the widget itself receives button input
+// events even when it is not focused. It does not report whether the widget's
+// descendants are receptive.
 func (c *Context) IsButtonInputReceptive(widget Widget) bool {
-	return widget.widgetState().buttonInputReceptive
+	return widget.widgetState().buttonInputReceptivity == buttonInputReceptivitySelf
 }
 
 // SetFocused sets or removes the focus on the widget.

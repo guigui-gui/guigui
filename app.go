@@ -295,7 +295,7 @@ func (a *app) setFocusAncestorFlags() {
 
 func (a *app) setButtonInputReceptiveAncestorFlags() {
 	for _, widget := range a.widgetList {
-		if !widget.widgetState().buttonInputReceptive {
+		if widget.widgetState().buttonInputReceptivity == buttonInputReceptivityNone {
 			continue
 		}
 		for w := widget; w != nil; w = w.widgetState().parent {
@@ -810,7 +810,7 @@ const (
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 	for i := len(a.layers) - 1; i >= 0; i-- {
 		layer := a.layers[i]
-		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root) || a.root.widgetState().buttonInputReceptive); r.IsHandled() {
+		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root) || a.root.widgetState().buttonInputReceptivity == buttonInputReceptivityWithDescendants); r.IsHandled() {
 			return r
 		}
 	}
@@ -834,7 +834,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		return HandleInputResult{}
 	}
 
-	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedDescendant(widget) && !widgetState.buttonInputReceptive
+	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedDescendant(widget) && widgetState.buttonInputReceptivity == buttonInputReceptivityNone
 
 	// Even if this widget is pruned for button input, traverse children if a descendant is receptive.
 	if !prunedForButtonInput || widgetState.buttonInputReceptiveOrHasReceptiveDescendant {
@@ -842,7 +842,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		focused := a.context.IsFocused(widget)
 		for i := len(widgetState.children) - 1; i >= 0; i-- {
 			child := widgetState.children[i]
-			if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused || widgetState.buttonInputReceptive); r.IsHandled() {
+			if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused || widgetState.buttonInputReceptivity == buttonInputReceptivityWithDescendants); r.IsHandled() {
 				return r
 			}
 		}
