@@ -459,6 +459,10 @@ func (l *List[T]) setContentWidth(width int) {
 	l.content.SetContentWidth(width)
 }
 
+func (l *List[T]) setButtonInputReceptiveWhileUnfocused(receptive bool) {
+	l.content.buttonInputReceptiveWhileUnfocused = receptive
+}
+
 func (l *List[T]) scrollOffset() (float64, float64) {
 	return l.inner.Widget().panel.scrollOffset()
 }
@@ -745,6 +749,10 @@ type listContent[T comparable] struct {
 	keyboardHighlightIndexPlus1 int
 	lastCursorPosition          image.Point
 
+	// buttonInputReceptiveWhileUnfocused makes the list navigable by keyboard
+	// while it is not focused, as needed inside a modeless popup menu.
+	buttonInputReceptiveWhileUnfocused bool
+
 	indexToJumpPlus1          int
 	indexToEnsureVisiblePlus1 int
 	ensureVisibleForce        bool
@@ -945,6 +953,8 @@ func (l *listContent[T]) Env(context *guigui.Context, key guigui.EnvKey, source 
 }
 
 func (l *listContent[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	context.SetButtonInputReceptive(l, l.buttonInputReceptiveWhileUnfocused)
+
 	if l.customBackground != nil {
 		adder.AddWidget(l.customBackground)
 	}

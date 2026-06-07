@@ -39,6 +39,8 @@ type PopupMenu[T comparable] struct {
 
 	minWidth int
 
+	buttonInputReceptiveWhileUnfocused bool
+
 	onItemSelected func(context *guigui.Context, index int)
 }
 
@@ -67,6 +69,16 @@ func (p *PopupMenu[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 
 	list := p.list.Widget()
 	list.SetStyle(ListStyleMenu)
+
+	// A modeless popup menu keeps focus on another widget, so its own key
+	// handlers (Escape here, navigation in the list) must receive button input
+	// while unfocused. Mark only those handlers self-only receptive rather than
+	// the whole subtree, so a focus-driven widget in an item's Content is not
+	// affected.
+	receptive := p.buttonInputReceptiveWhileUnfocused && p.IsOpen()
+	context.SetButtonInputReceptive(p, receptive)
+	list.setButtonInputReceptiveWhileUnfocused(receptive)
+
 	if p.onItemSelected == nil {
 		p.onItemSelected = func(context *guigui.Context, index int) {
 			p.popup.SetOpen(false)
@@ -141,6 +153,10 @@ func (p *PopupMenu[T]) contentBounds(context *guigui.Context, widgetBounds *guig
 
 func (p *PopupMenu[T]) setModal(modal bool) {
 	p.popup.SetModal(modal)
+}
+
+func (p *PopupMenu[T]) setButtonInputReceptiveWhileUnfocused(receptive bool) {
+	p.buttonInputReceptiveWhileUnfocused = receptive
 }
 
 func (p *PopupMenu[T]) setMinWidth(minWidth int) {

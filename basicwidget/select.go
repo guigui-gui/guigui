@@ -82,7 +82,7 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 
 	s.popupMenu.setModal(false)
-	context.SetButtonInputReceptiveWithDescendants(s, s.popupMenu.IsOpen())
+	s.popupMenu.setButtonInputReceptiveWhileUnfocused(true)
 
 	s.updatePopupMenuItems()
 	if index := s.popupMenu.SelectedItemIndex(); index >= 0 {

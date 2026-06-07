@@ -172,7 +172,7 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 
 	c.popupMenu.setModal(false)
 	context.DelegateFocus(c, &c.textInput)
-	context.SetButtonInputReceptiveWithDescendants(c, c.popupMenu.IsOpen())
+	c.popupMenu.setButtonInputReceptiveWhileUnfocused(true)
 
 	c.updateFilteredItems()
 	if len(c.filteredItems) == 0 && c.popupMenu.IsOpen() {
