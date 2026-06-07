@@ -190,7 +190,7 @@ func (c *Combobox) Build(context *guigui.Context, adder *guigui.ChildAdder) erro
 			c.highlightClosestCandidate(strings.ToLower(text))
 			if len(c.filteredItems) == 0 {
 				c.popupMenu.SetOpen(false)
-			} else if !c.popupMenu.IsOpen() && context.IsFocusedOrHasFocusedChild(&c.textInput) {
+			} else if !c.popupMenu.IsOpen() && context.IsFocusedOrHasFocusedDescendant(&c.textInput) {
 				c.popupMenu.SetOpen(true)
 			}
 			guigui.DispatchEvent(c, comboboxEventValueChanged, text, false)
@@ -241,7 +241,7 @@ func (c *Combobox) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 }
 
 func (c *Combobox) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	focused := context.IsFocusedOrHasFocusedChild(&c.textInput)
+	focused := context.IsFocusedOrHasFocusedDescendant(&c.textInput)
 
 	if focused && !c.prevFocused {
 		// Focus gained: open popup if there are items.

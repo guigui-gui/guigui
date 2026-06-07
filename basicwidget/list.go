@@ -1787,7 +1787,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 	// Reset dragging and pressing state when the list loses focus.
 	// This prevents accidental drags caused by mouse events leaking through
 	// a popup's closing animation (passthrough mode).
-	if !context.IsFocusedOrHasFocusedChild(l) {
+	if !context.IsFocusedOrHasFocusedDescendant(l) {
 		l.dragSrcIndexPlus1 = 0
 		l.dragDstIndexPlus1 = 0
 		l.pressStartPlus1 = image.Point{}
@@ -2195,7 +2195,7 @@ func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) 
 	if !context.IsEnabled(l) {
 		return false
 	}
-	return l.style == ListStyleSidebar || context.IsFocusedOrHasFocusedChild(l) || l.style == ListStyleMenu
+	return l.style == ListStyleSidebar || context.IsFocusedOrHasFocusedDescendant(l) || l.style == ListStyleMenu
 }
 
 func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context, index int) color.Color {

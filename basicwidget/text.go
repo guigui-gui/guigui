@@ -1334,7 +1334,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 	// Shift+click on a text that already holds a cursor moves one end of the
 	// selection to the clicked position and keeps the opposite end anchored.
 	// Dragging afterwards keeps extending from the same anchor.
-	if leftClick && idx >= 0 && ebiten.IsKeyPressed(ebiten.KeyShift) && context.IsFocusedOrHasFocusedChild(t) {
+	if leftClick && idx >= 0 && ebiten.IsKeyPressed(ebiten.KeyShift) && context.IsFocusedOrHasFocusedDescendant(t) {
 		selStart, selEnd := t.field.Selection()
 		anchor := shiftClickAnchor(selStart, selEnd, t.shiftSelectionSide, idx)
 		t.dragging = true
@@ -1371,7 +1371,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 			t.selectionDragStartPlus1 = 0
 			t.selectionDragEndPlus1 = 0
 		}
-		if leftClick || !context.IsFocusedOrHasFocusedChild(t) {
+		if leftClick || !context.IsFocusedOrHasFocusedDescendant(t) {
 			if start, end := t.field.Selection(); start != idx || end != idx {
 				t.setSelection(idx, idx, selectionSideNone, false)
 			}

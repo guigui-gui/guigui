@@ -283,13 +283,13 @@ func (a *app) focusWidget(widget Widget) {
 
 func (a *app) clearFocusAncestorFlags() {
 	for w := a.focusedWidget; w != nil; w = w.widgetState().parent {
-		w.widgetState().focusedOrHasFocusedChild = false
+		w.widgetState().focusedOrHasFocusedDescendant = false
 	}
 }
 
 func (a *app) setFocusAncestorFlags() {
 	for w := a.focusedWidget; w != nil; w = w.widgetState().parent {
-		w.widgetState().focusedOrHasFocusedChild = true
+		w.widgetState().focusedOrHasFocusedDescendant = true
 	}
 }
 
@@ -663,7 +663,7 @@ func (a *app) buildWidgets() error {
 		widgetState.enabledCacheValid = false
 		widgetState.passthroughCacheValid = false
 		widgetState.passthroughCache = false
-		widgetState.focusedOrHasFocusedChild = false
+		widgetState.focusedOrHasFocusedDescendant = false
 		widgetState.buttonInputReceptiveOrHasReceptiveChild = false
 		// Do not reset bounds an zs here, as they are used to determine whether redraw is needed.
 	}
@@ -834,7 +834,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		return HandleInputResult{}
 	}
 
-	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedChild(widget) && !widgetState.buttonInputReceptive
+	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedDescendant(widget) && !widgetState.buttonInputReceptive
 
 	// Even if this widget is pruned for button input, traverse children if a descendant is receptive.
 	if !prunedForButtonInput || widgetState.buttonInputReceptiveOrHasReceptiveChild {

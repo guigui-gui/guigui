@@ -152,7 +152,7 @@ type widgetState struct {
 	passthroughCache      bool
 	passthroughCacheValid bool
 
-	focusedOrHasFocusedChild                bool
+	focusedOrHasFocusedDescendant           bool
 	buttonInputReceptiveOrHasReceptiveChild bool
 
 	offscreen *ebiten.Image

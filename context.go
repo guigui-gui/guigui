@@ -343,17 +343,17 @@ func (c *Context) IsFocused(widget Widget) bool {
 	return c.canHaveFocus(widget.widgetState()) && areWidgetsSame(c.app.focusedWidget, widget)
 }
 
-// IsFocusedOrHasFocusedChild reports whether the widget is focused
+// IsFocusedOrHasFocusedDescendant reports whether the widget is focused
 // or has a focused descendant.
 //
-// IsFocusedOrHasFocusedChild must not be called in [Widget.Build] implementations
+// IsFocusedOrHasFocusedDescendant must not be called in [Widget.Build] implementations
 // because it depends on the finished widget tree.
-func (c *Context) IsFocusedOrHasFocusedChild(widget Widget) bool {
+func (c *Context) IsFocusedOrHasFocusedDescendant(widget Widget) bool {
 	if c.inBuild {
-		panic("guigui: IsFocusedOrHasFocusedChild cannot be called in Build")
+		panic("guigui: IsFocusedOrHasFocusedDescendant cannot be called in Build")
 	}
 	widgetState := widget.widgetState()
-	return widgetState.focusedOrHasFocusedChild && widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
+	return widgetState.focusedOrHasFocusedDescendant && widgetState.isInTree(c.app.buildCount) && widgetState.isVisible()
 }
 
 // Opacity returns the opacity of the widget.
