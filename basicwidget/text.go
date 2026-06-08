@@ -504,6 +504,10 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 					t.doSelectAll()
 				}
 			} else {
+				// End the IME session, committing any in-progress composition
+				// so typed-but-uncommitted text is preserved rather than
+				// discarded when focus moves away.
+				t.field.Blur()
 				t.commit(false)
 			}
 		}

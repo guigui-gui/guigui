@@ -4,8 +4,8 @@ github.com/ebitengine/gomobile v0.0.0-20260211053922-3d992dae95d1 h1:U8WldvN7/4c
 github.com/ebitengine/gomobile v0.0.0-20260211053922-3d992dae95d1/go.mod h1:J7sDBRQG9pJGMa9Z+h8l3flwk0yEKDzWeR57vA1LI5U=
 github.com/ebitengine/hideconsole v1.0.0 h1:5J4U0kXF+pv/DhiXt5/lTz0eO5ogJ1iXb8Yj1yReDqE=
 github.com/ebitengine/hideconsole v1.0.0/go.mod h1:hTTBTvVYWKBuxPr7peweneWdkUwEuHuB3C1R/ielR1A=
-github.com/ebitengine/purego v0.11.0-alpha.3.0.20260604015905-d339eb0fd4d3 h1:KbQMNPjpAESXJYQlGsCca3ocYJE7wMeXkuTuTGiYT8c=
-github.com/ebitengine/purego v0.11.0-alpha.3.0.20260604015905-d339eb0fd4d3/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
+github.com/ebitengine/purego v0.11.0-alpha.4 h1:C3adPBbjb7z4b/81sixV9ZObQn6fSUwsp3q8O2szk1M=
+github.com/ebitengine/purego v0.11.0-alpha.4/go.mod h1:iIjxzd6CiRiOG0UyXP+V1+jWqUXVjPKLAI0mRfJZTmQ=
 github.com/go-text/typesetting v0.3.5-0.20260505125104-04e4e76f9371 h1:rQq+LisqB/K7wGowlqDlOOAEO/K29DL0kndCxg2fBso=
 github.com/go-text/typesetting v0.3.5-0.20260505125104-04e4e76f9371/go.mod h1:XZO1hD+nQVyvVa5IicQk7FsCa4PFQaJ2soWAP1f//68=
 github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc h1:8FGo2It5K75XkavhTiCKExUfVaVDS1feBnLCru5qeoY=
@@ -16,8 +16,8 @@ github.com/hajimehoshi/bitmapfont/v4 v4.1.1 h1:5FNENqs0QbURnFG8HeDJuPl/FIjU4tNes
 github.com/hajimehoshi/bitmapfont/v4 v4.1.1/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
 github.com/hajimehoshi/dialog v0.0.0-20260522164032-98e3f04ecb5c h1:05zGKFEQBLecba8giHzw8U5xAmHULmEsveaXWPcIfoY=
 github.com/hajimehoshi/dialog v0.0.0-20260522164032-98e3f04ecb5c/go.mod h1:5JGhyXqDaeyTvPqNiVkQZ3shlZ3Js4gLYbtfEle3Hnw=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260604050435-bccc04ba63d9 h1:BO70yhBQkfgzqDGqasm8BZ5zGFFmsgOmj64FNEPjuE8=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260604050435-bccc04ba63d9/go.mod h1:4yroC1/PvLuoH+9YUYhyUhzm12RhdkCDQp1LbPLrwQE=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260608065240-2765ca1188d3 h1:H6QXhuV/9kMFTBI7h4I/XSJWwUVs7KDfVsceyw/kKlw=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260608065240-2765ca1188d3/go.mod h1:YM7+s7so2AmzvsVjN0t6tJZ+kjeVLLEz2y0RGELdB+c=
 github.com/hajimehoshi/iro v0.2.0 h1:7RFpvbI9Cvdna445mF4uJGsGSVwnqh1uK/j/GKUfYpY=
 github.com/hajimehoshi/iro v0.2.0/go.mod h1:gfbDojwwKcq04DipcwqdW35ooEStXByUF3JanzJG5Ks=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade h1:FmusiCI1wHw+XQbvL9M+1r/C3SPqKrmBaIOYwVfQoDE=

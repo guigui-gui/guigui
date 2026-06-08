@@ -240,16 +240,14 @@ func (f *textField) Focus() {
 	f.focused = true
 }
 
-// Blur removes the focus from the field, cancelling any active IME
-// session. [textinput.Composer.Cancel] fires [textinput.Composer.OnComposition]
-// with an empty composition, which clears the composition state via
-// [textField.onIMEComposition].
+// Blur removes the focus from the field, ending any active IME session.
+// [textinput.Composer.Finish] commits any in-progress composition.
 func (f *textField) Blur() {
 	if !f.focused {
 		return
 	}
 	f.focused = false
-	f.composer.Cancel()
+	f.composer.Finish()
 }
 
 // SetBounds sets the bounds used for IME window positioning. The bounds are
@@ -430,14 +428,12 @@ func (f *textField) Redo() {
 	f.bumpGeneration()
 }
 
-// cleanUp ends any active IME session before a programmatic mutation so the
-// new state is not immediately overwritten by a pending commit.
-// [textinput.Composer.Cancel] fires [textinput.Composer.OnComposition] with
-// an empty composition, which clears the composition state via
-// [textField.onIMEComposition].
+// cleanUp ends any active IME session before a programmatic mutation so a
+// later commit cannot overwrite the new state. [textinput.Composer.Finish]
+// commits any in-progress composition.
 func (f *textField) cleanUp() {
 	if f.err != nil {
 		return
 	}
-	f.composer.Cancel()
+	f.composer.Finish()
 }
