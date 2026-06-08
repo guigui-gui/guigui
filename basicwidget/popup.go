@@ -20,9 +20,24 @@ var (
 	popupEventClose guigui.EventKey = guigui.GenerateEventKey()
 )
 
-// autoClosePopups holds inner popups configured via [Popup.setAutoCloseOnOtherOpen].
-// When any popup transitions to the showing state, the others in this set are closed.
-var autoClosePopups = map[*popup]struct{}{}
+// subordinatePopups holds inner popups configured via [Popup.setSubordinate], e.g. tooltips.
+// A subordinate popup yields to other popups: it is closed when any other popup opens, and
+// it is not allowed to open while a blocking (non-subordinate) popup is open.
+var subordinatePopups = map[*popup]struct{}{}
+
+// openPopups holds every currently-open popup, used to detect whether a blocking
+// (non-subordinate) popup is open so a subordinate popup can avoid opening over it.
+var openPopups = map[*popup]struct{}{}
+
+// blockingPopupOpen reports whether a blocking (non-subordinate) popup is currently open.
+func blockingPopupOpen() bool {
+	for p := range openPopups {
+		if !p.isSubordinate() {
+			return true
+		}
+	}
+	return false
+}
 
 func easeOutQuad(t float64) float64 {
 	// https://greweb.me/2012/02/bezier-curve-based-easing-functions-from-concept-to-implementation
@@ -94,8 +109,8 @@ func (p *Popup) IsOpen() bool {
 	return p.popup.Widget().IsOpen()
 }
 
-func (p *Popup) setAutoCloseOnOtherOpen(autoClose bool) {
-	p.popup.Widget().setAutoCloseOnOtherOpen(autoClose)
+func (p *Popup) setSubordinate(subordinate bool) {
+	p.popup.Widget().setSubordinate(subordinate)
 }
 
 func (p *Popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
@@ -227,12 +242,17 @@ func (p *popup) IsOpen() bool {
 	return p.showing || p.hiding || p.openingCount > 0 || p.toOpen
 }
 
-func (p *popup) setAutoCloseOnOtherOpen(autoClose bool) {
-	if autoClose {
-		autoClosePopups[p] = struct{}{}
+func (p *popup) setSubordinate(subordinate bool) {
+	if subordinate {
+		subordinatePopups[p] = struct{}{}
 		return
 	}
-	delete(autoClosePopups, p)
+	delete(subordinatePopups, p)
+}
+
+func (p *popup) isSubordinate() bool {
+	_, ok := subordinatePopups[p]
+	return ok
 }
 
 func (p *popup) setOnOpen(f func(context *guigui.Context)) {
@@ -434,6 +454,11 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 }
 
 func (p *popup) SetOpen(open bool) {
+	// A subordinate popup (e.g. a tooltip) must not appear over an already-open blocking popup.
+	if open && p.isSubordinate() && blockingPopupOpen() {
+		return
+	}
+
 	toOpen := open
 	toClose := !open
 	if p.toOpen == toOpen && p.toClose == toClose {
@@ -442,7 +467,8 @@ func (p *popup) SetOpen(open bool) {
 	p.toOpen = toOpen
 	p.toClose = toClose
 	if open {
-		for q := range autoClosePopups {
+		openPopups[p] = struct{}{}
+		for q := range subordinatePopups {
 			if q == p {
 				continue
 			}
@@ -550,6 +576,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 			// hiding/openingCount are in WriteStateKey, so the finish-of-hide
 			// rebuild is triggered automatically.
 			p.hiding = false
+			// The popup is now fully closed, so drop it from the open set.
+			delete(openPopups, p)
 			guigui.DispatchEvent(p, popupEventClose, p.closeReason)
 			p.closeReason = PopupCloseReasonNone
 			if p.openAfterClose {
