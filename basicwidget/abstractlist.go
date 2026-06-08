@@ -101,7 +101,7 @@ func (a *abstractList[Value, Item]) SetMultiSelection(multi bool) {
 }
 
 func (a *abstractList[Value, Item]) SetItems(items []Item) {
-	a.items = adjustSliceSize(items, len(items))
+	a.items = adjustSliceSize(a.items, len(items))
 	copy(a.items, items)
 
 	origLen := len(a.selectedIndices)
