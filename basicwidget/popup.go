@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -22,8 +21,8 @@ var (
 )
 
 // autoClosePopups holds inner popups configured via [Popup.setAutoCloseOnOtherOpen].
-// When any popup transitions to the showing state, the others in this list are closed.
-var autoClosePopups []*popup
+// When any popup transitions to the showing state, the others in this set are closed.
+var autoClosePopups = map[*popup]struct{}{}
 
 func easeOutQuad(t float64) float64 {
 	// https://greweb.me/2012/02/bezier-curve-based-easing-functions-from-concept-to-implementation
@@ -196,8 +195,6 @@ type popup struct {
 	openAfterClose                     bool
 	contentBounds                      image.Rectangle
 	drawerEdge                         DrawerEdge
-
-	autoCloseOnOtherOpen bool
 }
 
 func (p *popup) WriteStateKey(w *guigui.StateKeyWriter) {
@@ -231,20 +228,11 @@ func (p *popup) IsOpen() bool {
 }
 
 func (p *popup) setAutoCloseOnOtherOpen(autoClose bool) {
-	if p.autoCloseOnOtherOpen == autoClose {
-		return
-	}
-	p.autoCloseOnOtherOpen = autoClose
 	if autoClose {
-		autoClosePopups = append(autoClosePopups, p)
+		autoClosePopups[p] = struct{}{}
 		return
 	}
-	for i, q := range autoClosePopups {
-		if q == p {
-			autoClosePopups = slices.Delete(autoClosePopups, i, i+1)
-			return
-		}
-	}
+	delete(autoClosePopups, p)
 }
 
 func (p *popup) setOnOpen(f func(context *guigui.Context)) {
@@ -454,7 +442,7 @@ func (p *popup) SetOpen(open bool) {
 	p.toOpen = toOpen
 	p.toClose = toClose
 	if open {
-		for _, q := range autoClosePopups {
+		for q := range autoClosePopups {
 			if q == p {
 				continue
 			}
