@@ -51,15 +51,25 @@ func (t *TooltipArea) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	t.popup.SetContent(&t.tooltipContent)
 	t.popup.SetModal(false)
 	t.popup.setAutoCloseOnOtherOpen(true)
+	t.setTooltipPassthrough(context)
 
 	// Defer showing until Build so that Layout positions the tooltip correctly
 	// before it becomes visible, avoiding a flash at a stale position.
 	if t.toShowTooltip {
 		t.toShowTooltip = false
-		t.popup.SetOpen(true)
+		if t.hovering {
+			t.popup.SetOpen(true)
+		}
 	}
 
 	return nil
+}
+
+func (t *TooltipArea) setTooltipPassthrough(context *guigui.Context) {
+	p := t.popup.popup.Widget()
+	context.SetPassthrough(&t.popup.popup, true)
+	context.SetPassthrough(&p.contentAndFrame, true)
+	context.SetPassthrough(&t.tooltipContent, true)
 }
 
 // Layout implements [guigui.Widget.Layout].
@@ -106,7 +116,7 @@ func (t *TooltipArea) Measure(context *guigui.Context, constraints guigui.Constr
 // HandlePointingInput implements [guigui.Widget.HandlePointingInput].
 func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	cursorPos := image.Pt(ebiten.CursorPosition())
-	if cursorPos.In(widgetBounds.Bounds()) {
+	if cursorPos.In(widgetBounds.Bounds()) && widgetBounds.IsHitAtCursor() {
 		if !t.hovering {
 			t.hovering = true
 			t.hoverTicks = 0
@@ -116,15 +126,18 @@ func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds 
 			t.showPosition = cursorPos
 		}
 	} else {
-		if t.hovering {
-			t.hovering = false
-			t.hoverTicks = 0
-			if t.popup.IsOpen() {
-				t.popup.SetOpen(false)
-			}
-		}
+		t.dismissTooltip()
 	}
 	return guigui.HandleInputResult{}
+}
+
+func (t *TooltipArea) dismissTooltip() {
+	t.hovering = false
+	t.hoverTicks = 0
+	t.toShowTooltip = false
+	if t.popup.IsOpen() {
+		t.popup.SetOpen(false)
+	}
 }
 
 func (t *TooltipArea) WriteStateKey(w *guigui.StateKeyWriter) {
@@ -134,6 +147,11 @@ func (t *TooltipArea) WriteStateKey(w *guigui.StateKeyWriter) {
 // Tick implements [guigui.Widget.Tick].
 func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if t.hovering {
+		cursorPos := image.Pt(ebiten.CursorPosition())
+		if !cursorPos.In(widgetBounds.Bounds()) || !widgetBounds.IsHitAtCursor() {
+			t.dismissTooltip()
+			return nil
+		}
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {
 			t.toShowTooltip = true

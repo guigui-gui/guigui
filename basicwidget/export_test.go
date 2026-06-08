@@ -3,6 +3,8 @@
 
 package basicwidget
 
+import "github.com/guigui-gui/guigui"
+
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	return replaceNewLinesWithSpace(text, start, end)
 }
@@ -89,4 +91,37 @@ func (a AbstractListTestItem[T]) selectable() bool {
 
 func (a AbstractListTestItem[T]) visible() bool {
 	return a.Visible
+}
+
+func CleanupTooltipAreaForTest(t *TooltipArea) {
+	t.popup.setAutoCloseOnOtherOpen(false)
+}
+
+func SetTooltipAreaPendingForTest(t *TooltipArea, hovering, toShowTooltip bool) {
+	t.hovering = hovering
+	t.toShowTooltip = toShowTooltip
+}
+
+func TooltipAreaPendingForTest(t *TooltipArea) bool {
+	return t.toShowTooltip
+}
+
+func TooltipAreaPopupIsOpenForTest(t *TooltipArea) bool {
+	return t.popup.IsOpen()
+}
+
+func TooltipAreaPopupIsModelessForTest(t *TooltipArea) bool {
+	return t.popup.popup.Widget().modeless
+}
+
+func TooltipAreaPopupLayerPassthroughForTest(context *guigui.Context, t *TooltipArea) bool {
+	return context.Passthrough(&t.popup.popup)
+}
+
+func TooltipAreaPopupFramePassthroughForTest(context *guigui.Context, t *TooltipArea) bool {
+	return context.Passthrough(&t.popup.popup.Widget().contentAndFrame)
+}
+
+func TooltipAreaContentPassthroughForTest(context *guigui.Context, t *TooltipArea) bool {
+	return context.Passthrough(&t.tooltipContent)
 }
