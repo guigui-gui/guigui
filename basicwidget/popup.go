@@ -20,13 +20,8 @@ var (
 	popupEventClose guigui.EventKey = guigui.GenerateEventKey()
 )
 
-// subordinatePopups holds inner popups configured via [Popup.setSubordinate], e.g. tooltips.
-// A subordinate popup yields to other popups: it is closed when any other popup opens, and
-// it is not allowed to open while a blocking (non-subordinate) popup is open.
-var subordinatePopups = map[*popup]struct{}{}
-
-// openPopups holds every currently-open popup, used to detect whether a blocking
-// (non-subordinate) popup is open so a subordinate popup can avoid opening over it.
+// openPopups holds every currently-open popup, used to coordinate subordinate
+// popups (e.g. tooltips) with blocking ones.
 var openPopups = map[*popup]struct{}{}
 
 // blockingPopupOpen reports whether a blocking (non-subordinate) popup is currently open.
@@ -203,6 +198,7 @@ type popup struct {
 	closeByClickingOutside             bool
 	closeByClickingOutsideExcludedRect image.Rectangle
 	modeless                           bool
+	subordinate                        bool
 	animateOnFading                    bool
 	contentPosition                    image.Point
 	nextContentPosition                image.Point
@@ -243,16 +239,11 @@ func (p *popup) IsOpen() bool {
 }
 
 func (p *popup) setSubordinate(subordinate bool) {
-	if subordinate {
-		subordinatePopups[p] = struct{}{}
-		return
-	}
-	delete(subordinatePopups, p)
+	p.subordinate = subordinate
 }
 
 func (p *popup) isSubordinate() bool {
-	_, ok := subordinatePopups[p]
-	return ok
+	return p.subordinate
 }
 
 func (p *popup) setOnOpen(f func(context *guigui.Context)) {
@@ -467,14 +458,16 @@ func (p *popup) SetOpen(open bool) {
 	p.toOpen = toOpen
 	p.toClose = toClose
 	if open {
-		openPopups[p] = struct{}{}
-		for q := range subordinatePopups {
-			if q == p {
+		// Close every open subordinate popup so it does not linger over the newly-opened one.
+		// SetOpen(false) only flips the close flag, so it is safe to iterate openPopups here.
+		for q := range openPopups {
+			if q == p || !q.isSubordinate() {
 				continue
 			}
 			q.setCloseReason(PopupCloseReasonAuto)
 			q.SetOpen(false)
 		}
+		openPopups[p] = struct{}{}
 	}
 	// A closed popup is typically gated out of its parent's Build, so the
 	// state-key-based auto-rebuild doesn't fire when it's not in the tree.
