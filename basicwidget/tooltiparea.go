@@ -103,40 +103,33 @@ func (t *TooltipArea) Measure(context *guigui.Context, constraints guigui.Constr
 	return image.Point{}
 }
 
-// HandlePointingInput implements [guigui.Widget.HandlePointingInput].
-func (t *TooltipArea) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	cursorPos := image.Pt(ebiten.CursorPosition())
-	if cursorPos.In(widgetBounds.Bounds()) {
-		if !t.hovering {
-			t.hovering = true
-			t.hoverTicks = 0
-		}
-		// Only update position before the tooltip is shown, so it stays fixed once visible.
-		if !t.toShowTooltip && !t.popup.IsOpen() {
-			t.showPosition = cursorPos
-		}
-	} else {
-		if t.hovering {
-			t.hovering = false
-			t.hoverTicks = 0
-			if t.popup.IsOpen() {
-				t.popup.SetOpen(false)
-			}
-		}
-	}
-	return guigui.HandleInputResult{}
-}
-
 func (t *TooltipArea) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteBool(t.toShowTooltip)
 }
 
 // Tick implements [guigui.Widget.Tick].
 func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	if t.hovering {
+	// Detect hover in Tick, not in an input handler: Tick always runs, but pointing
+	// input can be intercepted by a widget capturing the cursor (e.g. a dragged button).
+	cursorPos := image.Pt(ebiten.CursorPosition())
+	if context.IsVisible(t) && context.IsEnabled(t) && cursorPos.In(widgetBounds.Bounds()) {
+		if !t.hovering {
+			t.hovering = true
+			t.hoverTicks = 0
+		}
+		// Freeze the position once the tooltip is shown.
+		if !t.toShowTooltip && !t.popup.IsOpen() {
+			t.showPosition = cursorPos
+		}
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {
 			t.toShowTooltip = true
+		}
+	} else if t.hovering {
+		t.hovering = false
+		t.hoverTicks = 0
+		if t.popup.IsOpen() {
+			t.popup.SetOpen(false)
 		}
 	}
 	return nil
