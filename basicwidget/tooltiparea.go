@@ -116,6 +116,9 @@ func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetB
 		if !t.hovering {
 			t.hovering = true
 			t.hoverTicks = 0
+			// Record the reference tick at hover start, so only a non-subordinate
+			// popup that opens during this hover suppresses the tooltip.
+			t.popup.recordSubordinateTrigger()
 		}
 		// Freeze the position once the tooltip is shown.
 		if !t.toShowTooltip && !t.popup.IsOpen() {

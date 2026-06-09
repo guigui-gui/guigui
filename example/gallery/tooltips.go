@@ -153,7 +153,7 @@ func (t *TooltipAreas) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 }
 
 // tooltipPopupContent is the content of a popup that itself contains a tooltip area,
-// demonstrating that a tooltip is suppressed while another popup is open.
+// demonstrating that a tooltip still works while another popup is open.
 type tooltipPopupContent struct {
 	guigui.DefaultWidget
 

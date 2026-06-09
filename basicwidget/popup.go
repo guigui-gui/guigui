@@ -21,18 +21,13 @@ var (
 )
 
 // openPopups holds every currently-open popup, used to coordinate subordinate
-// popups (e.g. tooltips) with blocking ones.
+// popups (e.g. tooltips) with non-subordinate ones.
 var openPopups = map[*popup]struct{}{}
 
-// blockingPopupOpen reports whether a blocking (non-subordinate) popup is currently open.
-func blockingPopupOpen() bool {
-	for p := range openPopups {
-		if !p.isSubordinate() {
-			return true
-		}
-	}
-	return false
-}
+// lastNonSubordinatePopupOpenTick is the tick (see [ebiten.Tick]) when the most
+// recent non-subordinate popup opened. A subordinate popup refuses to open if
+// this is later than its recorded trigger tick.
+var lastNonSubordinatePopupOpenTick int64
 
 func easeOutQuad(t float64) float64 {
 	// https://greweb.me/2012/02/bezier-curve-based-easing-functions-from-concept-to-implementation
@@ -106,6 +101,10 @@ func (p *Popup) IsOpen() bool {
 
 func (p *Popup) setSubordinate(subordinate bool) {
 	p.popup.Widget().setSubordinate(subordinate)
+}
+
+func (p *Popup) recordSubordinateTrigger() {
+	p.popup.Widget().recordSubordinateTrigger()
 }
 
 func (p *Popup) OnClose(f func(context *guigui.Context, reason PopupCloseReason)) {
@@ -199,6 +198,7 @@ type popup struct {
 	closeByClickingOutsideExcludedRect image.Rectangle
 	modeless                           bool
 	subordinate                        bool
+	subordinateTriggerTick             int64
 	animateOnFading                    bool
 	contentPosition                    image.Point
 	nextContentPosition                image.Point
@@ -244,6 +244,12 @@ func (p *popup) setSubordinate(subordinate bool) {
 
 func (p *popup) isSubordinate() bool {
 	return p.subordinate
+}
+
+// recordSubordinateTrigger records the reference tick for a subordinate popup;
+// SetOpen refuses to open it if a non-subordinate popup opens after this call.
+func (p *popup) recordSubordinateTrigger() {
+	p.subordinateTriggerTick = ebiten.Tick()
 }
 
 func (p *popup) setOnOpen(f func(context *guigui.Context)) {
@@ -445,8 +451,9 @@ func (p *popup) HandlePointingInput(context *guigui.Context, widgetBounds *guigu
 }
 
 func (p *popup) SetOpen(open bool) {
-	// A subordinate popup (e.g. a tooltip) must not appear over an already-open blocking popup.
-	if open && p.isSubordinate() && blockingPopupOpen() {
+	// A subordinate popup must not cover a non-subordinate popup that opened
+	// after its trigger began (see recordSubordinateTrigger).
+	if open && p.isSubordinate() && lastNonSubordinatePopupOpenTick > p.subordinateTriggerTick {
 		return
 	}
 
@@ -458,6 +465,10 @@ func (p *popup) SetOpen(open bool) {
 	p.toOpen = toOpen
 	p.toClose = toClose
 	if open {
+		// Record the open tick that subordinate popups compare their trigger against.
+		if _, ok := openPopups[p]; !ok && !p.isSubordinate() {
+			lastNonSubordinatePopupOpenTick = ebiten.Tick()
+		}
 		// Close every open subordinate popup so it does not linger over the newly-opened one.
 		// SetOpen(false) only flips the close flag, so it is safe to iterate openPopups here.
 		for q := range openPopups {
