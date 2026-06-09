@@ -12,9 +12,9 @@ require (
 	github.com/jezek/xgb v1.3.1
 	github.com/kisielk/errcheck v1.20.0
 	github.com/zeebo/xxh3 v1.1.0
-	golang.org/x/image v0.41.0
-	golang.org/x/sys v0.45.0
-	golang.org/x/text v0.37.0
+	golang.org/x/image v0.42.0
+	golang.org/x/sys v0.46.0
+	golang.org/x/text v0.38.0
 	golang.org/x/tools v0.45.0
 	howett.net/plist v1.0.1
 )
@@ -24,5 +24,5 @@ require (
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	golang.org/x/mod v0.36.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
 )
