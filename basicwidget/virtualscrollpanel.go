@@ -122,6 +122,10 @@ type virtualScrollPanel struct {
 	// when allHeightsMeasured.
 	accurateHeightAboveTopInPixels int
 
+	// atBottom reports whether the most recent layout left the list scrolled to
+	// its end, with no content extending past the viewport bottom.
+	atBottom bool
+
 	// Scroll wheel state for bar visibility.
 	lastWheelX float64
 	lastWheelY float64
@@ -270,7 +274,8 @@ func (p *virtualScrollPanel) forceSetTopItem(index, offset int, cancelAnimation 
 
 // layoutTopItem resolves the panel's (topItemIndex, topItemOffset) to its
 // canonical layout-ready form, commits it via forceSetTopItem, and returns the
-// committed values.
+// committed values. It also records whether the resolved position is at the end
+// of the content (p.atBottom).
 //
 // apparentItemHeight returns the per-item height as it appears in the viewport;
 // callers wrap [virtualScrollContent.measureItemHeight] to apply per-item
@@ -285,6 +290,7 @@ func (p *virtualScrollPanel) layoutTopItem(context *guigui.Context, viewportInne
 	if n == 0 {
 		idx, offset = 0, 0
 		p.forceSetTopItem(idx, offset, false)
+		p.atBottom = true
 		return
 	}
 	if idx >= n {
@@ -348,6 +354,10 @@ func (p *virtualScrollPanel) layoutTopItem(context *guigui.Context, viewportInne
 	}
 
 	p.forceSetTopItem(idx, offset, false)
+	// The end is on screen only if the walk reached the last item without its
+	// bottom (y) passing the viewport: a tall last item can be touched yet still
+	// extend below, leaving room to scroll further.
+	p.atBottom = reachedEnd && y <= viewportInner
 	return idx, offset
 }
 
@@ -451,23 +461,66 @@ func (p *virtualScrollPanel) Build(context *guigui.Context, adder *guigui.ChildA
 // HandlePointingInput handles scroll wheel input directly,
 // applying vertical deltas to topItemOffset without virtual offset conversion.
 func (p *virtualScrollPanel) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	// Handle scroll wheel.
-	if widgetBounds.IsHitAtCursor() {
-		wheelX, wheelY := adjustedWheel()
-		p.lastWheelX = wheelX
-		p.lastWheelY = wheelY
-		if wheelX != 0 || wheelY != 0 {
-			dx := wheelX * scrollWheelSpeed(context)
-			dy := wheelY * scrollWheelSpeed(context)
-			p.forceSetScrollOffsetByDelta(dx, dy)
-			return guigui.HandleInputByWidget(p)
-		}
-	} else {
+	if !widgetBounds.IsHitAtCursor() {
 		p.lastWheelX = 0
 		p.lastWheelY = 0
+		return guigui.HandleInputResult{}
 	}
 
-	return guigui.HandleInputResult{}
+	wheelX, wheelY := adjustedWheel()
+	if wheelX == 0 && wheelY == 0 {
+		p.lastWheelX = 0
+		p.lastWheelY = 0
+		return guigui.HandleInputResult{}
+	}
+
+	bounds := widgetBounds.Bounds()
+	dx := wheelX * scrollWheelSpeed(context)
+	dy := wheelY * scrollWheelSpeed(context)
+
+	// Horizontal scroll is pixel-based; clamp against the content width as
+	// Layout does to learn whether the offset would move.
+	cw := p.content.contentWidth(context)
+	if cw == 0 {
+		cw = bounds.Dx()
+	}
+	minX := float64(min(bounds.Dx()-cw, 0))
+	scrollX := dx != 0 && min(max(p.offsetX+dx, minX), 0) != p.offsetX
+
+	// Vertical scroll is item-based. A positive dy scrolls toward the top, a
+	// negative dy toward the bottom.
+	var scrollY bool
+	switch {
+	case dy > 0:
+		scrollY = p.topItemIndex > 0 || p.topItemOffset < 0
+	case dy < 0:
+		scrollY = !p.atBottom
+	}
+
+	// Report scrolling only on an axis that actually moved, so a stale axis
+	// does not keep its scroll bar visible.
+	if scrollX {
+		p.lastWheelX = wheelX
+	} else {
+		p.lastWheelX = 0
+		dx = 0
+	}
+	if scrollY {
+		p.lastWheelY = wheelY
+	} else {
+		p.lastWheelY = 0
+		dy = 0
+	}
+
+	if !scrollX && !scrollY {
+		// Already at the scroll limit in the wheel's direction. Don't consume
+		// the event, so it can fall through to a scrollable widget behind this
+		// one.
+		return guigui.HandleInputResult{}
+	}
+
+	p.forceSetScrollOffsetByDelta(dx, dy)
+	return guigui.HandleInputByWidget(p)
 }
 
 func (p *virtualScrollPanel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

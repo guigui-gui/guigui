@@ -167,19 +167,43 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 	}
 
 	wheelX, wheelY := adjustedWheel()
-	s.lastWheelX = wheelX
-	s.lastWheelY = wheelY
-
-	if wheelX != 0 || wheelY != 0 {
-		offsetX, offsetY := s.offsetGetSetter.scrollOffset()
-		offsetX += wheelX * scrollWheelSpeed(context)
-		offsetY += wheelY * scrollWheelSpeed(context)
-		s.offsetGetSetter.forceSetScrollOffset(offsetX, offsetY)
-		// TODO: If the actual offset is not changed, this should not return HandleInputByWidget (#204).
-		return guigui.HandleInputByWidget(s)
+	if wheelX == 0 && wheelY == 0 {
+		s.lastWheelX = 0
+		s.lastWheelY = 0
+		return guigui.HandleInputResult{}
 	}
 
-	return guigui.HandleInputResult{}
+	offsetX, offsetY := s.offsetGetSetter.scrollOffset()
+	bounds := widgetBounds.Bounds()
+	// Clamp the prospective offset to the scrollable range to see whether the
+	// wheel would move the content.
+	minX := float64(min(bounds.Dx()-s.contentSize.X, 0))
+	minY := float64(min(bounds.Dy()-s.contentSize.Y, 0))
+	newX := min(max(offsetX+wheelX*scrollWheelSpeed(context), minX), 0)
+	newY := min(max(offsetY+wheelY*scrollWheelSpeed(context), minY), 0)
+
+	// Report scrolling only on an axis that actually moved, so a stale axis
+	// does not keep its scroll bar visible.
+	if newX != offsetX {
+		s.lastWheelX = wheelX
+	} else {
+		s.lastWheelX = 0
+	}
+	if newY != offsetY {
+		s.lastWheelY = wheelY
+	} else {
+		s.lastWheelY = 0
+	}
+
+	if newX == offsetX && newY == offsetY {
+		// Already at the scroll limit in the wheel's direction. Don't consume
+		// the event, so it can fall through to a scrollable widget behind this
+		// one.
+		return guigui.HandleInputResult{}
+	}
+
+	s.offsetGetSetter.forceSetScrollOffset(newX, newY)
+	return guigui.HandleInputByWidget(s)
 }
 
 type scrollBar struct {
