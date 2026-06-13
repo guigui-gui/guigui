@@ -1758,6 +1758,86 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	switch {
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyLeft):
+		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
+		var moveEnd bool
+		start, end := t.field.Selection()
+		idx := start
+		if shift && t.shiftSelectionSide == selectionSideEnd {
+			idx = end
+			moveEnd = true
+		}
+		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
+			// A far-left X clamps to the first index of idx's visual line.
+			y := int((pos.Top + pos.Bottom) / 2)
+			lineStart := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MinInt32, y), false)
+			if lineStart >= 0 {
+				if shift {
+					if moveEnd {
+						t.setSelection(start, lineStart, selectionSideEnd, true)
+					} else {
+						t.setSelection(lineStart, end, selectionSideStart, true)
+					}
+				} else {
+					t.setSelection(lineStart, lineStart, selectionSideNone, true)
+				}
+			}
+		}
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyRight):
+		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
+		var moveStart bool
+		start, end := t.field.Selection()
+		idx := end
+		if shift && t.shiftSelectionSide == selectionSideStart {
+			idx = start
+			moveStart = true
+		}
+		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
+			// A far-right X clamps to the last index of idx's visual line,
+			// excluding a trailing line break.
+			y := int((pos.Top + pos.Bottom) / 2)
+			lineEnd := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MaxInt32, y), false)
+			if lineEnd >= 0 {
+				if shift {
+					if moveStart {
+						t.setSelection(lineEnd, end, selectionSideStart, true)
+					} else {
+						t.setSelection(start, lineEnd, selectionSideEnd, true)
+					}
+				} else {
+					t.setSelection(lineEnd, lineEnd, selectionSideNone, true)
+				}
+			}
+		}
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyUp):
+		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
+		start, end := t.field.Selection()
+		if shift {
+			if t.shiftSelectionSide == selectionSideEnd {
+				t.setSelection(start, 0, selectionSideEnd, true)
+			} else {
+				t.setSelection(0, end, selectionSideStart, true)
+			}
+		} else {
+			t.setSelection(0, 0, selectionSideNone, true)
+		}
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyDown):
+		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
+		start, end := t.field.Selection()
+		tail := t.field.TextLengthInBytes()
+		if shift {
+			if t.shiftSelectionSide == selectionSideStart {
+				t.setSelection(tail, end, selectionSideStart, true)
+			} else {
+				t.setSelection(start, tail, selectionSideEnd, true)
+			}
+		} else {
+			t.setSelection(tail, tail, selectionSideNone, true)
+		}
+		return guigui.HandleInputByWidget(t)
 	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyLeft):
 		idx := 0
 		start, end := t.field.Selection()

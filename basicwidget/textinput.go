@@ -991,9 +991,10 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 
 // scrollCaretIntoView scrolls the panel to bring the selection into view.
 // start and end are the selection endpoints (start <= end as byte indices),
-// equal when the selection has zero width. end has priority — if it isn't
-// fully visible, scroll for it. Otherwise, if start is off-viewport, scroll
-// for start. When the selection is wider than the viewport, end wins.
+// equal when the selection has zero width. The moving end — the endpoint that
+// Shift+key extends — has priority: if it isn't fully visible, scroll for it;
+// otherwise scroll for the anchor when it is off-viewport. When the selection
+// is taller than the viewport, the moving end wins.
 //
 // The X axis accumulates contributions from both endpoints, matching the
 // legacy textEventScrollDelta semantics.
@@ -1001,8 +1002,14 @@ func (t *textInputText) scrollCaretIntoView(context *guigui.Context, start, end 
 	if t.panel == nil {
 		return
 	}
-	if !t.scrollEdgeIntoView(context, end) && end != start {
-		t.scrollEdgeIntoView(context, start)
+	// Follow the moving end so upward/leftward extension scrolls toward the
+	// start; only the start side moves while shiftSelectionSide is Start.
+	primary, secondary := end, start
+	if t.text.Widget().shiftSelectionSide == selectionSideStart {
+		primary, secondary = start, end
+	}
+	if !t.scrollEdgeIntoView(context, primary) && primary != secondary {
+		t.scrollEdgeIntoView(context, secondary)
 	}
 
 	bounds := t.containerBounds
