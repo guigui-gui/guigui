@@ -707,6 +707,191 @@ func (t *Text) nextPositionOnGraphemes(position int) int {
 	return lineStart + textutil.NextPositionOnGraphemes(line, position-lineStart)
 }
 
+// prevWordStart returns the byte offset of the start of the last word before
+// position, or 0 when no earlier word exists.
+func (t *Text) prevWordStart(position int) int {
+	// Step back over graphemes until the one just before position lies in a
+	// word; [Text.findWordBoundaries] then yields that word's start. Both
+	// helpers scan only the relevant logical line, so this crosses line breaks
+	// without materializing the document.
+	for position > 0 {
+		prev := t.prevPositionOnGraphemes(position)
+		if s, e := t.findWordBoundaries(prev); e > s {
+			return s
+		}
+		position = prev
+	}
+	return 0
+}
+
+// nextWordEnd returns the byte offset of the end of the first word at or after
+// position, or the text length when no further word exists.
+func (t *Text) nextWordEnd(position int) int {
+	// Step forward over graphemes until position lies in a word;
+	// [Text.findWordBoundaries] then yields that word's end. Both helpers scan
+	// only the relevant logical line, so this crosses line breaks without
+	// materializing the document.
+	total := t.field.TextLengthInBytes()
+	for position < total {
+		if _, e := t.findWordBoundaries(position); e > position {
+			return e
+		}
+		next := t.nextPositionOnGraphemes(position)
+		if next <= position {
+			break
+		}
+		position = next
+	}
+	return total
+}
+
+// paragraphStart returns the byte offset of the beginning of the logical line
+// containing position, or of the previous logical line when position is
+// already at a line start.
+func (t *Text) paragraphStart(position int) int {
+	lineIndex := t.LineIndexFromTextIndexInBytes(position)
+	lineStart := t.LineStartInBytes(lineIndex)
+	if position > lineStart {
+		return lineStart
+	}
+	if lineIndex > 0 {
+		return t.LineStartInBytes(lineIndex - 1)
+	}
+	return 0
+}
+
+// paragraphEnd returns the byte offset of the end of the logical line
+// containing position, excluding its trailing line break, or of the next
+// logical line when position is already at a line end.
+func (t *Text) paragraphEnd(position int) int {
+	lineIndex := t.LineIndexFromTextIndexInBytes(position)
+	lineEnd := t.logicalLineContentEnd(lineIndex)
+	if position < lineEnd {
+		return lineEnd
+	}
+	if lineIndex+1 < t.LineCount() {
+		return t.logicalLineContentEnd(lineIndex + 1)
+	}
+	return t.field.TextLengthInBytes()
+}
+
+// logicalLineContentEnd returns the byte offset of the end of the lineIndex-th
+// logical line's content, excluding its trailing line break.
+func (t *Text) logicalLineContentEnd(lineIndex int) int {
+	if lineIndex+1 >= t.LineCount() {
+		return t.field.TextLengthInBytes()
+	}
+	lineEnd := t.LineStartInBytes(lineIndex + 1)
+	lineStart := t.LineStartInBytes(lineIndex)
+	// The trailing line break is at most a few bytes, so inspect a short
+	// suffix rather than materializing the whole line.
+	suffix := t.stringValueWithRange(max(lineStart, lineEnd-4), lineEnd)
+	if i, l := textutil.LastLineBreakPositionAndLen(suffix); i >= 0 && i+l == len(suffix) {
+		return lineEnd - l
+	}
+	return lineEnd
+}
+
+// nextWordStart returns the byte offset of the start of the next word after
+// position, or the text length when no later word exists.
+func (t *Text) nextWordStart(position int) int {
+	total := t.field.TextLengthInBytes()
+	// Skip past the word under the caret, then to the first following word
+	// start. findWordBoundaries and the grapheme steppers scan only the
+	// relevant logical line, so this crosses line breaks without materializing
+	// the document.
+	if _, e := t.findWordBoundaries(position); e > position {
+		position = e
+	}
+	for position < total {
+		if s, e := t.findWordBoundaries(position); s == position && e > position {
+			return position
+		}
+		next := t.nextPositionOnGraphemes(position)
+		if next <= position {
+			break
+		}
+		position = next
+	}
+	return total
+}
+
+// visualLineStart returns the byte offset of the first index on the visual
+// (wrapped) line holding the caret at position, and whether the caret's line is
+// laid out. A far-left probe clamps to that line's start.
+func (t *Text) visualLineStart(context *guigui.Context, widgetBounds *guigui.WidgetBounds, position int) (int, bool) {
+	pos, ok := t.textPosition(context, widgetBounds.Bounds(), position, false)
+	if !ok {
+		return 0, false
+	}
+	y := int((pos.Top + pos.Bottom) / 2)
+	idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MinInt32, y), false)
+	if idx < 0 {
+		return 0, false
+	}
+	return idx, true
+}
+
+// visualLineEnd returns the byte offset of the last index on the visual
+// (wrapped) line holding the caret at position, excluding a trailing line
+// break, and whether the caret's line is laid out.
+func (t *Text) visualLineEnd(context *guigui.Context, widgetBounds *guigui.WidgetBounds, position int) (int, bool) {
+	pos, ok := t.textPosition(context, widgetBounds.Bounds(), position, false)
+	if !ok {
+		return 0, false
+	}
+	y := int((pos.Top + pos.Bottom) / 2)
+	idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MaxInt32, y), false)
+	if idx < 0 {
+		return 0, false
+	}
+	return idx, true
+}
+
+// navigateBackward moves the caret backward to target(position), or extends the
+// selection there under Shift. position is the moving end; target reporting
+// ok=false leaves the selection unchanged.
+func (t *Text) navigateBackward(shift bool, target func(position int) (int, bool)) {
+	start, end := t.field.Selection()
+	position := start
+	if shift && t.shiftSelectionSide == selectionSideEnd {
+		position = end
+	}
+	tgt, ok := target(position)
+	if !ok {
+		return
+	}
+	switch {
+	case !shift:
+		t.setSelection(tgt, tgt, selectionSideNone, true)
+	case t.shiftSelectionSide == selectionSideEnd:
+		t.setSelection(start, tgt, selectionSideEnd, true)
+	default:
+		t.setSelection(tgt, end, selectionSideStart, true)
+	}
+}
+
+// navigateForward mirrors [Text.navigateBackward] in the forward direction.
+func (t *Text) navigateForward(shift bool, target func(position int) (int, bool)) {
+	start, end := t.field.Selection()
+	position := end
+	if shift && t.shiftSelectionSide == selectionSideStart {
+		position = start
+	}
+	tgt, ok := target(position)
+	if !ok {
+		return
+	}
+	switch {
+	case !shift:
+		t.setSelection(tgt, tgt, selectionSideNone, true)
+	case t.shiftSelectionSide == selectionSideStart:
+		t.setSelection(tgt, end, selectionSideStart, true)
+	default:
+		t.setSelection(start, tgt, selectionSideEnd, true)
+	}
+}
+
 func (t *Text) stringValueForRendering() string {
 	t.valueBuilder.Reset()
 	_, _ = t.field.WriteTextForRenderingTo(&t.valueBuilder)
@@ -1758,101 +1943,79 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	}
 
 	switch {
+	// macOS: Command+Arrow moves to a visual-line or document extreme;
+	// Option+Arrow moves by word or paragraph. Shift extends the selection.
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyLeft):
-		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
-		var moveEnd bool
-		start, end := t.field.Selection()
-		idx := start
-		if shift && t.shiftSelectionSide == selectionSideEnd {
-			idx = end
-			moveEnd = true
-		}
-		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
-			// A far-left X clamps to the first index of idx's visual line.
-			y := int((pos.Top + pos.Bottom) / 2)
-			lineStart := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MinInt32, y), false)
-			if lineStart >= 0 {
-				if shift {
-					if moveEnd {
-						t.setSelection(start, lineStart, selectionSideEnd, true)
-					} else {
-						t.setSelection(lineStart, end, selectionSideStart, true)
-					}
-				} else {
-					t.setSelection(lineStart, lineStart, selectionSideNone, true)
-				}
-			}
-		}
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.visualLineStart(context, widgetBounds, position)
+		})
 		return guigui.HandleInputByWidget(t)
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyRight):
-		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
-		var moveStart bool
-		start, end := t.field.Selection()
-		idx := end
-		if shift && t.shiftSelectionSide == selectionSideStart {
-			idx = start
-			moveStart = true
-		}
-		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
-			// A far-right X clamps to the last index of idx's visual line,
-			// excluding a trailing line break.
-			y := int((pos.Top + pos.Bottom) / 2)
-			lineEnd := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(math.MaxInt32, y), false)
-			if lineEnd >= 0 {
-				if shift {
-					if moveStart {
-						t.setSelection(lineEnd, end, selectionSideStart, true)
-					} else {
-						t.setSelection(start, lineEnd, selectionSideEnd, true)
-					}
-				} else {
-					t.setSelection(lineEnd, lineEnd, selectionSideNone, true)
-				}
-			}
-		}
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.visualLineEnd(context, widgetBounds, position)
+		})
 		return guigui.HandleInputByWidget(t)
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyUp):
-		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
-		start, end := t.field.Selection()
-		if shift {
-			if t.shiftSelectionSide == selectionSideEnd {
-				t.setSelection(start, 0, selectionSideEnd, true)
-			} else {
-				t.setSelection(0, end, selectionSideStart, true)
-			}
-		} else {
-			t.setSelection(0, 0, selectionSideNone, true)
-		}
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
+			return 0, true
+		})
 		return guigui.HandleInputByWidget(t)
 	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && isKeyRepeating(ebiten.KeyDown):
-		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
-		start, end := t.field.Selection()
-		tail := t.field.TextLengthInBytes()
-		if shift {
-			if t.shiftSelectionSide == selectionSideStart {
-				t.setSelection(tail, end, selectionSideStart, true)
-			} else {
-				t.setSelection(start, tail, selectionSideEnd, true)
-			}
-		} else {
-			t.setSelection(tail, tail, selectionSideNone, true)
-		}
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
+			return t.field.TextLengthInBytes(), true
+		})
 		return guigui.HandleInputByWidget(t)
-	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyLeft):
-		idx := 0
-		start, end := t.field.Selection()
-		if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, start)); i >= 0 {
-			idx = i + l
-		}
-		t.setSelection(idx, end, selectionSideStart, true)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && isKeyRepeating(ebiten.KeyLeft):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.prevWordStart(position), true
+		})
 		return guigui.HandleInputByWidget(t)
-	case ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyRight):
-		idx := t.field.TextLengthInBytes()
-		start, end := t.field.Selection()
-		if i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(end, -1)); i >= 0 {
-			idx = end + i
-		}
-		t.setSelection(start, idx, selectionSideEnd, true)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && isKeyRepeating(ebiten.KeyRight):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.nextWordEnd(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && isKeyRepeating(ebiten.KeyUp):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.paragraphStart(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && isKeyRepeating(ebiten.KeyDown):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.paragraphEnd(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	// Windows/Linux: Ctrl+Arrow moves by word, Home/End to line head/tail,
+	// Ctrl+Home/End to document head/tail. Shift extends the selection.
+	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyLeft):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.prevWordStart(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyRight):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.nextWordStart(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyHome):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
+			return 0, true
+		})
+		return guigui.HandleInputByWidget(t)
+	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyEnd):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
+			return t.field.TextLengthInBytes(), true
+		})
+		return guigui.HandleInputByWidget(t)
+	case !isDarwin() && isKeyRepeating(ebiten.KeyHome):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.visualLineStart(context, widgetBounds, position)
+		})
+		return guigui.HandleInputByWidget(t)
+	case !isDarwin() && isKeyRepeating(ebiten.KeyEnd):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.visualLineEnd(context, widgetBounds, position)
+		})
 		return guigui.HandleInputByWidget(t)
 	case isKeyRepeating(ebiten.KeyLeft) ||
 		isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyB):
