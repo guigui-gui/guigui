@@ -1985,6 +1985,19 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			return t.paragraphEnd(position), true
 		})
 		return guigui.HandleInputByWidget(t)
+	// macOS: Shift+Home/End extend the selection to the start/end of the text.
+	// Plain Home/End scroll without moving the caret; they are left unhandled
+	// here and handled by textInputText after bubbling up.
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyHome):
+		t.navigateBackward(true, func(int) (int, bool) {
+			return 0, true
+		})
+		return guigui.HandleInputByWidget(t)
+	case isDarwin() && ebiten.IsKeyPressed(ebiten.KeyShift) && isKeyRepeating(ebiten.KeyEnd):
+		t.navigateForward(true, func(int) (int, bool) {
+			return t.field.TextLengthInBytes(), true
+		})
+		return guigui.HandleInputByWidget(t)
 	// Windows/Linux: Ctrl+Arrow moves by word, Home/End to line head/tail,
 	// Ctrl+Home/End to document head/tail. Shift extends the selection.
 	case !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && isKeyRepeating(ebiten.KeyLeft):

@@ -989,6 +989,28 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 	return height
 }
 
+func (t *textInputText) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	// On macOS, Home/End scroll to the text edges without moving the caret. The
+	// focused Text handles every selection-changing key (including
+	// Shift+Home/End) and declines plain Home/End, which then bubble up here.
+	if !isDarwin() || ebiten.IsKeyPressed(ebiten.KeyShift) || t.panel == nil {
+		return guigui.HandleInputResult{}
+	}
+	switch {
+	case isKeyRepeating(ebiten.KeyHome):
+		t.panel.setTopItem(0, 0)
+		return guigui.HandleInputByWidget(t)
+	case isKeyRepeating(ebiten.KeyEnd):
+		// Setting the last item as the top item over-scrolls; the panel clamps
+		// it to a bottom-aligned position.
+		if n := t.itemCount(); n > 0 {
+			t.panel.setTopItem(n-1, 0)
+		}
+		return guigui.HandleInputByWidget(t)
+	}
+	return guigui.HandleInputResult{}
+}
+
 // scrollCaretIntoView scrolls the panel to bring the selection into view.
 // start and end are the selection endpoints (start <= end as byte indices),
 // equal when the selection has zero width. The moving end — the endpoint that
