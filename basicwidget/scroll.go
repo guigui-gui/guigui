@@ -21,7 +21,8 @@ func adjustedWheel() (float64, float64) {
 	case "darwin":
 		x *= 2
 		y *= 2
-	case "windows":
+	case "js":
+	default:
 		x *= 10
 		y *= 10
 	}
