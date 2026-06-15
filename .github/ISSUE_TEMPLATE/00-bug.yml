@@ -3,9 +3,9 @@ description: Report a bug you've found.
 labels: bug
 body:
 - type: input
-  id: version_of_ebitengine
+  id: version_of_guigui
   attributes:
-    label: Ebitengine Version
+    label: Guigui Version
   validations:
     required: true
 - type: checkboxes
