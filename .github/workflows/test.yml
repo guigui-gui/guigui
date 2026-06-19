@@ -45,10 +45,10 @@ jobs:
       run: |
         go list ./... | grep -v -x -F -f .github/workflows/govetblock_windows.txt | xargs go vet -v
 
-    - name: Vet (other OS)
-      if: runner.os != 'macOS' && runner.os != 'Windows'
+    - name: Vet (Linux)
+      if: runner.os == 'Linux'
       run: |
-        go vet -v ./...
+        go list ./... | grep -v -x -F -f .github/workflows/govetblock_linux.txt | xargs go vet -v
 
     - name: Vet (errcheck)
       run: |

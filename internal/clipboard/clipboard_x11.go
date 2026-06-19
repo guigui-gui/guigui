@@ -11,19 +11,18 @@ import (
 	"log/slog"
 	"sync"
 	"time"
-
-	"github.com/jezek/xgb"
-	"github.com/jezek/xgb/xproto"
+	"unsafe"
 )
 
 const (
 	x11ReadTimeout = 2 * time.Second
 	x11PropName    = "GUIGUI_CLIPBOARD"
-	// x11IncrChunkSizeCap upper-bounds the per-chunk byte budget for INCR
-	// transfers. The actual chunk size is derived from the server's advertised
-	// MaximumRequestLength at connection time, but the cap keeps in-flight
-	// memory small even on servers that would allow much larger requests.
-	x11IncrChunkSizeCap = 64 * 1024
+	// x11IncrChunkSize is the per-chunk byte budget for INCR transfers, and the
+	// threshold above which a single-shot ChangeProperty switches to INCR. It
+	// stays within the X11 spec's guaranteed minimum maximum request length
+	// (4096 4-byte units = 16 KiB) so a single ChangeProperty fits on any
+	// server, less a small header margin.
+	x11IncrChunkSize = 4096*4 - 64
 	// x11IncrSendStaleAfter is the inactivity window after which an
 	// in-progress INCR send is considered abandoned and dropped. A requestor
 	// that never reads its property (window destroyed, process exited mid-read,
@@ -32,39 +31,33 @@ const (
 )
 
 type x11Clipboard struct {
-	conn *xgb.Conn
-	win  xproto.Window
+	display uintptr
+	win     xID
 
-	atomClipboard xproto.Atom
-	atomUTF8      xproto.Atom
-	atomString    xproto.Atom
-	atomTargets   xproto.Atom
-	atomProp      xproto.Atom
-	atomIncr      xproto.Atom
-
-	// incrChunkSize is the per-chunk byte budget for INCR transfers, derived
-	// from the server's MaximumRequestLength at connection time and capped at
-	// x11IncrChunkSizeCap. It also doubles as the threshold for switching from
-	// a single-shot ChangeProperty to INCR.
-	incrChunkSize int
+	atomClipboard xAtom
+	atomUTF8      xAtom
+	atomString    xAtom
+	atomTargets   xAtom
+	atomProp      xAtom
+	atomIncr      xAtom
 
 	mu      sync.Mutex
 	ownData []byte
 
-	notifyCh   chan xproto.SelectionNotifyEvent
-	propertyCh chan xproto.PropertyNotifyEvent
+	notifyCh   chan xSelectionEvent
+	propertyCh chan xPropertyEvent
 
 	incrSendsMu sync.Mutex
 	incrSends   map[incrSendKey]*incrSend
 }
 
 type incrSendKey struct {
-	requestor xproto.Window
-	property  xproto.Atom
+	requestor xID
+	property  xAtom
 }
 
 type incrSend struct {
-	target xproto.Atom
+	target xAtom
 	data   []byte
 	offset int
 	// terminated is set after the final empty chunk has been written. The next
@@ -95,69 +88,43 @@ func ensureX11() *x11Clipboard {
 			return
 		}
 		x11State = c
-		go func() {
-			for {
-				ev, err := c.conn.WaitForEvent()
-				if ev == nil && err == nil {
-					return
-				}
-				if err != nil {
-					slog.Error("clipboard: X event error", "error", err)
-					continue
-				}
-				switch e := ev.(type) {
-				case xproto.SelectionRequestEvent:
-					c.handleSelectionRequest(e)
-				case xproto.SelectionClearEvent:
-					c.setOwnData(nil)
-				case xproto.SelectionNotifyEvent:
-					select {
-					case c.notifyCh <- e:
-					default:
-					}
-				case xproto.PropertyNotifyEvent:
-					c.handlePropertyNotify(e)
-				}
-			}
-		}()
+		go c.eventLoop()
 	})
 	return x11State
 }
 
 func newX11Clipboard() (*x11Clipboard, error) {
-	conn, err := xgb.NewConn()
-	if err != nil {
-		return nil, fmt.Errorf("clipboard: NewConn failed: %w", err)
+	if err := loadX11(); err != nil {
+		return nil, err
 	}
-	setup := xproto.Setup(conn)
-	screen := setup.DefaultScreen(conn)
+	// XInitThreads enables Xlib's internal locking so the event goroutine and
+	// the read/write callers can use the connection concurrently. It must
+	// precede XOpenDisplay; redundant calls (e.g. when the windowing backend
+	// already initialized threading) are harmless.
+	xInitThreads()
 
-	wid, err := xproto.NewWindowId(conn)
-	if err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("clipboard: NewWindowId failed: %w", err)
+	display := xOpenDisplay(0)
+	if display == 0 {
+		return nil, errors.New("clipboard: XOpenDisplay failed")
 	}
+	x11Display = display
+	installX11ErrorHandler()
+
+	win := xCreateSimpleWindow(display, xDefaultRootWindow(display), 0, 0, 1, 1, 0, 0, 0)
 	// PropertyChangeMask on the owner window is required so the receive side of
 	// the INCR protocol can observe new chunks landing on its own property.
-	if err := xproto.CreateWindowChecked(conn, screen.RootDepth, wid, screen.Root,
-		0, 0, 1, 1, 0,
-		xproto.WindowClassInputOutput, screen.RootVisual,
-		xproto.CwEventMask, []uint32{xproto.EventMaskPropertyChange}).Check(); err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("clipboard: CreateWindow failed: %w", err)
-	}
+	xSelectInput(display, win, xPropertyChangeMask)
 
 	c := &x11Clipboard{
-		conn:          conn,
-		win:           wid,
-		atomString:    xproto.AtomString,
-		incrChunkSize: deriveIncrChunkSize(setup.MaximumRequestLength),
-		notifyCh:      make(chan xproto.SelectionNotifyEvent, 1),
-		propertyCh:    make(chan xproto.PropertyNotifyEvent, 64),
-		incrSends:     make(map[incrSendKey]*incrSend),
+		display:    display,
+		win:        win,
+		atomString: xaString,
+		notifyCh:   make(chan xSelectionEvent, 1),
+		propertyCh: make(chan xPropertyEvent, 64),
+		incrSends:  make(map[incrSendKey]*incrSend),
 	}
 	for _, a := range []struct {
-		dst  *xproto.Atom
+		dst  *xAtom
 		name string
 	}{
 		{&c.atomClipboard, "CLIPBOARD"},
@@ -166,32 +133,33 @@ func newX11Clipboard() (*x11Clipboard, error) {
 		{&c.atomProp, x11PropName},
 		{&c.atomIncr, "INCR"},
 	} {
-		atom, err := internAtom(conn, a.name)
-		if err != nil {
-			conn.Close()
-			return nil, err
+		atom := xInternAtom(display, a.name, false)
+		if atom == xAtomNone {
+			return nil, fmt.Errorf("clipboard: XInternAtom(%s) failed", a.name)
 		}
 		*a.dst = atom
 	}
 	return c, nil
 }
 
-// deriveIncrChunkSize picks a per-chunk byte budget that respects the
-// server's advertised MaximumRequestLength. The X11 spec mandates a minimum
-// of 4096 4-byte units = 16 KiB; ChangeProperty has a 24-byte header, so
-// drop a small safety margin and cap at x11IncrChunkSizeCap to keep
-// in-flight memory predictable.
-func deriveIncrChunkSize(maxRequestLength uint16) int {
-	const headerSafety = 64
-	return min(max(int(maxRequestLength)*4-headerSafety, 1024), x11IncrChunkSizeCap)
-}
-
-func internAtom(conn *xgb.Conn, name string) (xproto.Atom, error) {
-	reply, err := xproto.InternAtom(conn, false, uint16(len(name)), name).Reply()
-	if err != nil {
-		return 0, fmt.Errorf("clipboard: InternAtom(%s) failed: %w", name, err)
+func (c *x11Clipboard) eventLoop() {
+	for {
+		var ev xEvent
+		xNextEvent(c.display, &ev)
+		switch ev.kind() {
+		case xSelectionRequest:
+			c.handleSelectionRequest(*(*xSelectionRequestEvent)(unsafe.Pointer(&ev)))
+		case xSelectionClear:
+			c.setOwnData(nil)
+		case xSelectionNotify:
+			select {
+			case c.notifyCh <- *(*xSelectionEvent)(unsafe.Pointer(&ev)):
+			default:
+			}
+		case xPropertyNotify:
+			c.handlePropertyNotify(*(*xPropertyEvent)(unsafe.Pointer(&ev)))
+		}
 	}
-	return reply.Atom, nil
 }
 
 func (c *x11Clipboard) getOwnData() []byte {
@@ -211,64 +179,62 @@ func (c *x11Clipboard) setOwnData(data []byte) {
 	c.ownData = cp
 }
 
-func (c *x11Clipboard) handleSelectionRequest(e xproto.SelectionRequestEvent) {
-	notify := xproto.SelectionNotifyEvent{
-		Time:      e.Time,
-		Requestor: e.Requestor,
-		Selection: e.Selection,
-		Target:    e.Target,
-		Property:  e.Property,
+func (c *x11Clipboard) handleSelectionRequest(e xSelectionRequestEvent) {
+	notify := xSelectionEvent{
+		kind:      xSelectionNotify,
+		time:      e.time,
+		requestor: e.requestor,
+		selection: e.selection,
+		target:    e.target,
+		property:  e.property,
 	}
 	// Per ICCCM, a None Property in the request means the requestor is
 	// obsolete and the target atom should be used as the property.
-	prop := e.Property
-	if prop == xproto.AtomNone {
-		prop = e.Target
+	prop := e.property
+	if prop == xAtomNone {
+		prop = e.target
 	}
 
 	data := c.getOwnData()
 
-	switch e.Target {
+	switch e.target {
 	case c.atomTargets:
-		buf := make([]byte, 12)
-		xgb.Put32(buf[0:], uint32(c.atomTargets))
-		xgb.Put32(buf[4:], uint32(c.atomUTF8))
-		xgb.Put32(buf[8:], uint32(c.atomString))
-		xproto.ChangeProperty(c.conn, xproto.PropModeReplace, e.Requestor, prop,
-			xproto.AtomAtom, 32, 3, buf)
-		notify.Property = prop
+		// With format 32, Xlib reads the data as an array of C long, so the
+		// atoms must be native words rather than packed 32-bit values.
+		targets := []uint{uint(c.atomTargets), uint(c.atomUTF8), uint(c.atomString)}
+		xChangeProperty(c.display, e.requestor, prop, xaAtom, 32, xPropModeReplace,
+			unsafe.Pointer(&targets[0]), int32(len(targets)))
+		notify.property = prop
 	case c.atomUTF8, c.atomString:
 		switch {
 		case data == nil:
-			notify.Property = xproto.AtomNone
-		case len(data) <= c.incrChunkSize:
-			xproto.ChangeProperty(c.conn, xproto.PropModeReplace, e.Requestor, prop,
-				e.Target, 8, uint32(len(data)), data)
-			notify.Property = prop
+			notify.property = xAtomNone
+		case len(data) <= x11IncrChunkSize:
+			xChangeProperty(c.display, e.requestor, prop, e.target, 8, xPropModeReplace,
+				unsafe.Pointer(unsafe.SliceData(data)), int32(len(data)))
+			notify.property = prop
 		default:
-			if err := c.startIncrSend(e.Requestor, prop, e.Target, data); err != nil {
-				slog.Error("clipboard: failed to start INCR send", "error", err)
-				notify.Property = xproto.AtomNone
-			} else {
-				notify.Property = prop
-			}
+			c.startIncrSend(e.requestor, prop, e.target, data)
+			notify.property = prop
 		}
 	default:
-		notify.Property = xproto.AtomNone
+		notify.property = xAtomNone
 	}
 
-	xproto.SendEvent(c.conn, false, e.Requestor, 0, string(notify.Bytes()))
+	xSendEvent(c.display, e.requestor, false, 0, (*xEvent)(unsafe.Pointer(&notify)))
+	xFlush(c.display)
 }
 
 // startIncrSend kicks off an INCR transfer to the requestor by setting an
 // INCR-typed property containing the total payload size. The actual payload
 // chunks are pushed in advanceIncrSend as the requestor deletes the property
 // after each read.
-func (c *x11Clipboard) startIncrSend(requestor xproto.Window, property, target xproto.Atom, data []byte) error {
-	if err := xproto.ChangeWindowAttributesChecked(c.conn, requestor, xproto.CwEventMask,
-		[]uint32{xproto.EventMaskPropertyChange}).Check(); err != nil {
-		return fmt.Errorf("clipboard: ChangeWindowAttributes(PropertyChange) on requestor failed: %w", err)
-	}
+func (c *x11Clipboard) startIncrSend(requestor xID, property, target xAtom, data []byte) {
+	// PropertyChangeMask on the requestor lets the send side observe the
+	// requestor deleting the property after each chunk. Should the requestor
+	// already be gone, the resulting BadWindow is reported by the error
+	// handler and the transfer is dropped by the staleness timer.
+	xSelectInput(c.display, requestor, xPropertyChangeMask)
 
 	// The data slice is an internal copy returned by getOwnData, so retain it
 	// directly without an extra copy.
@@ -289,18 +255,17 @@ func (c *x11Clipboard) startIncrSend(requestor xproto.Window, property, target x
 	c.incrSends[key] = s
 	c.incrSendsMu.Unlock()
 
-	sizeBuf := make([]byte, 4)
-	xgb.Put32(sizeBuf, uint32(len(data)))
-	xproto.ChangeProperty(c.conn, xproto.PropModeReplace, requestor, property,
-		c.atomIncr, 32, 1, sizeBuf)
-	return nil
+	size := uint(len(data))
+	xChangeProperty(c.display, requestor, property, c.atomIncr, 32, xPropModeReplace,
+		unsafe.Pointer(&size), 1)
+	xFlush(c.display)
 }
 
 // advanceIncrSend pushes the next chunk of an in-progress INCR transfer in
 // response to the requestor deleting the property. After the entire payload
 // has been delivered, a final zero-length write signals end-of-stream; the
 // subsequent delete drops the entry from the map.
-func (c *x11Clipboard) advanceIncrSend(requestor xproto.Window, property xproto.Atom) {
+func (c *x11Clipboard) advanceIncrSend(requestor xID, property xAtom) {
 	target, chunk, send, unsubscribe := c.nextIncrChunk(incrSendKey{requestor, property})
 	if unsubscribe {
 		c.unsubscribeRequestor(requestor)
@@ -308,8 +273,9 @@ func (c *x11Clipboard) advanceIncrSend(requestor xproto.Window, property xproto.
 	if !send {
 		return
 	}
-	xproto.ChangeProperty(c.conn, xproto.PropModeReplace, requestor, property,
-		target, 8, uint32(len(chunk)), chunk)
+	xChangeProperty(c.display, requestor, property, target, 8, xPropModeReplace,
+		unsafe.Pointer(unsafe.SliceData(chunk)), int32(len(chunk)))
+	xFlush(c.display)
 }
 
 // nextIncrChunk returns the next chunk to write for an in-progress INCR
@@ -318,7 +284,7 @@ func (c *x11Clipboard) advanceIncrSend(requestor xproto.Window, property xproto.
 // because the prior call already wrote the terminating zero-length chunk —
 // in which case unsubscribe indicates whether the caller should also clear
 // the per-client event subscription on the requestor's window.
-func (c *x11Clipboard) nextIncrChunk(key incrSendKey) (target xproto.Atom, chunk []byte, send, unsubscribe bool) {
+func (c *x11Clipboard) nextIncrChunk(key incrSendKey) (target xAtom, chunk []byte, send, unsubscribe bool) {
 	c.incrSendsMu.Lock()
 	defer c.incrSendsMu.Unlock()
 
@@ -332,7 +298,7 @@ func (c *x11Clipboard) nextIncrChunk(key incrSendKey) (target xproto.Atom, chunk
 	}
 
 	if s.offset < len(s.data) {
-		end := min(s.offset+c.incrChunkSize, len(s.data))
+		end := min(s.offset+x11IncrChunkSize, len(s.data))
 		chunk = s.data[s.offset:end]
 		s.offset = end
 	} else {
@@ -369,8 +335,8 @@ func (c *x11Clipboard) cleanupStaleIncrSend(key incrSendKey, s *incrSend) {
 // removeIncrSendLocked drops the entry for key and stops its cleanup timer.
 // It returns true when no other transfers remain to the same requestor, in
 // which case the caller is expected to clear the per-client event mask on
-// that window — outside the lock, since X requests may block on xgb's
-// internal request queue. Must be called with incrSendsMu held.
+// that window — outside the lock, since X requests may block on the display
+// lock. Must be called with incrSendsMu held.
 func (c *x11Clipboard) removeIncrSendLocked(key incrSendKey) (unsubscribe bool) {
 	s, ok := c.incrSends[key]
 	if !ok {
@@ -389,36 +355,36 @@ func (c *x11Clipboard) removeIncrSendLocked(key incrSendKey) (unsubscribe bool) 
 // unsubscribeRequestor clears the PropertyChangeMask subscription this
 // client installed on the requestor when starting an INCR send. Best-effort:
 // the requestor's window may already be destroyed, in which case the
-// resulting BadWindow surfaces through the event goroutine's error log.
-func (c *x11Clipboard) unsubscribeRequestor(requestor xproto.Window) {
-	xproto.ChangeWindowAttributes(c.conn, requestor, xproto.CwEventMask,
-		[]uint32{xproto.EventMaskNoEvent})
+// resulting BadWindow surfaces through the error handler.
+func (c *x11Clipboard) unsubscribeRequestor(requestor xID) {
+	xSelectInput(c.display, requestor, xNoEventMask)
+	xFlush(c.display)
 }
 
-func (c *x11Clipboard) handlePropertyNotify(e xproto.PropertyNotifyEvent) {
-	if e.Window == c.win {
+func (c *x11Clipboard) handlePropertyNotify(e xPropertyEvent) {
+	if e.window == c.win {
 		// New chunk landed on the receive-side property during an INCR read.
 		// The send is non-blocking on purpose: INCR is strictly serialized
 		// (the sender writes the next chunk only after observing the previous
 		// one being deleted), so at most one event is in flight at a time and
 		// the buffer is far larger than that. A blocking send here would risk
 		// stalling the entire event goroutine — and with it SelectionRequest
-		// handling for our outgoing transfers — if the buffer ever did fill
-		// from a pathological producer.
-		if e.State == xproto.PropertyNewValue {
+		// handling for outgoing transfers — if the buffer ever did fill from a
+		// pathological producer.
+		if e.state == xPropertyNewValue {
 			select {
 			case c.propertyCh <- e:
 			default:
 				slog.Warn("clipboard: dropped PropertyNewValue event; INCR receive may stall",
-					"atom", e.Atom)
+					"atom", e.atom)
 			}
 		}
 		return
 	}
 	// Requestor deleted the property after consuming the previous chunk; push
 	// the next one.
-	if e.State == xproto.PropertyDelete {
-		c.advanceIncrSend(e.Window, e.Atom)
+	if e.state == xPropertyDelete {
+		c.advanceIncrSend(e.window, e.atom)
 	}
 }
 
@@ -445,11 +411,8 @@ func (c *x11Clipboard) read() ([]byte, error) {
 		return out, nil
 	}
 
-	owner, err := xproto.GetSelectionOwner(c.conn, c.atomClipboard).Reply()
-	if err != nil {
-		return nil, fmt.Errorf("clipboard: GetSelectionOwner failed: %w", err)
-	}
-	if owner.Owner == xproto.WindowNone {
+	owner := xGetSelectionOwner(c.display, c.atomClipboard)
+	if owner == xWindowNone {
 		return nil, nil
 	}
 
@@ -472,64 +435,73 @@ func (c *x11Clipboard) read() ([]byte, error) {
 		break
 	}
 
-	if err := xproto.ConvertSelectionChecked(c.conn, c.win, c.atomClipboard,
-		c.atomUTF8, c.atomProp, xproto.TimeCurrentTime).Check(); err != nil {
-		return nil, fmt.Errorf("clipboard: ConvertSelection failed: %w", err)
-	}
+	xConvertSelection(c.display, c.atomClipboard, c.atomUTF8, c.atomProp, c.win, xCurrentTime)
+	xFlush(c.display)
 
-	var ev xproto.SelectionNotifyEvent
+	var ev xSelectionEvent
 	select {
 	case ev = <-c.notifyCh:
 	case <-time.After(x11ReadTimeout):
 		return nil, errors.New("clipboard: read timeout")
 	}
-	if ev.Property == xproto.AtomNone {
+	if ev.property == xAtomNone {
 		return nil, nil
 	}
 
-	value, typeAtom, err := c.readProperty(ev.Property)
+	value, typeAtom, err := c.readProperty(ev.property)
 	if err != nil {
 		return nil, err
 	}
 	if typeAtom == c.atomIncr {
-		return c.readIncr(ev.Property)
+		return c.readIncr(ev.property)
 	}
 	return value, nil
 }
 
 // readProperty reads the entire current value of a property on c.win,
-// deleting it on completion. It loops on BytesAfter so a property whose
-// value exceeds what a single GetProperty reply can carry is reassembled
+// deleting it on completion. It loops on bytesAfter so a property whose value
+// exceeds what a single GetWindowProperty reply can carry is reassembled
 // correctly. Per X11, the server only deletes the property when the final
-// reply has BytesAfter == 0, so passing delete=true on every call is safe.
-func (c *x11Clipboard) readProperty(property xproto.Atom) ([]byte, xproto.Atom, error) {
+// reply has bytesAfter == 0, so passing delete=true on every call is safe.
+func (c *x11Clipboard) readProperty(property xAtom) ([]byte, xAtom, error) {
 	var value []byte
-	var typeAtom xproto.Atom
-	var offset uint32
+	var typeAtom xAtom
+	var offset int
 	for {
-		reply, err := xproto.GetProperty(c.conn, true, c.win, property,
-			xproto.AtomAny, offset, 1<<20).Reply()
-		if err != nil {
-			return nil, 0, fmt.Errorf("clipboard: GetProperty failed: %w", err)
-		}
-		if reply == nil {
-			return nil, 0, errors.New("clipboard: nil GetProperty reply")
+		var actualType xAtom
+		var actualFormat int32
+		var nitems uint
+		var bytesAfter uint
+		var prop uintptr
+		if status := xGetWindowProperty(c.display, c.win, property,
+			offset, 1<<20, true, xAnyPropertyType,
+			&actualType, &actualFormat, &nitems, &bytesAfter, &prop); status != xSuccess {
+			return nil, 0, fmt.Errorf("clipboard: XGetWindowProperty failed: status %d", status)
 		}
 		if offset == 0 {
-			typeAtom = reply.Type
+			typeAtom = actualType
 		}
-		value = append(value, reply.Value...)
-		if reply.BytesAfter == 0 {
+		// Only byte data (format 8: the UTF8_STRING/STRING payload and INCR
+		// chunks) is consumed. Non-8 formats — such as the format-32 INCR size
+		// hint — are read solely to advance the loop and are ignored here.
+		if prop != 0 {
+			if actualFormat == 8 && nitems > 0 {
+				value = append(value, unsafe.Slice((*byte)(unsafe.Pointer(prop)), nitems)...)
+			}
+			xFree(prop)
+		}
+		if bytesAfter == 0 {
 			return value, typeAtom, nil
 		}
-		offset += uint32(len(reply.Value)) / 4
+		// Advance by the number of 32-bit units consumed.
+		offset += int(nitems) * (int(actualFormat) / 8) / 4
 	}
 }
 
 // readIncr collects an INCR-format selection by repeatedly waiting for the
 // owner to write a new chunk to the receive property, reading and deleting
 // it. A zero-length chunk signals end-of-stream.
-func (c *x11Clipboard) readIncr(property xproto.Atom) (out []byte, err error) {
+func (c *x11Clipboard) readIncr(property xAtom) (out []byte, err error) {
 	// Drain any stragglers in propertyCh on exit — successfully or not — so
 	// they do not bleed into a subsequent read.
 	defer func() {
@@ -545,13 +517,13 @@ func (c *x11Clipboard) readIncr(property xproto.Atom) (out []byte, err error) {
 	timer := time.NewTimer(x11ReadTimeout)
 	defer timer.Stop()
 	for {
-		var ev xproto.PropertyNotifyEvent
+		var ev xPropertyEvent
 		select {
 		case ev = <-c.propertyCh:
 		case <-timer.C:
 			return nil, errors.New("clipboard: INCR read timeout")
 		}
-		if ev.Window != c.win || ev.Atom != property || ev.State != xproto.PropertyNewValue {
+		if ev.window != c.win || ev.atom != property || ev.state != xPropertyNewValue {
 			continue
 		}
 		if !timer.Stop() {
@@ -575,16 +547,12 @@ func (c *x11Clipboard) readIncr(property xproto.Atom) (out []byte, err error) {
 func (c *x11Clipboard) write(data []byte) error {
 	c.setOwnData(data)
 
-	if err := xproto.SetSelectionOwnerChecked(c.conn, c.win, c.atomClipboard,
-		xproto.TimeCurrentTime).Check(); err != nil {
+	xSetSelectionOwner(c.display, c.atomClipboard, c.win, xCurrentTime)
+	xFlush(c.display)
+
+	owner := xGetSelectionOwner(c.display, c.atomClipboard)
+	if owner != c.win {
 		c.setOwnData(nil)
-		return fmt.Errorf("clipboard: SetSelectionOwner failed: %w", err)
-	}
-	owner, err := xproto.GetSelectionOwner(c.conn, c.atomClipboard).Reply()
-	if err != nil {
-		return fmt.Errorf("clipboard: GetSelectionOwner failed: %w", err)
-	}
-	if owner.Owner != c.win {
 		return errors.New("clipboard: failed to take selection ownership")
 	}
 	return nil

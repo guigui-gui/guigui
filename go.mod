@@ -9,7 +9,6 @@ require (
 	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260618095917-314904af3a77
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
-	github.com/jezek/xgb v1.3.1
 	github.com/kisielk/errcheck v1.20.0
 	github.com/zeebo/xxh3 v1.1.0
 	golang.org/x/image v0.42.0
