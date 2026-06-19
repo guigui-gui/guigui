@@ -30,7 +30,6 @@ type TextInput struct {
 	focus       textInputFocus
 	supportText Text
 
-	style             TextInputStyle
 	hasError          bool
 	focusBorderHidden bool
 	supportTextValue  string
@@ -213,25 +212,31 @@ func (t *TextInput) IsEditable() bool {
 }
 
 func (t *TextInput) WriteStateKey(w *guigui.StateKeyWriter) {
-	w.WriteUint64(uint64(t.style))
 	w.WriteBool(t.hasError)
 	w.WriteBool(t.focusBorderHidden)
 	w.WriteString(t.supportTextValue)
 }
 
 // SetFocusBorderVisible sets whether the focus border is drawn around the
-// text input when it has focus. The default is true. The focus border is
-// always hidden for [TextInputStyleInline] regardless of this setting.
+// text input when it has focus. The default is true.
 func (t *TextInput) SetFocusBorderVisible(visible bool) {
 	t.focusBorderHidden = !visible
 }
 
+// SetStyle applies the preset combination of orthogonal properties for the given style.
+// SetStyle re-applies every property on each call, so a per-property override takes effect
+// only when its setter is called after SetStyle.
 func (t *TextInput) SetStyle(style TextInputStyle) {
-	if t.style == style {
-		return
+	switch style {
+	case TextInputStyleNormal:
+		t.SetFocusBorderVisible(true)
+		t.textInput.setCompactPadding(false)
+		t.textInput.setIntrinsicSize(false)
+	case TextInputStyleInline:
+		t.SetFocusBorderVisible(false)
+		t.textInput.setCompactPadding(true)
+		t.textInput.setIntrinsicSize(true)
 	}
-	t.style = style
-	t.textInput.SetStyle(style)
 }
 
 func (t *TextInput) SetEditable(editable bool) {
@@ -372,7 +377,7 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	context.SetVisible(&t.focus, !t.focusBorderHidden && t.style != TextInputStyleInline && context.IsFocused(t.textInput.text.Text()))
+	context.SetVisible(&t.focus, !t.focusBorderHidden && context.IsFocused(t.textInput.text.Text()))
 	return nil
 }
 
@@ -394,10 +399,13 @@ type textInput struct {
 	icon           Image
 	frame          textInputFrame
 
-	style        TextInputStyle
-	readonly     bool
-	paddingStart int
-	paddingEnd   int
+	// compactPadding uses tighter inner padding without vertical centering.
+	compactPadding bool
+	// intrinsicSize measures to the content size instead of a fixed control size.
+	intrinsicSize bool
+	readonly      bool
+	paddingStart  int
+	paddingEnd    int
 
 	onTextScrollDelta    func(context *guigui.Context, deltaX, deltaY float64)
 	onTextScrollIntoView func(context *guigui.Context, start, end caretScrollTarget)
@@ -528,14 +536,19 @@ func (t *textInput) IsEditable() bool {
 }
 
 func (t *textInput) WriteStateKey(w *guigui.StateKeyWriter) {
-	w.WriteUint64(uint64(t.style))
+	w.WriteBool(t.compactPadding)
+	w.WriteBool(t.intrinsicSize)
 	w.WriteBool(t.readonly)
 	w.WriteInt64(int64(t.paddingStart))
 	w.WriteInt64(int64(t.paddingEnd))
 }
 
-func (t *textInput) SetStyle(style TextInputStyle) {
-	t.style = style
+func (t *textInput) setCompactPadding(compact bool) {
+	t.compactPadding = compact
+}
+
+func (t *textInput) setIntrinsicSize(intrinsic bool) {
+	t.intrinsicSize = intrinsic
 }
 
 func (t *textInput) SetEditable(editable bool) {
@@ -561,17 +574,16 @@ func (t *textInput) SetIcon(icon *ebiten.Image) {
 func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.Padding {
 	u := UnitSize(context)
 	var start, end, y int
-	switch t.style {
-	case TextInputStyleNormal:
+	if t.compactPadding {
+		start = u / 4
+		end = u / 4
+	} else {
 		start = u / 2
 		end = u / 2
 		if t.icon.HasImage() {
 			start = u / 4
 		}
 		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-float64(LineHeight(context))*t.text.Text().scale()) / 2
-	case TextInputStyleInline:
-		start = u / 4
-		end = u / 4
 	}
 	start += t.paddingStart
 	end += t.paddingEnd
@@ -655,8 +667,8 @@ func (t *textInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 func (t *textInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	u := UnitSize(context)
-	if t.style == TextInputStyleInline {
-		// WidgetBounds is not needed for inline text input.
+	if t.intrinsicSize {
+		// WidgetBounds is not needed for intrinsic sizing.
 		padding := t.textInputPaddingInScrollableContent(context, nil)
 		if fixedWidth, ok := constraints.FixedWidth(); ok {
 			constraints = guigui.FixedWidthConstraints(fixedWidth - padding.Start - padding.End)

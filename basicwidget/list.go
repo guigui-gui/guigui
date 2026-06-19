@@ -36,6 +36,37 @@ const (
 	ListStyleMenu
 )
 
+// ListItemHighlightStyle represents which item a list draws its highlight on.
+type ListItemHighlightStyle int
+
+const (
+	// ListItemHighlightStyleSelection highlights the selected item; arrow keys move the selection.
+	ListItemHighlightStyleSelection ListItemHighlightStyle = iota
+	// ListItemHighlightStyleHover highlights the hovered item; arrow keys move a transient highlight committed by Enter.
+	ListItemHighlightStyleHover
+)
+
+// ListBackgroundStyle represents the background fill drawn behind a list's items.
+type ListBackgroundStyle int
+
+const (
+	// ListBackgroundStyleControl fills the background with the primary control color.
+	ListBackgroundStyleControl ListBackgroundStyle = iota
+	// ListBackgroundStyleControlSecondary fills the background with the secondary control color.
+	ListBackgroundStyleControlSecondary
+	// ListBackgroundStyleNone draws no background fill.
+	ListBackgroundStyleNone
+)
+
+// listVerticalAdjust is the sub-pixel vertical nudge applied to a list's item bounds.
+type listVerticalAdjust int
+
+const (
+	listVerticalAdjustInset listVerticalAdjust = iota
+	listVerticalAdjustNone
+	listVerticalAdjustOutset
+)
+
 // ListItemColorType represents the color state of a list item.
 type ListItemColorType int
 
@@ -279,9 +310,9 @@ func (l *List[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	l.content.listPanel = &inner.panel
 	inner.panel.setContent(&l.content)
 
-	// Sidebar style does not draw a rounded background, so there is no
-	// rounded shape to clip its contents to.
-	l.inner.SetCornderRouneded(l.content.Style() != ListStyleSidebar)
+	// A list without a rounded background has no rounded shape to clip its
+	// contents to.
+	l.inner.SetCornderRouneded(!l.content.cornerRoundingDisabled)
 
 	selectedIndex := l.SelectedItemIndex()
 	for i := range l.listItemWidgets.Len() {
@@ -343,7 +374,7 @@ func (l *List[T]) SetItems(items []ListItem[T]) {
 	for i, item := range items {
 		l.listItemWidgets.At(i).setListItem(item)
 		l.listItemWidgets.At(i).setHeight(l.listItemHeightPlus1 - 1)
-		l.listItemWidgets.At(i).setStyle(l.content.Style())
+		l.listItemWidgets.At(i).setBoldSelected(l.content.boldSelected)
 		l.abstractListItems[i].Content = l.listItemWidgets.At(i)
 		l.abstractListItems[i].Unselectable = !item.selectable()
 		l.abstractListItems[i].Movable = item.Movable
@@ -446,9 +477,75 @@ func (l *List[T]) OnScroll(callback func(context *guigui.Context, position ListS
 	})
 }
 
+// SetStyle applies the preset combination of orthogonal properties for the given style.
+// SetStyle re-applies every property on each call, so a per-property override takes effect
+// only when its setter is called after SetStyle.
 func (l *List[T]) SetStyle(style ListStyle) {
-	l.content.SetStyle(style)
-	l.inner.Widget().frame.SetStyle(style)
+	switch style {
+	case ListStyleNormal:
+		l.SetHighlightStyle(ListItemHighlightStyleSelection)
+		l.SetBackgroundStyle(ListBackgroundStyleControl)
+		l.SetFrameVisible(true)
+		l.SetCornerRounded(true)
+		l.SetSelectedItemBold(false)
+		l.SetHighlightVisibleWhenUnfocused(false)
+		l.content.setModeless(false)
+		l.content.setMultiSelectionClickDisabled(false)
+		l.content.setFullWidthHighlight(false)
+		l.content.setVerticalAdjust(listVerticalAdjustInset)
+	case ListStyleSidebar:
+		l.SetHighlightStyle(ListItemHighlightStyleSelection)
+		l.SetBackgroundStyle(ListBackgroundStyleNone)
+		l.SetFrameVisible(false)
+		l.SetCornerRounded(false)
+		l.SetSelectedItemBold(true)
+		l.SetHighlightVisibleWhenUnfocused(true)
+		l.content.setModeless(false)
+		l.content.setMultiSelectionClickDisabled(true)
+		l.content.setFullWidthHighlight(false)
+		l.content.setVerticalAdjust(listVerticalAdjustNone)
+	case ListStyleMenu:
+		l.SetHighlightStyle(ListItemHighlightStyleHover)
+		l.SetBackgroundStyle(ListBackgroundStyleControlSecondary)
+		l.SetFrameVisible(false)
+		l.SetCornerRounded(true)
+		l.SetSelectedItemBold(false)
+		l.SetHighlightVisibleWhenUnfocused(true)
+		l.content.setModeless(true)
+		l.content.setMultiSelectionClickDisabled(true)
+		l.content.setFullWidthHighlight(true)
+		l.content.setVerticalAdjust(listVerticalAdjustOutset)
+	}
+}
+
+// SetHighlightStyle sets which item the list highlights.
+func (l *List[T]) SetHighlightStyle(style ListItemHighlightStyle) {
+	l.content.setHighlightStyle(style)
+}
+
+// SetBackgroundStyle sets the background fill drawn behind the items.
+func (l *List[T]) SetBackgroundStyle(style ListBackgroundStyle) {
+	l.content.setBackgroundStyle(style)
+}
+
+// SetFrameVisible sets whether the list draws its frame, header, and footer.
+func (l *List[T]) SetFrameVisible(visible bool) {
+	l.inner.Widget().frame.setFrameVisible(visible)
+}
+
+// SetCornerRounded sets whether the list clips its contents to rounded corners.
+func (l *List[T]) SetCornerRounded(rounded bool) {
+	l.content.setCornerRoundingDisabled(!rounded)
+}
+
+// SetSelectedItemBold sets whether the selected item's text is drawn in bold.
+func (l *List[T]) SetSelectedItemBold(bold bool) {
+	l.content.setBoldSelected(bold)
+}
+
+// SetHighlightVisibleWhenUnfocused sets whether the highlight stays drawn while the list is unfocused.
+func (l *List[T]) SetHighlightVisibleWhenUnfocused(visible bool) {
+	l.content.setHighlightVisibleWhenUnfocused(visible)
 }
 
 func (l *List[T]) SetItemString(str string, index int) {
@@ -484,10 +581,10 @@ type listItemWidget[T comparable] struct {
 	text    Text
 	keyText Text
 
-	item        ListItem[T]
-	heightPlus1 int
-	style       ListStyle
-	selected    bool
+	item         ListItem[T]
+	heightPlus1  int
+	boldSelected bool
+	selected     bool
 
 	layout             guigui.LinearLayout
 	layoutItems        []guigui.LinearLayoutItem
@@ -500,7 +597,7 @@ type listItemWidget[T comparable] struct {
 func (l *listItemWidget[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	l.item.writeStateKey(w)
 	w.WriteInt(l.heightPlus1)
-	w.WriteUint64(uint64(l.style))
+	w.WriteBool(l.boldSelected)
 	w.WriteBool(l.selected)
 }
 
@@ -520,11 +617,11 @@ func (l *listItemWidget[T]) setHeight(height int) {
 	l.resetLayout()
 }
 
-func (l *listItemWidget[T]) setStyle(style ListStyle) {
-	if l.style == style {
+func (l *listItemWidget[T]) setBoldSelected(boldSelected bool) {
+	if l.boldSelected == boldSelected {
 		return
 	}
-	l.style = style
+	l.boldSelected = boldSelected
 	l.resetLayout()
 }
 
@@ -551,7 +648,7 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	l.text.SetValue(l.item.Text)
 	l.text.SetHorizontalAlign(l.item.TextStyle.HorizontalAlign)
 	l.text.SetVerticalAlign(l.item.TextStyle.VerticalAlign)
-	l.text.SetBold(l.item.TextStyle.Bold || l.item.Header || l.style == ListStyleSidebar && l.selected)
+	l.text.SetBold(l.item.TextStyle.Bold || l.item.Header || l.boldSelected && l.selected)
 	l.text.SetTabular(l.item.TextStyle.Tabular)
 	l.text.SetWrapMode(l.item.TextStyle.WrapMode)
 	l.keyText.SetOpacity(0.5)
@@ -737,10 +834,29 @@ type listContent[T comparable] struct {
 	checkmarks       guigui.WidgetSlice[*Image]
 	expanderImages   guigui.WidgetSlice[*Image]
 
-	abstractList              abstractList[T, abstractListItem[T]]
-	stripeVisible             bool
-	unfocusedSelectionHidden  bool
-	style                     ListStyle
+	abstractList             abstractList[T, abstractListItem[T]]
+	stripeVisible            bool
+	unfocusedSelectionHidden bool
+
+	// highlightStyle selects whether the highlight follows the selection or the hover.
+	highlightStyle ListItemHighlightStyle
+	// backgroundStyle selects the background fill drawn behind the items.
+	backgroundStyle ListBackgroundStyle
+	// highlightVisibleWhenUnfocused keeps the highlight drawn while the list is unfocused.
+	highlightVisibleWhenUnfocused bool
+	// fullWidthHighlight clamps the highlight rectangle to the full content width.
+	fullWidthHighlight bool
+	// cornerRoundingDisabled suppresses clipping the contents to rounded corners.
+	cornerRoundingDisabled bool
+	// boldSelected draws the selected item's text in bold.
+	boldSelected bool
+	// modeless keeps focus elsewhere and fires selection even while focused, as for a popup menu.
+	modeless bool
+	// multiSelectionClickDisabled suppresses the multi-selection click and drag gestures.
+	multiSelectionClickDisabled bool
+	// verticalAdjust is the sub-pixel vertical nudge applied to item bounds.
+	verticalAdjust listVerticalAdjust
+
 	reservesCheckmarkSpace    bool
 	hasCheckedItem            bool
 	hoveredItemIndexPlus1     int
@@ -863,7 +979,15 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 
 func (l *listContent[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	l.abstractList.writeStateKey(w)
-	w.WriteUint64(uint64(l.style))
+	w.WriteUint64(uint64(l.highlightStyle))
+	w.WriteUint64(uint64(l.backgroundStyle))
+	w.WriteBool(l.highlightVisibleWhenUnfocused)
+	w.WriteBool(l.fullWidthHighlight)
+	w.WriteBool(l.cornerRoundingDisabled)
+	w.WriteBool(l.boldSelected)
+	w.WriteBool(l.modeless)
+	w.WriteBool(l.multiSelectionClickDisabled)
+	w.WriteUint64(uint64(l.verticalAdjust))
 	w.WriteBool(l.reservesCheckmarkSpace)
 	w.WriteInt(l.contentWidthPlus1)
 	w.WriteInt(l.hoveredItemIndexPlus1)
@@ -1587,16 +1711,48 @@ func (l *listContent[T]) SetUnfocusedSelectionVisible(visible bool) {
 	guigui.RequestRedraw(l)
 }
 
-func (l *listContent[T]) isHoveringVisible() bool {
-	return l.style == ListStyleMenu
+func (l *listContent[T]) showsHoverHighlight() bool {
+	return l.highlightStyle == ListItemHighlightStyleHover
 }
 
-func (l *listContent[T]) Style() ListStyle {
-	return l.style
+func (l *listContent[T]) showsSelectionHighlight() bool {
+	return l.highlightStyle == ListItemHighlightStyleSelection
 }
 
-func (l *listContent[T]) SetStyle(style ListStyle) {
-	l.style = style
+func (l *listContent[T]) setHighlightStyle(style ListItemHighlightStyle) {
+	l.highlightStyle = style
+}
+
+func (l *listContent[T]) setBackgroundStyle(style ListBackgroundStyle) {
+	l.backgroundStyle = style
+}
+
+func (l *listContent[T]) setHighlightVisibleWhenUnfocused(visible bool) {
+	l.highlightVisibleWhenUnfocused = visible
+}
+
+func (l *listContent[T]) setFullWidthHighlight(fullWidth bool) {
+	l.fullWidthHighlight = fullWidth
+}
+
+func (l *listContent[T]) setCornerRoundingDisabled(disabled bool) {
+	l.cornerRoundingDisabled = disabled
+}
+
+func (l *listContent[T]) setBoldSelected(bold bool) {
+	l.boldSelected = bold
+}
+
+func (l *listContent[T]) setModeless(modeless bool) {
+	l.modeless = modeless
+}
+
+func (l *listContent[T]) setMultiSelectionClickDisabled(disabled bool) {
+	l.multiSelectionClickDisabled = disabled
+}
+
+func (l *listContent[T]) setVerticalAdjust(adjust listVerticalAdjust) {
+	l.verticalAdjust = adjust
 }
 
 func (l *listContent[T]) calcDropDstIndex(context *guigui.Context) int {
@@ -1715,7 +1871,7 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 	down := isKeyRepeating(ebiten.KeyDown)
 	up := isKeyRepeating(ebiten.KeyUp)
 	if !down && !up {
-		if l.isHoveringVisible() && inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+		if l.showsHoverHighlight() && inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			if l.selectKeyboardHighlightedItem() {
 				return guigui.HandleInputByWidget(l)
 			}
@@ -1723,13 +1879,13 @@ func (l *listContent[T]) HandleButtonInput(context *guigui.Context, widgetBounds
 		return guigui.HandleInputResult{}
 	}
 
-	if l.isHoveringVisible() {
+	if l.showsHoverHighlight() {
 		l.navigateKeyboardHighlight(down)
 		l.updateCheckmarkColor(context)
 		return guigui.HandleInputByWidget(l)
 	}
 
-	// Normal/Sidebar style: navigate the selection.
+	// Otherwise navigate the selection directly.
 	current := l.abstractList.SelectedItemIndex()
 
 	var next int
@@ -1818,7 +1974,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 
 	l.updateCheckmarkColor(context)
 
-	if l.isHoveringVisible() || l.hasMovableItems() {
+	if l.showsHoverHighlight() || l.hasMovableItems() {
 		l.lastHoveredItemIndexPlus1 = l.hoveredItemIndexPlus1
 	}
 
@@ -1898,10 +2054,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 
-			// A popup menu should not take a focus.
+			// A modeless list (e.g. a popup menu) should not take focus.
 			// For example, a context menu for a text field should not take a focus from the text field.
-			// TODO: It might be better to distinguish a menu and a popup menu in the future.
-			if l.style != ListStyleMenu {
+			if !l.modeless {
 				if item, ok := l.abstractList.ItemByIndex(index); ok {
 					context.SetFocused(item.Content, true)
 				} else {
@@ -1909,7 +2064,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				}
 			}
 
-			if l.style == ListStyleNormal && l.abstractList.MultiSelection() {
+			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() {
 				if ebiten.IsKeyPressed(ebiten.KeyShift) {
 					l.extendItemSelectionByIndex(index, false)
 				} else if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
@@ -1922,9 +2077,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				// or the user couldn't drag multiple items.
 				// This is updated when the user releases the mouse button.
 			} else {
-				// If the list is for a menu, the selection should be fired even if the list is focused,
+				// A modeless list fires the selection even when it is focused,
 				// in order to let the user know the item is selected.
-				l.selectItemByIndex(index, l.style == ListStyleMenu)
+				l.selectItemByIndex(index, l.modeless)
 			}
 
 			if left {
@@ -1984,7 +2139,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 
 		case inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft):
 			// For the multi selection, the index is updated when the user releases the mouse button.
-			if l.style == ListStyleNormal && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 {
+			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 {
 				if !ebiten.IsKeyPressed(ebiten.KeyShift) &&
 					!(!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) &&
 					!(isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta)) {
@@ -2147,11 +2302,11 @@ func (l *listContent[T]) itemYFromIndexForMenu(context *guigui.Context, index in
 }
 
 func (l *listContent[T]) adjustItemY(context *guigui.Context, y int) int {
-	// Adjust the bounds based on the list style (inset or outset).
-	switch l.style {
-	case ListStyleNormal:
+	// Nudge the bounds by a sub-pixel inset or outset amount.
+	switch l.verticalAdjust {
+	case listVerticalAdjustInset:
 		y += int(0.5 * context.Scale())
-	case ListStyleMenu:
+	case listVerticalAdjustOutset:
 		y += int(-0.5 * context.Scale())
 	}
 	return y
@@ -2172,7 +2327,7 @@ func (l *listContent[T]) isHighlightedItemIndex(context *guigui.Context, index i
 	if !l.useHighlightedBackgroundColor(context) {
 		return false
 	}
-	if l.isHoveringVisible() {
+	if l.showsHoverHighlight() {
 		if l.hoveredItemIndexPlus1-1 != index {
 			return false
 		}
@@ -2205,7 +2360,7 @@ func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) 
 	if !context.IsEnabled(l) {
 		return false
 	}
-	return l.style == ListStyleSidebar || context.IsFocusedOrHasFocusedDescendant(l) || l.style == ListStyleMenu
+	return l.highlightVisibleWhenUnfocused || context.IsFocusedOrHasFocusedDescendant(l)
 }
 
 func (l *listContent[T]) selectedItemBackgroundColor(context *guigui.Context, index int) color.Color {
@@ -2224,11 +2379,11 @@ func (l *listBackground1[T]) setListContent(content *listContent[T]) {
 
 func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	var clr color.Color
-	switch l.content.style {
-	case ListStyleSidebar:
-	case ListStyleNormal:
+	switch l.content.backgroundStyle {
+	case ListBackgroundStyleNone:
+	case ListBackgroundStyleControl:
 		clr = basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(l))
-	case ListStyleMenu:
+	case ListBackgroundStyleControlSecondary:
 		clr = basicwidgetdraw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
 	}
 	if clr != nil {
@@ -2281,7 +2436,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	vb := widgetBounds.VisibleBounds()
 
 	// Draw the selected item background.
-	if !l.content.isHoveringVisible() {
+	if l.content.showsSelectionHighlight() {
 		l.tmpItemIndices = l.content.AppendSelectedItemIndices(l.tmpItemIndices[:0])
 		for _, index := range l.tmpItemIndices {
 			clr := l.content.selectedItemBackgroundColor(context, index)
@@ -2292,7 +2447,7 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 				continue
 			}
 			bounds := l.content.itemBounds(context, index)
-			if l.content.style == ListStyleMenu {
+			if l.content.fullWidthHighlight {
 				bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 			}
 			if bounds.Overlaps(vb) {
@@ -2325,10 +2480,10 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && l.content.isHoveringVisible() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemAvailable(hoveredItemIndex) {
+	if ok && l.content.showsHoverHighlight() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemAvailable(hoveredItemIndex) {
 		clr := l.content.selectedItemBackgroundColor(context, hoveredItemIndex)
 		bounds := l.content.itemBounds(context, hoveredItemIndex)
-		if l.content.style == ListStyleMenu {
+		if l.content.fullWidthHighlight {
 			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
 		}
 		if clr != nil && bounds.Overlaps(vb) {
@@ -2397,13 +2552,14 @@ type listFrame struct {
 
 	headerHeight int
 	footerHeight int
-	style        ListStyle
+	// frameHidden suppresses drawing the frame, header, and footer.
+	frameHidden bool
 }
 
 func (l *listFrame) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteInt(l.headerHeight)
 	w.WriteInt(l.footerHeight)
-	w.WriteUint64(uint64(l.style))
+	w.WriteBool(l.frameHidden)
 }
 
 func (l *listFrame) SetHeaderHeight(height int) {
@@ -2414,8 +2570,8 @@ func (l *listFrame) SetFooterHeight(height int) {
 	l.footerHeight = height
 }
 
-func (l *listFrame) SetStyle(style ListStyle) {
-	l.style = style
+func (l *listFrame) setFrameVisible(visible bool) {
+	l.frameHidden = !visible
 }
 
 func (l *listFrame) headerBounds(context *guigui.Context, widgetBounds *guigui.WidgetBounds) image.Rectangle {
@@ -2431,7 +2587,7 @@ func (l *listFrame) footerBounds(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	if l.style == ListStyleSidebar || l.style == ListStyleMenu {
+	if l.frameHidden {
 		return
 	}
 
@@ -2479,9 +2635,6 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 
 	bounds := widgetBounds.Bounds()
 	border := basicwidgetdraw.RoundedRectBorderTypeInset
-	if l.style != ListStyleNormal {
-		border = basicwidgetdraw.RoundedRectBorderTypeOutset
-	}
 	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(border))
 	borderWidth := listBorderWidth(context)
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), borderWidth, border)

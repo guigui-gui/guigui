@@ -26,6 +26,16 @@ const (
 	PanelStyleSide
 )
 
+// PanelBackgroundStyle represents the background fill drawn behind a panel's content.
+type PanelBackgroundStyle int
+
+const (
+	// PanelBackgroundStyleNone draws no background fill.
+	PanelBackgroundStyleNone PanelBackgroundStyle = iota
+	// PanelBackgroundStyleSecondary fills the background with the secondary background color.
+	PanelBackgroundStyleSecondary
+)
+
 type PanelContentConstraints int
 
 const (
@@ -55,8 +65,21 @@ func (p *Panel) SetContent(widget guigui.Widget) {
 	p.panel.SetContent(widget)
 }
 
+// SetStyle applies the preset combination of orthogonal properties for the given style.
+// SetStyle re-applies every property on each call, so a per-property override takes effect
+// only when its setter is called after SetStyle.
 func (p *Panel) SetStyle(typ PanelStyle) {
-	p.panel.SetStyle(typ)
+	switch typ {
+	case PanelStyleDefault:
+		p.SetBackgroundStyle(PanelBackgroundStyleNone)
+	case PanelStyleSide:
+		p.SetBackgroundStyle(PanelBackgroundStyleSecondary)
+	}
+}
+
+// SetBackgroundStyle sets the background fill drawn behind the content.
+func (p *Panel) SetBackgroundStyle(style PanelBackgroundStyle) {
+	p.panel.setBackgroundStyle(style)
 }
 
 func (p *Panel) SetContentConstraints(c PanelContentConstraints) {
@@ -119,7 +142,7 @@ type panel struct {
 	scrollVBar  scrollBar
 
 	border             panelBorder
-	style              PanelStyle
+	backgroundStyle    PanelBackgroundStyle
 	contentConstraints PanelContentConstraints
 	scrollHidden       bool
 
@@ -155,13 +178,13 @@ func (p *panel) SetContent(widget guigui.Widget) {
 }
 
 func (p *panel) WriteStateKey(w *guigui.StateKeyWriter) {
-	w.WriteUint64(uint64(p.style))
+	w.WriteUint64(uint64(p.backgroundStyle))
 	w.WriteFloat64(p.offsetX)
 	w.WriteFloat64(p.offsetY)
 }
 
-func (p *panel) SetStyle(typ PanelStyle) {
-	p.style = typ
+func (p *panel) setBackgroundStyle(style PanelBackgroundStyle) {
+	p.backgroundStyle = style
 }
 
 func (p *panel) SetContentConstraints(c PanelContentConstraints) {
@@ -357,8 +380,8 @@ func (p *panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 
 func (p *panel) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	p.onceDraw = true
-	switch p.style {
-	case PanelStyleSide:
+	switch p.backgroundStyle {
+	case PanelBackgroundStyleSecondary:
 		dst.Fill(basicwidgetdraw.BackgroundSecondaryColor(context.ColorMode()))
 	}
 }
