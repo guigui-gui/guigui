@@ -76,6 +76,7 @@ const (
 	ListItemColorTypeSelectedInUnfocusedList
 	ListItemColorTypeItemDisabled
 	ListItemColorTypeListDisabled
+	ListItemColorTypeHovered
 )
 
 // TextColor returns the text color for the given color type.
@@ -100,6 +101,8 @@ func (t ListItemColorType) BackgroundColor(context *guigui.Context) color.Color 
 		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.8, 0.35)
 	case ListItemColorTypeSelectedInUnfocusedList:
 		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.85, 0.475)
+	case ListItemColorTypeHovered:
+		return draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.9, 0.35)
 	default:
 		return nil
 	}
@@ -548,6 +551,11 @@ func (l *List[T]) SetHighlightVisibleWhenUnfocused(visible bool) {
 	l.content.setHighlightVisibleWhenUnfocused(visible)
 }
 
+// SetHoverBackgroundVisible sets whether the hovered item shows a background in the selection highlight style.
+func (l *List[T]) SetHoverBackgroundVisible(visible bool) {
+	l.content.setHoverBackgroundVisible(visible)
+}
+
 func (l *List[T]) SetItemString(str string, index int) {
 	l.listItemWidgets.At(index).setText(str)
 }
@@ -846,6 +854,8 @@ type listContent[T comparable] struct {
 	highlightVisibleWhenUnfocused bool
 	// fullWidthHighlight clamps the highlight rectangle to the full content width.
 	fullWidthHighlight bool
+	// hoverBackgroundVisible draws a background on the hovered item in the selection highlight style.
+	hoverBackgroundVisible bool
 	// cornerRoundingDisabled suppresses clipping the contents to rounded corners.
 	cornerRoundingDisabled bool
 	// boldSelected draws the selected item's text in bold.
@@ -983,6 +993,7 @@ func (l *listContent[T]) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteUint64(uint64(l.backgroundStyle))
 	w.WriteBool(l.highlightVisibleWhenUnfocused)
 	w.WriteBool(l.fullWidthHighlight)
+	w.WriteBool(l.hoverBackgroundVisible)
 	w.WriteBool(l.cornerRoundingDisabled)
 	w.WriteBool(l.boldSelected)
 	w.WriteBool(l.modeless)
@@ -1735,6 +1746,10 @@ func (l *listContent[T]) setFullWidthHighlight(fullWidth bool) {
 	l.fullWidthHighlight = fullWidth
 }
 
+func (l *listContent[T]) setHoverBackgroundVisible(visible bool) {
+	l.hoverBackgroundVisible = visible
+}
+
 func (l *listContent[T]) setCornerRoundingDisabled(disabled bool) {
 	l.cornerRoundingDisabled = disabled
 }
@@ -2353,7 +2368,34 @@ func (l *listContent[T]) itemColorType(context *guigui.Context, index int) ListI
 	if l.IsSelectedItemIndex(index) && !l.unfocusedSelectionHidden {
 		return ListItemColorTypeSelectedInUnfocusedList
 	}
+	if l.showsHoverBackground(index) {
+		return ListItemColorTypeHovered
+	}
 	return ListItemColorTypeDefault
+}
+
+// showsHoverBackground reports whether the item at index should show the hover background.
+func (l *listContent[T]) showsHoverBackground(index int) bool {
+	if !l.hoverBackgroundVisible {
+		return false
+	}
+	// The hover background applies only to the selection highlight style; the
+	// hover highlight style already draws the accent on the hovered item.
+	if !l.showsSelectionHighlight() {
+		return false
+	}
+	if l.hoveredItemIndexPlus1-1 != index {
+		return false
+	}
+	// The selection's own background takes precedence on the selected item.
+	if l.IsSelectedItemIndex(index) {
+		return false
+	}
+	item, ok := l.abstractList.ItemByIndex(index)
+	if !ok {
+		return false
+	}
+	return !item.Unselectable
 }
 
 func (l *listContent[T]) useHighlightedBackgroundColor(context *guigui.Context) bool {
@@ -2480,14 +2522,17 @@ func (l *listBackground2[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 
 	hoveredItemIndex := l.content.hoveredItemIndexPlus1 - 1
 	hoveredItem, ok := l.content.abstractList.ItemByIndex(hoveredItemIndex)
-	if ok && l.content.showsHoverHighlight() && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemAvailable(hoveredItemIndex) {
-		clr := l.content.selectedItemBackgroundColor(context, hoveredItemIndex)
-		bounds := l.content.itemBounds(context, hoveredItemIndex)
-		if l.content.fullWidthHighlight {
-			bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
-		}
-		if clr != nil && bounds.Overlaps(vb) {
-			basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	if ok && hoveredItemIndex >= 0 && hoveredItemIndex < l.content.abstractList.ItemCount() && !hoveredItem.Unselectable && l.content.isItemAvailable(hoveredItemIndex) {
+		ct := l.content.itemColorType(context, hoveredItemIndex)
+		if l.content.showsHoverHighlight() || ct == ListItemColorTypeHovered {
+			clr := ct.BackgroundColor(context)
+			bounds := l.content.itemBounds(context, hoveredItemIndex)
+			if l.content.fullWidthHighlight {
+				bounds.Max.X = bounds.Min.X + widgetBounds.Bounds().Dx() - 2*RoundedCornerRadius(context)
+			}
+			if clr != nil && bounds.Overlaps(vb) {
+				basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+			}
 		}
 	}
 

@@ -25,19 +25,21 @@ type Lists struct {
 	indexNumberInput basicwidget.NumberInput
 	jumpButton       basicwidget.Button
 
-	configForm           basicwidget.Form
-	showStripeText       basicwidget.Text
-	showStripeToggle     basicwidget.Toggle
-	showHeaderText       basicwidget.Text
-	showHeaderToggle     basicwidget.Toggle
-	showFooterText       basicwidget.Text
-	showFooterToggle     basicwidget.Toggle
-	multiSelectionText   basicwidget.Text
-	multiSelectionToggle basicwidget.Toggle
-	movableText          basicwidget.Text
-	movableToggle        basicwidget.Toggle
-	enabledText          basicwidget.Text
-	enabledToggle        basicwidget.Toggle
+	configForm                basicwidget.Form
+	showStripeText            basicwidget.Text
+	showStripeToggle          basicwidget.Toggle
+	showHoverBackgroundText   basicwidget.Text
+	showHoverBackgroundToggle basicwidget.Toggle
+	showHeaderText            basicwidget.Text
+	showHeaderToggle          basicwidget.Toggle
+	showFooterText            basicwidget.Text
+	showFooterToggle          basicwidget.Toggle
+	multiSelectionText        basicwidget.Text
+	multiSelectionToggle      basicwidget.Toggle
+	movableText               basicwidget.Text
+	movableToggle             basicwidget.Toggle
+	enabledText               basicwidget.Text
+	enabledToggle             basicwidget.Toggle
 
 	listItems []basicwidget.ListItem[int]
 	treeItems []basicwidget.ListItem[int]
@@ -63,6 +65,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	list := l.list.Widget()
 	list.SetStripeVisible(model.Lists().IsStripeVisible())
+	list.SetHoverBackgroundVisible(model.Lists().IsHoverBackgroundVisible())
 	if model.Lists().IsHeaderVisible() {
 		list.SetHeaderHeight(u)
 	} else {
@@ -96,6 +99,7 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	l.treeText.SetValue("Tree view")
 	tree := l.tree.Widget()
 	tree.SetStripeVisible(model.Lists().IsStripeVisible())
+	tree.SetHoverBackgroundVisible(model.Lists().IsHoverBackgroundVisible())
 	if model.Lists().IsHeaderVisible() {
 		tree.SetHeaderHeight(u)
 	} else {
@@ -155,6 +159,11 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		model.Lists().SetStripeVisible(value)
 	})
 	l.showStripeToggle.SetValue(model.Lists().IsStripeVisible())
+	l.showHoverBackgroundText.SetValue("Show hover background")
+	l.showHoverBackgroundToggle.OnValueChanged(func(context *guigui.Context, value bool) {
+		model.Lists().SetHoverBackgroundVisible(value)
+	})
+	l.showHoverBackgroundToggle.SetValue(model.Lists().IsHoverBackgroundVisible())
 	l.showHeaderText.SetValue("Show header")
 	l.showHeaderToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.Lists().SetHeaderVisible(value)
@@ -187,6 +196,10 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		{
 			PrimaryWidget:   &l.showStripeText,
 			SecondaryWidget: &l.showStripeToggle,
+		},
+		{
+			PrimaryWidget:   &l.showHoverBackgroundText,
+			SecondaryWidget: &l.showHoverBackgroundToggle,
 		},
 		{
 			PrimaryWidget:   &l.showHeaderText,

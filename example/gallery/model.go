@@ -470,12 +470,13 @@ type ListsModel struct {
 	listItems []basicwidget.ListItem[int]
 	treeItems []basicwidget.ListItem[int]
 
-	stripeVisible  bool
-	headerVisible  bool
-	footerVisible  bool
-	multiSelection bool
-	unmovable      bool
-	disabled       bool
+	stripeVisible          bool
+	hoverBackgroundVisible bool
+	headerVisible          bool
+	footerVisible          bool
+	multiSelection         bool
+	unmovable              bool
+	disabled               bool
 }
 
 func (l *ListsModel) ensureListItems() {
@@ -546,6 +547,14 @@ func (l *ListsModel) IsStripeVisible() bool {
 
 func (l *ListsModel) SetStripeVisible(visible bool) {
 	l.stripeVisible = visible
+}
+
+func (l *ListsModel) IsHoverBackgroundVisible() bool {
+	return l.hoverBackgroundVisible
+}
+
+func (l *ListsModel) SetHoverBackgroundVisible(visible bool) {
+	l.hoverBackgroundVisible = visible
 }
 
 func (l *ListsModel) IsHeaderVisible() bool {
