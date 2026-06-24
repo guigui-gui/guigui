@@ -112,7 +112,7 @@ func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetB
 	// Detect hover in Tick, not in an input handler: Tick always runs, but pointing
 	// input can be intercepted by a widget capturing the cursor (e.g. a dragged button).
 	cursorPos := image.Pt(ebiten.CursorPosition())
-	if context.IsVisible(t) && context.IsEnabled(t) && cursorPos.In(widgetBounds.Bounds()) {
+	if context.IsVisible(t) && context.IsEnabled(t) && widgetBounds.IsHitAtCursor() {
 		if !t.hovering {
 			t.hovering = true
 			t.hoverTicks = 0
