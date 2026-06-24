@@ -25,3 +25,10 @@ git clone https://github.com/guigui-gui/guigui.git
 cd guigui
 go run ./example/gallery
 ```
+
+## For AI agents
+
+If you use an AI coding agent to write or modify guigui code, point it at
+[`.agents/skills`](.agents/skills). The `using-guigui` skill
+there documents the widget lifecycle, layout, and conventions so the agent
+produces idiomatic guigui code.
