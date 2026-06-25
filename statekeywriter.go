@@ -5,12 +5,11 @@ package guigui
 
 import (
 	"encoding/binary"
-	"fmt"
+	"hash"
+	"hash/fnv"
 	"io"
 	"math"
 	"math/big"
-
-	"github.com/zeebo/xxh3"
 )
 
 // StateKeyWriter accumulates a hash of a widget's state.
@@ -20,29 +19,31 @@ import (
 // StateKeyWriter implements [io.Writer] as an escape hatch for variable-length
 // byte content.
 type StateKeyWriter struct {
-	h   xxh3.Hasher
-	buf [8]byte
+	h      hash.Hash // FNV-1a 128-bit, lazily created.
+	buf    [8]byte
+	strbuf []byte
 }
 
 var _ io.Writer = (*StateKeyWriter)(nil)
 
 func (w *StateKeyWriter) reset() {
+	if w.h == nil {
+		w.h = fnv.New128a()
+	}
 	w.h.Reset()
 }
 
-func (w *StateKeyWriter) sum128() xxh3.Uint128 {
-	return w.h.Sum128()
+func (w *StateKeyWriter) sum128() [16]byte {
+	var key [16]byte
+	w.h.Sum(key[:0])
+	return key
 }
 
 // Write implements [io.Writer].
 //
 // Write never returns a non-nil error.
 func (w *StateKeyWriter) Write(p []byte) (int, error) {
-	n, err := w.h.Write(p)
-	if err != nil {
-		panic(fmt.Sprintf("guigui: xxh3.Hasher.Write must not fail: %v", err))
-	}
-	return n, nil
+	return w.h.Write(p)
 }
 
 // WriteBool writes a bool into the writer.
@@ -136,7 +137,8 @@ func (w *StateKeyWriter) WriteFloat64(v float64) {
 // concatenations hash distinctly (e.g. "ab"+"cd" vs "abc"+"d").
 func (w *StateKeyWriter) WriteString(s string) {
 	w.WriteInt(len(s))
-	_, _ = io.WriteString(&w.h, s)
+	w.strbuf = append(w.strbuf[:0], s...)
+	_, _ = w.h.Write(w.strbuf)
 }
 
 // WriteBigInt writes the value of a [big.Int] into the writer.

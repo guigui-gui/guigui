@@ -5,6 +5,8 @@ package basicwidget
 
 import (
 	"bytes"
+	"hash"
+	"hash/fnv"
 	"image"
 	"image/color"
 	"io"
@@ -16,7 +18,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
-	"github.com/zeebo/xxh3"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
@@ -209,14 +210,14 @@ type Text struct {
 
 	lastScale float64
 
-	// contentHasher is a reusable xxh3 streaming hasher used by [Text.WriteStateKey]
-	// to fingerprint the current field contents without allocating a string.
-	contentHasher xxh3.Hasher128
+	// contentHasher is a reusable streaming hasher used by [Text.WriteStateKey]
+	// to fingerprint the current field contents.
+	contentHasher hash.Hash
 
 	// contentHashCache memoizes the most recently computed hash, keyed by
 	// [textField.Generation]. While the field has not been mutated, repeated
 	// [Text.WriteStateKey] calls return the cached value without re-hashing.
-	contentHashCache           xxh3.Uint128
+	contentHashCache           [16]byte
 	contentHashFieldGeneration int64
 
 	// lineByteOffsets holds the byte offsets where each logical line begins
@@ -393,14 +394,19 @@ func (t *Text) onScrollIntoView(f func(context *guigui.Context, start, end caret
 // contentHashForStateKey returns a 128-bit fingerprint of the current field
 // contents, including the active IME composition (matching what [Text.Draw]
 // and [Text.Measure] see).
-func (t *Text) contentHashForStateKey() xxh3.Uint128 {
+func (t *Text) contentHashForStateKey() [16]byte {
 	generation := t.field.Generation()
 	if generation == t.contentHashFieldGeneration {
 		return t.contentHashCache
 	}
+	if t.contentHasher == nil {
+		t.contentHasher = fnv.New128a()
+	}
 	t.contentHasher.Reset()
-	_, _ = t.field.WriteTextForRenderingTo(&t.contentHasher)
-	t.contentHashCache = t.contentHasher.Sum128()
+	_, _ = t.field.WriteTextForRenderingTo(t.contentHasher)
+	var ch [16]byte
+	t.contentHasher.Sum(ch[:0])
+	t.contentHashCache = ch
 	t.contentHashFieldGeneration = generation
 	return t.contentHashCache
 }
@@ -454,8 +460,7 @@ func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
 	w.WriteString(t.cachedLocalesString)
 	w.WriteUint64(t.fontFamilyID())
 	ch := t.contentHashForStateKey()
-	w.WriteUint64(ch.Lo)
-	w.WriteUint64(ch.Hi)
+	_, _ = w.Write(ch[:])
 }
 
 func (t *Text) resetCachedTextSize() {

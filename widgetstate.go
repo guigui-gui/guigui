@@ -13,7 +13,6 @@ import (
 	"sync/atomic"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/zeebo/xxh3"
 )
 
 type bounds3D struct {
@@ -161,7 +160,7 @@ type widgetState struct {
 	rebuildRequestedAt    string
 	redrawReasonOnRebuild requestRedrawReason
 
-	capturedStateKey         xxh3.Uint128
+	capturedStateKey         [16]byte
 	capturedInternalStateKey widgetInternalStateKey
 
 	redrawRequested   bool

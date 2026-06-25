@@ -19,7 +19,6 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
-	"github.com/zeebo/xxh3"
 )
 
 type debugMode struct {
@@ -172,7 +171,7 @@ type app struct {
 
 // widgetStateKey runs widget.WriteStateKey into the shared writer and returns
 // the resulting 128-bit hash. The writer is reset before the call.
-func (a *app) widgetStateKey(widget Widget) xxh3.Uint128 {
+func (a *app) widgetStateKey(widget Widget) [16]byte {
 	a.stateKeyWriter.reset()
 	widget.WriteStateKey(&a.stateKeyWriter)
 	return a.stateKeyWriter.sum128()

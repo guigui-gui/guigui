@@ -10,7 +10,6 @@ require (
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.20.0
-	github.com/zeebo/xxh3 v1.1.0
 	golang.org/x/image v0.43.0
 	golang.org/x/sys v0.46.0
 	golang.org/x/text v0.38.0
@@ -21,7 +20,6 @@ require (
 require (
 	github.com/ebitengine/gomobile v0.0.0-20260211053922-3d992dae95d1 // indirect
 	github.com/ebitengine/hideconsole v1.0.0 // indirect
-	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
 )
