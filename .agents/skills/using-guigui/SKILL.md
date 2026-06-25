@@ -125,12 +125,27 @@ Embed `guigui.DefaultWidget`, then override as needed:
   (`SetText`, `SetEnabled`, registering handlers). `Build` is re-run on every
   rebuild, so it must be **idempotent** — write it as "given my current state,
   configure my children," not "do this once."
+- **Conventional order inside `Build`: add first, configure second.** Call all
+  the `adder.AddWidget(...)` you need, *then* push state into the children with
+  `Set*` / `On*`. Configuring a child you did not add is harmless, so you do not
+  need to guard every setter behind the same condition as its `AddWidget` —
+  unconditionally configuring for simplicity is fine and idiomatic.
+- **Only add children you actually use this rebuild.** Skip the `AddWidget` for a
+  child that is not currently shown (e.g. the contents of a closed popup, a
+  collapsed panel, a hidden tab). A widget that is not added is not laid out,
+  drawn, or sent input, which is cheaper than adding it and hiding it. `popup`
+  is the canonical example — it only adds its background/shadow/content while it
+  is opening or open, yet still runs their setters unconditionally afterward.
 - **`Layout` runs after `Build`, with bounds known.** Use it only to position
   children via `layouter.LayoutWidget(child, bounds)` or a layout helper. Do not
   read bounds in `Build`; do not configure widget content in `Layout`.
 
-`widgetBounds.Bounds()` gives the widget's own rectangle inside `Layout`,
-input, and `Draw`.
+`widgetBounds.Bounds()` gives **this** widget's own rectangle inside `Layout`,
+input, `Tick`, and `Draw`. A `WidgetBounds` only ever describes the widget it
+was handed to — there is no API to ask it for another widget's bounds. If a
+parent needs to size or place a child relative to a sibling, drive that from the
+layout (`LinearLayout` / `layouter`), not by trying to read the sibling's
+rectangle.
 
 ## Layout with LinearLayout
 
@@ -264,6 +279,14 @@ func (c *Child) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 `context.Env(self, key)` walks up the parent chain calling each ancestor's `Env`
 until one returns `true`. Use it for app-wide models / view-state; use explicit
 fields and setters for parent→direct-child wiring.
+
+`Env` is not only for your own values — `basicwidget` itself uses it to push
+presentation state down to descendant widgets. For example a `List` advertises
+its item color scheme through `basicwidget.EnvKeyListItemColorType`, and a row
+inside the list reads it with `context.Env(self, basicwidget.EnvKeyListItemColorType)`
+to draw itself correctly. So when composing a custom widget that lives inside a
+built-in container, check whether that container exposes an `EnvKey…` you should
+honor.
 
 ## Sending events up: the event-key pattern
 
@@ -399,8 +422,10 @@ whether this widget is the topmost one under the cursor.
 
 1. Embed `guigui.DefaultWidget`; keep children as plain fields; ensure the zero
    value is usable.
-2. In `Build`: add every child with `adder.AddWidget(&w.child)` and configure
-   children from current state (idempotently). Register `On…` handlers here.
+2. In `Build`: first add the children you use this rebuild with
+   `adder.AddWidget(&w.child)` (skip ones that are not shown, like a closed
+   popup's contents), then configure children from current state (idempotently).
+   Register `On…` handlers here. Configuring a child you did not add is fine.
 3. In `Layout`: position children with a `LinearLayout` (reuse the items slice)
    or `layouter.LayoutWidget`. Size in `UnitSize` multiples.
 4. Add `Measure` if the widget has an intrinsic size (especially list rows). For
