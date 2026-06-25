@@ -16,7 +16,7 @@ description: >
 
 guigui is an immediate-mode-*inspired* GUI framework for Go on top of Ebitengine.
 "Inspired" is the key word: widgets are **retained** Go structs that you own and
-keep across frames, but their child tree and presentation are **reconstructed**
+keep across ticks, but their child tree and presentation are **reconstructed**
 by re-running `Build` whenever relevant state changes — the way Compose or
 SwiftUI re-run a view function. You hold the state in struct fields; the
 framework decides when to rebuild, lay out, and redraw.
@@ -37,11 +37,22 @@ the part people get wrong.
 - A widget must work **from its zero value** — declare children as plain
   (non-pointer) fields and reference them as `&w.child`. Do not allocate them in
   a constructor; `var w Foo` must already be usable.
-- The framework drives a per-frame cycle: **Build** (reconstruct the child tree)
-  → **Layout** (position the children) → input handling → **Tick** → **Draw**.
-  Build and Layout may run several times per frame as state settles.
-- You never call `Build`/`Layout`/`Draw` yourself. You set fields and register
-  handlers; the framework calls back.
+- The framework runs two decoupled cycles. Each **tick** (Ebitengine's `Update`,
+  at the app's TPS — 60×/sec by default, or whatever TPS is configured) settles
+  the tree: it may run **Build** (reconstruct the child tree), **Layout**
+  (position the children), and the **`Handle*Input`** methods an *indeterminate*
+  number of times, interleaved, until state stops changing — then calls **Tick**
+  exactly once. Rely only on these guarantees: within a pass Build precedes
+  Layout, and Tick runs once, last. Do not assume a fixed count of Build, Layout,
+  or input passes per tick, nor that an input handler runs only once before
+  `Tick`. Each **frame** (Ebitengine's `Draw`, at the display's refresh rate)
+  does **Draw**. Ticks and frames are *not* one-to-one — there may be more or
+  fewer frames than ticks — so put per-step logic in `Tick`, never in `Draw`.
+- You never invoke a widget's framework-driven methods (`Build`, `Layout`,
+  `Tick`, `Draw`, the `Handle*Input` methods, `Env`, …) yourself — you set fields
+  and register handlers, and the framework calls back. The one exception is
+  **`Measure`**: a parent or composite widget calls a child's `Measure` directly
+  to size it (it is what `LinearLayout` and the shared `layout()` helper do).
 
 ## Minimal application
 
@@ -103,7 +114,7 @@ Embed `guigui.DefaultWidget`, then override as needed:
 | `HandleButtonInput` | `HandleButtonInput(*Context, *WidgetBounds) HandleInputResult` | Custom keyboard/gamepad handling. |
 | `Env` | `Env(*Context, EnvKey, *EnvSource) (any, bool)` | The widget provides shared values to descendants. |
 | `WriteStateKey` | `WriteStateKey(*StateKeyWriter)` | State changes outside input/events must trigger a rebuild (see below). |
-| `Tick` | `Tick(*Context, *WidgetBounds) error` | Per-frame updates (animation, timers). |
+| `Tick` | `Tick(*Context, *WidgetBounds) error` | Per-tick updates (animation, timers); runs at the app's TPS. |
 | `Draw` | `Draw(*Context, *WidgetBounds, *ebiten.Image)` | Custom rendering (most widgets compose children instead). |
 | `CursorShape` | `CursorShape(*Context, *WidgetBounds) (ebiten.CursorShapeType, bool)` | The widget wants a non-default cursor. |
 
@@ -124,8 +135,8 @@ input, and `Draw`.
 ## Layout with LinearLayout
 
 `LinearLayout` is the workhorse. Build a slice of `LinearLayoutItem`, then call
-`LayoutWidgets`. Reuse the backing slice across frames with `slices.Delete(s, 0,
-len(s))` to avoid per-frame allocation (the framework calls `Layout` often).
+`LayoutWidgets`. Reuse the backing slice across ticks with `slices.Delete(s, 0,
+len(s))` to avoid per-tick allocation (the framework calls `Layout` often).
 
 ```go
 func (w *Panel) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
@@ -195,7 +206,7 @@ func (w *Field) Measure(context *guigui.Context, constraints guigui.Constraints)
 ```
 
 `LinearLayout` is a plain value, so returning one by value is cheap; the helper
-still reuses the `items` slice across frames as before.
+still reuses the `items` slice across ticks as before.
 
 ## Composition and built-in widgets
 
