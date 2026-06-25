@@ -1,7 +1,7 @@
 ---
 name: using-guigui
 description: >
-  Use this skill when writing or modifying GUI code with the guigui framework
+  Use this skill when writing or modifying GUI code with the Guigui framework
   (github.com/guigui-gui/guigui): creating or editing a widget, composing a
   layout, wiring buttons / text inputs / lists, passing shared state down the
   widget tree, handling pointer or keyboard input, or figuring out why a change
@@ -9,12 +9,12 @@ description: >
   (Build / Layout / Measure / Draw / input), LinearLayout sizing, Env-based
   dependency injection, the event-key callback pattern, dynamic child lists, and
   when state changes trigger a rebuild. Not for general Ebitengine rendering
-  questions that do not involve guigui widgets.
+  questions that do not involve Guigui widgets.
 ---
 
-# Using guigui
+# Using Guigui
 
-guigui is an immediate-mode-*inspired* GUI framework for Go on top of Ebitengine.
+Guigui is an immediate-mode-*inspired* GUI framework for Go on top of Ebitengine.
 "Inspired" is the key word: widgets are **retained** Go structs that you own and
 keep across ticks, but their child tree and presentation are **reconstructed**
 by re-running `Build` whenever relevant state changes — the way Compose or
@@ -24,8 +24,8 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against guigui at commit `4ebb3fc7` (2026-06-25).
-> guigui is alpha and its API may change — if anything here disagrees with the
+> **Freshness.** Verified against Guigui at commit `4ebb3fc7` (2026-06-25).
+> Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
 
@@ -78,7 +78,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
 	adder.AddWidget(&r.hello)
 
-	r.hello.SetValue("Hello, guigui")
+	r.hello.SetValue("Hello, Guigui")
 	return nil
 }
 
@@ -232,7 +232,7 @@ exercises most widgets).
 
 ## Passing shared state down: Env
 
-`Env` is guigui's dependency injection. A value provided by an ancestor is
+`Env` is Guigui's dependency injection. A value provided by an ancestor is
 visible to every descendant without threading it through constructors. Generate
 a key once at package scope:
 
@@ -315,7 +315,7 @@ func (l *List) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 ```
 
 Use `WidgetSlice`, **not** a hand-rolled `[]Row` you `append` to. A widget's
-identity is the address of its embedded `DefaultWidget`, and guigui forbids
+identity is the address of its embedded `DefaultWidget`, and Guigui forbids
 moving or copying a widget by value — it panics with *"illegal use of
 DefaultWidget copied by value"*. Appending to a value slice reallocates and
 relocates its elements, which trips that guard or silently churns widget
@@ -422,7 +422,7 @@ drift from an alpha API. Before considering a change done:
 - **Copy from a working example.** `example/counter` (state + buttons),
   `example/todo` (Env, events, dynamic list), and `example/gallery` (most
   widgets) are canonical, compiling usage. Prefer adapting them to inventing.
-- **Build and vet.** `go build ./...` and `go vet ./...`. guigui code that
+- **Build and vet.** `go build ./...` and `go vet ./...`. Guigui code that
   misuses the lifecycle often still compiles, so also run the program (or the
   relevant `example/`) and confirm it renders and reacts.
 - **Sanity-check the lifecycle, not just the compile.** If a change does not
