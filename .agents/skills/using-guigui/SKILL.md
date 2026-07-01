@@ -38,16 +38,17 @@ the part people get wrong.
   (non-pointer) fields and reference them as `&w.child`. Do not allocate them in
   a constructor; `var w Foo` must already be usable.
 - The framework runs two decoupled cycles. Each **tick** (Ebitengine's `Update`,
-  at the app's TPS — 60×/sec by default, or whatever TPS is configured) settles
-  the tree: it may run **Build** (reconstruct the child tree), **Layout**
-  (position the children), and the **`Handle*Input`** methods an *indeterminate*
-  number of times, interleaved, until state stops changing — then calls **Tick**
-  exactly once. Rely only on these guarantees: within a pass Build precedes
-  Layout, and Tick runs once, last. Do not assume a fixed count of Build, Layout,
-  or input passes per tick, nor that an input handler runs only once before
-  `Tick`. Each **frame** (Ebitengine's `Draw`, at the display's refresh rate)
-  does **Draw**. Ticks and frames are *not* one-to-one — there may be more or
-  fewer frames than ticks — so put per-step logic in `Tick`, never in `Draw`.
+  at the app's TPS — 60×/sec by default, or whatever TPS is configured) first
+  settles the tree: it may run **Build** (reconstruct the child tree),
+  **Layout** (position the children), and the **`Handle*Input`** methods before
+  calling **Tick** exactly once. A state change during input can cause another
+  Build/Layout pass in the same tick before `Tick` runs. Rely only on these
+  guarantees: Build precedes Layout within a pass, input sees the current
+  layout, and Tick runs once, after input handling. Do not assume a fixed count
+  of Build or Layout passes per tick. Each **frame** (Ebitengine's `Draw`, at
+  the display's refresh rate) does **Draw**. Ticks and frames are *not*
+  one-to-one — there may be more or fewer frames than ticks — so put per-step
+  logic in `Tick`, never in `Draw`.
 - You never invoke a widget's framework-driven methods (`Build`, `Layout`,
   `Tick`, `Draw`, the `Handle*Input` methods, `Env`, …) yourself — you set fields
   and register handlers, and the framework calls back. The one exception is
@@ -322,11 +323,12 @@ to match the data, then add and configure each element.
 
 ```go
 func (l *List) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	l.rows.SetLen(l.model.Count())
-	for i := range l.rows.Len() {
+	n := l.model.Count()
+	l.rows.SetLen(n)
+	for i := range n {
 		adder.AddWidget(l.rows.At(i))
 	}
-	for i := range l.model.Count() {
+	for i := range n {
 		item := l.model.At(i)
 		l.rows.At(i).SetText(item.Text)
 		l.rows.At(i).OnActivated(func(context *guigui.Context) {
@@ -353,11 +355,13 @@ you — prefer them for large collections.)
 
 ## State changes and when the screen updates
 
-This is the second thing people get wrong. A rebuild/redraw happens
-automatically when:
+This is the second thing people get wrong. Tree/content changes need a rebuild;
+paint-only changes need only a redraw.
+
+Rebuilds happen when:
 
 - an **input handler or event handler runs** (the framework assumes it may have
-  mutated state), or
+  mutated state),
 - a widget's **state key changes** (see `WriteStateKey`), or
 - you explicitly call `guigui.RequestRebuild(widget)`.
 
@@ -441,8 +445,8 @@ This skill is a primer; it does not enumerate every widget method and it can
 drift from an alpha API. Before considering a change done:
 
 - **Look up real signatures, don't guess.** When you need a `basicwidget`
-  method (`SetText`, `OnUp`, a `Set*`/`On*` you half-remember), grep the actual
-  package: `grep -rn "func (.*Button)" basicwidget/`. The catalog here is
+  method (`SetText`, `OnUp`, a `Set*`/`On*` you half-remember), search the actual
+  package: `rg -n "func \\(.*Button\\)" basicwidget/`. The catalog here is
   intentionally not exhaustive.
 - **Copy from a working example.** `example/counter` (state + buttons),
   `example/todo` (Env, events, dynamic list), and `example/gallery` (most
