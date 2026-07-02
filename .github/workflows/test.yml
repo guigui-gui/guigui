@@ -28,33 +28,50 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update
-        sudo apt-get install libasound2-dev libgl1-mesa-dev libxcursor-dev libxi-dev libxinerama-dev libxrandr-dev libxxf86vm-dev libgtk-3-dev
+        sudo apt-get install libgl1 libgl1-mesa-dri libx11-6 libxcursor1 libxext6 libxi6 libxinerama1 libxrandr2 libxrender1 libgtk-3-0
 
     - name: Xvfb
       if: runner.os == 'Linux'
       run: |
         Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
 
-    - name: Vet (macOS)
+    - name: go vet (macOS)
       if: runner.os == 'macOS'
       run: |
         go list ./... | grep -v -x -F -f .github/workflows/govetblock_darwin.txt | xargs go vet -v
 
-    - name: Vet (Windows)
+    - name: go vet (Windows)
       if: runner.os == 'Windows'
       run: |
         go list ./... | grep -v -x -F -f .github/workflows/govetblock_windows.txt | xargs go vet -v
 
-    - name: Vet (Linux)
+    - name: go vet (Linux)
       if: runner.os == 'Linux'
       run: |
         go list ./... | grep -v -x -F -f .github/workflows/govetblock_linux.txt | xargs go vet -v
 
-    - name: Vet (errcheck)
+    - name: go vet (errcheck)
       run: |
         go build ./internal/vettool
         go vet -vettool=./vettool${{ runner.os == 'Windows' && '.exe' || '' }} -v ./...
 
-    - name: Test
+    - name: go build
+      run: |
+        go build -v ./...
+        env GOOS=darwin GOARCH=amd64 go build -v ./...
+        env GOOS=darwin GOARCH=arm64 go build -v ./...
+        env GOOS=freebsd GOARCH=amd64 go build "-gcflags=github.com/ebitengine/purego/internal/fakecgo=-std" -v ./...
+        env GOOS=freebsd GOARCH=arm64 go build "-gcflags=github.com/ebitengine/purego/internal/fakecgo=-std" -v ./...
+        env GOOS=linux GOARCH=386 go build -v ./...
+        env GOOS=linux GOARCH=amd64 go build -v ./...
+        env GOOS=linux GOARCH=arm go build -v ./...
+        env GOOS=linux GOARCH=arm64 go build -v ./...
+        env GOOS=netbsd GOARCH=amd64 go build -v ./...
+        env GOOS=netbsd GOARCH=arm64 go build -v ./...
+        env GOOS=windows GOARCH=386 go build -v ./...
+        env GOOS=windows GOARCH=amd64 go build -v ./...
+        env GOOS=windows GOARCH=arm64 go build -v ./...
+
+    - name: go test
       run: |
         go test -v ./...
