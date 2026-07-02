@@ -11,7 +11,8 @@
 > [!NOTE]
 > AI is used in the development of this project, but all changes are reviewed by the committer before committing.
 
- * Pure Go implementation without any use of HTML, CSS, or JavaScript
+ * Compilable without C compilers
+ * No HTML, CSS, or JavaScript required
  * Hi-DPI support for clear visuals on modern displays
  * Built-in internationalization (I18N) support for multiple languages
  * Efficient rendering with optimized draw calls for better performance
