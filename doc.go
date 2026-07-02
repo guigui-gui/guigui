@@ -22,9 +22,9 @@
 //     event before its ancestors or lower layers see it.
 //   - [Widget.HandleButtonInput] is invoked with the same post-order, top-to-bottom-layer
 //     traversal, but only on a subset of widgets: roughly, a widget that is focused, has a focused
-//     descendant, has a focused or button-input-receptive ancestor, or is itself
-//     button-input-receptive (see [Context.SetButtonInputReceptive]). Disabled or hidden widgets
-//     are skipped. See [Widget.HandleButtonInput] for the exact conditions.
+//     ancestor or descendant, or is itself button-input-receptive
+//     (see [Context.SetButtonInputReceptive]). Disabled or hidden widgets are skipped.
+//     See [Widget.HandleButtonInput] for the exact conditions.
 //   - [Widget.Draw] is invoked in pre-order (parent before its children), per layer from bottom
 //     to top, so children and higher layers are rendered on top of their parents and lower layers.
 //

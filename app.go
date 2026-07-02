@@ -809,14 +809,14 @@ const (
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
 	for i := len(a.layers) - 1; i >= 0; i-- {
 		layer := a.layers[i]
-		if r := a.doHandleInputWidget(typ, a.root, layer, a.context.IsFocused(a.root)); r.IsHandled() {
+		if r := a.doHandleInputWidget(typ, a.root, layer, false); r.IsHandled() {
 			return r
 		}
 	}
 	return HandleInputResult{}
 }
 
-func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, ancestorInputReceptive bool) HandleInputResult {
+func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHandle int64, hasFocusedAncestor bool) HandleInputResult {
 	widgetState := widget.widgetState()
 	if widgetState.isPassthrough() {
 		return HandleInputResult{}
@@ -833,7 +833,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		return HandleInputResult{}
 	}
 
-	prunedForButtonInput := typ == handleInputTypeButton && !ancestorInputReceptive && !a.context.IsFocusedOrHasFocusedDescendant(widget) && !widgetState.buttonInputReceptive
+	prunedForButtonInput := typ == handleInputTypeButton && !hasFocusedAncestor && !a.context.IsFocusedOrHasFocusedDescendant(widget) && !widgetState.buttonInputReceptive
 
 	// Even if this widget is pruned for button input, traverse children if a descendant is receptive.
 	if !prunedForButtonInput || widgetState.buttonInputReceptiveOrHasReceptiveDescendant {
@@ -841,7 +841,7 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 		focused := a.context.IsFocused(widget)
 		for i := len(widgetState.children) - 1; i >= 0; i-- {
 			child := widgetState.children[i]
-			if r := a.doHandleInputWidget(typ, child, layerToHandle, ancestorInputReceptive || focused); r.IsHandled() {
+			if r := a.doHandleInputWidget(typ, child, layerToHandle, hasFocusedAncestor || focused); r.IsHandled() {
 				return r
 			}
 		}

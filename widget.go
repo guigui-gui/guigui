@@ -48,7 +48,7 @@ type Widget interface {
 	// HandleButtonInput is called when any of the following conditions is met:
 	//   - The widget is focused or has a focused descendant.
 	//   - The widget is button-input-receptive (see [Context.SetButtonInputReceptive]).
-	//   - An ancestor of the widget is focused or button-input-receptive.
+	//   - An ancestor of the widget is focused.
 	//
 	// When a widget is only an ancestor of a button-input-receptive widget
 	// (but is not itself focused or receptive), the framework traverses into its

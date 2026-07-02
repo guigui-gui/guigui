@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `4ebb3fc7` (2026-06-25).
+> **Freshness.** Verified against Guigui at commit `5b1f378a` (2026-07-02).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -99,8 +99,8 @@ func main() {
 ```
 
 `guigui.Run(root, *RunOptions)` starts the app. `RunOptions` carries `Title`,
-`WindowSize` / `WindowMinSize` / `WindowMaxSize`, `AppScale`, and an optional
-`RunGameOptions` passed through to Ebitengine.
+`WindowSize` / `WindowMinSize` / `WindowMaxSize`, `WindowFloating`, `AppScale`,
+and an optional `RunGameOptions` passed through to Ebitengine.
 
 ## The Widget interface
 
@@ -112,7 +112,7 @@ Embed `guigui.DefaultWidget`, then override as needed:
 | `Layout` | `Layout(*Context, *WidgetBounds, *ChildLayouter)` | You have children to position (i.e. almost always). |
 | `Measure` | `Measure(*Context, Constraints) image.Point` | The widget has an intrinsic preferred size (list rows, leaf widgets). |
 | `HandlePointingInput` | `HandlePointingInput(*Context, *WidgetBounds) HandleInputResult` | Custom mouse/touch handling. |
-| `HandleButtonInput` | `HandleButtonInput(*Context, *WidgetBounds) HandleInputResult` | Custom keyboard/gamepad handling. |
+| `HandleButtonInput` | `HandleButtonInput(*Context, *WidgetBounds) HandleInputResult` | Custom keyboard/gamepad handling — only delivered under focus/receptiveness conditions (see "Handling input directly"). |
 | `Env` | `Env(*Context, EnvKey, *EnvSource) (any, bool)` | The widget provides shared values to descendants. |
 | `WriteStateKey` | `WriteStateKey(*StateKeyWriter)` | State changes outside input/events must trigger a rebuild (see below). |
 | `Tick` | `Tick(*Context, *WidgetBounds) error` | Per-tick updates (animation, timers); runs at the app's TPS. |
@@ -236,11 +236,14 @@ Compose by embedding child widgets as fields and adding them in `Build`. The
 
 ```go
 r.createButton.SetText("Create")
-r.createButton.OnUp(func(context *guigui.Context) {
+r.createButton.OnDown(func(context *guigui.Context) {
 	r.addItem(r.textInput.Value())
 })
 context.SetEnabled(&r.createButton, r.canAdd())
 ```
+
+For button actions, default to `OnDown`; reach for `OnUp` only when release
+semantics genuinely matter.
 
 For the full list and runnable demos, read `basicwidget/` and the programs under
 `example/` (start with `example/counter` and `example/todo`; `example/gallery`
@@ -304,7 +307,7 @@ func (w *Item) OnDeleted(f func(context *guigui.Context, id int)) {
 func (w *Item) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&w.deleteButton)
 	w.deleteButton.SetText("Delete")
-	w.deleteButton.OnUp(func(context *guigui.Context) {
+	w.deleteButton.OnDown(func(context *guigui.Context) {
 		guigui.DispatchEvent(w, eventItemDeleted, w.id)
 	})
 	return nil
@@ -314,7 +317,7 @@ func (w *Item) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 The parent calls `child.OnDeleted(func(context, id){ ... })` during its own
 `Build`. Handlers are **cleared and re-registered on every rebuild**, so always
 (re)register inside `Build`. This is exactly how `basicwidget` buttons expose
-`OnUp`.
+`OnDown` and `OnUp`.
 
 ## Dynamic lists of children
 
@@ -422,6 +425,17 @@ to stop propagation without claiming the event, or the zero
 `guigui.HandleInputResult{}` to pass. `widgetBounds.IsHitAtCursor()` reports
 whether this widget is the topmost one under the cursor.
 
+`HandleButtonInput` is not delivered to every widget. It runs only when the
+widget is focused, has a focused ancestor or descendant, or is itself marked
+button-input-receptive with `context.SetButtonInputReceptive(w, true)`. Focus
+lights up a whole path — the focused widget, its ancestors, and its descendants
+all receive button input. Receptiveness is strictly self-only: it grants
+delivery to that one widget, not to its ancestors or descendants (the framework
+traverses through ancestors only to reach the receptive widget). Overriding
+`HandleButtonInput` on a widget that is never focused and never marked
+receptive silently does nothing — focus the widget (`context.SetFocused`) or
+mark it receptive.
+
 ## Checklist when adding a widget
 
 1. Embed `guigui.DefaultWidget`; keep children as plain fields; ensure the zero
@@ -481,6 +495,10 @@ drift from an alpha API. Before considering a change done:
   `DefaultWidget`, and moving/copying one by value panics (*"illegal use of
   DefaultWidget copied by value"*). Use `guigui.WidgetSlice[*T]` for a variable
   number of children (see "Dynamic lists of children").
+- **Overriding `HandleButtonInput` on a never-focused widget.** Keyboard/gamepad
+  input only reaches widgets that are focused, have a focused ancestor or
+  descendant, or are themselves button-input-receptive. Focus the widget or
+  call `context.SetButtonInputReceptive` (see "Handling input directly").
 - **Trying to scroll a panel past its content.** `basicwidget.Panel` clamps the
   scroll offset to `[min(viewport − content, 0), 0]`: positive offsets are
   discarded, and when the content fits the viewport the offset stays pinned at
