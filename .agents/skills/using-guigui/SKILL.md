@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `5b1f378a` (2026-07-02).
+> **Freshness.** Verified against Guigui at commit `6d6f56e5` (2026-07-04).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -292,6 +292,56 @@ to draw itself correctly. So when composing a custom widget that lives inside a
 built-in container, check whether that container exposes an `EnvKey…` you should
 honor.
 
+### Env lookups on a just-created widget silently find nothing
+
+`context.Env(widget, key)` resolves by walking up `widget`'s parent pointers,
+and a widget only gets its parent pointer when some ancestor's `Build` adds it
+with `adder.AddWidget`. A widget that no `Build` has added yet has no parent, so
+the lookup returns `(nil, false)` — no panic, no error, just a missing value.
+
+Two consequences:
+
+- **On yourself, inside your own `Build` / `Layout`, env lookups are safe.** By
+  the time your `Build` runs, the parent's `Build` has already added you, so
+  your parent chain is intact.
+- **A parent's `Build` must not resolve env *through* a child that may have
+  just been created.** The classic sequence: an add-item handler grows a
+  `WidgetSlice` pool and selects the new element. On the very next `Build` of
+  the owner, that element is still unparented — it only gains a parent later in
+  the same build pass, when the container hosting it builds. Any env lookup
+  routed through it fails, and code assuming a non-nil result panics.
+
+```go
+// An event handler grows the pool and selects the new element:
+w.addButton.OnDown(func(context *guigui.Context) {
+	w.rowContents.SetLen(w.rowContents.Len() + 1)
+	w.selectedRow = w.rowContents.Len() - 1
+})
+
+// BAD — the owner's next Build resolves env through the fresh element:
+content := w.rowContents.At(w.selectedRow)
+v, _ := context.Env(content, envKeyModel) // fresh element: parent is nil → (nil, false)
+model, _ := v.(*Model)                    // model is nil → panics on first use
+```
+
+Resolve shared state through the widget whose `Build` is running — its own env
+is always available there — and hand data to children via their plain fields:
+
+```go
+// GOOD — inside (w *Editor) Build:
+v, ok := context.Env(w, envKeyModel)
+if !ok {
+	return nil
+}
+model := v.(*Model)
+// ... configure w.rowContents elements from model via their Set* methods ...
+```
+
+If a widget keeps a helper that resolves a model via its own env (e.g.
+`func (c *Content) model(context) *Model` built on `context.Env(c, …)`), make it
+return nil when the lookup fails and guard at every call site — the lookup can
+legitimately fail while the widget is not (yet) in the tree.
+
 ## Sending events up: the event-key pattern
 
 A child should not know its parent's type. To notify the parent, declare an
@@ -495,6 +545,12 @@ drift from an alpha API. Before considering a change done:
   `DefaultWidget`, and moving/copying one by value panics (*"illegal use of
   DefaultWidget copied by value"*). Use `guigui.WidgetSlice[*T]` for a variable
   number of children (see "Dynamic lists of children").
+- **Resolving env through a widget that was just created.** `context.Env(w,
+  key)` walks `w`'s parent chain; a widget nobody has built yet has no parent,
+  so the lookup silently returns `(nil, false)` and code assuming a non-nil
+  value crashes. Resolve shared state through the widget whose `Build` is
+  running, not through a possibly-new child (see "Env lookups on a just-created
+  widget silently find nothing").
 - **Overriding `HandleButtonInput` on a never-focused widget.** Keyboard/gamepad
   input only reaches widgets that are focused, have a focused ancestor or
   descendant, or are themselves button-input-receptive. Focus the widget or
