@@ -408,6 +408,24 @@ func (a *app) Update() error {
 	rootState := a.root.widgetState()
 	rootState.bounds = a.bounds()
 
+	// Invalidate the entire screen if the screen size has changed. This must run
+	// before the build and layout passes below so the widgets are re-laid out to
+	// the new size in the same frame the redraw is requested. Otherwise the
+	// newly exposed area is cleared but left unpainted until the next frame,
+	// which shows through as a black edge while the window is being resized.
+	var screenInvalidated bool
+	if a.lastScreenWidth != a.screenWidth {
+		screenInvalidated = true
+		a.lastScreenWidth = a.screenWidth
+	}
+	if a.lastScreenHeight != a.screenHeight {
+		screenInvalidated = true
+		a.lastScreenHeight = a.screenHeight
+	}
+	if screenInvalidated {
+		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize, nil)
+	}
+
 	// Call the first buildWidgets.
 	if layoutChanged, err := a.buildAndLayoutWidgets(); err != nil {
 		return err
@@ -467,19 +485,6 @@ func (a *app) Update() error {
 		return err
 	}
 
-	// Invalidate the engire screen if the screen size is changed.
-	var screenInvalidated bool
-	if a.lastScreenWidth != a.screenWidth {
-		screenInvalidated = true
-		a.lastScreenWidth = a.screenWidth
-	}
-	if a.lastScreenHeight != a.screenHeight {
-		screenInvalidated = true
-		a.lastScreenHeight = a.screenHeight
-	}
-	if screenInvalidated {
-		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize, nil)
-	}
 	if layoutChangedInUpdate {
 		// Invalidate regions if a widget's children state is changed.
 		// A widget's bounds might be changed in Widget.Layout, so do this after building and layouting.
