@@ -3,10 +3,10 @@ module github.com/guigui-gui/guigui
 go 1.25.0
 
 require (
-	github.com/ebitengine/purego v0.11.0-alpha.5
+	github.com/ebitengine/purego v0.11.0-alpha.6
 	github.com/go-text/typesetting v0.3.5-0.20260505125104-04e4e76f9371
 	github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198
-	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260703152742-c9ba641f621c
+	github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.11.0.20260705151743-d8e8661d5506
 	github.com/hajimehoshi/iro v0.2.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.20.0
