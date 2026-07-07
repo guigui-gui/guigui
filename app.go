@@ -152,7 +152,7 @@ type app struct {
 	// reallocate a fresh backing array every time.
 	bounds3DsPool sync.Pool
 
-	// hasDirtyWidgets is true when any widget has rebuildRequested, redrawRequested, or eventDispatched set.
+	// hasDirtyWidgets is true when any widget has a pending rebuild, redrawRequested, or eventDispatched set.
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
@@ -327,18 +327,15 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 		a.hasDirtyWidgets = false
 		for _, widget := range a.widgetList {
 			widgetState := widget.widgetState()
-			if widgetState.rebuildRequested || widgetState.redrawRequested {
+			if widgetState.redrawReasonOnRebuild != requestRedrawReasonUnknown || widgetState.redrawRequested {
 				if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-					var reason requestRedrawReason
-					if widgetState.rebuildRequested {
+					reason := requestRedrawReasonRedrawWidget
+					if widgetState.redrawReasonOnRebuild != requestRedrawReasonUnknown {
 						reason = widgetState.redrawReasonOnRebuild
-					} else {
-						reason = requestRedrawReasonRedrawWidget
 					}
 					a.enqueueRedrawWidget(widget, reason)
 				}
-				widgetState.rebuildRequested = false
-				widgetState.redrawReasonOnRebuild = 0
+				widgetState.redrawReasonOnRebuild = requestRedrawReasonUnknown
 				widgetState.redrawRequested = false
 				widgetState.redrawRequestedAt = ""
 			}
@@ -751,7 +748,7 @@ func (a *app) checkStateKeys() {
 	a.stateKeyCheckPending = false
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		if ws.rebuildRequested {
+		if ws.redrawReasonOnRebuild != requestRedrawReasonUnknown {
 			continue
 		}
 		if ws.internalStateKey() != ws.capturedInternalStateKey {
@@ -1153,8 +1150,12 @@ func (a *app) requestRebuild() {
 // requestRedrawAndRebuild flags a widget whose state changed: it rebuilds the whole tree and
 // redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
 // widget is off-screen and has nothing to repaint.
+//
+// redrawReason must not be requestRedrawReasonUnknown, which flags the absence of a pending rebuild.
 func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
-	widgetState.rebuildRequested = true
+	if redrawReason == requestRedrawReasonUnknown {
+		panic("guigui: redrawReason must not be requestRedrawReasonUnknown")
+	}
 	widgetState.redrawReasonOnRebuild = redrawReason
 	a.hasDirtyWidgets = true
 }

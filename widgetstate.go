@@ -154,7 +154,8 @@ type widgetState struct {
 
 	offscreen *ebiten.Image
 
-	rebuildRequested      bool
+	// redrawReasonOnRebuild is the redraw reason for a pending rebuild of this widget.
+	// requestRedrawReasonUnknown (the zero value) means no rebuild is pending.
 	redrawReasonOnRebuild requestRedrawReason
 
 	capturedStateKey         [16]byte
