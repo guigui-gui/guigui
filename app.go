@@ -335,7 +335,7 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 					} else {
 						reason = requestRedrawReasonRedrawWidget
 					}
-					a.requestRedrawWidget(widget, reason)
+					a.enqueueRedrawWidget(widget, reason)
 				}
 				widgetState.rebuildRequested = false
 				widgetState.redrawReasonOnRebuild = 0
@@ -565,7 +565,7 @@ func (a *app) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	return a.screenWidth, a.screenHeight
 }
 
-func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, widget Widget) {
+func (a *app) enqueueRedrawRegion(region image.Rectangle, reason requestRedrawReason, widget Widget) {
 	switch reason {
 	case requestRedrawReasonRedrawWidget, requestRedrawReasonLayout:
 		a.redrawRequestedRegions.add(region, reason, widget)
@@ -574,22 +574,22 @@ func (a *app) requestRedraw(region image.Rectangle, reason requestRedrawReason, 
 	}
 }
 
-func (a *app) requestRedrawWidget(widget Widget, reason requestRedrawReason) {
+func (a *app) enqueueRedrawWidget(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
-	a.requestRedraw(a.context.visibleBounds(widgetState), reason, widget)
+	a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), reason, widget)
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentLayer(child, reason)
+		a.enqueueRedrawIfDifferentParentLayer(child, reason)
 	}
 }
 
-func (a *app) requestRedrawIfDifferentParentLayer(widget Widget, reason requestRedrawReason) {
+func (a *app) enqueueRedrawIfDifferentParentLayer(widget Widget, reason requestRedrawReason) {
 	widgetState := widget.widgetState()
 	if widgetState.inDifferentLayerFromParent() {
-		a.requestRedrawWidget(widget, reason)
+		a.enqueueRedrawWidget(widget, reason)
 		return
 	}
 	for _, child := range widgetState.children {
-		a.requestRedrawIfDifferentParentLayer(child, reason)
+		a.enqueueRedrawIfDifferentParentLayer(child, reason)
 	}
 }
 
@@ -729,7 +729,7 @@ func (a *app) buildWidgets() error {
 		newStateKey := a.widgetStateKey(widget)
 		newInternalStateKey := ws.internalStateKey()
 		if newStateKey != ws.capturedStateKey || newInternalStateKey != ws.capturedInternalStateKey {
-			requestRedraw(ws)
+			a.requestRedraw(ws)
 		}
 		ws.capturedStateKey = newStateKey
 		ws.capturedInternalStateKey = newInternalStateKey
@@ -937,14 +937,14 @@ func (a *app) requestRedrawIfTreeChanged() {
 		widgetState := widget.widgetState()
 		// If the children and/or children's bounds are changed, request redraw.
 		if !widgetState.prev.equals(&a.context, widgetState.children) {
-			a.requestRedraw(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
+			a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
 
 			widgetState.prev.requestRedraw(a)
 
 			// If the widget is a clipping widget, all the children are included in the visible bounds.
 			if !widgetState.clipChildren {
 				for _, child := range widgetState.children {
-					a.requestRedraw(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
+					a.enqueueRedrawRegion(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
 				}
 			}
 		}
@@ -1163,19 +1163,19 @@ func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason req
 // screen size): it rebuilds the whole tree and redraws the whole screen.
 func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
 	a.treeRebuildRequested = true
-	a.requestRedraw(a.bounds(), redrawReason, nil)
+	a.enqueueRedrawRegion(a.bounds(), redrawReason, nil)
 }
 
 // RequestRedraw requests to redraw the given widget.
 // RequestRedraw causes Draw invocations, but this might not be enough to reflect the latest state.
 // If unsure, use [RequestRebuild] instead.
 func RequestRedraw(widget Widget) {
-	requestRedraw(widget.widgetState())
+	theApp.requestRedraw(widget.widgetState())
 }
 
-func requestRedraw(widgetState *widgetState) {
+func (a *app) requestRedraw(widgetState *widgetState) {
 	widgetState.redrawRequested = true
-	theApp.hasDirtyWidgets = true
+	a.hasDirtyWidgets = true
 	if theDebugMode.showRenderingRegions {
 		if _, file, line, ok := runtime.Caller(2); ok {
 			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)

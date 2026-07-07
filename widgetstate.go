@@ -102,8 +102,8 @@ func (w *widgetsAndBounds) commitCurrent() {
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {
 	for _, wb := range w.bounds3Ds {
-		app.requestRedraw(wb.bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
-		requestRedraw(wb.widgetState)
+		app.enqueueRedrawRegion(wb.bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
+		app.requestRedraw(wb.widgetState)
 	}
 }
 
