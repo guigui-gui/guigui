@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `6d6f56e5` (2026-07-04).
+> **Freshness.** Verified against Guigui at commit `cb99bdfd` (2026-07-05).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -418,6 +418,17 @@ Rebuilds happen when:
 - a widget's **state key changes** (see `WriteStateKey`), or
 - you explicitly call `guigui.RequestRebuild(widget)`.
 
+**A rebuild is whole-tree, never scoped.** Any of these re-runs `Build` on
+*every* widget from the root — there is no per-widget or per-subtree rebuild.
+`RequestRebuild(widget)` rebuilds the entire tree regardless of the widget you
+pass (the argument is only for logging), and a changed state key rebuilds the
+whole tree, not just the widget that owns the key. So place a `WriteStateKey`
+on whichever widget *owns* the self-changing state — a **different** widget
+that renders from it still re-runs its own `Build` and reflects the change, so
+the key need not live on the widget that displays it. (`WriteStateKey` gets no
+`*Context`, so it can only hash fields reachable from the widget itself, not an
+`Env` lookup.)
+
 So a counter mutated inside a button's `OnUp` updates with no extra work. But a
 field mutated **outside** any handler — from a `Tick`, a goroutine result
 applied on the main goroutine, or an ancestor reacting to an external model —
@@ -443,6 +454,13 @@ will *not* repaint unless you do one of:
 
 `guigui.RequestRedraw(widget)` forces a repaint **without** a rebuild — use it
 only when nothing in the tree structure changed (e.g. an animation frame).
+
+A state key rebuilds only when its hashed bytes *change*, so a value that holds
+steady across ticks (e.g. an `isPlaying` flag that stays `true` for the whole
+animation) costs nothing per tick. Pair the two: drive the per-frame animation
+with `RequestRedraw` each tick, and let a `WriteStateKey` fire the one rebuild
+on the on/off transition (when the animation finishes and a button must flip
+from stop back to play).
 
 ## Context utilities
 
