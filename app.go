@@ -117,7 +117,7 @@ type app struct {
 	maybeHitWidgets []widgetAndLayer
 
 	redrawRequestedRegions           redrawRequests
-	redrawAndRebuildRequestedRegions redrawRequests
+	rebuildAndRedrawRequestedRegions redrawRequests
 	regionsToDraw                    image.Rectangle
 
 	invalidatedRegionsForDebug []invalidatedRegionsForDebugItem
@@ -153,7 +153,7 @@ type app struct {
 	bounds3DsPool sync.Pool
 
 	// hasDirtyWidgets is true when any widget has a pending rebuild, redrawRequested, or eventDispatched set.
-	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
+	// This allows settleRebuildAndRedrawState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
 	// treeRebuildRequested is set by [RequestRebuild] to force a whole-tree rebuild on the next
@@ -280,7 +280,7 @@ func (a *app) focusWidget(widget Widget) {
 	a.setFocusAncestorFlags()
 
 	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
-	a.requestRedrawAndRebuildScreen(requestRedrawReasonWidgetFocus)
+	a.requestRebuildAndRedrawScreen(requestRedrawReasonWidgetFocus)
 }
 
 func (a *app) clearFocusAncestorFlags() {
@@ -310,12 +310,12 @@ func (a *app) setButtonInputReceptiveAncestorFlags() {
 	}
 }
 
-// settleRedrawAndRebuildState collects pending widget redraw/rebuild requests,
+// settleRebuildAndRedrawState collects pending widget redraw/rebuild requests,
 // determines which phases are required for the next buildAndLayoutWidgets call,
 // accumulates draw regions into regionsToDraw, and resets the region buffers.
 // It performs a single pass over the widget list to collect both redraw requests
 // and event-dispatched widgets.
-func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
+func (a *app) settleRebuildAndRedrawState(inputHandledWidget Widget) {
 	// Detect [Widget.WriteStateKey] changes since the last [Widget.Build] and flag rebuilds accordingly.
 	// This lets widgets skip explicit [RequestRebuild] calls for state they expose via [Widget.WriteStateKey].
 	a.checkStateKeys()
@@ -362,10 +362,10 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
 	}
-	if !a.redrawAndRebuildRequestedRegions.empty() {
+	if !a.rebuildAndRedrawRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
 		if theDebugMode.showBuildLogs {
-			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
+			slog.Info("rebuilding tree next time: region redraw requested", "region", a.rebuildAndRedrawRequestedRegions)
 		}
 	}
 	if a.treeRebuildRequested {
@@ -377,10 +377,10 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 	}
 
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
-	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
+	a.regionsToDraw = a.rebuildAndRedrawRequestedRegions.union(a.regionsToDraw)
 
 	a.redrawRequestedRegions.reset()
-	a.redrawAndRebuildRequestedRegions.reset()
+	a.rebuildAndRedrawRequestedRegions.reset()
 }
 
 func (a *app) Update() error {
@@ -392,12 +392,12 @@ func (a *app) Update() error {
 
 	if s := deviceScaleFactor(); a.deviceScale != s {
 		a.deviceScale = s
-		a.requestRedrawAndRebuildScreen(requestRedrawReasonScreenDeviceScale)
+		a.requestRebuildAndRedrawScreen(requestRedrawReasonScreenDeviceScale)
 	}
 
 	if a.context.ColorMode() != a.lastColorMode {
 		a.lastColorMode = a.context.ColorMode()
-		a.requestRedrawAndRebuildScreen(requestRedrawReasonColorMode)
+		a.requestRebuildAndRedrawScreen(requestRedrawReasonColorMode)
 	}
 
 	if focused := ebiten.IsFocused(); focused != a.lastFocused {
@@ -406,7 +406,7 @@ func (a *app) Update() error {
 		// every frame, so regions changed while unfocused (e.g. a popup fading out
 		// off-screen) would otherwise never be repainted.
 		if focused {
-			a.requestRedrawAndRebuildScreen(requestRedrawReasonAppFocus)
+			a.requestRebuildAndRedrawScreen(requestRedrawReasonAppFocus)
 		}
 	}
 
@@ -428,7 +428,7 @@ func (a *app) Update() error {
 		a.lastScreenHeight = a.screenHeight
 	}
 	if screenInvalidated {
-		a.requestRedrawAndRebuildScreen(requestRedrawReasonScreenSize)
+		a.requestRebuildAndRedrawScreen(requestRedrawReasonScreenSize)
 	}
 
 	// Call the first buildWidgets.
@@ -472,7 +472,7 @@ func (a *app) Update() error {
 		}
 	}
 
-	a.settleRedrawAndRebuildState(inputHandledWidget)
+	a.settleRebuildAndRedrawState(inputHandledWidget)
 
 	// Call the second buildWidgets to construct the widget tree again to reflect the latest state.
 	if layoutChanged, err := a.buildAndLayoutWidgets(); err != nil {
@@ -496,7 +496,7 @@ func (a *app) Update() error {
 		a.requestRedrawIfTreeChanged()
 	}
 
-	a.settleRedrawAndRebuildState(nil)
+	a.settleRebuildAndRedrawState(nil)
 
 	if theDebugMode.showRenderingRegions {
 		// Update the regions in the reversed order to remove items.
@@ -567,7 +567,7 @@ func (a *app) enqueueRedrawRegion(region image.Rectangle, reason requestRedrawRe
 	case requestRedrawReasonRedrawWidget, requestRedrawReasonLayout:
 		a.redrawRequestedRegions.add(region, reason, widget)
 	default:
-		a.redrawAndRebuildRequestedRegions.add(region, reason, widget)
+		a.rebuildAndRedrawRequestedRegions.add(region, reason, widget)
 	}
 }
 
@@ -594,7 +594,7 @@ func (a *app) enqueueRedrawIfDifferentParentLayer(widget Widget, reason requestR
 // then updates the hit-test widget list. Build or layout may trigger further
 // rebuild/relayout requests, so this method loops until no more phases are
 // required or a maximum iteration count is reached. Between iterations,
-// settleRedrawAndRebuildState collects pending requests and determines whether
+// settleRebuildAndRedrawState collects pending requests and determines whether
 // another pass is needed.
 func (a *app) buildAndLayoutWidgets() (bool, error) {
 	const maxBuildLayoutIterations = 2
@@ -621,7 +621,7 @@ func (a *app) buildAndLayoutWidgets() (bool, error) {
 			break
 		}
 
-		a.settleRedrawAndRebuildState(nil)
+		a.settleRebuildAndRedrawState(nil)
 	}
 
 	a.updateHitWidgets(layoutChanged)
@@ -752,13 +752,13 @@ func (a *app) checkStateKeys() {
 			continue
 		}
 		if ws.internalStateKey() != ws.capturedInternalStateKey {
-			a.requestRedrawAndRebuild(ws, requestRedrawReasonStateKeyChanged)
+			a.requestRebuildAndRedraw(ws, requestRedrawReasonStateKeyChanged)
 			continue
 		}
 		if a.widgetStateKey(widget) == ws.capturedStateKey {
 			continue
 		}
-		a.requestRedrawAndRebuild(ws, requestRedrawReasonStateKeyChanged)
+		a.requestRebuildAndRedraw(ws, requestRedrawReasonStateKeyChanged)
 	}
 }
 
@@ -1147,12 +1147,12 @@ func (a *app) requestRebuild() {
 	a.treeRebuildRequested = true
 }
 
-// requestRedrawAndRebuild flags a widget whose state changed: it rebuilds the whole tree and
+// requestRebuildAndRedraw flags a widget whose state changed: it rebuilds the whole tree and
 // redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
 // widget is off-screen and has nothing to repaint.
 //
 // redrawReason must not be requestRedrawReasonUnknown, which flags the absence of a pending rebuild.
-func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
+func (a *app) requestRebuildAndRedraw(widgetState *widgetState, redrawReason requestRedrawReason) {
 	if redrawReason == requestRedrawReasonUnknown {
 		panic("guigui: redrawReason must not be requestRedrawReasonUnknown")
 	}
@@ -1160,12 +1160,12 @@ func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason req
 	a.hasDirtyWidgets = true
 }
 
-// requestRedrawAndRebuildScreen handles a global change (color mode, device scale, focus,
+// requestRebuildAndRedrawScreen handles a global change (color mode, device scale, focus,
 // screen size): it rebuilds the whole tree and redraws the whole screen.
-func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
+func (a *app) requestRebuildAndRedrawScreen(redrawReason requestRedrawReason) {
 	// A global-change redrawReason routes the whole-screen region into
-	// redrawAndRebuildRequestedRegions, whose non-emptiness forces a tree rebuild
-	// in settleRedrawAndRebuildState. Setting treeRebuildRequested here would be
+	// rebuildAndRedrawRequestedRegions, whose non-emptiness forces a tree rebuild
+	// in settleRebuildAndRedrawState. Setting treeRebuildRequested here would be
 	// redundant.
 	a.enqueueRedrawRegion(a.bounds(), redrawReason, nil)
 }
