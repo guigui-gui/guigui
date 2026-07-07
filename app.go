@@ -1163,7 +1163,10 @@ func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason req
 // requestRedrawAndRebuildScreen handles a global change (color mode, device scale, focus,
 // screen size): it rebuilds the whole tree and redraws the whole screen.
 func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
-	a.treeRebuildRequested = true
+	// A global-change redrawReason routes the whole-screen region into
+	// redrawAndRebuildRequestedRegions, whose non-emptiness forces a tree rebuild
+	// in settleRedrawAndRebuildState. Setting treeRebuildRequested here would be
+	// redundant.
 	a.enqueueRedrawRegion(a.bounds(), redrawReason, nil)
 }
 
