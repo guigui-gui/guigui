@@ -155,8 +155,7 @@ type widgetState struct {
 	offscreen *ebiten.Image
 
 	// redrawReasons is the set of reasons this widget must be redrawn on the next tick.
-	// The empty set (the zero value) means the widget is clean. A state-key-change reason
-	// also drives a rebuild of the widget tree.
+	// The empty set (the zero value) means the widget is clean.
 	redrawReasons requestRedrawReasons
 
 	capturedStateKey         [16]byte
