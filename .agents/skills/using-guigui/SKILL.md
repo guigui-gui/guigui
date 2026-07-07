@@ -558,21 +558,18 @@ drift from an alpha API. Before considering a change done:
   `slices.Delete(s, 0, len(s))`; `Layout` runs frequently.
 - **Hard-coded pixel sizes.** Use `basicwidget.UnitSize(context)` so layouts
   scale with DPI and app scale.
-- **Holding children in a plain value slice.** `append` to a `[]Row` reallocates
-  and moves its elements; a widget's identity is the address of its embedded
-  `DefaultWidget`, and moving/copying one by value panics (*"illegal use of
-  DefaultWidget copied by value"*). Use `guigui.WidgetSlice[*T]` for a variable
-  number of children (see "Dynamic lists of children").
-- **Resolving env through a widget that was just created.** `context.Env(w,
-  key)` walks `w`'s parent chain; a widget nobody has built yet has no parent,
-  so the lookup silently returns `(nil, false)` and code assuming a non-nil
-  value crashes. Resolve shared state through the widget whose `Build` is
-  running, not through a possibly-new child (see "Env lookups on a just-created
-  widget silently find nothing").
-- **Overriding `HandleButtonInput` on a never-focused widget.** Keyboard/gamepad
-  input only reaches widgets that are focused, have a focused ancestor or
-  descendant, or are themselves button-input-receptive. Focus the widget or
-  call `context.SetButtonInputReceptive` (see "Handling input directly").
+- **Holding children in a plain value slice.** `append` to a `[]Row` moves its
+  elements, which churns widget identity or panics. Use `guigui.WidgetSlice[*T]`
+  for a variable number of children (see "Dynamic lists of children").
+- **Resolving env through a widget that was just created.** A widget nobody has
+  built yet has no parent, so the lookup silently returns `(nil, false)` and code
+  assuming a non-nil value crashes. Resolve shared state through the widget whose
+  `Build` is running, not through a possibly-new child (see "Env lookups on a
+  just-created widget silently find nothing").
+- **Overriding `HandleButtonInput` on a never-focused widget.** It reaches only
+  focused widgets (plus their ancestors/descendants) or button-input-receptive
+  ones. Focus the widget or call `context.SetButtonInputReceptive` (see
+  "Handling input directly").
 - **Trying to scroll a panel past its content.** `basicwidget.Panel` clamps the
   scroll offset to `[min(viewport − content, 0), 0]`: positive offsets are
   discarded, and when the content fits the viewport the offset stays pinned at
