@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Written against Guigui's alpha API as of 2026-07.
+> **Freshness.** Verified against Guigui at commit `6d90cdb6` (2026-07-07).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
