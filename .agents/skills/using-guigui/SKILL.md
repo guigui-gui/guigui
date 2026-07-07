@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `cb99bdfd` (2026-07-05).
+> **Freshness.** Written against Guigui's alpha API as of 2026-07.
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -416,18 +416,24 @@ Rebuilds happen when:
 - an **input handler or event handler runs** (the framework assumes it may have
   mutated state),
 - a widget's **state key changes** (see `WriteStateKey`), or
-- you explicitly call `guigui.RequestRebuild(widget)`.
+- you explicitly call `guigui.RequestRebuild()`.
 
 **A rebuild is whole-tree, never scoped.** Any of these re-runs `Build` on
 *every* widget from the root — there is no per-widget or per-subtree rebuild.
-`RequestRebuild(widget)` rebuilds the entire tree regardless of the widget you
-pass (the argument is only for logging), and a changed state key rebuilds the
+`RequestRebuild()` takes no argument; a changed state key likewise rebuilds the
 whole tree, not just the widget that owns the key. So place a `WriteStateKey`
 on whichever widget *owns* the self-changing state — a **different** widget
 that renders from it still re-runs its own `Build` and reflects the change, so
 the key need not live on the widget that displays it. (`WriteStateKey` gets no
 `*Context`, so it can only hash fields reachable from the widget itself, not an
 `Env` lookup.)
+
+**A rebuild re-runs `Build`; it does not repaint by itself.** The pixels that
+get redrawn come from state-key changes (which auto-repaint the changed
+widget's region), from tree/layout diffs, or from an explicit `RequestRedraw`.
+A bare `RequestRebuild()` seeds no redraw region, so for a paint-only change
+that alters a widget's appearance without changing its bounds or a state key,
+pair it with `guigui.RequestRedraw(widget)`.
 
 So a counter mutated inside a button's `OnUp` updates with no extra work. But a
 field mutated **outside** any handler — from a `Tick`, a goroutine result
@@ -449,8 +455,9 @@ will *not* repaint unless you do one of:
    variants), `WriteFloat32/64`, `WriteString`, `WriteWidget`, and raw `Write`.
    Writing nothing opts out (the default).
 
-2. **Call `guigui.RequestRebuild(widget)`** at the mutation site if you do not
-   want to maintain a state key.
+2. **Call `guigui.RequestRebuild()`** at the mutation site if you do not want to
+   maintain a state key. It re-runs `Build` but does not repaint on its own, so
+   for a paint-only change also call `guigui.RequestRedraw(widget)`.
 
 `guigui.RequestRedraw(widget)` forces a repaint **without** a rebuild — use it
 only when nothing in the tree structure changed (e.g. an animation frame).
@@ -519,7 +526,8 @@ mark it receptive.
 5. Read shared models via `context.Env`; bubble events up with a generated
    `EventKey` + `On…` setter + `DispatchEvent`.
 6. If a field can change outside input/event handlers, expose it via
-   `WriteStateKey` or call `RequestRebuild` when you mutate it.
+   `WriteStateKey` or call `RequestRebuild` when you mutate it (add
+   `RequestRedraw` too for a paint-only change).
 
 ## Verify your work — do not trust this file alone
 
@@ -553,7 +561,8 @@ drift from an alpha API. Before considering a change done:
 - **Registering handlers once / outside `Build`.** Handlers are wiped each
   rebuild — register them in `Build` every time.
 - **Expecting a field write to repaint.** Only handler-driven or
-  state-key-driven changes auto-rebuild; otherwise call `RequestRebuild`.
+  state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (plus
+  `RequestRedraw` if the change is paint-only).
 - **Allocating a fresh items slice every `Layout`.** Reuse with
   `slices.Delete(s, 0, len(s))`; `Layout` runs frequently.
 - **Hard-coded pixel sizes.** Use `basicwidget.UnitSize(context)` so layouts

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"log/slog"
 	"reflect"
 	"runtime"
 	"slices"
@@ -157,7 +158,6 @@ type widgetState struct {
 	offscreen *ebiten.Image
 
 	rebuildRequested      bool
-	rebuildRequestedAt    string
 	redrawReasonOnRebuild requestRedrawReason
 
 	capturedStateKey         [16]byte
@@ -336,27 +336,38 @@ func traverseWidget(widget Widget, f func(widget Widget) error) error {
 	return nil
 }
 
-// RequestRebuild requests to rebuild the entire widget tree.
-// The widget argument is used only for logging purposes; the entire tree is rebuilt regardless of which widget is passed.
-func RequestRebuild(widget Widget) {
-	theApp.requestRebuild(widget.widgetState(), requestRedrawReasonRebuildWidget)
+// RequestRebuild requests a rebuild of the entire widget tree on the next frame.
+// A rebuild re-runs [Widget.Build] across the tree but does not by itself repaint anything;
+// to refresh a widget's pixels, call [RequestRedraw].
+func RequestRebuild() {
+	theApp.requestRebuild()
 }
 
-func (a *app) requestRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
-	if !widgetState.isInTree(a.buildCount) {
-		// requestRebuild can be called with a widget that is not in the tree.
-		// For example, a popup widget that is not added yet can invoke this when opening it.
-		// As the special case, rebuild the root widget.
-		widgetState = a.root.widgetState()
+// requestRebuild rebuilds the whole tree without seeding any redraw; the repaint, if any,
+// comes from a state-key change, a tree diff, or an explicit [RequestRedraw].
+func (a *app) requestRebuild() {
+	a.treeRebuildRequested = true
+	if theDebugMode.showBuildLogs {
+		if _, file, line, ok := runtime.Caller(2); ok {
+			slog.Info("rebuild requested", "at", fmt.Sprintf("%s:%d", file, line))
+		}
 	}
+}
+
+// requestRedrawAndRebuild flags a widget whose state changed: it rebuilds the whole tree and
+// redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
+// widget is off-screen and has nothing to repaint.
+func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
 	widgetState.rebuildRequested = true
 	widgetState.redrawReasonOnRebuild = redrawReason
 	a.hasDirtyWidgets = true
-	if theDebugMode.showRenderingRegions {
-		if _, file, line, ok := runtime.Caller(2); ok {
-			widgetState.rebuildRequestedAt = fmt.Sprintf("%s:%d", file, line)
-		}
-	}
+}
+
+// requestRedrawAndRebuildScreen handles a global change (color mode, device scale, focus,
+// screen size): it rebuilds the whole tree and redraws the whole screen.
+func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
+	a.treeRebuildRequested = true
+	a.requestRedraw(a.bounds(), redrawReason, nil)
 }
 
 // RequestRedraw requests to redraw the given widget.
@@ -407,7 +418,7 @@ func DispatchEvent(widget Widget, eventKey EventKey, args ...any) ([]any, bool) 
 		for i, a := range args {
 			argValues[i] = reflect.ValueOf(a)
 		}
-		return invokeEventHandler(widget, widgetState, h.handler, argValues), true
+		return invokeEventHandler(widgetState, h.handler, argValues), true
 	}
 	return nil, false
 }
@@ -424,12 +435,12 @@ func DispatchEventLazy(widget Widget, eventKey EventKey, argsFunc any) ([]any, b
 			continue
 		}
 		args := reflect.ValueOf(argsFunc).Call(nil)
-		return invokeEventHandler(widget, widgetState, h.handler, args), true
+		return invokeEventHandler(widgetState, h.handler, args), true
 	}
 	return nil, false
 }
 
-func invokeEventHandler(widget Widget, widgetState *widgetState, handler any, args []reflect.Value) []any {
+func invokeEventHandler(widgetState *widgetState, handler any, args []reflect.Value) []any {
 	f := reflect.ValueOf(handler)
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 	widgetState.tmpArgs = append(widgetState.tmpArgs, reflect.ValueOf(&theApp.context))
@@ -438,7 +449,6 @@ func invokeEventHandler(widget Widget, widgetState *widgetState, handler any, ar
 	widgetState.tmpArgs = slices.Delete(widgetState.tmpArgs, 0, len(widgetState.tmpArgs))
 	widgetState.eventDispatched = true
 	theApp.hasDirtyWidgets = true
-	RequestRebuild(widget)
 	if len(results) == 0 {
 		return nil
 	}

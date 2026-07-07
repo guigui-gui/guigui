@@ -155,6 +155,11 @@ type app struct {
 	// This allows settleRedrawAndRebuildState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
+	// treeRebuildRequested is set by [RequestRebuild] to force a whole-tree rebuild on the next
+	// build+layout cycle. It is independent of any redraw region: a rebuild does not by itself
+	// repaint anything, so callers that also need pixels refreshed must call [RequestRedraw].
+	treeRebuildRequested bool
+
 	// stateKeyCheckPending is true when widget state may have changed since the last
 	// [app.checkStateKeys] run. It is set by widget phases (Build, Layout, Tick, HandleInput)
 	// and [Context] setters that affect state tracked in [Widget.WriteStateKey] or internalStateKey.
@@ -265,19 +270,16 @@ func (a *app) focusWidget(widget Widget) {
 	}
 	a.clearFocusAncestorFlags()
 	if a.focusedWidget != nil {
-		RequestRebuild(a.focusedWidget)
 		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, false)
 	}
 	a.focusedWidget = widget
 	if a.focusedWidget != nil {
-		RequestRebuild(a.focusedWidget)
 		DispatchEvent(a.focusedWidget, widgetEventFocusChanged, true)
 	}
 	a.setFocusAncestorFlags()
 
 	// Redraw the entire screen, as any widgets can be affected by the focus change (#283).
-	// requestRedrawReasonWidgetFocus also requests rebuilding a tree.
-	a.requestRedraw(a.bounds(), requestRedrawReasonWidgetFocus, nil)
+	a.requestRedrawAndRebuildScreen(requestRedrawReasonWidgetFocus)
 }
 
 func (a *app) clearFocusAncestorFlags() {
@@ -335,7 +337,6 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 					a.requestRedrawWidget(widget, reason)
 				}
 				widgetState.rebuildRequested = false
-				widgetState.rebuildRequestedAt = ""
 				widgetState.redrawReasonOnRebuild = 0
 				widgetState.redrawRequested = false
 				widgetState.redrawRequestedAt = ""
@@ -369,6 +370,13 @@ func (a *app) settleRedrawAndRebuildState(inputHandledWidget Widget) {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.redrawAndRebuildRequestedRegions)
 		}
 	}
+	if a.treeRebuildRequested {
+		a.treeRebuildRequested = false
+		a.requiredPhases = a.requiredPhases.addBuild()
+		if theDebugMode.showBuildLogs {
+			slog.Info("rebuilding tree next time: rebuild requested")
+		}
+	}
 
 	a.regionsToDraw = a.redrawRequestedRegions.union(a.regionsToDraw)
 	a.regionsToDraw = a.redrawAndRebuildRequestedRegions.union(a.regionsToDraw)
@@ -386,12 +394,12 @@ func (a *app) Update() error {
 
 	if s := deviceScaleFactor(); a.deviceScale != s {
 		a.deviceScale = s
-		a.requestRebuild(a.root.widgetState(), requestRedrawReasonScreenDeviceScale)
+		a.requestRedrawAndRebuildScreen(requestRedrawReasonScreenDeviceScale)
 	}
 
 	if a.context.ColorMode() != a.lastColorMode {
 		a.lastColorMode = a.context.ColorMode()
-		a.requestRebuild(a.root.widgetState(), requestRedrawReasonColorMode)
+		a.requestRedrawAndRebuildScreen(requestRedrawReasonColorMode)
 	}
 
 	if focused := ebiten.IsFocused(); focused != a.lastFocused {
@@ -399,9 +407,8 @@ func (a *app) Update() error {
 		// On regaining focus, redraw the entire screen: the screen is not cleared
 		// every frame, so regions changed while unfocused (e.g. a popup fading out
 		// off-screen) would otherwise never be repainted.
-		// requestRedrawReasonAppFocus also requests rebuilding a tree.
 		if focused {
-			a.requestRedraw(a.bounds(), requestRedrawReasonAppFocus, nil)
+			a.requestRedrawAndRebuildScreen(requestRedrawReasonAppFocus)
 		}
 	}
 
@@ -423,7 +430,7 @@ func (a *app) Update() error {
 		a.lastScreenHeight = a.screenHeight
 	}
 	if screenInvalidated {
-		a.requestRedraw(a.bounds(), requestRedrawReasonScreenSize, nil)
+		a.requestRedrawAndRebuildScreen(requestRedrawReasonScreenSize)
 	}
 
 	// Call the first buildWidgets.
@@ -747,13 +754,13 @@ func (a *app) checkStateKeys() {
 			continue
 		}
 		if ws.internalStateKey() != ws.capturedInternalStateKey {
-			a.requestRebuild(ws, requestRedrawReasonStateKeyChanged)
+			a.requestRedrawAndRebuild(ws, requestRedrawReasonStateKeyChanged)
 			continue
 		}
 		if a.widgetStateKey(widget) == ws.capturedStateKey {
 			continue
 		}
-		a.requestRebuild(ws, requestRedrawReasonStateKeyChanged)
+		a.requestRedrawAndRebuild(ws, requestRedrawReasonStateKeyChanged)
 	}
 }
 

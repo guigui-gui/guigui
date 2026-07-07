@@ -482,8 +482,9 @@ func (p *popup) SetOpen(open bool) {
 	}
 	// A closed popup is typically gated out of its parent's Build, so the
 	// state-key-based auto-rebuild doesn't fire when it's not in the tree.
-	// RequestRebuild falls back to rebuilding the root in that case.
-	guigui.RequestRebuild(p)
+	// Request a whole-tree rebuild so the open/close is reflected; the popup's
+	// region (and the area it vacates) is repainted as the tree diff changes.
+	guigui.RequestRebuild()
 }
 
 func (p *popup) setCloseReason(reason PopupCloseReason) {

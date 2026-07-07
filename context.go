@@ -112,7 +112,7 @@ func (c *Context) SetPreferredColorMode(mode ebiten.ColorMode) {
 		return
 	}
 	ebiten.SetWindowColorMode(mode)
-	c.app.requestRebuild(c.app.root.widgetState(), requestRedrawReasonColorMode)
+	c.app.requestRedrawAndRebuildScreen(requestRedrawReasonColorMode)
 }
 
 var (

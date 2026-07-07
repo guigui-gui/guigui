@@ -29,7 +29,6 @@ type requestRedrawReason int
 
 const (
 	requestRedrawReasonUnknown requestRedrawReason = iota
-	requestRedrawReasonRebuildWidget
 	requestRedrawReasonStateKeyChanged
 	requestRedrawReasonRedrawWidget
 	requestRedrawReasonLayout
@@ -46,8 +45,6 @@ func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason,
 	r.region = r.region.Union(region)
 	if theDebugMode.showRenderingRegions {
 		switch reason {
-		case requestRedrawReasonRebuildWidget:
-			slog.Info("request redrawing", "reason", "rebuild widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().rebuildRequestedAt, "region", region)
 		case requestRedrawReasonStateKeyChanged:
 			slog.Info("request redrawing", "reason", "state key changed", "requester", fmt.Sprintf("%T", widget), "region", region)
 		case requestRedrawReasonRedrawWidget:
