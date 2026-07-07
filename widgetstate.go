@@ -5,11 +5,8 @@ package guigui
 
 import (
 	"errors"
-	"fmt"
 	"image"
-	"log/slog"
 	"reflect"
-	"runtime"
 	"slices"
 	"sync/atomic"
 
@@ -334,57 +331,6 @@ func traverseWidget(widget Widget, f func(widget Widget) error) error {
 		}
 	}
 	return nil
-}
-
-// RequestRebuild requests a rebuild of the entire widget tree on the next frame.
-// A rebuild re-runs [Widget.Build] across the tree but does not by itself repaint anything;
-// to refresh a widget's pixels, call [RequestRedraw].
-func RequestRebuild() {
-	theApp.requestRebuild()
-}
-
-// requestRebuild rebuilds the whole tree without seeding any redraw; the repaint, if any,
-// comes from a state-key change, a tree diff, or an explicit [RequestRedraw].
-func (a *app) requestRebuild() {
-	a.treeRebuildRequested = true
-	if theDebugMode.showBuildLogs {
-		if _, file, line, ok := runtime.Caller(2); ok {
-			slog.Info("rebuild requested", "at", fmt.Sprintf("%s:%d", file, line))
-		}
-	}
-}
-
-// requestRedrawAndRebuild flags a widget whose state changed: it rebuilds the whole tree and
-// redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
-// widget is off-screen and has nothing to repaint.
-func (a *app) requestRedrawAndRebuild(widgetState *widgetState, redrawReason requestRedrawReason) {
-	widgetState.rebuildRequested = true
-	widgetState.redrawReasonOnRebuild = redrawReason
-	a.hasDirtyWidgets = true
-}
-
-// requestRedrawAndRebuildScreen handles a global change (color mode, device scale, focus,
-// screen size): it rebuilds the whole tree and redraws the whole screen.
-func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
-	a.treeRebuildRequested = true
-	a.requestRedraw(a.bounds(), redrawReason, nil)
-}
-
-// RequestRedraw requests to redraw the given widget.
-// RequestRedraw causes Draw invocations, but this might not be enough to reflect the latest state.
-// If unsure, use [RequestRebuild] instead.
-func RequestRedraw(widget Widget) {
-	requestRedraw(widget.widgetState())
-}
-
-func requestRedraw(widgetState *widgetState) {
-	widgetState.redrawRequested = true
-	theApp.hasDirtyWidgets = true
-	if theDebugMode.showRenderingRegions {
-		if _, file, line, ok := runtime.Caller(2); ok {
-			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
-		}
-	}
 }
 
 // SetEventHandler registers an event handler for the given event key on the widget.
