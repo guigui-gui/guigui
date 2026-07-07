@@ -1133,6 +1133,11 @@ func (a *app) appendWidgetsAt(widgets []widgetAndLayer, point image.Point, widge
 // A rebuild re-runs [Widget.Build] across the tree but does not by itself repaint anything;
 // to refresh a widget's pixels, call [RequestRedraw].
 func RequestRebuild() {
+	if theDebugMode.showBuildLogs {
+		if _, file, line, ok := runtime.Caller(1); ok {
+			slog.Info("rebuild requested", "at", fmt.Sprintf("%s:%d", file, line))
+		}
+	}
 	theApp.requestRebuild()
 }
 
@@ -1140,11 +1145,6 @@ func RequestRebuild() {
 // comes from a state-key change, a tree diff, or an explicit [RequestRedraw].
 func (a *app) requestRebuild() {
 	a.treeRebuildRequested = true
-	if theDebugMode.showBuildLogs {
-		if _, file, line, ok := runtime.Caller(2); ok {
-			slog.Info("rebuild requested", "at", fmt.Sprintf("%s:%d", file, line))
-		}
-	}
 }
 
 // requestRedrawAndRebuild flags a widget whose state changed: it rebuilds the whole tree and
@@ -1171,15 +1171,16 @@ func (a *app) requestRedrawAndRebuildScreen(redrawReason requestRedrawReason) {
 // RequestRedraw causes Draw invocations, but this might not be enough to reflect the latest state.
 // If unsure, use [RequestRebuild] instead.
 func RequestRedraw(widget Widget) {
-	theApp.requestRedraw(widget.widgetState())
+	widgetState := widget.widgetState()
+	if theDebugMode.showRenderingRegions {
+		if _, file, line, ok := runtime.Caller(1); ok {
+			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
+		}
+	}
+	theApp.requestRedraw(widgetState)
 }
 
 func (a *app) requestRedraw(widgetState *widgetState) {
 	widgetState.redrawRequested = true
 	a.hasDirtyWidgets = true
-	if theDebugMode.showRenderingRegions {
-		if _, file, line, ok := runtime.Caller(2); ok {
-			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
-		}
-	}
 }
