@@ -152,7 +152,7 @@ type app struct {
 	// reallocate a fresh backing array every time.
 	bounds3DsPool sync.Pool
 
-	// hasDirtyWidgets is true when any widget has a pending rebuild, redrawRequested, or eventDispatched set.
+	// hasDirtyWidgets is true when any widget has a non-empty redrawReasons set or eventDispatched set.
 	// This allows settleRebuildAndRedrawState to skip iterating widgetList when nothing is dirty.
 	hasDirtyWidgets bool
 
@@ -327,16 +327,11 @@ func (a *app) settleRebuildAndRedrawState(inputHandledWidget Widget) {
 		a.hasDirtyWidgets = false
 		for _, widget := range a.widgetList {
 			widgetState := widget.widgetState()
-			if widgetState.redrawReasonOnRebuild != requestRedrawReasonUnknown || widgetState.redrawRequested {
+			if !widgetState.redrawReasons.empty() {
 				if vb := a.context.visibleBounds(widgetState); !vb.Empty() {
-					reason := requestRedrawReasonRedrawWidget
-					if widgetState.redrawReasonOnRebuild != requestRedrawReasonUnknown {
-						reason = widgetState.redrawReasonOnRebuild
-					}
-					a.enqueueRedrawWidget(widget, reason)
+					a.enqueueRedrawWidget(widget, widgetState.redrawReasons)
 				}
-				widgetState.redrawReasonOnRebuild = requestRedrawReasonUnknown
-				widgetState.redrawRequested = false
+				widgetState.redrawReasons.clear()
 				widgetState.redrawRequestedAt = ""
 			}
 			if widgetState.eventDispatched {
@@ -562,31 +557,30 @@ func (a *app) LayoutF(outsideWidth, outsideHeight float64) (float64, float64) {
 	return a.screenWidth, a.screenHeight
 }
 
-func (a *app) enqueueRedrawRegion(region image.Rectangle, reason requestRedrawReason, widget Widget) {
-	switch reason {
-	case requestRedrawReasonRedrawWidget, requestRedrawReasonLayout:
-		a.redrawRequestedRegions.add(region, reason, widget)
-	default:
-		a.rebuildAndRedrawRequestedRegions.add(region, reason, widget)
+func (a *app) enqueueRedrawRegion(region image.Rectangle, reasons requestRedrawReasons, widget Widget) {
+	if reasons.triggersRebuild() {
+		a.rebuildAndRedrawRequestedRegions.add(region, reasons, widget)
+	} else {
+		a.redrawRequestedRegions.add(region, reasons, widget)
 	}
 }
 
-func (a *app) enqueueRedrawWidget(widget Widget, reason requestRedrawReason) {
+func (a *app) enqueueRedrawWidget(widget Widget, reasons requestRedrawReasons) {
 	widgetState := widget.widgetState()
-	a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), reason, widget)
+	a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), reasons, widget)
 	for _, child := range widgetState.children {
-		a.enqueueRedrawIfDifferentParentLayer(child, reason)
+		a.enqueueRedrawIfDifferentParentLayer(child, reasons)
 	}
 }
 
-func (a *app) enqueueRedrawIfDifferentParentLayer(widget Widget, reason requestRedrawReason) {
+func (a *app) enqueueRedrawIfDifferentParentLayer(widget Widget, reasons requestRedrawReasons) {
 	widgetState := widget.widgetState()
 	if widgetState.inDifferentLayerFromParent() {
-		a.enqueueRedrawWidget(widget, reason)
+		a.enqueueRedrawWidget(widget, reasons)
 		return
 	}
 	for _, child := range widgetState.children {
-		a.enqueueRedrawIfDifferentParentLayer(child, reason)
+		a.enqueueRedrawIfDifferentParentLayer(child, reasons)
 	}
 }
 
@@ -748,17 +742,17 @@ func (a *app) checkStateKeys() {
 	a.stateKeyCheckPending = false
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		if ws.redrawReasonOnRebuild != requestRedrawReasonUnknown {
+		if ws.redrawReasons.has(requestRedrawReasonStateKeyChanged) {
 			continue
 		}
 		if ws.internalStateKey() != ws.capturedInternalStateKey {
-			a.requestRebuildAndRedraw(ws, requestRedrawReasonStateKeyChanged)
+			a.requestRebuildAndRedraw(ws)
 			continue
 		}
 		if a.widgetStateKey(widget) == ws.capturedStateKey {
 			continue
 		}
-		a.requestRebuildAndRedraw(ws, requestRedrawReasonStateKeyChanged)
+		a.requestRebuildAndRedraw(ws)
 	}
 }
 
@@ -934,14 +928,14 @@ func (a *app) requestRedrawIfTreeChanged() {
 		widgetState := widget.widgetState()
 		// If the children and/or children's bounds are changed, request redraw.
 		if !widgetState.prev.equals(&a.context, widgetState.children) {
-			a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), requestRedrawReasonLayout, nil)
+			a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), redrawReasonsOf(requestRedrawReasonLayout), nil)
 
 			widgetState.prev.requestRedraw(a)
 
 			// If the widget is a clipping widget, all the children are included in the visible bounds.
 			if !widgetState.clipChildren {
 				for _, child := range widgetState.children {
-					a.enqueueRedrawRegion(a.context.visibleBounds(child.widgetState()), requestRedrawReasonLayout, nil)
+					a.enqueueRedrawRegion(a.context.visibleBounds(child.widgetState()), redrawReasonsOf(requestRedrawReasonLayout), nil)
 				}
 			}
 		}
@@ -1150,13 +1144,8 @@ func (a *app) requestRebuild() {
 // requestRebuildAndRedraw flags a widget whose state changed: it rebuilds the whole tree and
 // redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
 // widget is off-screen and has nothing to repaint.
-//
-// redrawReason must not be requestRedrawReasonUnknown, which flags the absence of a pending rebuild.
-func (a *app) requestRebuildAndRedraw(widgetState *widgetState, redrawReason requestRedrawReason) {
-	if redrawReason == requestRedrawReasonUnknown {
-		panic("guigui: redrawReason must not be requestRedrawReasonUnknown")
-	}
-	widgetState.redrawReasonOnRebuild = redrawReason
+func (a *app) requestRebuildAndRedraw(widgetState *widgetState) {
+	widgetState.redrawReasons.add(requestRedrawReasonStateKeyChanged)
 	a.hasDirtyWidgets = true
 }
 
@@ -1167,7 +1156,7 @@ func (a *app) requestRebuildAndRedrawScreen(redrawReason requestRedrawReason) {
 	// rebuildAndRedrawRequestedRegions, whose non-emptiness forces a tree rebuild
 	// in settleRebuildAndRedrawState. Setting treeRebuildRequested here would be
 	// redundant.
-	a.enqueueRedrawRegion(a.bounds(), redrawReason, nil)
+	a.enqueueRedrawRegion(a.bounds(), redrawReasonsOf(redrawReason), nil)
 }
 
 // RequestRedraw requests to redraw the given widget.
@@ -1184,6 +1173,6 @@ func RequestRedraw(widget Widget) {
 }
 
 func (a *app) requestRedraw(widgetState *widgetState) {
-	widgetState.redrawRequested = true
+	widgetState.redrawReasons.add(requestRedrawReasonRedrawWidget)
 	a.hasDirtyWidgets = true
 }

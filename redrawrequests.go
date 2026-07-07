@@ -6,7 +6,9 @@ package guigui
 import (
 	"fmt"
 	"image"
+	"iter"
 	"log/slog"
+	"math/bits"
 )
 
 type redrawRequests struct {
@@ -28,8 +30,7 @@ func (r *redrawRequests) union(region image.Rectangle) image.Rectangle {
 type requestRedrawReason int
 
 const (
-	requestRedrawReasonUnknown requestRedrawReason = iota
-	requestRedrawReasonStateKeyChanged
+	requestRedrawReasonStateKeyChanged requestRedrawReason = iota
 	requestRedrawReasonRedrawWidget
 	requestRedrawReasonLayout
 	requestRedrawReasonWidgetFocus
@@ -41,32 +42,92 @@ const (
 	requestRedrawReasonLocale
 )
 
-func (r *redrawRequests) add(region image.Rectangle, reason requestRedrawReason, widget Widget) {
+func (r requestRedrawReason) String() string {
+	switch r {
+	case requestRedrawReasonStateKeyChanged:
+		return "state key changed"
+	case requestRedrawReasonRedrawWidget:
+		return "redraw widget"
+	case requestRedrawReasonLayout:
+		return "layout"
+	case requestRedrawReasonWidgetFocus:
+		return "widget focus"
+	case requestRedrawReasonAppFocus:
+		return "app focus"
+	case requestRedrawReasonScreenSize:
+		return "screen size"
+	case requestRedrawReasonScreenDeviceScale:
+		return "screen device scale"
+	case requestRedrawReasonAppScale:
+		return "app scale"
+	case requestRedrawReasonColorMode:
+		return "color mode"
+	case requestRedrawReasonLocale:
+		return "locale"
+	default:
+		return "unknown"
+	}
+}
+
+// requestRedrawReasons is a set of requestRedrawReason values, one bit per reason.
+// The zero value is the empty set, meaning no redraw is pending.
+type requestRedrawReasons uint32
+
+// redrawReasonsOf returns a set containing the single given reason.
+func redrawReasonsOf(reason requestRedrawReason) requestRedrawReasons {
+	var r requestRedrawReasons
+	r.add(reason)
+	return r
+}
+
+func (r requestRedrawReasons) empty() bool {
+	return r == 0
+}
+
+func (r requestRedrawReasons) has(reason requestRedrawReason) bool {
+	return r&(1<<reason) != 0
+}
+
+// triggersRebuild reports whether the set contains any reason that forces a tree rebuild,
+// i.e. any reason other than a redraw-only one.
+func (r requestRedrawReasons) triggersRebuild() bool {
+	const redrawOnly = 1<<requestRedrawReasonRedrawWidget | 1<<requestRedrawReasonLayout
+	return r&^redrawOnly != 0
+}
+
+// all returns an iterator over the reasons in the set, in ascending reason order.
+func (r requestRedrawReasons) all() iter.Seq[requestRedrawReason] {
+	return func(yield func(requestRedrawReason) bool) {
+		for rs := r; rs != 0; rs &= rs - 1 {
+			reason := requestRedrawReason(bits.TrailingZeros32(uint32(rs)))
+			if !yield(reason) {
+				return
+			}
+		}
+	}
+}
+
+func (r *requestRedrawReasons) add(reason requestRedrawReason) {
+	*r |= 1 << reason
+}
+
+func (r *requestRedrawReasons) clear() {
+	*r = 0
+}
+
+func (r *redrawRequests) add(region image.Rectangle, reasons requestRedrawReasons, widget Widget) {
 	r.region = r.region.Union(region)
-	if theDebugMode.showRenderingRegions {
+	if !theDebugMode.showRenderingRegions {
+		return
+	}
+	for reason := range reasons.all() {
 		switch reason {
-		case requestRedrawReasonStateKeyChanged:
-			slog.Info("request redrawing", "reason", "state key changed", "requester", fmt.Sprintf("%T", widget), "region", region)
 		case requestRedrawReasonRedrawWidget:
-			slog.Info("request redrawing", "reason", "redraw widget", "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
-		case requestRedrawReasonLayout:
-			slog.Info("request redrawing", "reason", "layout", "region", region)
-		case requestRedrawReasonWidgetFocus:
-			slog.Info("request redrawing", "reason", "widget focus", "region", region)
-		case requestRedrawReasonAppFocus:
-			slog.Info("request redrawing", "reason", "app focus", "region", region)
-		case requestRedrawReasonScreenSize:
-			slog.Info("request redrawing", "reason", "screen size", "region", region)
-		case requestRedrawReasonScreenDeviceScale:
-			slog.Info("request redrawing", "reason", "screen device scale", "region", region)
-		case requestRedrawReasonAppScale:
-			slog.Info("request redrawing", "reason", "app scale", "region", region)
-		case requestRedrawReasonColorMode:
-			slog.Info("request redrawing", "reason", "color mode", "region", region)
-		case requestRedrawReasonLocale:
-			slog.Info("request redrawing", "reason", "locale", "region", region)
+			slog.Info("request redrawing", "reason", reason.String(), "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
+		case requestRedrawReasonStateKeyChanged:
+			slog.Info("request redrawing", "reason", reason.String(), "requester", fmt.Sprintf("%T", widget), "region", region)
 		default:
-			slog.Info("request redrawing", "reason", "unknown", "region", region)
+			slog.Info("request redrawing", "reason", reason.String(), "region", region)
 		}
 	}
 }

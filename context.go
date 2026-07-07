@@ -81,7 +81,7 @@ func (c *Context) SetAppScale(scale float64) {
 		return
 	}
 	c.appScaleMinus1 = scale - 1
-	c.app.enqueueRedrawRegion(c.app.bounds(), requestRedrawReasonAppScale, nil)
+	c.app.enqueueRedrawRegion(c.app.bounds(), redrawReasonsOf(requestRedrawReasonAppScale), nil)
 }
 
 // ColorMode returns the resolved color mode.
@@ -202,7 +202,7 @@ func (c *Context) SetAppLocales(locales []language.Tag) {
 	c.locales = append(c.locales, locales...)
 	c.allLocales = slices.Delete(c.allLocales, 0, len(c.allLocales))
 
-	c.app.enqueueRedrawRegion(c.app.bounds(), requestRedrawReasonLocale, nil)
+	c.app.enqueueRedrawRegion(c.app.bounds(), redrawReasonsOf(requestRedrawReasonLocale), nil)
 }
 
 // AppBounds returns the bounds of the application.

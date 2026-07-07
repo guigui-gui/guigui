@@ -102,7 +102,7 @@ func (w *widgetsAndBounds) commitCurrent() {
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {
 	for _, wb := range w.bounds3Ds {
-		app.enqueueRedrawRegion(wb.bounds3D.visibleBounds, requestRedrawReasonLayout, nil)
+		app.enqueueRedrawRegion(wb.bounds3D.visibleBounds, redrawReasonsOf(requestRedrawReasonLayout), nil)
 		app.requestRedraw(wb.widgetState)
 	}
 }
@@ -154,14 +154,15 @@ type widgetState struct {
 
 	offscreen *ebiten.Image
 
-	// redrawReasonOnRebuild is the redraw reason for a pending rebuild of this widget.
-	// requestRedrawReasonUnknown (the zero value) means no rebuild is pending.
-	redrawReasonOnRebuild requestRedrawReason
+	// redrawReasons is the set of reasons this widget must be redrawn on the next tick.
+	// The empty set (the zero value) means the widget is clean. A state-key-change reason
+	// also drives a rebuild of the widget tree.
+	redrawReasons requestRedrawReasons
 
 	capturedStateKey         [16]byte
 	capturedInternalStateKey widgetInternalStateKey
 
-	redrawRequested   bool
+	// redrawRequestedAt records the call site of the last RequestRedraw, for debug logging only.
 	redrawRequestedAt string
 
 	hasVisibleBoundsCache bool
