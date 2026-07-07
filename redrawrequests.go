@@ -30,9 +30,13 @@ func (r *redrawRequests) union(region image.Rectangle) image.Rectangle {
 type requestRedrawReason int
 
 const (
-	requestRedrawReasonStateKeyChanged requestRedrawReason = iota
-	requestRedrawReasonRedrawWidget
-	requestRedrawReasonLayout
+	// These reasons require only a redraw, not a rebuild.
+	requestRedrawReasonExplicitRequest requestRedrawReason = iota
+	requestRedrawReasonStateKeyChangedForDraw
+	requestRedrawReasonTreeChanged
+
+	// The remaining reasons require a rebuild in addition to a redraw.
+	requestRedrawReasonStateKeyChangedForBuild
 	requestRedrawReasonWidgetFocus
 	requestRedrawReasonAppFocus
 	requestRedrawReasonScreenSize
@@ -44,12 +48,14 @@ const (
 
 func (r requestRedrawReason) String() string {
 	switch r {
-	case requestRedrawReasonStateKeyChanged:
-		return "state key changed"
-	case requestRedrawReasonRedrawWidget:
-		return "redraw widget"
-	case requestRedrawReasonLayout:
-		return "layout"
+	case requestRedrawReasonExplicitRequest:
+		return "explicit request"
+	case requestRedrawReasonStateKeyChangedForDraw:
+		return "state key changed for draw"
+	case requestRedrawReasonTreeChanged:
+		return "tree changed"
+	case requestRedrawReasonStateKeyChangedForBuild:
+		return "state key changed for build"
 	case requestRedrawReasonWidgetFocus:
 		return "widget focus"
 	case requestRedrawReasonAppFocus:
@@ -91,7 +97,9 @@ func (r requestRedrawReasons) has(reason requestRedrawReason) bool {
 // triggersRebuild reports whether the set contains any reason that forces a tree rebuild,
 // i.e. any reason other than a redraw-only one.
 func (r requestRedrawReasons) triggersRebuild() bool {
-	const redrawOnly = 1<<requestRedrawReasonRedrawWidget | 1<<requestRedrawReasonLayout
+	const redrawOnly = 1<<requestRedrawReasonExplicitRequest |
+		1<<requestRedrawReasonStateKeyChangedForDraw |
+		1<<requestRedrawReasonTreeChanged
 	return r&^redrawOnly != 0
 }
 
@@ -122,9 +130,9 @@ func (r *redrawRequests) add(region image.Rectangle, reasons requestRedrawReason
 	}
 	for reason := range reasons.all() {
 		switch reason {
-		case requestRedrawReasonRedrawWidget:
+		case requestRedrawReasonExplicitRequest:
 			slog.Info("request redrawing", "reason", reason.String(), "requester", fmt.Sprintf("%T", widget), "at", widget.widgetState().redrawRequestedAt, "region", region)
-		case requestRedrawReasonStateKeyChanged:
+		case requestRedrawReasonStateKeyChangedForDraw, requestRedrawReasonTreeChanged, requestRedrawReasonStateKeyChangedForBuild:
 			slog.Info("request redrawing", "reason", reason.String(), "requester", fmt.Sprintf("%T", widget), "region", region)
 		default:
 			slog.Info("request redrawing", "reason", reason.String(), "region", region)

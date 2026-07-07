@@ -720,7 +720,7 @@ func (a *app) buildWidgets() error {
 		newStateKey := a.widgetStateKey(widget)
 		newInternalStateKey := ws.internalStateKey()
 		if newStateKey != ws.capturedStateKey || newInternalStateKey != ws.capturedInternalStateKey {
-			a.requestRedraw(ws)
+			a.requestRedraw(ws, requestRedrawReasonStateKeyChangedForDraw)
 		}
 		ws.capturedStateKey = newStateKey
 		ws.capturedInternalStateKey = newInternalStateKey
@@ -742,17 +742,17 @@ func (a *app) checkStateKeys() {
 	a.stateKeyCheckPending = false
 	for _, widget := range a.widgetList {
 		ws := widget.widgetState()
-		if ws.redrawReasons.has(requestRedrawReasonStateKeyChanged) {
+		if ws.redrawReasons.has(requestRedrawReasonStateKeyChangedForBuild) {
 			continue
 		}
 		if ws.internalStateKey() != ws.capturedInternalStateKey {
-			a.requestRebuildAndRedraw(ws)
+			a.requestRedraw(ws, requestRedrawReasonStateKeyChangedForBuild)
 			continue
 		}
 		if a.widgetStateKey(widget) == ws.capturedStateKey {
 			continue
 		}
-		a.requestRebuildAndRedraw(ws)
+		a.requestRedraw(ws, requestRedrawReasonStateKeyChangedForBuild)
 	}
 }
 
@@ -928,14 +928,14 @@ func (a *app) requestRedrawIfTreeChanged() {
 		widgetState := widget.widgetState()
 		// If the children and/or children's bounds are changed, request redraw.
 		if !widgetState.prev.equals(&a.context, widgetState.children) {
-			a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), redrawReasonsOf(requestRedrawReasonLayout), nil)
+			a.enqueueRedrawRegion(a.context.visibleBounds(widgetState), redrawReasonsOf(requestRedrawReasonTreeChanged), nil)
 
 			widgetState.prev.requestRedraw(a)
 
 			// If the widget is a clipping widget, all the children are included in the visible bounds.
 			if !widgetState.clipChildren {
 				for _, child := range widgetState.children {
-					a.enqueueRedrawRegion(a.context.visibleBounds(child.widgetState()), redrawReasonsOf(requestRedrawReasonLayout), nil)
+					a.enqueueRedrawRegion(a.context.visibleBounds(child.widgetState()), redrawReasonsOf(requestRedrawReasonTreeChanged), nil)
 				}
 			}
 		}
@@ -1141,14 +1141,6 @@ func (a *app) requestRebuild() {
 	a.treeRebuildRequested = true
 }
 
-// requestRebuildAndRedraw flags a widget whose state changed: it rebuilds the whole tree and
-// redraws that widget's region. The rebuild rides on the redraw, so it is skipped while the
-// widget is off-screen and has nothing to repaint.
-func (a *app) requestRebuildAndRedraw(widgetState *widgetState) {
-	widgetState.redrawReasons.add(requestRedrawReasonStateKeyChanged)
-	a.hasDirtyWidgets = true
-}
-
 // requestRebuildAndRedrawScreen handles a global change (color mode, device scale, focus,
 // screen size): it rebuilds the whole tree and redraws the whole screen.
 func (a *app) requestRebuildAndRedrawScreen(redrawReason requestRedrawReason) {
@@ -1169,10 +1161,10 @@ func RequestRedraw(widget Widget) {
 			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
 		}
 	}
-	theApp.requestRedraw(widgetState)
+	theApp.requestRedraw(widgetState, requestRedrawReasonExplicitRequest)
 }
 
-func (a *app) requestRedraw(widgetState *widgetState) {
-	widgetState.redrawReasons.add(requestRedrawReasonRedrawWidget)
+func (a *app) requestRedraw(widgetState *widgetState, reason requestRedrawReason) {
+	widgetState.redrawReasons.add(reason)
 	a.hasDirtyWidgets = true
 }

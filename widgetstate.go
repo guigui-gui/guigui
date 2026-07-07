@@ -102,8 +102,10 @@ func (w *widgetsAndBounds) commitCurrent() {
 
 func (w *widgetsAndBounds) requestRedraw(app *app) {
 	for _, wb := range w.bounds3Ds {
-		app.enqueueRedrawRegion(wb.bounds3D.visibleBounds, redrawReasonsOf(requestRedrawReasonLayout), nil)
-		app.requestRedraw(wb.widgetState)
+		// bounds3Ds holds the previous frame's snapshot. Repaint the snapshot's bounds to erase
+		// the subtree's old footprint, then mark the live widgetState to paint its current one.
+		app.enqueueRedrawRegion(wb.bounds3D.visibleBounds, redrawReasonsOf(requestRedrawReasonTreeChanged), nil)
+		app.requestRedraw(wb.widgetState, requestRedrawReasonTreeChanged)
 	}
 }
 
