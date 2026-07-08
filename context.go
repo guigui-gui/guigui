@@ -88,7 +88,7 @@ func (c *Context) SetAppScale(scale float64) {
 //
 // ColorMode never returns [ebiten.ColorModeUnknown].
 func (c *Context) ColorMode() ebiten.ColorMode {
-	if mode := ebiten.WindowColorMode(); mode != ebiten.ColorModeUnknown {
+	if mode := ebiten.PreferredColorMode(); mode != ebiten.ColorModeUnknown {
 		return mode
 	}
 	if mode := ebiten.SystemColorMode(); mode != ebiten.ColorModeUnknown {
@@ -101,17 +101,17 @@ func (c *Context) ColorMode() ebiten.ColorMode {
 //
 // PreferredColorMode might return [ebiten.ColorModeUnknown] if the color mode is not set.
 func (c *Context) PreferredColorMode() ebiten.ColorMode {
-	return ebiten.WindowColorMode()
+	return ebiten.PreferredColorMode()
 }
 
 // SetPreferredColorMode sets the preferred color mode.
 //
 // If mode is [ebiten.ColorModeUnknown], SetPreferredColorMode specifies the default system color mode.
 func (c *Context) SetPreferredColorMode(mode ebiten.ColorMode) {
-	if mode == ebiten.WindowColorMode() {
+	if mode == ebiten.PreferredColorMode() {
 		return
 	}
-	ebiten.SetWindowColorMode(mode)
+	ebiten.SetPreferredColorMode(mode)
 	c.app.requestRebuildAndRedrawScreen(requestRedrawReasonColorMode)
 }
 
@@ -122,9 +122,9 @@ var (
 func init() {
 	switch envColorModeStr {
 	case "light":
-		ebiten.SetWindowColorMode(ebiten.ColorModeLight)
+		ebiten.SetPreferredColorMode(ebiten.ColorModeLight)
 	case "dark":
-		ebiten.SetWindowColorMode(ebiten.ColorModeDark)
+		ebiten.SetPreferredColorMode(ebiten.ColorModeDark)
 	case "":
 	default:
 		slog.Warn(fmt.Sprintf("invalid GUIGUI_COLOR_MODE: %s", envColorModeStr))
