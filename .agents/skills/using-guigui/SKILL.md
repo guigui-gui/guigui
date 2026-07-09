@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `8d62c66b` (2026-07-09).
+> **Freshness.** Verified against Guigui at commit `c1ffb301` (2026-07-10).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -148,6 +148,15 @@ parent needs to size or place a child relative to a sibling, drive that from the
 layout (`LinearLayout` / `layouter`), not by trying to read the sibling's
 rectangle.
 
+`widgetBounds.VisibleBounds()` gives the part left after ancestor clipping.
+Use `Bounds()` for layout coordinates and `VisibleBounds()` to cull custom
+drawing. For ordinary cursor hit testing, use `widgetBounds.IsHitAtCursor()`;
+it accounts for clipping and higher-layer occlusion. Use `VisibleBounds()`
+geometrically only for an additional custom-shape check or a point other than
+the cursor. In `Draw`, `dst` is a clipped subimage whose coordinates are still
+screen coordinates, so draw at `Bounds().Min` (or other screen-space
+coordinates), not at an assumed `(0, 0)` origin.
+
 ## Layout with LinearLayout
 
 `LinearLayout` is the workhorse. Build a slice of `LinearLayoutItem`, then call
@@ -244,6 +253,33 @@ context.SetEnabled(&r.createButton, r.canAdd())
 
 For button actions, default to `OnDown`; reach for `OnUp` only when release
 semantics genuinely matter.
+
+Use `guigui.WidgetWithSize[*T]` or `guigui.WidgetWithPadding[*T]` when a child
+only needs an intrinsic-size override or padding. These wrappers lazily create
+their zero-value child, forward layout and focus, and expose it through
+`Widget()`. Use `guigui.LayerWidget[*T]` for floating content that must escape
+ancestor clipping or sit above other input targets: add and lay out the wrapper,
+then call `BringToFrontLayer(context)` during `Build`. Higher layers draw and
+receive input first.
+
+A widget instance can have only one parent in a build. Do not reuse the same
+content widget in two lists, a source view and a popup, or any other two places;
+create distinct widget instances that render the same data. Sharing the model is
+fine, but sharing the widget corrupts its parent chain, env lookup, bounds, and
+focus/input behavior.
+
+### Keep in-progress edits separate from model synchronization
+
+For an editable `basicwidget.TextInput`, call `SetValue(modelValue)` during
+`Build` as usual. It preserves an active user edit instead of overwriting the
+live buffer on every whole-tree rebuild. Reserve `ForceSetValue` for an explicit
+replacement/reset: it immediately replaces the buffer and can synchronously
+invoke `OnValueChanged` as a committed change. If a forced seed must not be
+treated as user input, guard the callback with a short-lived `seeding` flag.
+
+When replacing a subtree or switching records, commit or deliberately discard
+active edits before resetting the widget. Otherwise the model and the retained
+editing buffer can silently diverge.
 
 For the full list and runnable demos, read `basicwidget/` and the programs under
 `example/` (start with `example/counter` and `example/todo`; `example/gallery`
@@ -369,6 +405,14 @@ The parent calls `child.OnDeleted(func(context, id){ ... })` during its own
 (re)register inside `Build`. This is exactly how `basicwidget` buttons expose
 `OnDown` and `OnUp`.
 
+Re-registering a handler does not require allocating a new closure each time.
+In a large tree, keep hot handlers in widget fields, initialize them once when
+nil, and pass the same function back to `On...` during every `Build`. A cached
+closure should capture only the stable widget receiver (or another stable key):
+never retain the `Context` argument or a Build-local model/item whose meaning can
+change. Use the context passed to the callback and resolve current data from the
+receiver or `Env` when the event actually runs.
+
 ## Dynamic lists of children
 
 For a variable number of children, use `guigui.WidgetSlice[*T]`: set its length
@@ -405,6 +449,12 @@ Give the row a `Measure` returning its intrinsic height so the parent layout can
 size it; lay rows out with `FixedSize(rowHeight)` items in a vertical
 `LinearLayout`. (`basicwidget.List[T]` / `Table[T]` handle scrolling lists for
 you — prefer them for large collections.)
+
+`WidgetSlice` preserves widget addresses, not the logical identity of the data
+shown in each slot. For filterable or reorderable data, track selection and
+per-item state by a stable item value/key, reconfigure every slot from current
+data in `Build`, and validate the selection after deletion. A row index can
+start referring to a different item after a rebuild.
 
 ## Resetting a widget's cached state
 
@@ -502,6 +552,11 @@ with `RequestRedraw` each tick, and let a `WriteStateKey` fire the one rebuild
 on the on/off transition (when the animation finishes and a button must flip
 from stop back to play).
 
+For a large mutable model, prefer hashing a cheap monotonic generation counter
+in `WriteStateKey` over serializing every collection. Increment the generation
+for every mutation that affects the UI. State deliberately omitted from the key
+still needs an explicit `RequestRebuild` at its mutation sites.
+
 ## Context utilities
 
 `*guigui.Context` (passed to most methods) also exposes per-widget state setters,
@@ -543,6 +598,16 @@ traverses through ancestors only to reach the receptive widget). Overriding
 `HandleButtonInput` on a widget that is never focused and never marked
 receptive silently does nothing — focus the widget (`context.SetFocused`) or
 mark it receptive.
+
+Rich content nested inside a button or list item can intercept pointing input
+before the interactive parent. If that content is decorative, call
+`context.SetPassthrough(content, true)` in `Build`; the decorative subtree stops
+receiving input, allowing the container to handle the click.
+
+A visually modal popup does not automatically isolate keyboard shortcuts. Make
+its content button-input-receptive, handle intended keys such as Escape, and
+return `AbortHandlingInputByWidget` for the rest so input cannot leak to widgets
+or global shortcut handlers behind it.
 
 ## Checklist when adding a widget
 
@@ -608,6 +673,13 @@ drift from an alpha API. Before considering a change done:
 - **Holding children in a plain value slice.** `append` to a `[]Row` moves its
   elements, which churns widget identity or panics. Use `guigui.WidgetSlice[*T]`
   for a variable number of children (see "Dynamic lists of children").
+- **Reusing one widget in multiple containers.** A widget has one parent chain.
+  Use distinct widget instances backed by shared data.
+- **Forcing a text input's value on every Build.** `ForceSetValue` overwrites an
+  active edit and can synchronously emit a committed change. Use `SetValue` for
+  normal model synchronization and force only explicit resets.
+- **Letting decorative content consume its container's click.** Mark rich
+  button/list content passthrough so the interactive ancestor handles input.
 - **Resolving env through a widget that was just created.** A widget nobody has
   built yet has no parent, so the lookup silently returns `(nil, false)` and code
   assuming a non-nil value crashes. Resolve shared state through the widget whose
