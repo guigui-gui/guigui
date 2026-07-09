@@ -24,7 +24,7 @@ framework decides when to rebuild, lay out, and redraw.
 Read this whole file before writing widget code; the lifecycle rules below are
 the part people get wrong.
 
-> **Freshness.** Verified against Guigui at commit `dbf6d0f6` (2026-07-09).
+> **Freshness.** Verified against Guigui at commit `8d62c66b` (2026-07-09).
 > Guigui is alpha and its API may change — if anything here disagrees with the
 > source, **the source wins**: trust `*.go` in the module root and the programs
 > under `example/` over this file, and update this skill when you find drift.
@@ -406,6 +406,41 @@ size it; lay rows out with `FixedSize(rowHeight)` items in a vertical
 `LinearLayout`. (`basicwidget.List[T]` / `Table[T]` handle scrolling lists for
 you — prefer them for large collections.)
 
+## Resetting a widget's cached state
+
+A widget accumulates state that is *not* re-derived from its inputs each Build —
+a selected index, a scroll offset, a cache keyed by IDs, an in-progress edit.
+When the data behind it is swapped wholesale (a document reloaded, a different
+record opened), that state points at the old data and won't self-heal. Drop it by
+assigning the widget its zero value, at the top of **`Build`**, before re-adding
+the child:
+
+```go
+func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	if doc := r.model.Document(); doc != r.lastDoc {
+		r.lastDoc = doc     // a fresh object means the data was replaced
+		r.editor = Editor{} // discard the child's accumulated state
+	}
+	// ... add and configure children ...
+}
+```
+
+This is safe as far as the framework is concerned: every widget must be usable
+from its zero value, so the field keeps its address, `copyCheck` re-pins, identity
+holds, and the next Build re-adds and reconfigures the fresh child. It drops only
+in-memory state, though — a widget that owns an external resource (a live
+connection, a goroutine, an open file) must release it *before* zeroing, since
+Guigui has no teardown hook and a bare reset would leak it. Key the trigger on
+object identity (or a generation counter), not a name/path, so a reload that
+yields a fresh object at the same path still fires.
+
+Reset in `Build`, not `Tick`: `Tick` runs after that tick's Layout, so a tree
+change there is inconsistent with the frame's already-computed layout for one
+Draw. And never zero the **application root** widget's own struct this way — the
+framework marks the root once at startup and never re-establishes it, so wiping
+its embedded `DefaultWidget` unmarks it. Reset the root's *children*, not the
+root value itself.
+
 ## State changes and when the screen updates
 
 This is the second thing people get wrong. Tree/content changes need a rebuild;
@@ -558,6 +593,11 @@ drift from an alpha API. Before considering a change done:
   positions.
 - **Registering handlers once / outside `Build`.** Handlers are wiped each
   rebuild — register them in `Build` every time.
+- **Resetting a widget's cached state in `Tick`.** Zeroing a child to drop stale
+  state belongs in `Build` (the rebuild boundary); `Tick` runs after `Layout`,
+  so a tree change there is inconsistent with the frame's layout for one `Draw`.
+  Never zero the application root's own struct (see "Resetting a widget's cached
+  state").
 - **Expecting a field write to repaint.** Only handler-driven or
   state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (plus
   `RequestRedraw` if the change is paint-only).
