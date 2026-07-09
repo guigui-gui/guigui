@@ -35,11 +35,9 @@ type TextInput struct {
 	supportTextValue  string
 }
 
-// OnValueChanged sets the event handler that is called when the text value changes.
-// The handler receives the current text and whether the change is committed.
-// A committed change occurs when the user presses Enter (for single-line text) or when the text input loses focus.
-// An uncommitted change occurs on every keystroke or text modification during editing.
-// Note that the handler might be called even when the text content has not actually changed.
+// OnValueChanged sets a handler with the same dispatch and commit semantics as
+// [Text.OnValueChanged]. The handler receives the current text and whether the
+// change is committed.
 //
 // If the handler does not need the text payload, prefer
 // [TextInput.OnValueChangedWithoutText] to avoid materializing the value on

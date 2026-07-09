@@ -71,7 +71,7 @@ type Widget interface {
 
 	// Measure returns the preferred size of the widget given the constraints.
 	// The returned value is advisory; the parent performing layout is not obligated to use it.
-	// The constraints may specify fixed width and/or height that the widget should respect.
+	// The constraints may specify a fixed width or a fixed height that the widget should respect.
 	Measure(context *Context, constraints Constraints) image.Point
 
 	// WriteStateKey writes a summary of the widget state relevant to rebuilding

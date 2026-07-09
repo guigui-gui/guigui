@@ -1152,8 +1152,8 @@ func (a *app) requestRebuildAndRedrawScreen(redrawReason requestRedrawReason) {
 }
 
 // RequestRedraw requests to redraw the given widget.
-// RequestRedraw causes Draw invocations, but this might not be enough to reflect the latest state.
-// If unsure, use [RequestRebuild] instead.
+// RequestRedraw causes Draw invocations without rebuilding the widget tree.
+// If the tree, content, or layout changed, call [RequestRebuild] as well.
 func RequestRedraw(widget Widget) {
 	widgetState := widget.widgetState()
 	if theDebugMode.showRenderingRegions {

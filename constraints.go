@@ -11,11 +11,14 @@ const (
 	constraintsTypeFixedHeight
 )
 
+// Constraints specifies at most one fixed dimension for measuring a widget.
+// The zero value leaves both dimensions unconstrained.
 type Constraints struct {
 	typ  constraintsType
 	size int
 }
 
+// FixedWidth returns the fixed width, if one is specified.
 func (c *Constraints) FixedWidth() (int, bool) {
 	if c.typ != constraintsTypeFixedWidth {
 		return 0, false
@@ -23,6 +26,7 @@ func (c *Constraints) FixedWidth() (int, bool) {
 	return c.size, true
 }
 
+// FixedHeight returns the fixed height, if one is specified.
 func (c *Constraints) FixedHeight() (int, bool) {
 	if c.typ != constraintsTypeFixedHeight {
 		return 0, false
@@ -30,6 +34,7 @@ func (c *Constraints) FixedHeight() (int, bool) {
 	return c.size, true
 }
 
+// FixedWidthConstraints returns constraints with a fixed width.
 func FixedWidthConstraints(w int) Constraints {
 	return Constraints{
 		typ:  constraintsTypeFixedWidth,
@@ -37,6 +42,7 @@ func FixedWidthConstraints(w int) Constraints {
 	}
 }
 
+// FixedHeightConstraints returns constraints with a fixed height.
 func FixedHeightConstraints(h int) Constraints {
 	return Constraints{
 		typ:  constraintsTypeFixedHeight,

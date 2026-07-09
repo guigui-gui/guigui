@@ -66,17 +66,13 @@ const (
 
 // Padding represents the padding around a layout.
 type Padding struct {
-	// Start is the padding in pixels at the start (left for LTR, right for RTL) of the layout.
-	//
-	// TODO: Support LTR/RTL.
+	// Start is the left padding in pixels. RTL mirroring is not yet supported.
 	Start int
 
 	// Top is the padding in pixels at the top of the layout.
 	Top int
 
-	// End is the padding in pixels at the end (right for LTR, left for RTL) of the layout.
-	//
-	// TODO: Support LTR/RTL.
+	// End is the right padding in pixels. RTL mirroring is not yet supported.
 	End int
 
 	// Bottom is the padding in pixels at the bottom of the layout.
