@@ -37,7 +37,7 @@ func (c *Checkbox) Value() bool {
 	return c.value
 }
 
-func (c *Checkbox) WriteStateKey(w *guigui.StateKeyWriter) {
+func (c *Checkbox) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(c.value)
 }
 

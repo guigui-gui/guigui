@@ -65,7 +65,7 @@ func (w *itemWidget) Measure(context *guigui.Context, constraints guigui.Constra
 	return s
 }
 
-func (w *itemWidget) WriteStateKey(sw *guigui.StateKeyWriter) {
+func (w *itemWidget) WriteStateKey(context *guigui.Context, sw *guigui.StateKeyWriter) {
 	sw.WriteInt(w.height)
 }
 
@@ -93,7 +93,7 @@ type Root struct {
 	layoutItems []guigui.LinearLayoutItem
 }
 
-func (r *Root) WriteStateKey(w *guigui.StateKeyWriter) {
+func (r *Root) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	// Build conditionally repopulates r.items when the slice is empty, so
 	// tracking its length is enough to trigger a rebuild when the Randomize
 	// handlers clear it.

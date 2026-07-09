@@ -87,7 +87,7 @@ func (m *Menubar[T]) OnItemSelected(f func(context *guigui.Context, menuIndex, i
 }
 
 // WriteStateKey implements [guigui.Widget.WriteStateKey].
-func (m *Menubar[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (m *Menubar[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteInt(m.openIndexPlus1)
 }
 
@@ -235,7 +235,7 @@ func (t *menubarTitle[T]) setText(value string) {
 	t.text.SetValue(value)
 }
 
-func (t *menubarTitle[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *menubarTitle[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteInt(t.index)
 }
 

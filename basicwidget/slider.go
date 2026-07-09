@@ -155,7 +155,7 @@ func (s *Slider) SetStepUint64(step uint64) {
 	s.abstractNumberInput.SetStepUint64(step)
 }
 
-func (s *Slider) WriteStateKey(w *guigui.StateKeyWriter) {
+func (s *Slider) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	s.abstractNumberInput.writeStateKey(w)
 	w.WriteBool(s.snapOnly)
 	w.WriteBool(s.dragging)

@@ -211,7 +211,7 @@ func (t *TextInput) IsEditable() bool {
 	return t.textInput.IsEditable()
 }
 
-func (t *TextInput) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *TextInput) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(t.hasError)
 	w.WriteBool(t.focusBorderHidden)
 	w.WriteString(t.supportTextValue)
@@ -535,7 +535,7 @@ func (t *textInput) IsEditable() bool {
 	return !t.readonly
 }
 
-func (t *textInput) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *textInput) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(t.compactPadding)
 	w.WriteBool(t.intrinsicSize)
 	w.WriteBool(t.readonly)
@@ -850,7 +850,7 @@ func (t *textInputText) SetVerticalAlign(valign VerticalAlign) {
 	t.vAlign = valign
 }
 
-func (t *textInputText) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *textInputText) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	writeRectangle(w, t.containerBounds)
 	writePadding(w, t.padding)
 	w.WriteUint64(uint64(t.vAlign))

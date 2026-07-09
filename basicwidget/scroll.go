@@ -136,7 +136,7 @@ type scrollWheel struct {
 	lastWheelY      float64
 }
 
-func (s *scrollWheel) WriteStateKey(w *guigui.StateKeyWriter) {
+func (s *scrollWheel) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	writePoint(w, s.contentSize)
 }
 
@@ -222,7 +222,7 @@ type scrollBar struct {
 	onceDraw              bool
 }
 
-func (s *scrollBar) WriteStateKey(w *guigui.StateKeyWriter) {
+func (s *scrollBar) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(s.horizontal)
 	writePoint(w, s.contentSize)
 }

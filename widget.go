@@ -83,7 +83,7 @@ type Widget interface {
 	//
 	// Write nothing to opt out; widgets that opt out must continue to call
 	// [RequestRebuild] explicitly for state that warrants a rebuild.
-	WriteStateKey(w *StateKeyWriter)
+	WriteStateKey(context *Context, w *StateKeyWriter)
 
 	copyCheck()
 	widgetState() *widgetState

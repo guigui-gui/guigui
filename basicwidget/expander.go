@@ -50,7 +50,7 @@ func expandCollapseMaxCount() int {
 	return ebiten.TPS() / 20
 }
 
-func (e *Expander) WriteStateKey(w *guigui.StateKeyWriter) {
+func (e *Expander) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(e.expanded)
 	w.WriteInt(e.count)
 	w.WriteWidget(e.headerWidget)
@@ -176,7 +176,7 @@ func (e *expanderHeader) setOnDown(callback func(context *guigui.Context)) {
 	guigui.SetEventHandler(e, expanderHeaderEventDown, callback)
 }
 
-func (e *expanderHeader) WriteStateKey(w *guigui.StateKeyWriter) {
+func (e *expanderHeader) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(e.expanded)
 	w.WriteWidget(e.widget)
 }

@@ -57,7 +57,7 @@ func (*DefaultWidget) CursorShape(context *Context, widgetBounds *WidgetBounds) 
 func (*DefaultWidget) Draw(context *Context, widgetBounds *WidgetBounds, dst *ebiten.Image) {
 }
 
-func (*DefaultWidget) WriteStateKey(w *StateKeyWriter) {
+func (*DefaultWidget) WriteStateKey(context *Context, w *StateKeyWriter) {
 }
 
 func (d *DefaultWidget) Measure(context *Context, constraints Constraints) image.Point {

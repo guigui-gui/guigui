@@ -103,7 +103,7 @@ func (t *TooltipArea) Measure(context *guigui.Context, constraints guigui.Constr
 	return image.Point{}
 }
 
-func (t *TooltipArea) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *TooltipArea) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(t.toShowTooltip)
 }
 

@@ -38,7 +38,7 @@ func (t *Toggle) Value() bool {
 	return t.value
 }
 
-func (t *Toggle) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *Toggle) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(t.value)
 }
 

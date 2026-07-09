@@ -133,7 +133,7 @@ type virtualScrollPanel struct {
 	onceDraw bool
 }
 
-func (p *virtualScrollPanel) WriteStateKey(w *guigui.StateKeyWriter) {
+func (p *virtualScrollPanel) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteInt64(int64(p.topItemIndex))
 	w.WriteInt64(int64(p.topItemOffset))
 	w.WriteFloat64(p.offsetX)

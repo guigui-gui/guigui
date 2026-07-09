@@ -208,7 +208,7 @@ type popup struct {
 	drawerEdge                         DrawerEdge
 }
 
-func (p *popup) WriteStateKey(w *guigui.StateKeyWriter) {
+func (p *popup) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteUint64(uint64(p.style))
 	writeRectangle(w, p.backgroundBounds)
 	writeRectangle(w, p.contentBounds)
@@ -867,7 +867,7 @@ func (p *popupShadow) SetOpeningRate(rate float64) {
 	guigui.RequestRedraw(p)
 }
 
-func (p *popupShadow) WriteStateKey(w *guigui.StateKeyWriter) {
+func (p *popupShadow) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	writeRectangle(w, p.contentBounds)
 }
 

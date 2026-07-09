@@ -177,7 +177,7 @@ func (p *panel) SetContent(widget guigui.Widget) {
 	p.content = widget
 }
 
-func (p *panel) WriteStateKey(w *guigui.StateKeyWriter) {
+func (p *panel) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteUint64(uint64(p.backgroundStyle))
 	w.WriteFloat64(p.offsetX)
 	w.WriteFloat64(p.offsetY)
@@ -628,7 +628,7 @@ func (b *panelBorder) setPanelBounds(rect image.Rectangle) {
 	b.panelBoundsRect = rect
 }
 
-func (b *panelBorder) WriteStateKey(w *guigui.StateKeyWriter) {
+func (b *panelBorder) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(b.borders.Start)
 	w.WriteBool(b.borders.Top)
 	w.WriteBool(b.borders.End)

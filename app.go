@@ -179,7 +179,7 @@ type app struct {
 // the resulting 128-bit hash. The writer is reset before the call.
 func (a *app) widgetStateKey(widget Widget) [16]byte {
 	a.stateKeyWriter.reset()
-	widget.WriteStateKey(&a.stateKeyWriter)
+	widget.WriteStateKey(&a.context, &a.stateKeyWriter)
 	return a.stateKeyWriter.sum128()
 }
 

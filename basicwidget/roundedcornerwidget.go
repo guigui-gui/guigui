@@ -23,7 +23,7 @@ type roundedCornerWidget[T guigui.Widget] struct {
 	disabled bool
 }
 
-func (r *roundedCornerWidget[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (r *roundedCornerWidget[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(r.disabled)
 }
 

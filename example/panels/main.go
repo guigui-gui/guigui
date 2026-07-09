@@ -100,7 +100,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}).LayoutWidgets(context, bounds, layouter)
 }
 
-func (r *Root) WriteStateKey(w *guigui.StateKeyWriter) {
+func (r *Root) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	r.model.writeStateKey(w)
 }
 

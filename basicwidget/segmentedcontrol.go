@@ -59,7 +59,7 @@ type SegmentedControl[T comparable] struct {
 	onButtonDowns []func(context *guigui.Context)
 }
 
-func (s *SegmentedControl[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (s *SegmentedControl[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	s.abstractList.writeStateKey(w)
 	w.WriteUint64(uint64(s.direction))
 }

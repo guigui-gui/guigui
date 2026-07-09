@@ -59,7 +59,7 @@ func (i *Image) HasImage() bool {
 	return i.image != nil
 }
 
-func (i *Image) WriteStateKey(w *guigui.StateKeyWriter) {
+func (i *Image) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteUint64(i.imageGeneration)
 }
 

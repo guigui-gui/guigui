@@ -427,7 +427,7 @@ func (t *Text) ensureLineByteOffsets() {
 	t.lineByteOffsetsFieldGeneration = generation
 }
 
-func (t *Text) WriteStateKey(w *guigui.StateKeyWriter) {
+func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteUint64(uint64(t.hAlign))
 	w.WriteUint64(uint64(t.vAlign))
 	hasColor := t.color != nil

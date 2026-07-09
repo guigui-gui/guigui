@@ -41,7 +41,7 @@ type RadioButtonGroup[T comparable] struct {
 	valuesString string
 }
 
-func (r *RadioButtonGroup[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (r *RadioButtonGroup[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteString(r.valuesString)
 }
 
@@ -117,7 +117,7 @@ type RadioButton[T comparable] struct {
 	prevHovered bool
 }
 
-func (r *RadioButton[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (r *RadioButton[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	var selected bool
 	if r.group != nil {
 		selected = r.group.SelectedIndex() == r.index

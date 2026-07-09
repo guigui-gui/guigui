@@ -114,7 +114,7 @@ Embed `guigui.DefaultWidget`, then override as needed:
 | `HandlePointingInput` | `HandlePointingInput(*Context, *WidgetBounds) HandleInputResult` | Custom mouse/touch handling. |
 | `HandleButtonInput` | `HandleButtonInput(*Context, *WidgetBounds) HandleInputResult` | Custom keyboard/gamepad handling — only delivered under focus/receptiveness conditions (see "Handling input directly"). |
 | `Env` | `Env(*Context, EnvKey, *EnvSource) (any, bool)` | The widget provides shared values to descendants. |
-| `WriteStateKey` | `WriteStateKey(*StateKeyWriter)` | State changes outside input/events must trigger a rebuild (see below). |
+| `WriteStateKey` | `WriteStateKey(*Context, *StateKeyWriter)` | State changes outside input/events must trigger a rebuild (see below). |
 | `Tick` | `Tick(*Context, *WidgetBounds) error` | Per-tick updates (animation, timers); runs at the app's TPS. |
 | `Draw` | `Draw(*Context, *WidgetBounds, *ebiten.Image)` | Custom rendering (most widgets compose children instead). |
 | `CursorShape` | `CursorShape(*Context, *WidgetBounds) (ebiten.CursorShapeType, bool)` | The widget wants a non-default cursor. |
@@ -424,9 +424,7 @@ Rebuilds happen when:
 whole tree, not just the widget that owns the key. So place a `WriteStateKey`
 on whichever widget *owns* the self-changing state — a **different** widget
 that renders from it still re-runs its own `Build` and reflects the change, so
-the key need not live on the widget that displays it. (`WriteStateKey` gets no
-`*Context`, so it can only hash fields reachable from the widget itself, not an
-`Env` lookup.)
+the key need not live on the widget that displays it.
 
 **A rebuild re-runs `Build`; it does not repaint by itself.** The pixels that
 get redrawn come from state-key changes (which auto-repaint the changed
@@ -444,7 +442,7 @@ will *not* repaint unless you do one of:
    The framework re-hashes after each build and rebuilds when the hash changes:
 
    ```go
-   func (w *Foo) WriteStateKey(s *guigui.StateKeyWriter) {
+   func (w *Foo) WriteStateKey(context *guigui.Context, s *guigui.StateKeyWriter) {
        s.WriteInt(w.count)
        s.WriteBool(w.open)
        s.WriteString(w.title)

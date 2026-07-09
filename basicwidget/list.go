@@ -214,7 +214,7 @@ func (l *List[T]) SetMultiSelection(multi bool) {
 	l.content.abstractList.SetMultiSelection(multi)
 }
 
-func (l *List[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (l *List[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	inner := l.inner.Widget()
 	w.WriteInt64(int64(l.listItemHeightPlus1))
 	w.WriteInt64(int64(inner.headerHeight))
@@ -602,7 +602,7 @@ type listItemWidget[T comparable] struct {
 	textCenterLayoutItems []guigui.LinearLayoutItem
 }
 
-func (l *listItemWidget[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (l *listItemWidget[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	l.item.writeStateKey(w)
 	w.WriteInt(l.heightPlus1)
 	w.WriteBool(l.boldSelected)
@@ -987,7 +987,7 @@ func (l *listContent[T]) OnItemExpanderToggled(f func(context *guigui.Context, i
 	guigui.SetEventHandler(l, listEventItemExpanderToggled, f)
 }
 
-func (l *listContent[T]) WriteStateKey(w *guigui.StateKeyWriter) {
+func (l *listContent[T]) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	l.abstractList.writeStateKey(w)
 	w.WriteUint64(uint64(l.highlightStyle))
 	w.WriteUint64(uint64(l.backgroundStyle))
@@ -2601,7 +2601,7 @@ type listFrame struct {
 	frameHidden bool
 }
 
-func (l *listFrame) WriteStateKey(w *guigui.StateKeyWriter) {
+func (l *listFrame) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteInt(l.headerHeight)
 	w.WriteInt(l.footerHeight)
 	w.WriteBool(l.frameHidden)

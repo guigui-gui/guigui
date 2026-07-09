@@ -85,7 +85,7 @@ func (b *Button) setPairedButton(pair *Button) {
 	b.pairedButton = pair
 }
 
-func (b *Button) WriteStateKey(w *guigui.StateKeyWriter) {
+func (b *Button) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	w.WriteBool(b.pressed)
 	w.WriteBool(b.keepPressed)
 	w.WriteBool(b.prevPressed)
