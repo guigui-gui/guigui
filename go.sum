@@ -6,8 +6,8 @@ github.com/ebitengine/hideconsole v1.0.0 h1:5J4U0kXF+pv/DhiXt5/lTz0eO5ogJ1iXb8Yj
 github.com/ebitengine/hideconsole v1.0.0/go.mod h1:hTTBTvVYWKBuxPr7peweneWdkUwEuHuB3C1R/ielR1A=
 github.com/ebitengine/purego v0.11.0-alpha.6 h1:xZ7KkRHWH0O/DskwUkFfd6Y4X9vtth85b4iEmNDeIME=
 github.com/ebitengine/purego v0.11.0-alpha.6/go.mod h1:DCHPP08djqhNSoTfImcnHYQRZmd0qhakvrozqaEYhGQ=
-github.com/go-text/typesetting v0.3.5-0.20260505125104-04e4e76f9371 h1:rQq+LisqB/K7wGowlqDlOOAEO/K29DL0kndCxg2fBso=
-github.com/go-text/typesetting v0.3.5-0.20260505125104-04e4e76f9371/go.mod h1:XZO1hD+nQVyvVa5IicQk7FsCa4PFQaJ2soWAP1f//68=
+github.com/go-text/typesetting v0.3.5-0.20260710134149-0bd3abe5ff89 h1:LDq6K4x6OfzVqXuZrlRbFk7J79QCU8cWCsZiOYimSWc=
+github.com/go-text/typesetting v0.3.5-0.20260710134149-0bd3abe5ff89/go.mod h1:XZO1hD+nQVyvVa5IicQk7FsCa4PFQaJ2soWAP1f//68=
 github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc h1:8FGo2It5K75XkavhTiCKExUfVaVDS1feBnLCru5qeoY=
 github.com/go-text/typesetting-utils v0.0.0-20260419141703-4ffe8874dabc/go.mod h1:3/62I4La/HBRX9TcTpBj4eipLiwzf+vhI+7whTc9V7o=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
@@ -16,8 +16,8 @@ github.com/hajimehoshi/bitmapfont/v4 v4.1.1 h1:5FNENqs0QbURnFG8HeDJuPl/FIjU4tNes
 github.com/hajimehoshi/bitmapfont/v4 v4.1.1/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
 github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198 h1:fcJFQ8HjauZXxEag8ePAvxbknarEEwQGP4OwQC4P/gY=
 github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198/go.mod h1:bwEZvNLSrtl7bOSAvWaoixpIjmTFBjNIgfDiEN9wsYc=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.12 h1:pxb9BLIye9dvfQLdJTPU7palzdWSsrkXvHQckuO651Q=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.12/go.mod h1:NLuFCoJvqJfoQfy9mvQ67cpIkrfEb8rNRZYdeVQHRZc=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.12.0.20260711174231-6685a0fe0250 h1:3pCj+hCNBr2qKX09Ptzjpl63WI7RDVK03WujgCqqgvY=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.12.0.20260711174231-6685a0fe0250/go.mod h1:mW4/HzzXuvbexk/KAciSfdrjOKntnxjpmEvX+I5TOEk=
 github.com/hajimehoshi/iro v0.2.0 h1:7RFpvbI9Cvdna445mF4uJGsGSVwnqh1uK/j/GKUfYpY=
 github.com/hajimehoshi/iro v0.2.0/go.mod h1:gfbDojwwKcq04DipcwqdW35ooEStXByUF3JanzJG5Ks=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade h1:FmusiCI1wHw+XQbvL9M+1r/C3SPqKrmBaIOYwVfQoDE=
@@ -29,6 +29,8 @@ github.com/pierrec/lz4/v4 v4.1.22 h1:cKFw6uJDK+/gfw5BcDL0JL5aBsAFdsIT18eRtLj7VIU
 github.com/pierrec/lz4/v4 v4.1.22/go.mod h1:gZWDp/Ze/IJXGXf23ltt2EXimqmTUXEy0GFuRQyBid4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
+github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef h1:Ch6Q+AZUxDBCVqdkI8FSpFyZDtCVBc2VmejdNrm5rRQ=
+github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef/go.mod h1:nXTWP6+gD5+LUJ8krVhhoeHjvHTutPxMYl5SvkcnJNE=
 github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 golang.org/x/image v0.44.0 h1:+tDekMZED9+LrtB3G5xzRggpVh9CARjZqROla3R3R+I=
