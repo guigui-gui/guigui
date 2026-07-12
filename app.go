@@ -116,6 +116,12 @@ type app struct {
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and Passthrough states.
 	maybeHitWidgets []widgetAndLayer
 
+	// maybeHitWidgetsInvalidated forces the next updateHitWidgets call to rebuild
+	// maybeHitWidgets even when the cursor has not moved and the layout has not
+	// changed. It is set when a widget leaves the tree so maybeHitWidgets does not
+	// keep the widget reachable for the GC.
+	maybeHitWidgetsInvalidated bool
+
 	// tmpHitWidgets is reused by isWidgetHitAt for hit tests at arbitrary points.
 	tmpHitWidgets []widgetAndLayer
 
@@ -707,6 +713,7 @@ func (a *app) buildWidgets() error {
 		a.putBounds3Ds(ws.prev.currentBounds3D)
 		ws.prev.bounds3Ds = nil
 		ws.prev.currentBounds3D = nil
+		a.maybeHitWidgetsInvalidated = true
 	}
 
 	// Capture [Widget.WriteStateKey] snapshots so subsequent phases can detect state changes
@@ -794,10 +801,11 @@ func (a *app) layoutWidgets() {
 
 func (a *app) updateHitWidgets(layoutChanged bool) {
 	pt := image.Pt(ebiten.CursorPosition())
-	if !layoutChanged && pt == a.lastCursorPosition {
+	if !layoutChanged && !a.maybeHitWidgetsInvalidated && pt == a.lastCursorPosition {
 		return
 	}
 	a.lastCursorPosition = pt
+	a.maybeHitWidgetsInvalidated = false
 
 	a.maybeHitWidgets = slices.Delete(a.maybeHitWidgets, 0, len(a.maybeHitWidgets))
 	a.maybeHitWidgets = a.appendWidgetsAt(a.maybeHitWidgets, pt, a.root, true)

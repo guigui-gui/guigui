@@ -215,6 +215,9 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	}
 
 	tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
+	defer func() {
+		tmpFaceSourceEntries = slices.Delete(tmpFaceSourceEntries, 0, len(tmpFaceSourceEntries))
+	}()
 	if fnt != nil {
 		tmpFaceSourceEntries = append(tmpFaceSourceEntries, fnt.entries...)
 		if fnt.useFallback {
