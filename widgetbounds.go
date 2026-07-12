@@ -28,3 +28,9 @@ func (w *WidgetBounds) VisibleBounds() image.Rectangle {
 func (w *WidgetBounds) IsHitAtCursor() bool {
 	return w.context.app.isWidgetHitAtCursor(w.widget)
 }
+
+// IsHitAt reports whether the given point, in screen coordinates, is over this widget
+// and no higher-layer widget is obscuring it at that point.
+func (w *WidgetBounds) IsHitAt(point image.Point) bool {
+	return w.context.app.isWidgetHitAt(w.widget, point)
+}

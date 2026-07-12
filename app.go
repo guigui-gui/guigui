@@ -116,6 +116,9 @@ type app struct {
 	// maybeHitWidgets includes all the widgets regardless of their Visibility and Passthrough states.
 	maybeHitWidgets []widgetAndLayer
 
+	// tmpHitWidgets is reused by isWidgetHitAt for hit tests at arbitrary points.
+	tmpHitWidgets []widgetAndLayer
+
 	redrawRequestedRegions           redrawRequests
 	rebuildAndRedrawRequestedRegions redrawRequests
 	regionsToDraw                    image.Rectangle
@@ -1049,6 +1052,21 @@ func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
 }
 
 func (a *app) isWidgetHitAtCursor(widget Widget) bool {
+	return a.isWidgetHit(widget, a.maybeHitWidgets)
+}
+
+func (a *app) isWidgetHitAt(widget Widget, point image.Point) bool {
+	defer func() {
+		a.tmpHitWidgets = slices.Delete(a.tmpHitWidgets, 0, len(a.tmpHitWidgets))
+	}()
+	a.tmpHitWidgets = a.appendWidgetsAt(a.tmpHitWidgets, point, a.root, true)
+	slices.SortStableFunc(a.tmpHitWidgets, func(a, b widgetAndLayer) int {
+		return cmp.Compare(b.layer, a.layer)
+	})
+	return a.isWidgetHit(widget, a.tmpHitWidgets)
+}
+
+func (a *app) isWidgetHit(widget Widget, hitWidgets []widgetAndLayer) bool {
 	widgetState := widget.widgetState()
 	if !widgetState.isInTree(a.buildCount) {
 		return false
@@ -1063,7 +1081,7 @@ func (a *app) isWidgetHitAtCursor(widget Widget) bool {
 
 	// hitWidgets are ordered by descending layer values.
 	// Always use a fixed set hitWidgets, as the tree might be dynamically changed during buildWidgets.
-	for _, wl := range a.maybeHitWidgets {
+	for _, wl := range hitWidgets {
 		if wl.widget.widgetState() == widgetState {
 			return true
 		}
