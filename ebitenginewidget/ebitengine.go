@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/exp/vmhost"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
@@ -29,6 +30,39 @@ var (
 	ebitengineEventError        guigui.EventKey = guigui.GenerateEventKey()
 	ebitengineEventTPSRequested guigui.EventKey = guigui.GenerateEventKey()
 )
+
+// GuestNotConnectedError is reported to the OnError handler when the launched binary did not connect
+// to the widget as a virtualization guest, typically because it is not an Ebitengine program built
+// with the "ebitenginevm" build tag.
+type GuestNotConnectedError struct {
+	// BinaryPath is the path of the launched binary.
+	BinaryPath string
+
+	// Err is the underlying error.
+	Err error
+}
+
+func (e *GuestNotConnectedError) Error() string {
+	return fmt.Sprintf("ebitenginewidget: %s did not connect as a guest (is it built with -tags ebitenginevm?): %v", e.BinaryPath, e.Err)
+}
+
+func (e *GuestNotConnectedError) Unwrap() error {
+	return e.Err
+}
+
+// AudioSampleRateMismatchError is reported to the OnError handler when the guest's audio cannot be
+// played because the guest's sample rate does not match the process's audio context.
+type AudioSampleRateMismatchError struct {
+	// CurrentSampleRate is the audio context's sample rate.
+	CurrentSampleRate int
+
+	// NewSampleRate is the guest's sample rate.
+	NewSampleRate int
+}
+
+func (e *AudioSampleRateMismatchError) Error() string {
+	return fmt.Sprintf("ebitenginewidget: the guest's audio sample rate (%d) does not match the audio context's (%d)", e.NewSampleRate, e.CurrentSampleRate)
+}
 
 // ebitengineState is the lifecycle state of the widget's launcher: the one-time host setup and the
 // asynchronous guest launches. Whether a guest is running is tracked separately by the gp field, since
@@ -70,6 +104,7 @@ type Ebitengine struct {
 	tps                     int
 	tpsSet                  bool
 	inputForwardingDisabled bool
+	audioDisabled           bool
 
 	// requestedTPS is the current guest's own requested rate (ebiten.SyncWithFPS resolved), 0 until its
 	// first tick is processed.
@@ -96,6 +131,19 @@ type Ebitengine struct {
 	gp          *guestProcess
 	guestScreen *ebiten.Image
 	screenSet   bool
+
+	// audioContext is the host audio context guest streams are played on; it is created at the first
+	// guest's sample rate, or adopted from the process's existing context.
+	audioContext *audio.Context
+
+	// audioPlayers maps each guest stream to the host player playing it.
+	audioPlayers map[*vmhost.GuestAudioStream]*audio.Player
+
+	// audioStreams holds the guest's audio streams, from the OnAudioStream handler.
+	audioStreams []*vmhost.GuestAudioStream
+
+	// audioRateWarned guards reporting a sample-rate mismatch once per guest.
+	audioRateWarned bool
 
 	// pressedKeys holds the keys whose presses were forwarded to the guest and whose releases were not
 	// yet, so releases can reach the guest even when the widget is unfocused.
@@ -166,6 +214,13 @@ func (e *Ebitengine) AdvanceTicks(n int) {
 // default.
 func (e *Ebitengine) SetInputForwardingEnabled(enabled bool) {
 	e.inputForwardingDisabled = !enabled
+}
+
+// SetAudioEnabled sets whether the audio the guest plays is played on the host. It is enabled by
+// default. While disabled, the guest's audio sources are not consumed, so the guest observes no audio
+// playback progress.
+func (e *Ebitengine) SetAudioEnabled(enabled bool) {
+	e.audioDisabled = !enabled
 }
 
 // OnLaunched sets a handler called when a guest has connected and started running.
@@ -247,6 +302,7 @@ func (e *Ebitengine) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 			e.screenSet = false
 			e.requestedTPS = 0
 			e.tpsReported = false
+			e.audioRateWarned = false
 			// A remainder accumulated for the previous guest must not tick the new one.
 			e.tickAccum = 0
 			guigui.DispatchEvent(e, ebitengineEventLaunched)
@@ -331,6 +387,12 @@ func (e *Ebitengine) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		e.requestedTPS = tps
 		e.tpsReported = true
 		guigui.DispatchEvent(e, ebitengineEventTPSRequested, tps)
+	}
+
+	if err := e.updateAudio(); err != nil {
+		e.dispatchError(err)
+		e.closeGuest()
+		return nil
 	}
 
 	// The guest advanced, so a new frame is due: keep the widget repainting.
@@ -506,6 +568,9 @@ func (e *Ebitengine) closeGuest() {
 	gp := e.gp
 	e.gp = nil
 	e.screenSet = false
+
+	e.closeAudioPlayers()
+	e.audioStreams = slices.Delete(e.audioStreams, 0, len(e.audioStreams))
 
 	// The forwarded presses belong to the guest being closed; the next guest starts with nothing held.
 	clear(e.pressedKeys)

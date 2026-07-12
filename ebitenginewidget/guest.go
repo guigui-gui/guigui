@@ -9,6 +9,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"slices"
+	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -19,6 +21,30 @@ import (
 type guestProcess struct {
 	session *vmhost.GuestSession
 	cmd     *exec.Cmd
+
+	// audioStreamsMu guards newAudioStreams.
+	audioStreamsMu sync.Mutex
+
+	// newAudioStreams holds the streams appendNewAudioStream recorded (on the session goroutine) and
+	// takeNewAudioStreams has not yet drained (on the host goroutine).
+	newAudioStreams []*vmhost.GuestAudioStream
+}
+
+// appendNewAudioStream records a new guest audio stream. It is the session's OnAudioStream handler, so
+// it runs on the session goroutine and must not block or read the stream.
+func (gp *guestProcess) appendNewAudioStream(s *vmhost.GuestAudioStream) {
+	gp.audioStreamsMu.Lock()
+	defer gp.audioStreamsMu.Unlock()
+	gp.newAudioStreams = append(gp.newAudioStreams, s)
+}
+
+// takeNewAudioStreams drains the streams recorded since the last call, appending them to dst.
+func (gp *guestProcess) takeNewAudioStreams(dst []*vmhost.GuestAudioStream) []*vmhost.GuestAudioStream {
+	gp.audioStreamsMu.Lock()
+	defer gp.audioStreamsMu.Unlock()
+	dst = append(dst, gp.newAudioStreams...)
+	gp.newAudioStreams = slices.Delete(gp.newAudioStreams, 0, len(gp.newAudioStreams))
+	return dst
 }
 
 // launchResult is the outcome of an asynchronous launch.
@@ -63,7 +89,10 @@ func startGuest(listener net.Listener, binPath, endpoint string, options *startG
 	}
 	conn, err := listener.Accept()
 	if err != nil {
-		return nil, fmt.Errorf("ebitenginewidget: %s did not connect as a guest (is it built with -tags ebitenginevm?): %w", binPath, err)
+		return nil, &GuestNotConnectedError{
+			BinaryPath: binPath,
+			Err:        err,
+		}
 	}
 	defer func() {
 		// The connection outlives this function only on success (the session takes ownership).
@@ -80,6 +109,9 @@ func startGuest(listener net.Listener, binPath, endpoint string, options *startG
 		// connection), so the wedge surfaces as an error from Err instead of stalling the session
 		// forever.
 		IdleTimeout: 30 * time.Second,
+
+		// Record each new guest audio stream for updateAudio to play on the host frame.
+		OnAudioStream: gp.appendNewAudioStream,
 
 		// Mirror the vibrations the guest requests onto the host. The guest's gamepad IDs match the host's,
 		// because the host forwards its own gamepads to the guest. Both functions are concurrent-safe, so
