@@ -132,6 +132,14 @@ type Ebitengine struct {
 	guestScreen *ebiten.Image
 	screenSet   bool
 
+	// prevGuestScreen is the previous guest screen, drawn stretched to the bounds while the resized
+	// guestScreen has not yet received a frame, so the widget keeps showing the last frame during a
+	// resize.
+	prevGuestScreen *ebiten.Image
+
+	// screenPresented reports whether a frame has been composited into guestScreen since its creation.
+	screenPresented bool
+
 	// audioContext is the host audio context guest streams are played on; it is created at the first
 	// guest's sample rate, or adopted from the process's existing context.
 	audioContext *audio.Context
@@ -340,9 +348,19 @@ func (e *Ebitengine) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	sh := max(1, int(math.Round(float64(bounds.Dy())/appScale)))
 	if e.guestScreen == nil || e.guestScreen.Bounds().Dx() != sw || e.guestScreen.Bounds().Dy() != sh {
 		if e.guestScreen != nil {
-			e.guestScreen.Deallocate()
+			// The outgoing screen holds the last frame; Draw keeps presenting it until the guest
+			// delivers a frame at the new size.
+			if e.screenPresented {
+				if e.prevGuestScreen != nil {
+					e.prevGuestScreen.Deallocate()
+				}
+				e.prevGuestScreen = e.guestScreen
+			} else {
+				e.guestScreen.Deallocate()
+			}
 		}
 		e.guestScreen = ebiten.NewImage(sw, sh)
+		e.screenPresented = false
 		e.screenSet = false
 	}
 	if !e.screenSet {
@@ -407,18 +425,28 @@ func (e *Ebitengine) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		return
 	}
 	e.gp.session.AdvanceFrame()
-	e.gp.session.CompositeFrame()
+	if e.gp.session.CompositeFrame() {
+		e.screenPresented = true
+		if e.prevGuestScreen != nil {
+			e.prevGuestScreen.Deallocate()
+			e.prevGuestScreen = nil
+		}
+	}
+	img := e.guestScreen
+	if !e.screenPresented && e.prevGuestScreen != nil {
+		img = e.prevGuestScreen
+	}
 	bounds := widgetBounds.Bounds()
 	op := &ebiten.DrawImageOptions{}
 	// The guest screen is bounds/AppScale pixels; scale it up to fill the bounds.
-	sw := e.guestScreen.Bounds().Dx()
-	sh := e.guestScreen.Bounds().Dy()
+	sw := img.Bounds().Dx()
+	sh := img.Bounds().Dy()
 	if sw != bounds.Dx() || sh != bounds.Dy() {
 		op.GeoM.Scale(float64(bounds.Dx())/float64(sw), float64(bounds.Dy())/float64(sh))
 		op.Filter = ebiten.FilterPixelated
 	}
 	op.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
-	dst.DrawImage(e.guestScreen, op)
+	dst.DrawImage(img, op)
 }
 
 // HandlePointingInput focuses the widget when it is clicked, so subsequent keyboard input is forwarded
@@ -477,6 +505,10 @@ func (e *Ebitengine) Close() error {
 	if e.guestScreen != nil {
 		e.guestScreen.Deallocate()
 		e.guestScreen = nil
+	}
+	if e.prevGuestScreen != nil {
+		e.prevGuestScreen.Deallocate()
+		e.prevGuestScreen = nil
 	}
 	return err
 }
