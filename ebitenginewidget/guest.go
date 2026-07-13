@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -22,26 +21,19 @@ type guestProcess struct {
 	session *vmhost.GuestSession
 	cmd     *exec.Cmd
 
-	// audioStreamsMu guards newAudioStreams.
-	audioStreamsMu sync.Mutex
-
-	// newAudioStreams holds the streams appendNewAudioStream recorded (on the session goroutine) and
-	// takeNewAudioStreams has not yet drained (on the host goroutine).
+	// newAudioStreams holds the streams appendNewAudioStream recorded and takeNewAudioStreams has not yet
+	// drained. The session delivers the streams during AdvanceTicks, on the widget's tick like the drain,
+	// so no lock is needed.
 	newAudioStreams []*vmhost.GuestAudioStream
 }
 
-// appendNewAudioStream records a new guest audio stream. It is the session's OnAudioStream handler, so
-// it runs on the session goroutine and must not block or read the stream.
+// appendNewAudioStream records a new guest audio stream. It is the session's OnAudioStream handler.
 func (gp *guestProcess) appendNewAudioStream(s *vmhost.GuestAudioStream) {
-	gp.audioStreamsMu.Lock()
-	defer gp.audioStreamsMu.Unlock()
 	gp.newAudioStreams = append(gp.newAudioStreams, s)
 }
 
 // takeNewAudioStreams drains the streams recorded since the last call, appending them to dst.
 func (gp *guestProcess) takeNewAudioStreams(dst []*vmhost.GuestAudioStream) []*vmhost.GuestAudioStream {
-	gp.audioStreamsMu.Lock()
-	defer gp.audioStreamsMu.Unlock()
 	dst = append(dst, gp.newAudioStreams...)
 	gp.newAudioStreams = slices.Delete(gp.newAudioStreams, 0, len(gp.newAudioStreams))
 	return dst
@@ -114,8 +106,7 @@ func startGuest(listener net.Listener, binPath, endpoint string, options *startG
 		OnAudioStream: gp.appendNewAudioStream,
 
 		// Mirror the vibrations the guest requests onto the host. The guest's gamepad IDs match the host's,
-		// because the host forwards its own gamepads to the guest. Both functions are concurrent-safe, so
-		// running them on the session goroutine is fine.
+		// because the host forwards its own gamepads to the guest.
 		OnGamepadVibration: func(v vmhost.GamepadVibration) {
 			ebiten.VibrateGamepad(v.GamepadID, &ebiten.VibrateGamepadOptions{
 				Duration:        v.Duration,
