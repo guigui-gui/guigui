@@ -331,10 +331,10 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		Items:     r.layoutItems,
 		Gap:       u / 2,
 		Padding: guigui.Padding{
-			Start:  u,
-			Top:    u,
-			End:    u,
-			Bottom: u,
+			Start:  u / 2,
+			Top:    u / 2,
+			End:    u / 2,
+			Bottom: u / 2,
 		},
 	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
