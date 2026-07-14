@@ -166,6 +166,10 @@ type Text struct {
 	selectionVisibleWhenUnfocus bool
 	ellipsisString              string
 
+	// wrapWidth keeps wrapping tied to a viewport even when the widget bounds
+	// are widened to cover horizontally overflowing content.
+	wrapWidth int
+
 	// placeholder is drawn in a subdued color when the value is empty and no
 	// IME composition is active. An empty string disables it.
 	placeholder string
@@ -450,6 +454,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteBool(t.keepTailingSpace)
 	w.WriteBool(t.selectionVisibleWhenUnfocus)
 	w.WriteString(t.ellipsisString)
+	w.WriteInt(t.wrapWidth)
 	w.WriteString(t.placeholder)
 	w.WriteInt32(t.maskRune)
 	writePadding(w, t.paddingForScrollOffset)
@@ -467,6 +472,17 @@ func (t *Text) resetCachedTextSize() {
 	clear(t.cachedTextWidths[:])
 	clear(t.cachedTextHeights[:])
 	t.cachedDefaultTabWidth = 0
+}
+
+func (t *Text) setWrapWidth(width int) {
+	t.wrapWidth = width
+}
+
+func (t *Text) layoutWidth(bounds image.Rectangle) int {
+	if t.wrapMode != WrapModeNone && t.wrapWidth > 0 {
+		return t.wrapWidth
+	}
+	return bounds.Dx()
 }
 
 func (t *Text) canHaveCaret() bool {
@@ -1367,7 +1383,7 @@ func (t *Text) setFirstLogicalLineInViewport(idx int) {
 
 func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
 	b := bounds
-	h := t.textHeight(context, guigui.FixedWidthConstraints(b.Dx()))
+	h := t.textHeight(context, guigui.FixedWidthConstraints(t.layoutWidth(b)))
 
 	switch t.vAlign {
 	case VerticalAlignTop:
@@ -1658,7 +1674,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		return materializeFull(), 0, 0, false
 	}
 
-	width := textBounds.Dx()
+	width := t.layoutWidth(textBounds)
 
 	var compInfo textutil.CompositionInfo
 	if hasComp {
@@ -2267,6 +2283,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	op.Style.VerticalAlign = textutil.VerticalAlign(t.vAlign)
 	op.Style.TabWidth = t.actualTabWidth(context)
 	op.Style.KeepTailingSpace = t.keepTailingSpace
+	op.LayoutWidth = t.layoutWidth(textBounds)
 	if !t.editable {
 		op.Style.EllipsisString = t.ellipsisString
 	} else {
@@ -2762,7 +2779,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		}
 	}
 
-	width := textContentBounds.Dx()
+	width := t.layoutWidth(textContentBounds)
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
@@ -2830,7 +2847,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		}, true
 	}
 
-	width := textBounds.Dx()
+	width := t.layoutWidth(textBounds)
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),
@@ -2941,7 +2958,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		}, true
 	}
 
-	width := textBounds.Dx()
+	width := t.layoutWidth(textBounds)
 	s := textutil.Style{
 		WrapMode:         textutil.WrapMode(t.wrapMode),
 		Face:             t.face(context, false),

@@ -79,10 +79,10 @@ func (l *LayoutCacheForTest) Touch(text string) {
 			faceID: testFaceID,
 		},
 	}
-	if _, ok := l.c.get(k); ok {
+	if _, _, ok := l.c.get(k); ok {
 		return
 	}
-	l.c.put(k, []int{0})
+	l.c.put(k, []int{0}, 0)
 }
 
 func (l *LayoutCacheForTest) Len() int {

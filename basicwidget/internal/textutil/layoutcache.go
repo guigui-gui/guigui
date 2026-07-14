@@ -61,7 +61,8 @@ type layoutCache struct {
 }
 
 type layoutCacheEntry struct {
-	vlStarts []int
+	vlStarts  []int
+	maxCaretX float64
 	// lastTick is the tick the entry was last created or read.
 	lastTick int64
 }
@@ -94,18 +95,18 @@ func (c *layoutCache) nowTick() int64 {
 	return c.now()
 }
 
-// get returns the cached visual-line starts for k, or ok=false on a miss.
-func (c *layoutCache) get(k layoutKey) ([]int, bool) {
+// get returns the cached visual-line layout for k, or ok=false on a miss.
+func (c *layoutCache) get(k layoutKey) ([]int, float64, bool) {
 	if e, ok := c.entries[k]; ok {
 		e.lastTick = c.nowTick()
-		return e.vlStarts, true
+		return e.vlStarts, e.maxCaretX, true
 	}
-	return nil, false
+	return nil, 0, false
 }
 
-// put stores vlStarts for k. The stored slice must not be mutated by callers;
-// get hands back the same slice.
-func (c *layoutCache) put(k layoutKey, vlStarts []int) {
+// put stores the visual-line layout for k. The stored slice must not be
+// mutated by callers; get hands back the same slice.
+func (c *layoutCache) put(k layoutKey, vlStarts []int, maxCaretX float64) {
 	if c.entries == nil {
 		c.entries = map[layoutKey]*layoutCacheEntry{}
 	}
@@ -113,7 +114,11 @@ func (c *layoutCache) put(k layoutKey, vlStarts []int) {
 	// Clone the key text so a cached entry does not pin the whole document
 	// buffer, of which the line is a substring.
 	k.text = strings.Clone(k.text)
-	c.entries[k] = &layoutCacheEntry{vlStarts: vlStarts, lastTick: cur}
+	c.entries[k] = &layoutCacheEntry{
+		vlStarts:  vlStarts,
+		maxCaretX: maxCaretX,
+		lastTick:  cur,
+	}
 	c.evictStaleIfNeeded(cur)
 }
 
@@ -141,10 +146,10 @@ func (c *layoutCache) evictStaleIfNeeded(cur int64) {
 	}
 }
 
-// relayout returns the visual-line starts for k.text, updating the last-measured
-// line. Callers must have a non-zero faceID; face is the resolved face for
-// k.faceID. k.text must be valid UTF-8.
-func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
+// relayout returns the visual-line starts and caret extent for k.text,
+// updating the last-measured line. Callers must have a non-zero faceID;
+// face is the resolved face for k.faceID. k.text must be valid UTF-8.
+func (c *layoutCache) relayout(k layoutKey, face font.Face) ([]int, float64) {
 	line := k.text
 	style := k.layoutStyleKey
 	tf := face.TextFace()
@@ -190,6 +195,7 @@ func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
 	// measure without reshaping line.
 	ra.advanceUpTo = work
 	vlStarts := appendVisualLineStarts(make([]int, 0, capHint), k.width, line, k.wrapMode, ra)
+	maxCaretX := maxVisualLineCaretX(line, vlStarts, ra)
 
 	if replaceLastMeasured {
 		// Swap: the array just built becomes the live one; the previous live array
@@ -211,7 +217,7 @@ func (c *layoutCache) relayout(k layoutKey, face font.Face) []int {
 		c.lastMeasured.advanceUpToBuf = work
 	}
 	c.lastMeasured.lastTick = c.nowTick()
-	return vlStarts
+	return vlStarts, maxCaretX
 }
 
 // patchAdvanceUpTo returns newLine's advance-up-to array built from

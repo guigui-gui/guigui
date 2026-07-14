@@ -124,6 +124,23 @@ func visualLinesFromStarts(line string, vlStarts []int) iter.Seq[visualLine] {
 	}
 }
 
+// maxVisualLineCaretX returns the furthest trailing caret position described
+// by vlStarts. ra may reuse the wrapping pass's shaping data; trailing spaces
+// are kept, matching how caret positions are measured.
+func maxVisualLineCaretX(line string, vlStarts []int, ra *rangeAdvancer) float64 {
+	caretAdvancer := *ra
+	caretAdvancer.keepTailingSpace = true
+	var maxCaretX float64
+	for i, start := range vlStarts {
+		end := len(line)
+		if i+1 < len(vlStarts) {
+			end = vlStarts[i+1]
+		}
+		maxCaretX = max(maxCaretX, caretAdvancer.rangeAdvance(start, end-start))
+	}
+	return maxCaretX
+}
+
 // rangeAdvancer measures by subtracting entries of a precomputed
 // advance-up-to array, so each call is a trim and one or a few subtractions, not
 // a reshape. With a nonzero tab width it scans for tabs and snaps at each stop.
@@ -250,12 +267,13 @@ func appendAdvanceUpTo(dst []float64, line string, face text.Face) []float64 {
 	return dst
 }
 
-// cachedVisualLineStarts returns the visual-line start offsets for line at the
-// given layout parameters, memoized by content in [theLayoutCache] and keyed by
-// the resolved face's ID. ok is false for non-UTF-8 lines (whose offsets would
-// index into a sanitized copy, not line) so callers fall back to their shaping
-// path; in that case vlStarts is nil. face must be resolved (non-zero ID).
-func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, ok bool) {
+// cachedVisualLineLayout returns the visual-line start offsets and furthest
+// trailing caret position for line at the given layout parameters, memoized by
+// content in [theLayoutCache] and keyed by the resolved face's ID. ok is false
+// for non-UTF-8 lines (whose offsets would index into a sanitized copy, not
+// line) so callers fall back to their shaping path. face must be resolved
+// (non-zero ID).
+func cachedVisualLineLayout(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, maxCaretX float64, ok bool) {
 	k := layoutKey{
 		text: line,
 		layoutStyleKey: layoutStyleKey{
@@ -267,17 +285,23 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 		},
 	}
 	if k.faceID == 0 {
-		panic("textutil: cachedVisualLineStarts requires a resolved face (face ID 0)")
+		panic("textutil: cachedVisualLineLayout requires a resolved face (face ID 0)")
 	}
-	if s, hit := theLayoutCache.get(k); hit {
-		return s, true
+	if s, x, hit := theLayoutCache.get(k); hit {
+		return s, x, true
 	}
 	if !utf8.ValidString(line) {
-		return nil, false
+		return nil, 0, false
 	}
-	vlStarts = theLayoutCache.relayout(k, face)
-	theLayoutCache.put(k, vlStarts)
-	return vlStarts, true
+	vlStarts, maxCaretX = theLayoutCache.relayout(k, face)
+	theLayoutCache.put(k, vlStarts, maxCaretX)
+	return vlStarts, maxCaretX, true
+}
+
+// cachedVisualLineStarts returns the cached visual-line start offsets for line.
+func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, ok bool) {
+	vlStarts, _, ok = cachedVisualLineLayout(width, line, wrapMode, face, tabWidth, keepTailingSpace)
+	return vlStarts, ok
 }
 
 // MeasureLogicalLineHeight returns the rendered height of one logical line
@@ -313,6 +337,21 @@ func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, fac
 		}
 	}
 	return VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace)
+}
+
+// CachedVisualLineMaxCaretX returns the furthest trailing caret position using
+// the same content-keyed layout cache as [CachedVisualLineCount].
+func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) float64 {
+	if wrapMode != WrapModeNone {
+		if _, maxCaretX, ok := cachedVisualLineLayout(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace); ok {
+			return maxCaretX
+		}
+	}
+	var maxCaretX float64
+	for line := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace) {
+		maxCaretX = max(maxCaretX, advance(line.str, len(line.str), face.TextFace(), tabWidth, true))
+	}
+	return maxCaretX
 }
 
 // MeasureLogicalLine returns the rendered width and height of one logical

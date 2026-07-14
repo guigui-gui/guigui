@@ -21,6 +21,10 @@ import (
 type DrawOptions struct {
 	Style
 
+	// LayoutWidth is the width used to wrap and align text. When zero, the
+	// drawing bounds width is used.
+	LayoutWidth int
+
 	TextColor color.Color
 
 	DrawSelection  bool
@@ -88,6 +92,10 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	if clip.Empty() {
 		return
 	}
+	layoutWidth := options.LayoutWidth
+	if layoutWidth <= 0 {
+		layoutWidth = bounds.Dx()
+	}
 	op := &text.DrawOptions{}
 	op.GeoM.Translate(float64(bounds.Min.X), float64(bounds.Min.Y))
 	op.ColorScale.ScaleWithColor(options.TextColor)
@@ -98,7 +106,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 
 	op.LineSpacing = options.LineHeight
 
-	yOffset := textPositionYOffset(bounds.Size(), str, &options.Style)
+	yOffset := textPositionYOffset(image.Pt(layoutWidth, bounds.Dy()), str, &options.Style)
 	op.GeoM.Translate(0, yOffset)
 
 	theVisualLinesBuffer = theVisualLinesBuffer[:0]
@@ -107,14 +115,14 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	}()
 	var built bool
 	if options.WrapMode != WrapModeNone {
-		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, bounds.Dx(), options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
+		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
 			theVisualLinesBuffer = vls
 			built = true
 		}
 	}
 	if !built {
 		theVisualLinesBuffer = theVisualLinesBuffer[:0]
-		for vl := range visualLines(bounds.Dx(), str, options.WrapMode, func(str string, indexInBytes int) float64 {
+		for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, indexInBytes int) float64 {
 			return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
 		}) {
 			theVisualLinesBuffer = append(theVisualLinesBuffer, vl)
@@ -141,8 +149,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -164,8 +172,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -184,8 +192,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(bounds.Dx(), slices.Values(theVisualLinesBuffer), end, &options.Style)
+					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
+					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
 					if countStart > 0 && countEnd > 0 {
 						posStart := posStart0
 						if countStart == 2 {
@@ -208,8 +216,8 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if !options.KeepTailingSpace {
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
-		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(bounds.Dx()) {
-			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(bounds.Dx()), options.Face.TextFace(), options.TabWidth)
+		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(layoutWidth) {
+			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(layoutWidth), options.Face.TextFace(), options.TabWidth)
 		}
 		// Ebitengine's text.Draw does not handle tab characters, so lines
 		// containing tabs must use manual alignment via oneLineLeft and GeoM.
@@ -222,17 +230,17 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			switch options.HorizontalAlign {
 			case HorizontalAlignCenter:
 				op.PrimaryAlign = text.AlignCenter
-				op.GeoM.Translate(float64(bounds.Dx())/2, 0)
+				op.GeoM.Translate(float64(layoutWidth)/2, 0)
 			case HorizontalAlignEnd, HorizontalAlignRight:
 				op.PrimaryAlign = text.AlignEnd
-				op.GeoM.Translate(float64(bounds.Dx()), 0)
+				op.GeoM.Translate(float64(layoutWidth), 0)
 			default:
 				op.PrimaryAlign = text.AlignStart
 			}
 			text.Draw(dst, vlStr, options.Face.TextFace(), op)
 		} else {
 			op.PrimaryAlign = text.AlignStart
-			x := oneLineLeft(bounds.Dx(), vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			x := oneLineLeft(layoutWidth, vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 			op.GeoM.Translate(x, 0)
 			origVlStr := vlStr
 			var origX float64

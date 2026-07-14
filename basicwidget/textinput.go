@@ -822,17 +822,28 @@ type textInputText struct {
 	// content edit invalidates it.
 	measuredLineHeightsGeneration int64
 
-	// measuredMaxWidth tracks the widest logical line measured during the
+	// measuredMaxWidth tracks the widest visual line measured during the
 	// current Layout. Used by [textInputText.contentWidth] to size the
 	// panel's horizontal scroll bar without scanning every logical line.
 	//
 	// Reset at the start of each [textInputText.Layout]; updated by
-	// [textInputText.measureItemHeight] for each visible line measured.
-	// As a result the H scroll bar reflects the widest line in the current
-	// viewport rather than a historical high-water mark - the bar grows
-	// and shrinks as the user scrolls past wide regions, but it is never
-	// stale after edits or document replacement.
+	// [textInputText.measureMaxWidthForViewport] for each visible line
+	// measured. As a result the H scroll bar reflects the widest line in the
+	// current viewport rather than a historical high-water mark - the bar
+	// grows and shrinks as the user scrolls past wide regions, but it is
+	// never stale after edits or document replacement.
 	measuredMaxWidth int
+
+	// measuredMaxWidthWrapMode is the wrap mode measuredMaxWidth was measured
+	// under. [textInputText.contentWidth] ignores measuredMaxWidth when the
+	// current wrap mode differs.
+	measuredMaxWidthWrapMode WrapMode
+
+	// measuredMaxWidthInnerWidth is the wrapping width measuredMaxWidth was
+	// measured at. [textInputText.contentWidth] ignores measuredMaxWidth for
+	// wrapped text when the current inner width differs (e.g. after a
+	// container resize).
+	measuredMaxWidthInnerWidth int
 }
 
 var _ virtualScrollContent = (*textInputText)(nil)
@@ -898,20 +909,12 @@ func (t *textInputText) setPanel(p *virtualScrollPanel) {
 // click-to-position-caret).
 func (t *textInputText) contentWidth(context *guigui.Context) int {
 	txt := t.text.Widget()
-	// Wrapped text wraps at the viewport width, so short-circuit to the
-	// container width even though individual long words can still overflow.
-	// This avoids returning a stale wide measuredMaxWidth carried over from
-	// a prior [WrapModeNone] state, which would lay the content out wider
-	// than the viewport and make wrapping appear inert (the *Text would
-	// have plenty of horizontal room and stop wrapping).
-	if txt.wrapMode != WrapModeNone {
-		return t.containerBounds.Dx()
-	}
 	var measured int
 	if !txt.IsMultiline() {
 		w := txt.Measure(context, guigui.Constraints{}).X
 		measured = w + t.padding.Start + t.padding.End
-	} else {
+	} else if t.measuredMaxWidthWrapMode == txt.wrapMode &&
+		(txt.wrapMode == WrapModeNone || t.measuredMaxWidthInnerWidth == t.containerBounds.Dx()-t.padding.Start-t.padding.End) {
 		measured = t.measuredMaxWidth
 	}
 	return max(measured, t.containerBounds.Dx())
@@ -980,10 +983,11 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 			width = math.MaxInt
 		}
 
-		// Only the height is needed here ([textInputText.contentWidth]
-		// short-circuits to containerBounds.Dx() for wrapped text and never
-		// reads measuredMaxWidth), so take the visual-line count from the
-		// content-keyed layout cache rather than re-packing every Layout.
+		// Only the height is needed here; the viewport lines' widths are
+		// measured afterwards in a separate pass
+		// ([textInputText.measureMaxWidthForViewport]) that hits the same
+		// cache entry. Take the visual-line count from the content-keyed
+		// layout cache rather than re-packing every Layout.
 		count := textutil.CachedVisualLineCount(
 			width, logicalLine, textutil.WrapMode(txt.wrapMode), txt.face(context, false),
 			txt.actualTabWidth(context), txt.keepTailingSpace,
@@ -1121,23 +1125,25 @@ func (t *textInputText) scrollEdgeIntoView(context *guigui.Context, target caret
 	return true
 }
 
-// measureMaxWidthForViewport runs after [textInputText.Layout]'s
-// height-only walks and records the widest viewport line into
-// [textInputText.measuredMaxWidth] so the horizontal scroll bar can size
-// its thumb. Only [WrapModeNone] multiline text needs this; for wrapped
-// or single-line text [textInputText.contentWidth] computes the width
-// itself and ignores measuredMaxWidth.
+// measureMaxWidthForViewport runs after [textInputText.Layout]'s height-only
+// walks and records the widest viewport caret extent into
+// [textInputText.measuredMaxWidth] so the horizontal scroll bar can reach every
+// editable position. Wrapped text normally stays at the viewport width, but an
+// unbreakable segment can extend beyond it and require horizontal scrolling.
 func (t *textInputText) measureMaxWidthForViewport(context *guigui.Context) {
 	txt := t.text.Widget()
-	if txt.wrapMode != WrapModeNone || !txt.IsMultiline() || len(t.measuredLineHeights) == 0 {
+	if !txt.IsMultiline() || len(t.measuredLineHeights) == 0 {
 		return
 	}
 	txt.ensureLineByteOffsets()
 	n := txt.lineByteOffsets.LineCount()
 	face := txt.face(context, false)
-	lineHeight := txt.lineHeight(context)
 	tabWidth := txt.actualTabWidth(context)
 	keepTailingSpace := txt.keepTailingSpace
+	measureWidth := t.containerBounds.Dx() - t.padding.Start - t.padding.End
+	if txt.wrapMode == WrapModeNone || measureWidth <= 0 {
+		measureWidth = math.MaxInt
+	}
 	for lineIdx := range t.measuredLineHeights {
 		if lineIdx < 0 || lineIdx >= n {
 			continue
@@ -1148,9 +1154,9 @@ func (t *textInputText) measureMaxWidthForViewport(context *guigui.Context) {
 			end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIdx + 1)
 		}
 		logicalLine := txt.stringValueWithRange(start, end)
-		w, _ := textutil.MeasureLogicalLine(
-			math.MaxInt, logicalLine, textutil.WrapModeNone, face,
-			lineHeight, tabWidth, keepTailingSpace, "",
+		w := textutil.CachedVisualLineMaxCaretX(
+			measureWidth, logicalLine, textutil.WrapMode(txt.wrapMode), face,
+			tabWidth, keepTailingSpace,
 		)
 		if mw := int(math.Ceil(w)) + t.padding.Start + t.padding.End; mw > t.measuredMaxWidth {
 			t.measuredMaxWidth = mw
@@ -1167,6 +1173,10 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 
 	bounds := widgetBounds.Bounds()
 	txt := t.text.Widget()
+	innerWidth := t.containerBounds.Dx() - t.padding.Start - t.padding.End
+	t.measuredMaxWidthWrapMode = txt.wrapMode
+	t.measuredMaxWidthInnerWidth = innerWidth
+	txt.setWrapWidth(innerWidth)
 	lh := int(math.Ceil(txt.lineHeight(context)))
 
 	viewportInner := bounds.Dy() - t.padding.Top - t.padding.Bottom

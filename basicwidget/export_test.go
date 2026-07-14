@@ -3,6 +3,8 @@
 
 package basicwidget
 
+import "image"
+
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	return replaceNewLinesWithSpace(text, start, end)
 }
@@ -76,6 +78,33 @@ func (p *VirtualScrollPanel) ApplyPendingScrollOffset() {
 
 func (p *VirtualScrollPanel) ScrollOffset() (float64, float64) {
 	return p.scrollOffset()
+}
+
+// TextInputText exposes the horizontal layout state of textInputText so tests
+// can verify the relationship between its scroll extent and wrapping width.
+type TextInputText struct {
+	textInputText
+}
+
+func (t *TextInputText) ConfigureHorizontalLayout(wrapMode WrapMode, containerWidth, paddingStart, paddingEnd, measuredWidth int) {
+	txt := t.text.Widget()
+	txt.SetMultiline(true)
+	txt.SetWrapMode(wrapMode)
+	t.containerBounds = image.Rect(0, 0, containerWidth, 1)
+	t.padding.Start = paddingStart
+	t.padding.End = paddingEnd
+	t.measuredMaxWidth = measuredWidth
+	t.measuredMaxWidthWrapMode = wrapMode
+	t.measuredMaxWidthInnerWidth = containerWidth - paddingStart - paddingEnd
+	txt.setWrapWidth(t.measuredMaxWidthInnerWidth)
+}
+
+func (t *TextInputText) ContentWidth() int {
+	return t.contentWidth(nil)
+}
+
+func (t *TextInputText) LayoutWidth(bounds image.Rectangle) int {
+	return t.text.Widget().layoutWidth(bounds)
 }
 
 type AbstractListValuer[T comparable] interface {

@@ -117,6 +117,50 @@ func TestMeasureLogicalLineParity(t *testing.T) {
 	}
 }
 
+func TestCachedVisualLineMaxCaretXIncludesTrailingSpaces(t *testing.T) {
+	face := newTestFace(t)
+	testCases := []struct {
+		name string
+		line string
+	}{
+		{
+			name: "one trailing space",
+			line: "abcdefghijklmnopqrstuvwxyz ",
+		},
+		{
+			name: "multiple trailing spaces",
+			line: "the quick brown fox   ",
+		},
+	}
+
+	const width = 80
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
+		for _, tc := range testCases {
+			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
+				style := textutil.Style{
+					WrapMode:   wrapMode,
+					Face:       face,
+					LineHeight: 24,
+				}
+				position, _, count := textutil.TextPositionFromIndexInLogicalLine(width, tc.line, len(tc.line), &style)
+				if count == 0 {
+					t.Fatal("TextPositionFromIndexInLogicalLine returned no position")
+				}
+				got := textutil.CachedVisualLineMaxCaretX(width, tc.line, wrapMode, face, 0, false)
+				if got < position.X {
+					t.Errorf("CachedVisualLineMaxCaretX = %v, trailing caret X = %v", got, position.X)
+				}
+				if tc.name == "one trailing space" && wrapMode == textutil.WrapModeNormal {
+					rendered, _ := textutil.MeasureLogicalLine(width, tc.line, wrapMode, face, 0, 0, false, "")
+					if position.X <= rendered {
+						t.Fatalf("test setup: trailing caret X = %v, rendered width = %v", position.X, rendered)
+					}
+				}
+			})
+		}
+	}
+}
+
 // TestMeasureLogicalLineWrapVisualCount verifies that wrapping a long
 // line produces multiple visual sublines whose total height equals the line
 // height times the visual subline count.
