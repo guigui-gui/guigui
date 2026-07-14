@@ -5,6 +5,7 @@ package ebitenginewidget
 
 import (
 	"image"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/exp/vmhost"
@@ -194,4 +195,44 @@ func updateGamepadState(state *vmhost.GamepadState, id ebiten.GamepadID) {
 			Value:   ebiten.StandardGamepadButtonValue(id, b),
 		}
 	}
+}
+
+// updateTextInput serves the guest's text-input sessions on the host's platform IME through a
+// [vmhostutil.ComposerForwarder]. It runs before the guest's ticks are advanced so that a commit
+// reaches the guest in the same tick as the raw input that produced it; the guest's own composer then
+// reports the input as handled and its game does not process it twice.
+func (e *Ebitengine) updateTextInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) {
+	if textInput := e.gp.takeNewTextInput(); textInput != nil {
+		e.textInput = textInput
+	}
+	if e.textInput != nil && e.textInput.IsClosed() {
+		// The guest released the session (its game ended text inputting), or it was already answered
+		// with a commit or an error.
+		e.textInput = nil
+	}
+	// The host IME is driven only while the widget is focused, like key forwarding, so text inputting
+	// into surrounding Guigui widgets does not reach the guest.
+	if e.textInput == nil || e.inputForwardingDisabled || !context.IsFocused(e) {
+		e.composerForwarder.Forward(nil, image.Rectangle{})
+		return
+	}
+	// The guest caret's rectangle is in the guest's device-independent pixels; scaling by the full
+	// scale from the widget's origin translates it into the widget's coordinate space (the inverse of
+	// forwardInput's position translation).
+	bounds := widgetBounds.Bounds()
+	scale := context.Scale()
+	if scale <= 0 {
+		scale = 1
+	}
+	cb := e.textInput.CaretBounds()
+	caretBounds := image.Rect(
+		bounds.Min.X+int(math.Round(float64(cb.Min.X)*scale)),
+		bounds.Min.Y+int(math.Round(float64(cb.Min.Y)*scale)),
+		bounds.Min.X+int(math.Round(float64(cb.Max.X)*scale)),
+		bounds.Min.Y+int(math.Round(float64(cb.Max.Y)*scale)),
+	)
+	e.composerForwarder.Forward(e.textInput, caretBounds)
+	// The handled result is not consulted: the widget mirrors the host's raw input as-is, and the
+	// forwarded states make the guest's own composer report the same result to the guest's game.
+	e.composerForwarder.Update()
 }

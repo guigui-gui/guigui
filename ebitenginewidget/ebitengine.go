@@ -6,6 +6,7 @@ package ebitenginewidget
 import (
 	"errors"
 	"fmt"
+	"image"
 	"log/slog"
 	"math"
 	"net"
@@ -17,6 +18,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/exp/vmhost"
+	"github.com/hajimehoshi/ebiten/v2/exp/vmhost/vmhostutil"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
@@ -152,6 +154,12 @@ type Ebitengine struct {
 
 	// audioRateWarned guards reporting a sample-rate mismatch once per guest.
 	audioRateWarned bool
+
+	// textInput is the guest's text-input session awaiting or being served, nil when none.
+	textInput *vmhost.GuestTextInput
+
+	// composerForwarder serves textInput on the host's platform IME.
+	composerForwarder vmhostutil.ComposerForwarder
 
 	// pressedKeys holds the keys whose presses were forwarded to the guest and whose releases were not
 	// yet, so releases can reach the guest even when the widget is unfocused.
@@ -375,6 +383,9 @@ func (e *Ebitengine) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	if !e.inputForwardingDisabled {
 		e.forwardInput(context, widgetBounds)
 	}
+	// updateTextInput runs even while input forwarding is disabled: the guest's text-input sessions
+	// are still tracked, and a host IME session in progress is stopped rather than left composing.
+	e.updateTextInput(context, widgetBounds)
 	n := e.guestTickCount() + e.manualTicks
 	e.manualTicks = 0
 	e.gp.session.AdvanceTicks(n)
@@ -608,6 +619,10 @@ func (e *Ebitengine) closeGuest() {
 	clear(e.pressedKeys)
 	clear(e.pressedMouseButtons)
 	clear(e.forwardedTouches)
+
+	// The text-input session being served belongs to the guest being closed.
+	e.textInput = nil
+	e.composerForwarder.Forward(nil, image.Rectangle{})
 
 	if err := gp.session.Close(); err != nil {
 		e.dispatchError(fmt.Errorf("ebitenginewidget: closing the guest: %w", err))

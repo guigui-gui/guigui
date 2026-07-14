@@ -25,6 +25,11 @@ type guestProcess struct {
 	// drained. The session delivers the streams during AdvanceTicks, on the widget's tick like the drain,
 	// so no lock is needed.
 	newAudioStreams []*vmhost.GuestAudioStream
+
+	// newTextInputs holds the text-input sessions appendNewTextInput recorded and takeNewTextInput has
+	// not yet drained. The session delivers the sessions during AdvanceTicks, on the widget's tick like
+	// the drain, so no lock is needed.
+	newTextInputs []*vmhost.GuestTextInput
 }
 
 // appendNewAudioStream records a new guest audio stream. It is the session's OnAudioStream handler.
@@ -37,6 +42,23 @@ func (gp *guestProcess) takeNewAudioStreams(dst []*vmhost.GuestAudioStream) []*v
 	dst = append(dst, gp.newAudioStreams...)
 	gp.newAudioStreams = slices.Delete(gp.newAudioStreams, 0, len(gp.newAudioStreams))
 	return dst
+}
+
+// appendNewTextInput records a new guest text-input session. It is the session's OnTextInput handler.
+func (gp *guestProcess) appendNewTextInput(t *vmhost.GuestTextInput) {
+	gp.newTextInputs = append(gp.newTextInputs, t)
+}
+
+// takeNewTextInput returns the newest text-input session recorded since the last call, or nil. An
+// older undrained session is skipped: the guest releases a session before starting the next, so only
+// the newest can still be open.
+func (gp *guestProcess) takeNewTextInput() *vmhost.GuestTextInput {
+	if len(gp.newTextInputs) == 0 {
+		return nil
+	}
+	t := gp.newTextInputs[len(gp.newTextInputs)-1]
+	gp.newTextInputs = slices.Delete(gp.newTextInputs, 0, len(gp.newTextInputs))
+	return t
 }
 
 // launchResult is the outcome of an asynchronous launch.
@@ -104,6 +126,9 @@ func startGuest(listener net.Listener, binPath, endpoint string, options *startG
 
 		// Record each new guest audio stream for updateAudio to play on the host frame.
 		OnAudioStream: gp.appendNewAudioStream,
+
+		// Record each new guest text-input session for updateTextInput to serve on the host's IME.
+		OnTextInput: gp.appendNewTextInput,
 
 		// Mirror the vibrations the guest requests onto the host. The guest's gamepad IDs match the host's,
 		// because the host forwards its own gamepads to the guest.
