@@ -476,6 +476,14 @@ func (e *Ebitengine) HandlePointingInput(context *guigui.Context, widgetBounds *
 	return guigui.HandleInputResult{}
 }
 
+// CursorShape returns the cursor shape the guest's game requests via [ebiten.SetCursorShape].
+func (e *Ebitengine) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	if e.state == ebitengineStateClosed || e.gp == nil || e.inputForwardingDisabled {
+		return 0, false
+	}
+	return e.gp.session.CursorShape(), true
+}
+
 // Close stops the guest and releases the widget's OS resources. Close is idempotent.
 func (e *Ebitengine) Close() error {
 	if e.state == ebitengineStateClosed {
