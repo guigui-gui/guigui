@@ -212,26 +212,32 @@ func (e *Ebitengine) updateTextInput(context *guigui.Context, widgetBounds *guig
 	}
 	// The host IME is driven only while the widget is focused, like key forwarding, so text inputting
 	// into surrounding Guigui widgets does not reach the guest.
-	if e.textInput == nil || e.inputForwardingDisabled || !context.IsFocused(e) {
+	if e.inputForwardingDisabled || !context.IsFocused(e) {
 		e.composerForwarder.Reset()
 		return
 	}
-	// The guest caret's rectangle is in the guest's device-independent pixels; scaling by the full
-	// scale from the widget's origin translates it into the widget's coordinate space (the inverse of
-	// forwardInput's position translation).
-	bounds := widgetBounds.Bounds()
-	scale := context.Scale()
-	if scale <= 0 {
-		scale = 1
+	if e.textInput != nil {
+		// The guest caret's rectangle is in the guest's device-independent pixels; scaling by the full
+		// scale from the widget's origin translates it into the widget's coordinate space (the inverse of
+		// forwardInput's position translation).
+		bounds := widgetBounds.Bounds()
+		scale := context.Scale()
+		if scale <= 0 {
+			scale = 1
+		}
+		cb := e.textInput.CaretBounds()
+		caretBounds := image.Rect(
+			bounds.Min.X+int(math.Round(float64(cb.Min.X)*scale)),
+			bounds.Min.Y+int(math.Round(float64(cb.Min.Y)*scale)),
+			bounds.Min.X+int(math.Round(float64(cb.Max.X)*scale)),
+			bounds.Min.Y+int(math.Round(float64(cb.Max.Y)*scale)),
+		)
+		e.composerForwarder.Forward(e.textInput, caretBounds)
 	}
-	cb := e.textInput.CaretBounds()
-	caretBounds := image.Rect(
-		bounds.Min.X+int(math.Round(float64(cb.Min.X)*scale)),
-		bounds.Min.Y+int(math.Round(float64(cb.Min.Y)*scale)),
-		bounds.Min.X+int(math.Round(float64(cb.Max.X)*scale)),
-		bounds.Min.Y+int(math.Round(float64(cb.Max.Y)*scale)),
-	)
-	e.composerForwarder.Forward(e.textInput, caretBounds)
+	// Update runs even while no session is being served: after a commit, the forwarder bridges the
+	// gap until the guest's next session arrives (at the earliest one tick later, via AdvanceTicks),
+	// so keystrokes typed in that window are queued rather than dropped.
+	//
 	// The handled result is not consulted: the widget mirrors the host's raw input as-is, and the
 	// forwarded states make the guest's own composer report the same result to the guest's game.
 	e.composerForwarder.Update()
