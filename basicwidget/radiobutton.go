@@ -14,7 +14,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -198,17 +197,17 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 
 	isSelected := r.group.SelectedIndex() == r.index
 	backgroundColor := draw.CheckableControlBackgroundColor(cm, isSelected, r.isActive(context, widgetBounds), context.IsEnabled(r))
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, backgroundColor, radius)
+	draw.DrawRoundedRect(context, dst, bounds, backgroundColor, radius)
 
 	// Border
 	strokeWidth := float32(1 * context.Scale())
 	var borderClr1, borderClr2 color.Color
 	if isSelected && context.IsEnabled(r) {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderAccentSecondaryColors(cm, basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderAccentSecondaryColors(cm, draw.RoundedRectBorderTypeInset)
 	} else {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(cm, basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderColors(cm, draw.RoundedRectBorderTypeInset)
 	}
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, borderClr1, borderClr2, radius, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	draw.DrawRoundedRectBorder(context, dst, bounds, borderClr1, borderClr2, radius, strokeWidth, draw.RoundedRectBorderTypeInset)
 
 	if isSelected {
 		innerBounds := bounds
@@ -219,7 +218,7 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		innerBounds.Max.Y = innerBounds.Min.Y + innerRadius*2
 
 		innerColor := draw.RadioButtonMarkColor(cm, context.IsEnabled(r))
-		basicwidgetdraw.DrawRoundedRect(context, dst, innerBounds, innerColor, innerRadius)
+		draw.DrawRoundedRect(context, dst, innerBounds, innerColor, innerRadius)
 	}
 }
 

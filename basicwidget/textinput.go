@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
@@ -323,9 +322,9 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		t.supportText.SetScale(0.85)
 		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
 		if t.hasError {
-			t.supportText.SetColor(basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), basicwidgetdraw.SemanticColorDanger))
+			t.supportText.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
 		} else {
-			t.supportText.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
+			t.supportText.SetColor(draw.TextColor(context.ColorMode(), false))
 		}
 	}
 
@@ -738,8 +737,8 @@ func (t *textInputBackground) setEditable(editable bool) {
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
+	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
 type textInputIconBackground struct {
@@ -758,8 +757,8 @@ func (t *textInputIconBackground) setEditable(editable bool) {
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
+	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
 type textInputFrame struct {
@@ -778,11 +777,11 @@ func (t *textInputFrame) setError(hasError bool) {
 
 func (t *textInputFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
+	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
+	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 	if t.hasError {
-		dclr1, dclr2 := basicwidgetdraw.BorderDangerColors(context.ColorMode())
-		basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, dclr1, dclr2, RoundedCornerRadius(context), float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeRegular)
+		dclr1, dclr2 := draw.BorderDangerColors(context.ColorMode())
+		draw.DrawRoundedRectBorder(context, dst, bounds, dclr1, dclr2, RoundedCornerRadius(context), float32(1*context.Scale()), draw.RoundedRectBorderTypeRegular)
 	}
 }
 
@@ -885,7 +884,7 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	adder.AddWidget(&t.text)
 
 	t.text.Widget().SetSelectable(true)
-	t.text.Widget().SetColor(basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t)))
+	t.text.Widget().SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
 	t.text.Widget().setKeepTailingSpace(t.text.Widget().wrapMode == WrapModeNone)
 
 	context.DelegateFocus(t, t.text.Widget())
@@ -1278,5 +1277,5 @@ func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	bounds := widgetBounds.Bounds()
 	w := textInputFocusBorderWidth(context)
 	clr := draw.FocusBorderColor(context.ColorMode())
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), basicwidgetdraw.RoundedRectBorderTypeRegular)
+	draw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), draw.RoundedRectBorderTypeRegular)
 }

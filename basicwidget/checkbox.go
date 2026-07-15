@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -144,17 +143,17 @@ func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	r := UnitSize(context) / 8
 
 	backgroundColor := draw.CheckableControlBackgroundColor(cm, c.value, c.isActive(context, widgetBounds), context.IsEnabled(c))
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, backgroundColor, r)
+	draw.DrawRoundedRect(context, dst, bounds, backgroundColor, r)
 
 	// Border
 	strokeWidth := float32(1 * context.Scale())
 	var borderClr1, borderClr2 color.Color
 	if c.value && context.IsEnabled(c) {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderAccentSecondaryColors(cm, basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderAccentSecondaryColors(cm, draw.RoundedRectBorderTypeInset)
 	} else {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(cm, basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderColors(cm, draw.RoundedRectBorderTypeInset)
 	}
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	draw.DrawRoundedRectBorder(context, dst, bounds, borderClr1, borderClr2, r, strokeWidth, draw.RoundedRectBorderTypeInset)
 }
 
 func (c *Checkbox) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

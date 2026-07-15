@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -375,5 +374,5 @@ func (s *scrollBar) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	s.onceDraw = true
 	barColor := draw.ScrollBarColor(context.ColorMode())
 	barColor = draw.ScaleAlpha(barColor, s.alpha)
-	basicwidgetdraw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
+	draw.DrawRoundedRect(context, dst, s.thumbBounds, barColor, RoundedCornerRadius(context))
 }

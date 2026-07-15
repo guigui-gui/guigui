@@ -52,7 +52,7 @@ type Button struct {
 	iconAlign IconAlign
 
 	typ           ButtonType
-	semanticColor basicwidgetdraw.SemanticColor
+	semanticColor draw.SemanticColor
 	textBold      bool
 
 	layoutItems     []guigui.LinearLayoutItem
@@ -128,7 +128,7 @@ func (b *Button) SetType(typ ButtonType) {
 }
 
 func (b *Button) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	b.semanticColor = semanticColor
+	b.semanticColor = draw.SemanticColor(semanticColor)
 }
 
 func (b *Button) setKeepPressed(keep bool) {
@@ -159,15 +159,15 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddWidget(&b.icon)
 
 	if !context.IsEnabled(b) {
-		b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), false))
-	} else if b.semanticColor != basicwidgetdraw.SemanticColorBase {
-		b.text.SetColor(basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
+		b.text.SetColor(draw.TextColor(context.ColorMode(), false))
+	} else if b.semanticColor != draw.SemanticColorBase {
+		b.text.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
 			b.text.SetColor(draw.TextOnAccentColor(context.ColorMode()))
 		default:
-			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
+			b.text.SetColor(draw.TextColor(context.ColorMode(), true))
 		}
 	}
 	if b.textBold {
@@ -393,7 +393,7 @@ func (b *Button) radius(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 
 func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	cm := context.ColorMode()
-	backgroundColor := basicwidgetdraw.ControlColor(context.ColorMode(), context.IsEnabled(b))
+	backgroundColor := draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
 		switch b.typ {
 		case ButtonTypePrimary:
@@ -403,10 +403,10 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 				hovered := b.keepPressedClickable && widgetBounds.IsHitAtCursor()
 				backgroundColor = draw.ActiveSegmentedControlButtonBackgroundColor(cm, hovered)
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = basicwidgetdraw.ButtonBackgroundColorFromSemanticColor(cm, basicwidgetdraw.SemanticColorBase, false, true)
+				backgroundColor = draw.ButtonBackgroundColorFromSemanticColor(cm, draw.SemanticColorBase, false, true)
 			}
 		default:
-			backgroundColor = basicwidgetdraw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
+			backgroundColor = draw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		}
 	}
 
@@ -417,29 +417,29 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}
 	bounds := widgetBounds.Bounds()
 	if border || b.isPressed(context, widgetBounds) {
-		basicwidgetdraw.DrawRoundedRectWithSharpCorners(context, dst, bounds, backgroundColor, r, basicwidgetdraw.Corners(b.sharpCorners))
+		draw.DrawRoundedRectWithSharpCorners(context, dst, bounds, backgroundColor, r, draw.Corners(b.sharpCorners))
 	}
 
 	if border {
-		borderType := basicwidgetdraw.RoundedRectBorderTypeOutset
+		borderType := draw.RoundedRectBorderTypeOutset
 		if b.isPressed(context, widgetBounds) {
-			borderType = basicwidgetdraw.RoundedRectBorderTypeInset
+			borderType = draw.RoundedRectBorderTypeInset
 		}
-		clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+		clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 		if context.IsEnabled(b) {
 			switch b.typ {
 			case ButtonTypePrimary:
-				clr1, clr2 = basicwidgetdraw.BorderAccentColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+				clr1, clr2 = draw.BorderAccentColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 			case buttonTypeActiveSegmentControlButton:
 				if b.isPressed(context, widgetBounds) {
-					clr1, clr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+					clr1, clr2 = draw.BorderAccentSecondaryColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 				} else {
-					clr1, clr2 = basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderType(borderType))
+					clr1, clr2 = draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 				}
 			}
 		}
 
-		basicwidgetdraw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, basicwidgetdraw.Corners(b.sharpCorners))
+		draw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, draw.Corners(b.sharpCorners))
 	}
 }
 

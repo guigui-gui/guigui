@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -330,7 +329,7 @@ func (t *menubarTitle[T]) backgroundBounds(context *guigui.Context, bounds image
 }
 
 func (t *menubarTitle[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	dst.Fill(basicwidgetdraw.BackgroundColor(context.ColorMode()))
+	dst.Fill(draw.BackgroundColor(context.ColorMode()))
 
 	if !context.IsEnabled(t) {
 		return
@@ -339,5 +338,5 @@ func (t *menubarTitle[T]) Draw(context *guigui.Context, widgetBounds *guigui.Wid
 		return
 	}
 	clr := draw.ItemHighlightedBackgroundColor(context.ColorMode())
-	basicwidgetdraw.DrawRoundedRect(context, dst, t.backgroundBounds(context, widgetBounds.Bounds()), clr, RoundedCornerRadius(context))
+	draw.DrawRoundedRect(context, dst, t.backgroundBounds(context, widgetBounds.Bounds()), clr, RoundedCornerRadius(context))
 }

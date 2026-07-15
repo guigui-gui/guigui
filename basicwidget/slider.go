@@ -13,7 +13,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -382,20 +381,20 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if barX0 < barX1 {
 		b := image.Rect(barX0, barY0, barX1, barY1)
-		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOn, r)
+		draw.DrawRoundedRect(context, dst, b, bgColorOn, r)
 
 		if !context.IsEnabled(s) {
-			borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
-			basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
+			borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
+			draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 		}
 	}
 
 	if barX1 < barX2 {
 		b := image.Rect(barX1, barY0, barX2, barY1)
-		basicwidgetdraw.DrawRoundedRect(context, dst, b, bgColorOff, r)
+		draw.DrawRoundedRect(context, dst, b, bgColorOff, r)
 
-		borderClr1, borderClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
-		basicwidgetdraw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
+		draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
 	}
 
 	// Draw gauge marks at snap positions.
@@ -443,19 +442,19 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
 		cm := context.ColorMode()
-		thumbColor := basicwidgetdraw.ThumbColor(cm, context.IsEnabled(s))
+		thumbColor := draw.ThumbColor(cm, context.IsEnabled(s))
 		if s.isActive(context, widgetBounds) {
 			thumbColor = draw.ThumbPressedColor(cm)
 		} else if s.canPress(context, widgetBounds) {
 			thumbColor = draw.ThumbHoveredColor(cm)
 		}
-		thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+		thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset)
 		r := thumbBounds.Dy() / 2
 		if s.hasSnaps() {
 			r = thumbBounds.Dx() / 2
 		}
-		basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
-		basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), basicwidgetdraw.RoundedRectBorderTypeOutset)
+		draw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
+		draw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeOutset)
 	}
 }
 

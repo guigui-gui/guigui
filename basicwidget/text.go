@@ -148,7 +148,7 @@ type Text struct {
 	hAlign        HorizontalAlign
 	vAlign        VerticalAlign
 	color         color.Color
-	semanticColor basicwidgetdraw.SemanticColor
+	semanticColor draw.SemanticColor
 	transparent   float64
 	locales       []language.Tag
 	scaleMinus1   float64
@@ -1236,7 +1236,7 @@ func (t *Text) SetColor(color color.Color) {
 }
 
 func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	t.semanticColor = semanticColor
+	t.semanticColor = draw.SemanticColor(semanticColor)
 }
 
 func (t *Text) SetOpacity(opacity float64) {
@@ -2266,10 +2266,10 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	var textColor color.Color
 	if t.color != nil {
 		textColor = t.color
-	} else if t.semanticColor != basicwidgetdraw.SemanticColorBase {
-		textColor = basicwidgetdraw.TextColorFromSemanticColor(context.ColorMode(), t.semanticColor)
+	} else if t.semanticColor != draw.SemanticColorBase {
+		textColor = draw.TextColorFromSemanticColor(context.ColorMode(), t.semanticColor)
 	} else {
-		textColor = basicwidgetdraw.TextColor(context.ColorMode(), context.IsEnabled(t))
+		textColor = draw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}
 	if t.transparent > 0 {
 		textColor = draw.ScaleAlpha(textColor, 1-t.transparent)
@@ -2296,7 +2296,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end
-			op.SelectionColor = basicwidgetdraw.TextSelectionColor(context.ColorMode())
+			op.SelectionColor = draw.TextSelectionColor(context.ColorMode())
 		} else {
 			op.DrawSelection = false
 		}
@@ -2307,8 +2307,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.CompositionEnd = uEnd
 		op.CompositionActiveStart = cStart
 		op.CompositionActiveEnd = cEnd
-		op.InactiveCompositionColor = basicwidgetdraw.TextInactiveCompositionColor(context.ColorMode())
-		op.ActiveCompositionColor = basicwidgetdraw.TextActiveCompositionColor(context.ColorMode())
+		op.InactiveCompositionColor = draw.TextInactiveCompositionColor(context.ColorMode())
+		op.ActiveCompositionColor = draw.TextActiveCompositionColor(context.ColorMode())
 		op.CompositionBorderWidth = float32(textCaretWidth(context))
 	} else {
 		op.DrawComposition = false
@@ -2319,7 +2319,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	// layout. This precedes the masking and virtualized-restriction paths since
 	// both draw nothing for an empty value.
 	if t.placeholder != "" && t.editable && !t.field.HasText() && t.field.UncommittedTextLengthInBytes() == 0 {
-		clr := basicwidgetdraw.TextColor(context.ColorMode(), false)
+		clr := draw.TextColor(context.ColorMode(), false)
 		if t.transparent > 0 {
 			clr = draw.ScaleAlpha(clr, 1-t.transparent)
 		}
@@ -3280,7 +3280,7 @@ func (t *textCaret) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 		return
 	}
 	clr := draw.ScaleAlpha(draw.TextCaretColor(context.ColorMode()), alpha)
-	basicwidgetdraw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
+	draw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }
 
 func replaceNewLinesWithSpace(text string, start, end int) (string, int, int) {

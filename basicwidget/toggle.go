@@ -11,7 +11,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -96,7 +95,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	bounds := widgetBounds.Bounds()
 
 	cm := context.ColorMode()
-	thumbColor := basicwidgetdraw.ThumbColor(cm, context.IsEnabled(t))
+	thumbColor := draw.ThumbColor(cm, context.IsEnabled(t))
 	if t.isActive(context, widgetBounds) {
 		thumbColor = draw.ThumbPressedColor(cm)
 	} else if t.canPress(context, widgetBounds) {
@@ -114,7 +113,7 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		bgColor = draw.MixColors(bgColorOn, bgColorOff, rate)
 	}
 	r := bounds.Dy() / 2
-	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, bgColor, r)
+	draw.DrawRoundedRect(context, dst, bounds, bgColor, r)
 
 	// Border (upper)
 	b := bounds
@@ -123,13 +122,13 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	strokeWidth := float32(1 * context.Scale())
 	var borderClr1, borderClr2 color.Color
 	if t.value && context.IsEnabled(t) {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderAccentSecondaryColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderAccentSecondaryColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
 	} else {
-		borderClr1, borderClr2 = basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeInset)
+		borderClr1, borderClr2 = draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
 	}
 	dstSub := dst.RecyclableSubImage(b)
 	defer dstSub.Recycle()
-	basicwidgetdraw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	draw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, draw.RoundedRectBorderTypeInset)
 
 	// Thumb
 	cxOff := float64(bounds.Min.X) + float64(r)
@@ -141,17 +140,17 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		cx = int((1-rate)*cxOn + rate*cxOff)
 	}
 	cy := bounds.Min.Y + r
-	thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+	thumbClr1, thumbClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset)
 	thumbBounds := image.Rect(cx-r, cy-r, cx+r, cy+r)
-	basicwidgetdraw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeOutset)
+	draw.DrawRoundedRect(context, dst, thumbBounds, thumbColor, r)
+	draw.DrawRoundedRectBorder(context, dst, thumbBounds, thumbClr1, thumbClr2, r, strokeWidth, draw.RoundedRectBorderTypeOutset)
 
 	// Border (lower)
 	b = bounds
 	b.Min.Y += halfHeight
 	dstSub = dst.RecyclableSubImage(b)
 	defer dstSub.Recycle()
-	basicwidgetdraw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, basicwidgetdraw.RoundedRectBorderTypeInset)
+	draw.DrawRoundedRectBorder(context, dstSub, bounds, borderClr1, borderClr2, r, strokeWidth, draw.RoundedRectBorderTypeInset)
 
 	t.onceDraw = true
 }

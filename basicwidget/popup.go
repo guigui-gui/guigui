@@ -140,7 +140,7 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 }
 
 func (p *Popup) SetBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	p.popup.Widget().setBackgroundSemanticColor(semanticColor)
+	p.popup.Widget().setBackgroundSemanticColor(draw.SemanticColor(semanticColor))
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
@@ -309,7 +309,7 @@ func (p *popup) SetBackgroundBlurred(blurred bool) {
 	p.backgroundBlurred = blurred
 }
 
-func (p *popup) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+func (p *popup) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
 	p.contentAndFrame.Widget().setBackgroundSemanticColor(semanticColor)
 }
 
@@ -640,7 +640,7 @@ func (p *popupContentAndFrame) setStyle(style popupStyle) {
 	p.frame.setStyle(style)
 }
 
-func (p *popupContentAndFrame) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+func (p *popupContentAndFrame) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
 	p.content.setBackgroundSemanticColor(semanticColor)
 }
 
@@ -666,7 +666,7 @@ type popupContent struct {
 
 	content                 guigui.Widget
 	style                   popupStyle
-	backgroundSemanticColor basicwidgetdraw.SemanticColor
+	backgroundSemanticColor draw.SemanticColor
 }
 
 func (p *popupContent) setContent(widget guigui.Widget) {
@@ -677,7 +677,7 @@ func (p *popupContent) setStyle(style popupStyle) {
 	p.style = style
 }
 
-func (p *popupContent) setBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
+func (p *popupContent) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
 	p.backgroundSemanticColor = semanticColor
 }
 
@@ -703,9 +703,9 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := basicwidgetdraw.PopupBackgroundColorFromSemanticColor(context.ColorMode(), p.backgroundSemanticColor)
+	clr := draw.PopupBackgroundColorFromSemanticColor(context.ColorMode(), p.backgroundSemanticColor)
 	if p.style != popupStyleDrawer {
-		basicwidgetdraw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
+		draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	} else {
 		vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 	}
@@ -729,7 +729,7 @@ func (p *popupFrame) setDrawerEdge(edge DrawerEdge) {
 func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
-	clr1, clr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
+	clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeOutset)
 	if p.style == popupStyleDrawer {
 		u := UnitSize(context)
 		switch p.drawerEdge {
@@ -752,7 +752,7 @@ func (p *popupFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBo
 		}
 	}
 	width := float32(1 * context.Scale())
-	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, basicwidgetdraw.RoundedRectBorderTypeOutset)
+	draw.DrawRoundedRectBorder(context, dst, bounds, clr1, clr2, RoundedCornerRadius(context), width, draw.RoundedRectBorderTypeOutset)
 }
 
 type popupTransparentBackground struct {
