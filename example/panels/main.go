@@ -9,8 +9,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -113,9 +111,6 @@ func main() {
 	op := &guigui.RunOptions{
 		Title:      "Panels",
 		WindowSize: image.Pt(800, 600),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(&Root{}, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)

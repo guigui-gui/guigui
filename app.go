@@ -202,6 +202,11 @@ type RunOptions struct {
 	WindowFloating bool
 	AppScale       float64
 
+	// ApplePressAndHoldDelegated indicates whether RunGameOptions.ApplePressAndHoldEnabled controls
+	// the macOS press-and-hold feature. When false, the feature is enabled regardless of
+	// RunGameOptions.
+	ApplePressAndHoldDelegated bool
+
 	RunGameOptions *ebiten.RunGameOptions
 }
 
@@ -256,6 +261,10 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 	// Prefer SRGB for consistent result.
 	if eop.ColorSpace == ebiten.ColorSpaceDefault {
 		eop.ColorSpace = ebiten.ColorSpaceSRGB
+	}
+	// Prefer the press-and-hold feature for text editing.
+	if !options.ApplePressAndHoldDelegated {
+		eop.ApplePressAndHoldEnabled = true
 	}
 
 	return f(a, &eop)

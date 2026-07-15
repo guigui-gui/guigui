@@ -9,8 +9,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 	"github.com/guigui-gui/guigui/example/calc/internal/calc"
@@ -183,9 +181,6 @@ func main() {
 		Title:         "Calculator",
 		WindowMinSize: image.Pt(300, 400),
 		WindowSize:    image.Pt(320, 480),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(&Root{}, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)

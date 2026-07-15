@@ -11,8 +11,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -202,9 +200,6 @@ func main() {
 		Title:         "Big List",
 		WindowMinSize: image.Pt(400, 300),
 		WindowSize:    image.Pt(600, 600),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(r, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -319,9 +319,6 @@ func main() {
 	op := &guigui.RunOptions{
 		Title:         "Toast",
 		WindowMinSize: image.Pt(400, 300),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(&Root{}, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)

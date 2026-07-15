@@ -9,8 +9,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/hajimehoshi/ebiten/v2"
-
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 	_ "github.com/guigui-gui/guigui/basicwidget/cjkfont"
@@ -126,9 +124,6 @@ func main() {
 	op := &guigui.RunOptions{
 		Title:      "Component Gallery",
 		WindowSize: image.Pt(800, 800),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(&Root{}, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)

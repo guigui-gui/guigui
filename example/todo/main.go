@@ -256,9 +256,6 @@ func main() {
 	op := &guigui.RunOptions{
 		Title:         "TODO",
 		WindowMinSize: image.Pt(320, 240),
-		RunGameOptions: &ebiten.RunGameOptions{
-			ApplePressAndHoldEnabled: true,
-		},
 	}
 	if err := guigui.Run(&Root{}, op); err != nil {
 		fmt.Fprintln(os.Stderr, err)
