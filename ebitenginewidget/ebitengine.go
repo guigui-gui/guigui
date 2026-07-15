@@ -6,7 +6,6 @@ package ebitenginewidget
 import (
 	"errors"
 	"fmt"
-	"image"
 	"log/slog"
 	"math"
 	"net"
@@ -630,7 +629,7 @@ func (e *Ebitengine) closeGuest() {
 
 	// The text-input session being served belongs to the guest being closed.
 	e.textInput = nil
-	e.composerForwarder.Forward(nil, image.Rectangle{})
+	e.composerForwarder.Reset()
 
 	if err := gp.session.Close(); err != nil {
 		e.dispatchError(fmt.Errorf("ebitenginewidget: closing the guest: %w", err))

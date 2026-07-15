@@ -213,7 +213,7 @@ func (e *Ebitengine) updateTextInput(context *guigui.Context, widgetBounds *guig
 	// The host IME is driven only while the widget is focused, like key forwarding, so text inputting
 	// into surrounding Guigui widgets does not reach the guest.
 	if e.textInput == nil || e.inputForwardingDisabled || !context.IsFocused(e) {
-		e.composerForwarder.Forward(nil, image.Rectangle{})
+		e.composerForwarder.Reset()
 		return
 	}
 	// The guest caret's rectangle is in the guest's device-independent pixels; scaling by the full
