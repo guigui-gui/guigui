@@ -1277,6 +1277,6 @@ type textInputFocus struct {
 func (t *textInputFocus) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	w := textInputFocusBorderWidth(context)
-	clr := draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.8)
+	clr := draw.FocusBorderColor(context.ColorMode())
 	basicwidgetdraw.DrawRoundedRectBorder(context, dst, bounds, clr, clr, w+RoundedCornerRadius(context), float32(w), basicwidgetdraw.RoundedRectBorderTypeRegular)
 }

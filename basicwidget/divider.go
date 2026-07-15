@@ -20,7 +20,7 @@ type Divider struct {
 func (d *Divider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 	strokeWidth := float32(1 * context.Scale())
-	clr := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
+	clr := draw.DividerColor(context.ColorMode())
 	y := float32(bounds.Min.Y+bounds.Max.Y) / 2
 	vector.StrokeLine(dst, float32(bounds.Min.X), y, float32(bounds.Max.X), y, strokeWidth, clr, false)
 }

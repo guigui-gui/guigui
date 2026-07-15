@@ -840,14 +840,7 @@ func (p *popupDarkBackground) SetOpeningRate(rate float64) {
 func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
 
-	colorMode := context.ColorMode()
-	var alpha float64
-	if colorMode == ebiten.ColorModeLight {
-		alpha = 0.25 * p.openingRate
-	} else {
-		alpha = 0.5 * p.openingRate
-	}
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.1, 0), alpha)
+	clr := draw.PopupDarkBackgroundColor(context.ColorMode(), p.openingRate)
 	vector.FillRect(dst, float32(bounds.Min.X), float32(bounds.Min.Y), float32(bounds.Dx()), float32(bounds.Dy()), clr, false)
 }
 
@@ -886,7 +879,7 @@ func (p *popupShadow) Draw(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds.Min.Y -= int(8 * context.Scale())
 	bounds.Max.Y += int(16 * context.Scale())
 	// TODO: When openingRate < 1, only the edges should be rendered.
-	clr := draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0, 0)
+	clr := draw.ShadowColor(context.ColorMode())
 	alpha := 0.25
 	if p.style != popupStyleDrawer {
 		// As the popup itself is also transparent, the shadow should be more transparent.

@@ -143,24 +143,7 @@ func (c *Checkbox) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	cm := context.ColorMode()
 	r := UnitSize(context) / 8
 
-	var backgroundColor color.Color
-	if context.IsEnabled(c) {
-		if c.value {
-			if c.isActive(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
-			} else {
-				backgroundColor = draw.Color(cm, draw.SemanticColorAccent, 0.5)
-			}
-		} else {
-			if c.isActive(context, widgetBounds) {
-				backgroundColor = basicwidgetdraw.ControlSecondaryColor(cm, true)
-			} else {
-				backgroundColor = basicwidgetdraw.ControlColor(cm, true)
-			}
-		}
-	} else {
-		backgroundColor = basicwidgetdraw.ControlColor(cm, false)
-	}
+	backgroundColor := draw.CheckableControlBackgroundColor(cm, c.value, c.isActive(context, widgetBounds), context.IsEnabled(c))
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, backgroundColor, r)
 
 	// Border

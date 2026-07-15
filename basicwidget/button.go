@@ -165,7 +165,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
-			b.text.SetColor(basicwidgetdraw.TextColor(ebiten.ColorModeDark, true))
+			b.text.SetColor(draw.TextOnAccentColor(context.ColorMode()))
 		default:
 			b.text.SetColor(basicwidgetdraw.TextColor(context.ColorMode(), true))
 		}
@@ -397,21 +397,13 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	if context.IsEnabled(b) {
 		switch b.typ {
 		case ButtonTypePrimary:
-			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.55)
-			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.475, 0.525)
-			} else {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.5, 0.5)
-			}
+			backgroundColor = draw.PrimaryButtonBackgroundColor(cm, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		case buttonTypeActiveSegmentControlButton:
 			if b.isPressed(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.875, 0.5)
-				if b.keepPressedClickable && widgetBounds.IsHitAtCursor() {
-					backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.85, 0.475)
-				}
+				hovered := b.keepPressedClickable && widgetBounds.IsHitAtCursor()
+				backgroundColor = draw.ActiveSegmentedControlButtonBackgroundColor(cm, hovered)
 			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.275)
+				backgroundColor = basicwidgetdraw.ButtonBackgroundColorFromSemanticColor(cm, basicwidgetdraw.SemanticColorBase, false, true)
 			}
 		default:
 			backgroundColor = basicwidgetdraw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))

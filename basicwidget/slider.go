@@ -374,8 +374,8 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}
 	barX2 := b.Max.X - sliderThumbRadius(context)*3/4
 
-	bgColorOn := draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.5)
-	bgColorOff := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
+	bgColorOn := draw.TrackColor(context.ColorMode(), true, false)
+	bgColorOff := draw.TrackColor(context.ColorMode(), false, false)
 	if !context.IsEnabled(s) {
 		bgColorOn = bgColorOff
 	}
@@ -412,7 +412,7 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		barTop := float32(barY0)
 		barBottom := float32(barY1)
 
-		tickColor := draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.7)
+		tickColor := draw.SliderTickColor(context.ColorMode())
 		tickWidth := float32(2 * context.Scale())
 		tickHeight := float32(radius) / 2
 
@@ -443,11 +443,11 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	if thumbBounds := s.thumbBounds(context, widgetBounds); !thumbBounds.Empty() {
 		cm := context.ColorMode()
-		thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(s))
+		thumbColor := basicwidgetdraw.ThumbColor(cm, context.IsEnabled(s))
 		if s.isActive(context, widgetBounds) {
-			thumbColor = draw.Color2(cm, draw.SemanticColorBase, 0.95, 0.55)
+			thumbColor = draw.ThumbPressedColor(cm)
 		} else if s.canPress(context, widgetBounds) {
-			thumbColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.575)
+			thumbColor = draw.ThumbHoveredColor(cm)
 		}
 		thumbClr1, thumbClr2 := basicwidgetdraw.BorderColors(context.ColorMode(), basicwidgetdraw.RoundedRectBorderTypeOutset)
 		r := thumbBounds.Dy() / 2

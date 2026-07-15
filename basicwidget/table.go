@@ -522,10 +522,7 @@ func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		x1 := x0
 		y0 := float32(b.Min.Y + u/4)
 		y1 := float32(b.Min.Y + tableHeaderHeight(context) - u/4)
-		clr := draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.9, 0.4)
-		if !context.IsEnabled(t) {
-			clr = draw.Color2(context.ColorMode(), draw.SemanticColorBase, 0.8, 0.3)
-		}
+		clr := draw.HeaderSeparatorColor(context.ColorMode(), context.IsEnabled(t))
 		vector.StrokeLine(dst, x0, y0, x1, y1, float32(context.Scale()), clr, false)
 	}
 }

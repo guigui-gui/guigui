@@ -330,7 +330,7 @@ func (t *menubarTitle[T]) backgroundBounds(context *guigui.Context, bounds image
 }
 
 func (t *menubarTitle[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
-	dst.Fill(basicwidgetdraw.BackgroundColorFromSemanticColor(context.ColorMode(), basicwidgetdraw.SemanticColorBase))
+	dst.Fill(basicwidgetdraw.BackgroundColor(context.ColorMode()))
 
 	if !context.IsEnabled(t) {
 		return
@@ -338,6 +338,6 @@ func (t *menubarTitle[T]) Draw(context *guigui.Context, widgetBounds *guigui.Wid
 	if !t.isOpen() {
 		return
 	}
-	clr := draw.Color2(context.ColorMode(), draw.SemanticColorAccent, 0.6, 0.475)
+	clr := draw.ItemHighlightedBackgroundColor(context.ColorMode())
 	basicwidgetdraw.DrawRoundedRect(context, dst, t.backgroundBounds(context, widgetBounds.Bounds()), clr, RoundedCornerRadius(context))
 }

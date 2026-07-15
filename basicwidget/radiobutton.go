@@ -196,25 +196,8 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 	cm := context.ColorMode()
 	radius := LineHeight(context) / 2
 
-	var backgroundColor color.Color
 	isSelected := r.group.SelectedIndex() == r.index
-	if context.IsEnabled(r) {
-		if isSelected {
-			if r.isActive(context, widgetBounds) {
-				backgroundColor = draw.Color2(cm, draw.SemanticColorAccent, 0.45, 0.45)
-			} else {
-				backgroundColor = draw.Color(cm, draw.SemanticColorAccent, 0.5)
-			}
-		} else {
-			if r.isActive(context, widgetBounds) {
-				backgroundColor = basicwidgetdraw.ControlSecondaryColor(cm, true)
-			} else {
-				backgroundColor = basicwidgetdraw.ControlColor(cm, true)
-			}
-		}
-	} else {
-		backgroundColor = basicwidgetdraw.ControlColor(cm, false)
-	}
+	backgroundColor := draw.CheckableControlBackgroundColor(cm, isSelected, r.isActive(context, widgetBounds), context.IsEnabled(r))
 	basicwidgetdraw.DrawRoundedRect(context, dst, bounds, backgroundColor, radius)
 
 	// Border
@@ -235,14 +218,7 @@ func (r *RadioButton[T]) Draw(context *guigui.Context, widgetBounds *guigui.Widg
 		innerBounds.Max.X = innerBounds.Min.X + innerRadius*2
 		innerBounds.Max.Y = innerBounds.Min.Y + innerRadius*2
 
-		imageCM := ebiten.ColorModeDark
-		if cm == ebiten.ColorModeLight && !context.IsEnabled(r) {
-			imageCM = ebiten.ColorModeLight
-		}
-		innerColor := draw.Color(imageCM, draw.SemanticColorBase, 0)
-		if !context.IsEnabled(r) {
-			innerColor = draw.ScaleAlpha(innerColor, 0.5)
-		}
+		innerColor := draw.RadioButtonMarkColor(cm, context.IsEnabled(r))
 		basicwidgetdraw.DrawRoundedRect(context, dst, innerBounds, innerColor, innerRadius)
 	}
 }

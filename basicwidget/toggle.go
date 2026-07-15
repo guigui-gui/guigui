@@ -96,22 +96,17 @@ func (t *Toggle) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	bounds := widgetBounds.Bounds()
 
 	cm := context.ColorMode()
-	thumbColor := basicwidgetdraw.ThumbColor(context.ColorMode(), context.IsEnabled(t))
+	thumbColor := basicwidgetdraw.ThumbColor(cm, context.IsEnabled(t))
 	if t.isActive(context, widgetBounds) {
-		thumbColor = draw.Color2(cm, draw.SemanticColorBase, 0.95, 0.55)
+		thumbColor = draw.ThumbPressedColor(cm)
 	} else if t.canPress(context, widgetBounds) {
-		thumbColor = draw.Color2(cm, draw.SemanticColorBase, 0.975, 0.575)
+		thumbColor = draw.ThumbHoveredColor(cm)
 	}
 
 	// Background
-	var bgColorOff, bgColorOn color.Color
-	if t.isActive(context, widgetBounds) {
-		bgColorOff = draw.Color2(cm, draw.SemanticColorBase, 0.775, 0.175)
-		bgColorOn = draw.Color2(cm, draw.SemanticColorAccent, 0.475, 0.475)
-	} else {
-		bgColorOff = draw.Color(context.ColorMode(), draw.SemanticColorBase, 0.8)
-		bgColorOn = draw.Color(context.ColorMode(), draw.SemanticColorAccent, 0.5)
-	}
+	pressed := t.isActive(context, widgetBounds)
+	bgColorOff := draw.TrackColor(cm, false, pressed)
+	bgColorOn := draw.TrackColor(cm, true, pressed)
 	var bgColor color.Color
 	if t.value && context.IsEnabled(t) {
 		bgColor = draw.MixColors(bgColorOff, bgColorOn, rate)

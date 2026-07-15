@@ -3279,7 +3279,7 @@ func (t *textCaret) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if !b.In(region) {
 		return
 	}
-	clr := draw.ScaleAlpha(draw.Color2(context.ColorMode(), draw.SemanticColorAccent, 0.5, 0.6), alpha)
+	clr := draw.ScaleAlpha(draw.TextCaretColor(context.ColorMode()), alpha)
 	basicwidgetdraw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }
 
