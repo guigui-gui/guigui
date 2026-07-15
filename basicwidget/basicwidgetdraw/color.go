@@ -23,336 +23,362 @@ const (
 	SemanticColorDanger  SemanticColor = SemanticColor(draw.SemanticColorDanger)
 )
 
+// colorToken represents a themable color as a semantic hue and a lightness for each color mode.
+type colorToken struct {
+	// semanticColor is the hue the color is derived from.
+	semanticColor draw.SemanticColor
+
+	// light is the lightness in the light color mode, in the range [0, 1].
+	light float64
+
+	// dark is the lightness in the dark color mode, in the range [0, 1].
+	dark float64
+}
+
+func (c colorToken) color(colorMode ebiten.ColorMode) color.Color {
+	return draw.Color2(colorMode, c.semanticColor, c.light, c.dark)
+}
+
+// borderColorTokens is a set of color tokens for a rounded-rect border, one pair per border type.
+type borderColorTokens struct {
+	// regular is the color for both edges of a regular border.
+	regular colorToken
+
+	// inset1 is the upper-edge color of an inset border.
+	inset1 colorToken
+
+	// inset2 is the lower-edge color of an inset border.
+	inset2 colorToken
+
+	// outset1 is the upper-edge color of an outset border.
+	outset1 colorToken
+
+	// outset2 is the lower-edge color of an outset border.
+	outset2 colorToken
+}
+
+func (b borderColorTokens) colors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
+	switch borderType {
+	case RoundedRectBorderTypeRegular:
+		c := b.regular.color(colorMode)
+		return c, c
+	case RoundedRectBorderTypeInset:
+		return b.inset1.color(colorMode), b.inset2.color(colorMode)
+	case RoundedRectBorderTypeOutset:
+		return b.outset1.color(colorMode), b.outset2.color(colorMode)
+	default:
+		panic(fmt.Sprintf("basicwidgetdraw: invalid border type: %d", borderType))
+	}
+}
+
 var (
-	borderRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.8, 0.1)
-	borderRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.8, 0.1)
-	borderRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.8, 0.1)
-	borderRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.8, 0.1)
-	borderInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.7, 0)
-	borderInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.15)
-	borderInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.7, 0)
-	borderInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.15)
-	borderOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.5)
-	borderOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.7, 0.2)
-	borderOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.5)
-	borderOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.7, 0.2)
-
-	borderAccentRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.325, 0.2)
-	borderAccentInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.325, 0.2)
-	borderAccentInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.6, 0.8)
-	borderAccentOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.35, 0.35)
-	borderAccentOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.6, 0.8)
-	borderAccentOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.35, 0.35)
-
-	borderAccentSecondaryRegularLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.1)
-	borderAccentSecondaryRegularDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.1)
-	borderAccentSecondaryInsetLightColor1   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.7, 0.2)
-	borderAccentSecondaryInsetLightColor2   = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.85, 0.05)
-	borderAccentSecondaryInsetDarkColor1    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.7, 0.2)
-	borderAccentSecondaryInsetDarkColor2    = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetLightColor1  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetLightColor2  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.7, 0.2)
-	borderAccentSecondaryOutsetDarkColor1   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.85, 0.05)
-	borderAccentSecondaryOutsetDarkColor2   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.7, 0.2)
-
-	borderDangerLightColor1 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorDanger, 0.4, 0.7)
-	borderDangerLightColor2 = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorDanger, 0.4, 0.7)
-	borderDangerDarkColor1  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorDanger, 0.4, 0.7)
-	borderDangerDarkColor2  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorDanger, 0.4, 0.7)
+	borderTokens = borderColorTokens{
+		regular: colorToken{
+			semanticColor: draw.SemanticColorBase,
+			light:         0.8,
+			dark:          0.1,
+		},
+		inset1: colorToken{
+			semanticColor: draw.SemanticColorBase,
+			light:         0.7,
+			dark:          0,
+		},
+		inset2: colorToken{
+			semanticColor: draw.SemanticColorBase,
+			light:         0.85,
+			dark:          0.15,
+		},
+		outset1: colorToken{
+			semanticColor: draw.SemanticColorBase,
+			light:         0.85,
+			dark:          0.5,
+		},
+		outset2: colorToken{
+			semanticColor: draw.SemanticColorBase,
+			light:         0.7,
+			dark:          0.2,
+		},
+	}
+	borderAccentTokens = borderColorTokens{
+		regular: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.35,
+			dark:          0.35,
+		},
+		inset1: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.325,
+			dark:          0.2,
+		},
+		inset2: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.35,
+			dark:          0.35,
+		},
+		outset1: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.6,
+			dark:          0.8,
+		},
+		outset2: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.35,
+			dark:          0.35,
+		},
+	}
+	borderAccentSecondaryTokens = borderColorTokens{
+		regular: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.8,
+			dark:          0.1,
+		},
+		inset1: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.7,
+			dark:          0.2,
+		},
+		inset2: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.85,
+			dark:          0.05,
+		},
+		outset1: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.85,
+			dark:          0.05,
+		},
+		outset2: colorToken{
+			semanticColor: draw.SemanticColorAccent,
+			light:         0.7,
+			dark:          0.2,
+		},
+	}
+	borderDangerToken = colorToken{
+		semanticColor: draw.SemanticColorDanger,
+		light:         0.4,
+		dark:          0.7,
+	}
 )
 
 func BorderColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderRegularLightColor1, borderRegularLightColor2
-		case RoundedRectBorderTypeInset:
-			return borderInsetLightColor1, borderInsetLightColor2
-		case RoundedRectBorderTypeOutset:
-			return borderOutsetLightColor1, borderOutsetLightColor2
-		}
-	case ebiten.ColorModeDark:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderRegularDarkColor1, borderRegularDarkColor2
-		case RoundedRectBorderTypeInset:
-			return borderInsetDarkColor1, borderInsetDarkColor2
-		case RoundedRectBorderTypeOutset:
-			return borderOutsetDarkColor1, borderOutsetDarkColor2
-		}
-	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
+	return borderTokens.colors(colorMode, borderType)
 }
 
 func BorderAccentColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderAccentRegularLightColor1, borderAccentRegularLightColor2
-		case RoundedRectBorderTypeInset:
-			return borderAccentInsetLightColor1, borderAccentInsetLightColor2
-		case RoundedRectBorderTypeOutset:
-			return borderAccentOutsetLightColor1, borderAccentOutsetLightColor2
-		}
-	case ebiten.ColorModeDark:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderAccentRegularDarkColor1, borderAccentRegularDarkColor2
-		case RoundedRectBorderTypeInset:
-			return borderAccentInsetDarkColor1, borderAccentInsetDarkColor2
-		case RoundedRectBorderTypeOutset:
-			return borderAccentOutsetDarkColor1, borderAccentOutsetDarkColor2
-		}
-	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
+	return borderAccentTokens.colors(colorMode, borderType)
 }
 
 func BorderAccentSecondaryColors(colorMode ebiten.ColorMode, borderType RoundedRectBorderType) (color.Color, color.Color) {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderAccentSecondaryRegularLightColor1, borderAccentSecondaryRegularLightColor2
-		case RoundedRectBorderTypeInset:
-			return borderAccentSecondaryInsetLightColor1, borderAccentSecondaryInsetLightColor2
-		case RoundedRectBorderTypeOutset:
-			return borderAccentSecondaryOutsetLightColor1, borderAccentSecondaryOutsetLightColor2
-		}
-	case ebiten.ColorModeDark:
-		switch borderType {
-		case RoundedRectBorderTypeRegular:
-			return borderAccentSecondaryRegularDarkColor1, borderAccentSecondaryRegularDarkColor2
-		case RoundedRectBorderTypeInset:
-			return borderAccentSecondaryInsetDarkColor1, borderAccentSecondaryInsetDarkColor2
-		case RoundedRectBorderTypeOutset:
-			return borderAccentSecondaryOutsetDarkColor1, borderAccentSecondaryOutsetDarkColor2
-		}
-	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode or border type: %d, %d", colorMode, borderType))
+	return borderAccentSecondaryTokens.colors(colorMode, borderType)
 }
 
 func BorderDangerColors(colorMode ebiten.ColorMode) (color.Color, color.Color) {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return borderDangerLightColor1, borderDangerLightColor2
-	case ebiten.ColorModeDark:
-		return borderDangerDarkColor1, borderDangerDarkColor2
-	}
-	panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	c := borderDangerToken.color(colorMode)
+	return c, c
 }
 
 var (
-	textEnabledLightColor              = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.1)
-	textEnabledDarkColor               = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.1)
-	textDisabledLightColor             = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.5)
-	textDisabledDarkColor              = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.5)
-	textSelectionLightColor            = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8, 0.35)
-	textSelectionDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8, 0.35)
-	textActiveCompositionLightColor    = draw.Color(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.4)
-	textActiveCompositionDarkColor     = draw.Color(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.4)
-	textInactiveCompositionLightColor  = draw.Color(ebiten.ColorModeLight, draw.SemanticColorAccent, 0.8)
-	textInactiveCompositionDarkColor   = draw.Color(ebiten.ColorModeDark, draw.SemanticColorAccent, 0.8)
-	controlEnabledLightColor           = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.25)
-	controlEnabledDarkColor            = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.25)
-	controlDisabledLightColor          = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9, 0.15)
-	controlDisabledDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9, 0.15)
-	controlSecondaryEnabledLightColor  = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.95, 0.3)
-	controlSecondaryEnabledDarkColor   = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.95, 0.3)
-	controlSecondaryDisabledLightColor = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.85, 0.25)
-	controlSecondaryDisabledDarkColor  = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.85, 0.25)
-	thumbEnabledLightColor             = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.6)
-	thumbEnabledDarkColor              = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.6)
-	thumbDisabledLightColor            = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9, 0.55)
-	thumbDisabledDarkColor             = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9, 0.55)
-	backgroundLightColor               = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.95)
-	backgroundDarkColor                = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.95)
-	backgroundSecondaryColorLightColor = draw.Color(ebiten.ColorModeLight, draw.SemanticColorBase, 0.9)
-	backgroundSecondaryColorDarkColor  = draw.Color(ebiten.ColorModeDark, draw.SemanticColorBase, 0.9)
-	popupBackgroundLightColor          = draw.Color2(ebiten.ColorModeLight, draw.SemanticColorBase, 1, 0.05)
-	popupBackgroundDarkColor           = draw.Color2(ebiten.ColorModeDark, draw.SemanticColorBase, 1, 0.05)
+	textEnabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.1,
+		dark:          0.9,
+	}
+	textDisabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.5,
+		dark:          0.5,
+	}
+	textSelectionToken = colorToken{
+		semanticColor: draw.SemanticColorAccent,
+		light:         0.8,
+		dark:          0.35,
+	}
+	textActiveCompositionToken = colorToken{
+		semanticColor: draw.SemanticColorAccent,
+		light:         0.4,
+		dark:          0.6,
+	}
+	textInactiveCompositionToken = colorToken{
+		semanticColor: draw.SemanticColorAccent,
+		light:         0.8,
+		dark:          0.2,
+	}
+	controlEnabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         1,
+		dark:          0.25,
+	}
+	controlDisabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.9,
+		dark:          0.15,
+	}
+	controlSecondaryEnabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.95,
+		dark:          0.3,
+	}
+	controlSecondaryDisabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.85,
+		dark:          0.25,
+	}
+	buttonPressedToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.95,
+		dark:          0.3,
+	}
+	buttonHoveredToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.975,
+		dark:          0.275,
+	}
+	thumbEnabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         1,
+		dark:          0.6,
+	}
+	thumbDisabledToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.9,
+		dark:          0.55,
+	}
+	backgroundToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.95,
+		dark:          0.05,
+	}
+	backgroundSecondaryToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         0.9,
+		dark:          0.1,
+	}
+	popupBackgroundToken = colorToken{
+		semanticColor: draw.SemanticColorBase,
+		light:         1,
+		dark:          0.05,
+	}
 )
 
 func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		if enabled {
-			return textEnabledLightColor
-		}
-		return textDisabledLightColor
-	case ebiten.ColorModeDark:
-		if enabled {
-			return textEnabledDarkColor
-		}
-		return textDisabledDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	if enabled {
+		return textEnabledToken.color(colorMode)
 	}
+	return textDisabledToken.color(colorMode)
 }
 
 func TextColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
 	if semanticColor == SemanticColorBase {
 		return TextColor(colorMode, true)
 	}
-	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.3, 0.8)
+	c := colorToken{
+		semanticColor: draw.SemanticColor(semanticColor),
+		light:         0.3,
+		dark:          0.8,
+	}
+	return c.color(colorMode)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textSelectionLightColor
-	case ebiten.ColorModeDark:
-		return textSelectionDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return textSelectionToken.color(colorMode)
 }
 
 func TextActiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textActiveCompositionLightColor
-	case ebiten.ColorModeDark:
-		return textActiveCompositionDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return textActiveCompositionToken.color(colorMode)
 }
 
 func TextInactiveCompositionColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return textInactiveCompositionLightColor
-	case ebiten.ColorModeDark:
-		return textInactiveCompositionDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return textInactiveCompositionToken.color(colorMode)
 }
 
 func ControlColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		if enabled {
-			return controlEnabledLightColor
-		}
-		return controlDisabledLightColor
-	case ebiten.ColorModeDark:
-		if enabled {
-			return controlEnabledDarkColor
-		}
-		return controlDisabledDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	if enabled {
+		return controlEnabledToken.color(colorMode)
 	}
+	return controlDisabledToken.color(colorMode)
 }
 
 func ControlSecondaryColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		if enabled {
-			return controlSecondaryEnabledLightColor
-		}
-		return controlSecondaryDisabledLightColor
-	case ebiten.ColorModeDark:
-		if enabled {
-			return controlSecondaryEnabledDarkColor
-		}
-		return controlSecondaryDisabledDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	if enabled {
+		return controlSecondaryEnabledToken.color(colorMode)
 	}
+	return controlSecondaryDisabledToken.color(colorMode)
 }
 
 func ButtonBackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor, pressed bool, hovered bool) color.Color {
 	if semanticColor == SemanticColorBase {
 		if pressed {
-			return draw.Color2(colorMode, draw.SemanticColorBase, 0.95, 0.3)
+			return buttonPressedToken.color(colorMode)
 		}
 		if hovered {
-			return draw.Color2(colorMode, draw.SemanticColorBase, 0.975, 0.275)
+			return buttonHoveredToken.color(colorMode)
 		}
 		return ControlColor(colorMode, true)
 	}
 	sc := draw.SemanticColor(semanticColor)
 	if pressed {
-		return draw.Color2(colorMode, sc, 0.85, 0.4)
+		c := colorToken{
+			semanticColor: sc,
+			light:         0.85,
+			dark:          0.4,
+		}
+		return c.color(colorMode)
 	}
 	if hovered {
-		return draw.Color2(colorMode, sc, 0.875, 0.375)
+		c := colorToken{
+			semanticColor: sc,
+			light:         0.875,
+			dark:          0.375,
+		}
+		return c.color(colorMode)
 	}
-	return draw.Color2(colorMode, sc, 0.9, 0.35)
+	c := colorToken{
+		semanticColor: sc,
+		light:         0.9,
+		dark:          0.35,
+	}
+	return c.color(colorMode)
 }
 
 func ThumbColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		if enabled {
-			return thumbEnabledLightColor
-		}
-		return thumbDisabledLightColor
-	case ebiten.ColorModeDark:
-		if enabled {
-			return thumbEnabledDarkColor
-		}
-		return thumbDisabledDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
+	if enabled {
+		return thumbEnabledToken.color(colorMode)
 	}
+	return thumbDisabledToken.color(colorMode)
 }
 
 func BackgroundColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return backgroundLightColor
-	case ebiten.ColorModeDark:
-		return backgroundDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return backgroundToken.color(colorMode)
 }
 
 func BackgroundSecondaryColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return backgroundSecondaryColorLightColor
-	case ebiten.ColorModeDark:
-		return backgroundSecondaryColorDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return backgroundSecondaryToken.color(colorMode)
 }
 
 func PopupBackgroundColor(colorMode ebiten.ColorMode) color.Color {
-	switch colorMode {
-	case ebiten.ColorModeLight:
-		return popupBackgroundLightColor
-	case ebiten.ColorModeDark:
-		return popupBackgroundDarkColor
-	default:
-		panic(fmt.Sprintf("basicwidgetdraw: invalid color mode: %d", colorMode))
-	}
+	return popupBackgroundToken.color(colorMode)
 }
 
 func PopupBackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
 	if semanticColor == SemanticColorBase {
 		return PopupBackgroundColor(colorMode)
 	}
-	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.95, 0.1)
+	c := colorToken{
+		semanticColor: draw.SemanticColor(semanticColor),
+		light:         0.95,
+		dark:          0.1,
+	}
+	return c.color(colorMode)
 }
 
 func BackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
 	if semanticColor == SemanticColorBase {
 		return BackgroundColor(colorMode)
 	}
-	return draw.Color2(colorMode, draw.SemanticColor(semanticColor), 0.95, 0.15)
+	c := colorToken{
+		semanticColor: draw.SemanticColor(semanticColor),
+		light:         0.95,
+		dark:          0.15,
+	}
+	return c.color(colorMode)
 }
