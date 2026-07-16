@@ -295,25 +295,15 @@ var (
 		light:         0.5,
 		dark:          0.6,
 	}
-	scrollBarToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.2,
-		dark:          0.8,
-	}
 	trackOffToken = colorToken{
 		semanticColor: SemanticColorBase,
 		light:         0.8,
 		dark:          0.2,
 	}
-	trackOnPressedToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.475,
-		dark:          0.475,
-	}
 	trackOffPressedToken = colorToken{
 		semanticColor: SemanticColorBase,
-		light:         0.775,
-		dark:          0.175,
+		light:         0.75,
+		dark:          0.25,
 	}
 	thumbHoveredToken = colorToken{
 		semanticColor: SemanticColorBase,
@@ -325,17 +315,12 @@ var (
 		light:         0.95,
 		dark:          0.55,
 	}
-	checkedControlPressedToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.45,
-		dark:          0.45,
-	}
-	primaryButtonPressedToken = colorToken{
+	accentPressedToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.45,
 		dark:          0.55,
 	}
-	primaryButtonHoveredToken = colorToken{
+	accentHoveredToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.475,
 		dark:          0.525,
@@ -348,7 +333,7 @@ var (
 	activeSegmentedControlButtonHoveredToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.85,
-		dark:          0.475,
+		dark:          0.525,
 	}
 	headerSeparatorToken = colorToken{
 		semanticColor: SemanticColorBase,
@@ -550,13 +535,13 @@ func TextCaretColor(colorMode ebiten.ColorMode) color.Color {
 }
 
 func ScrollBarColor(colorMode ebiten.ColorMode) color.Color {
-	return scrollBarToken.color(colorMode)
+	return ScaleAlpha(foregroundToken.color(colorMode), 0.8)
 }
 
 func TrackColor(colorMode ebiten.ColorMode, on bool, pressed bool) color.Color {
 	if on {
 		if pressed {
-			return trackOnPressedToken.color(colorMode)
+			return accentPressedToken.color(colorMode)
 		}
 		return accentToken.color(colorMode)
 	}
@@ -580,7 +565,7 @@ func CheckableControlBackgroundColor(colorMode ebiten.ColorMode, checked bool, p
 	}
 	if checked {
 		if pressed {
-			return checkedControlPressedToken.color(colorMode)
+			return accentPressedToken.color(colorMode)
 		}
 		return accentToken.color(colorMode)
 	}
@@ -599,10 +584,10 @@ func RadioButtonMarkColor(colorMode ebiten.ColorMode, enabled bool) color.Color 
 
 func PrimaryButtonBackgroundColor(colorMode ebiten.ColorMode, pressed bool, hovered bool) color.Color {
 	if pressed {
-		return primaryButtonPressedToken.color(colorMode)
+		return accentPressedToken.color(colorMode)
 	}
 	if hovered {
-		return primaryButtonHoveredToken.color(colorMode)
+		return accentHoveredToken.color(colorMode)
 	}
 	return accentToken.color(colorMode)
 }
