@@ -64,9 +64,9 @@ const (
 	WrapModeAnywhere WrapMode = WrapMode(textutil.WrapModeAnywhere)
 )
 
-// TextStyle bundles the styling attributes applied to the fallback text
+// ItemTextStyle bundles the styling attributes applied to the fallback text
 // rendered when a widget's Content is nil.
-type TextStyle struct {
+type ItemTextStyle struct {
 	Color           color.Color
 	HorizontalAlign HorizontalAlign
 	VerticalAlign   VerticalAlign
@@ -75,7 +75,7 @@ type TextStyle struct {
 	WrapMode        WrapMode
 }
 
-func (s TextStyle) writeStateKey(w *guigui.StateKeyWriter) {
+func (s ItemTextStyle) writeStateKey(w *guigui.StateKeyWriter) {
 	writeColor(w, s.Color)
 	w.WriteUint64(uint64(s.HorizontalAlign))
 	w.WriteUint64(uint64(s.VerticalAlign))

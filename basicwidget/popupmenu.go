@@ -18,7 +18,7 @@ var (
 
 type PopupMenuItem[T comparable] struct {
 	Text         string
-	TextStyle    TextStyle
+	TextStyle    ItemTextStyle
 	Header       bool
 	Content      guigui.Widget
 	KeyText      string

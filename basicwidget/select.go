@@ -16,7 +16,7 @@ var (
 
 type SelectItem[T comparable] struct {
 	Text         string
-	TextStyle    TextStyle
+	TextStyle    ItemTextStyle
 	Header       bool
 	Content      guigui.Widget
 	Unselectable bool

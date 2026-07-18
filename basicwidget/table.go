@@ -51,7 +51,7 @@ func (t *TableRow[T]) selectable() bool {
 
 type TableCell struct {
 	Text      string
-	TextStyle TextStyle
+	TextStyle ItemTextStyle
 	Content   guigui.Widget
 }
 
