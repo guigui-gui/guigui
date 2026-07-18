@@ -6,6 +6,7 @@ package textwidget
 import (
 	"strings"
 
+	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
@@ -58,4 +59,31 @@ func (m *maskMapping) offsetToMasked(srcOffset int) int {
 func (m *maskMapping) offsetFromMasked(maskedOffset int) int {
 	idx := min(max(maskedOffset/m.runeLen, 0), len(m.boundaries)-1)
 	return m.boundaries[idx]
+}
+
+// masking reports whether the value is rendered as the mask rune.
+func (t *Text) masking() bool {
+	return t.maskRune != 0
+}
+
+// maskStyle returns the textutil style used to lay out the masked string. A
+// masked value never wraps, so the wrap mode is forced to none.
+func (t *Text) maskStyle(context *guigui.Context) textutil.Style {
+	return textutil.Style{
+		WrapMode:         textutil.WrapModeNone,
+		Face:             t.face(context, false),
+		LineHeight:       t.LineHeight(),
+		HorizontalAlign:  t.style.hAlign,
+		VerticalAlign:    t.style.vAlign,
+		TabWidth:         t.actualTabWidth(context),
+		KeepTailingSpace: t.keepTailingSpace,
+	}
+}
+
+// maskMappingForRendering returns the [maskMapping] for the current rendering
+// text. The returned pointer is owned by the receiver and is invalidated by the
+// next edit, so callers must not retain it.
+func (t *Text) maskMappingForRendering(showComposition bool) *maskMapping {
+	withComposition := showComposition && t.store.UncommittedTextLengthInBytes() > 0
+	return t.contentCache.maskMappingForRendering(&t.store, t.maskRune, withComposition)
 }
