@@ -283,12 +283,12 @@ var (
 	itemHighlightedBackgroundToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.6,
-		dark:          0.475,
+		dark:          0.35,
 	}
 	itemSelectedUnfocusedBackgroundToken = colorToken{
 		semanticColor: SemanticColorBase,
 		light:         0.85,
-		dark:          0.475,
+		dark:          0.35,
 	}
 	itemSelectedDisabledBackgroundToken = colorToken{
 		semanticColor: SemanticColorBase,
