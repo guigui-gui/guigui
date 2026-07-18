@@ -161,6 +161,71 @@ func TestCachedVisualLineMaxCaretXIncludesTrailingSpaces(t *testing.T) {
 	}
 }
 
+// TestCachedVisualLineMaxCaretXExcludesBreakSpace verifies that the final
+// space of a non-final visual line does not extend the caret extent: the caret
+// after it is rendered at the head of the next visual line. Carets between
+// hanging spaces still render on the wrapped line and must stay covered.
+func TestCachedVisualLineMaxCaretXExcludesBreakSpace(t *testing.T) {
+	const lineHeight = 24.0
+	face := newTestFace(t)
+
+	// Pick a width that fits "aaa" but not "aaa ", so the break space hangs
+	// past the wrapping width.
+	wordW, _ := textutil.Measure(math.MaxInt, "aaa", textutil.WrapModeNone, face, lineHeight, 0, false, "")
+	wordSpaceW, _ := textutil.Measure(math.MaxInt, "aaa ", textutil.WrapModeNone, face, lineHeight, 0, true, "")
+	width := int((wordW + wordSpaceW) / 2)
+	if float64(width) < wordW || wordSpaceW <= float64(width) {
+		t.Fatalf("test setup: width %d must satisfy %v <= width < %v", width, wordW, wordSpaceW)
+	}
+
+	style := textutil.Style{
+		WrapMode:   textutil.WrapModeNormal,
+		Face:       face,
+		LineHeight: lineHeight,
+	}
+
+	t.Run("single break space", func(t *testing.T) {
+		const line = "aaa bbb"
+		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, 0, false); got != 2 {
+			t.Fatalf("test setup: visual line count = %d, want 2", got)
+		}
+		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, len("aaa "), &style)
+		if count != 2 {
+			t.Fatalf("test setup: the caret at the wrap boundary must have two positions, got %d", count)
+		}
+		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, 0, false)
+		if got >= tailPos.X {
+			t.Errorf("CachedVisualLineMaxCaretX = %v, want less than the boundary tail X %v", got, tailPos.X)
+		}
+		if got > float64(width) {
+			t.Errorf("CachedVisualLineMaxCaretX = %v, want at most the wrapping width %d", got, width)
+		}
+	})
+
+	t.Run("multiple hanging spaces", func(t *testing.T) {
+		const line = "aaa      bbb"
+		boundary := len("aaa      ")
+		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, 0, false); got != 2 {
+			t.Fatalf("test setup: visual line count = %d, want 2", got)
+		}
+		innerPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, boundary-1, &style)
+		if count != 1 {
+			t.Fatalf("test setup: the caret between hanging spaces must have one position, got %d", count)
+		}
+		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, boundary, &style)
+		if count != 2 {
+			t.Fatalf("test setup: the caret at the wrap boundary must have two positions, got %d", count)
+		}
+		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, 0, false)
+		if got < innerPos.X {
+			t.Errorf("CachedVisualLineMaxCaretX = %v, want at least the last in-line caret X %v", got, innerPos.X)
+		}
+		if got >= tailPos.X {
+			t.Errorf("CachedVisualLineMaxCaretX = %v, want less than the boundary tail X %v", got, tailPos.X)
+		}
+	})
+}
+
 // TestMeasureLogicalLineWrapVisualCount verifies that wrapping a long
 // line produces multiple visual sublines whose total height equals the line
 // height times the visual subline count.

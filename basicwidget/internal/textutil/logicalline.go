@@ -124,9 +124,9 @@ func visualLinesFromStarts(line string, vlStarts []int) iter.Seq[visualLine] {
 	}
 }
 
-// maxVisualLineCaretX returns the furthest trailing caret position described
-// by vlStarts. ra may reuse the wrapping pass's shaping data; trailing spaces
-// are kept, matching how caret positions are measured.
+// maxVisualLineCaretX returns the furthest caret position rendered on the
+// visual lines described by vlStarts. ra may reuse the wrapping pass's shaping
+// data; trailing spaces are kept, matching how caret positions are measured.
 func maxVisualLineCaretX(line string, vlStarts []int, ra *rangeAdvancer) float64 {
 	caretAdvancer := *ra
 	caretAdvancer.keepTailingSpace = true
@@ -134,11 +134,24 @@ func maxVisualLineCaretX(line string, vlStarts []int, ra *rangeAdvancer) float64
 	for i, start := range vlStarts {
 		end := len(line)
 		if i+1 < len(vlStarts) {
-			end = vlStarts[i+1]
+			// The caret after a non-final visual line's final space sits on
+			// the wrap boundary and is rendered at the head of the next
+			// visual line, so that space does not extend this line's caret
+			// extent.
+			end = vlStarts[i+1] - lastSpaceCharLen(line[start:vlStarts[i+1]])
 		}
 		maxCaretX = max(maxCaretX, caretAdvancer.rangeAdvance(start, end-start))
 	}
 	return maxCaretX
+}
+
+// lastSpaceCharLen returns the byte length of str's final space rune, or 0 if
+// str does not end with a space.
+func lastSpaceCharLen(str string) int {
+	if r, s := utf8.DecodeLastRuneInString(str); s > 0 && unicode.IsSpace(r) {
+		return s
+	}
+	return 0
 }
 
 // rangeAdvancer measures by subtracting entries of a precomputed
@@ -339,8 +352,9 @@ func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, fac
 	return VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace)
 }
 
-// CachedVisualLineMaxCaretX returns the furthest trailing caret position using
-// the same content-keyed layout cache as [CachedVisualLineCount].
+// CachedVisualLineMaxCaretX returns the furthest caret position rendered on
+// the logical line's visual lines, using the same content-keyed layout cache
+// as [CachedVisualLineCount].
 func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) float64 {
 	if wrapMode != WrapModeNone {
 		if _, maxCaretX, ok := cachedVisualLineLayout(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace); ok {
@@ -348,8 +362,23 @@ func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode,
 		}
 	}
 	var maxCaretX float64
+	var prev visualLine
+	var hasPrev bool
 	for line := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace) {
-		maxCaretX = max(maxCaretX, advance(line.str, len(line.str), face.TextFace(), tabWidth, true))
+		if hasPrev {
+			// prev is a non-final visual line: the caret after its final
+			// space sits on the wrap boundary and is rendered at the head of
+			// the next visual line, so that space does not extend the caret
+			// extent. This mirrors maxVisualLineCaretX.
+			str := prev.str
+			str = str[:len(str)-lastSpaceCharLen(str)]
+			maxCaretX = max(maxCaretX, advance(str, len(str), face.TextFace(), tabWidth, true))
+		}
+		prev = line
+		hasPrev = true
+	}
+	if hasPrev {
+		maxCaretX = max(maxCaretX, advance(prev.str, len(prev.str), face.TextFace(), tabWidth, true))
 	}
 	return maxCaretX
 }
