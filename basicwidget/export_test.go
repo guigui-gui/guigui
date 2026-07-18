@@ -5,42 +5,6 @@ package basicwidget
 
 import "image"
 
-func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
-	return replaceNewLinesWithSpace(text, start, end)
-}
-
-type SelectionSide = selectionSide
-
-const (
-	SelectionSideNone  = selectionSideNone
-	SelectionSideStart = selectionSideStart
-	SelectionSideEnd   = selectionSideEnd
-)
-
-func ShiftClickAnchor(start, end int, shiftSide SelectionSide, idx int) int {
-	return shiftClickAnchor(start, end, shiftSide, idx)
-}
-
-func (t *Text) PrevWordStart(position int) int {
-	return t.prevWordStart(position)
-}
-
-func (t *Text) NextWordEnd(position int) int {
-	return t.nextWordEnd(position)
-}
-
-func (t *Text) NextWordStart(position int) int {
-	return t.nextWordStart(position)
-}
-
-func (t *Text) ParagraphStart(position int) int {
-	return t.paragraphStart(position)
-}
-
-func (t *Text) ParagraphEnd(position int) int {
-	return t.paragraphEnd(position)
-}
-
 func TopItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (int, int) {
 	return topItemAfterPixelScroll(measure, totalCount, startIndex, startOffset, deltaPx)
 }
@@ -96,7 +60,7 @@ func (t *TextInputText) ConfigureHorizontalLayout(wrapMode WrapMode, containerWi
 	t.measuredMaxWidth = measuredWidth
 	t.measuredMaxWidthWrapMode = wrapMode
 	t.measuredMaxWidthInnerWidth = containerWidth - paddingStart - paddingEnd
-	txt.setWrapWidth(t.measuredMaxWidthInnerWidth)
+	txt.core.SetWrapWidth(t.measuredMaxWidthInnerWidth)
 }
 
 func (t *TextInputText) ContentWidth() int {
@@ -104,7 +68,7 @@ func (t *TextInputText) ContentWidth() int {
 }
 
 func (t *TextInputText) LayoutWidth(bounds image.Rectangle) int {
-	return t.text.Widget().layoutWidth(bounds)
+	return t.text.Widget().core.LayoutWidth(bounds)
 }
 
 type AbstractListValuer[T comparable] interface {

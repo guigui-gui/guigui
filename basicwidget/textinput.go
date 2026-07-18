@@ -12,7 +12,7 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
-	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
 
 type TextInputStyle int
@@ -374,7 +374,7 @@ func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constrai
 }
 
 func (t *TextInput) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
-	context.SetVisible(&t.focus, !t.focusBorderHidden && context.IsFocused(t.textInput.text.Text()))
+	context.SetVisible(&t.focus, !t.focusBorderHidden && t.textInput.text.Text().isFocused(context))
 	return nil
 }
 
@@ -405,7 +405,7 @@ type textInput struct {
 	paddingEnd    int
 
 	onTextScrollDelta    func(context *guigui.Context, deltaX, deltaY float64)
-	onTextScrollIntoView func(context *guigui.Context, start, end caretScrollTarget)
+	onTextScrollIntoView func(context *guigui.Context, start, end textwidget.CaretScrollTarget)
 }
 
 func (t *textInput) OnValueChanged(f func(context *guigui.Context, text string, committed bool)) {
@@ -509,7 +509,7 @@ func (t *textInput) SetSelectionVisibleWhenUnfocused(visible bool) {
 }
 
 func (t *textInput) SelectAll() {
-	t.text.Text().selectAll()
+	t.text.Text().core.SelectAll()
 }
 
 func (t *textInput) Selection() (start, end int) {
@@ -557,7 +557,7 @@ func (t *textInput) SetEditable(editable bool) {
 }
 
 func (t *textInput) setSelection(start, end int) {
-	t.text.Text().setSelection(start, end, -1, false)
+	t.text.Text().core.SetSelectionWithSide(start, end, -1, false)
 }
 
 func (t *textInput) setPaddingEnd(padding int) {
@@ -580,7 +580,7 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 		if t.icon.HasImage() {
 			start = u / 4
 		}
-		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-float64(LineHeight(context))*t.text.Text().scale()) / 2
+		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-float64(LineHeight(context))*t.text.Text().core.Scale()) / 2
 	}
 	start += t.paddingStart
 	end += t.paddingEnd
@@ -614,14 +614,14 @@ func (t *textInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			t.panel.forceSetScrollOffsetByDelta(deltaX, deltaY)
 		}
 	}
-	t.text.Text().onScrollDelta(t.onTextScrollDelta)
+	t.text.Text().core.OnScrollDelta(t.onTextScrollDelta)
 
 	if t.onTextScrollIntoView == nil {
-		t.onTextScrollIntoView = func(context *guigui.Context, start, end caretScrollTarget) {
+		t.onTextScrollIntoView = func(context *guigui.Context, start, end textwidget.CaretScrollTarget) {
 			t.text.scrollCaretIntoView(context, start, end)
 		}
 	}
-	t.text.Text().onScrollIntoView(t.onTextScrollIntoView)
+	t.text.Text().core.OnScrollIntoView(t.onTextScrollIntoView)
 
 	context.SetPassthrough(&t.frame, true)
 	context.DelegateFocus(t, t.text.Text())
@@ -873,7 +873,7 @@ func (t *textInputText) setPadding(padding guigui.Padding) {
 		return
 	}
 	t.padding = padding
-	t.text.Widget().setPaddingForScrollOffset(padding)
+	t.text.Widget().core.SetPaddingForScrollOffset(padding)
 }
 
 func (t *textInputText) Text() *Text {
@@ -885,7 +885,7 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 	t.text.Widget().SetSelectable(true)
 	t.text.Widget().SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
-	t.text.Widget().setKeepTailingSpace(t.text.Widget().wrapMode == WrapModeNone)
+	t.text.Widget().core.SetKeepTailingSpace(t.text.Widget().WrapMode() == WrapModeNone)
 
 	context.DelegateFocus(t, t.text.Widget())
 
@@ -912,8 +912,8 @@ func (t *textInputText) contentWidth(context *guigui.Context) int {
 	if !txt.IsMultiline() {
 		w := txt.Measure(context, guigui.Constraints{}).X
 		measured = w + t.padding.Start + t.padding.End
-	} else if t.measuredMaxWidthWrapMode == txt.wrapMode &&
-		(txt.wrapMode == WrapModeNone || t.measuredMaxWidthInnerWidth == t.containerBounds.Dx()-t.padding.Start-t.padding.End) {
+	} else if t.measuredMaxWidthWrapMode == txt.WrapMode() &&
+		(txt.WrapMode() == WrapModeNone || t.measuredMaxWidthInnerWidth == t.containerBounds.Dx()-t.padding.Start-t.padding.End) {
 		measured = t.measuredMaxWidth
 	}
 	return max(measured, t.containerBounds.Dx())
@@ -922,9 +922,7 @@ func (t *textInputText) contentWidth(context *guigui.Context) int {
 // itemCount implements [virtualScrollContent]. Each item is one logical
 // line of the source text.
 func (t *textInputText) itemCount() int {
-	txt := t.text.Widget()
-	txt.ensureLineByteOffsets()
-	return txt.lineByteOffsets.LineCount()
+	return t.text.Widget().LineCount()
 }
 
 // viewportPaddingY implements [virtualScrollContent.viewportPaddingY].
@@ -946,10 +944,10 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 	txt := t.text.Widget()
 
 	// The cache is keyed by line index, so a content edit that shifts lines
-	// makes the cached heights stale. Drop them when the field has advanced;
+	// makes the cached heights stale. Drop them when the store has advanced;
 	// scrollEdgeIntoView reads heights from Tick before the next Layout
 	// repopulates the cache.
-	if gen := txt.field.Generation(); gen > t.measuredLineHeightsGeneration {
+	if gen := txt.core.Generation(); gen > t.measuredLineHeightsGeneration {
 		clear(t.measuredLineHeights)
 		t.measuredLineHeightsGeneration = gen
 	}
@@ -958,25 +956,15 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		return h
 	}
 
-	txt.ensureLineByteOffsets()
-
-	n := txt.lineByteOffsets.LineCount()
+	n := txt.LineCount()
 	if lineIndex < 0 || lineIndex >= n {
 		return -1
 	}
 
 	var height int
-	if txt.wrapMode == WrapModeNone {
-		height = int(math.Ceil(txt.lineHeight(context)))
+	if txt.WrapMode() == WrapModeNone {
+		height = int(math.Ceil(txt.core.LineHeight()))
 	} else {
-		start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
-		end := txt.field.TextLengthInBytes()
-		if lineIndex+1 < n {
-			end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
-		}
-
-		logicalLine := txt.stringValueWithRange(start, end)
-
 		width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
 		if width <= 0 {
 			width = math.MaxInt
@@ -987,11 +975,8 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		// ([textInputText.measureMaxWidthForViewport]) that hits the same
 		// cache entry. Take the visual-line count from the content-keyed
 		// layout cache rather than re-packing every Layout.
-		count := textutil.CachedVisualLineCount(
-			width, logicalLine, textutil.WrapMode(txt.wrapMode), txt.face(context, false),
-			txt.actualTabWidth(context), txt.keepTailingSpace,
-		)
-		height = int(math.Ceil(txt.lineHeight(context) * float64(count)))
+		count := txt.core.VisualLineCountOfLogicalLine(context, lineIndex, width)
+		height = int(math.Ceil(txt.core.LineHeight() * float64(count)))
 	}
 
 	if t.measuredLineHeights == nil {
@@ -1033,14 +1018,14 @@ func (t *textInputText) HandleButtonInput(context *guigui.Context, widgetBounds 
 //
 // The X axis accumulates contributions from both endpoints, matching the
 // legacy textEventScrollDelta semantics.
-func (t *textInputText) scrollCaretIntoView(context *guigui.Context, start, end caretScrollTarget) {
+func (t *textInputText) scrollCaretIntoView(context *guigui.Context, start, end textwidget.CaretScrollTarget) {
 	if t.panel == nil {
 		return
 	}
 	// Follow the moving end so upward/leftward extension scrolls toward the
 	// start; only the start side moves while shiftSelectionSide is Start.
 	primary, secondary := end, start
-	if t.text.Widget().shiftSelectionSide == selectionSideStart {
+	if t.text.Widget().core.ShiftSelectionSide() == textwidget.SelectionSideStart {
 		primary, secondary = start, end
 	}
 	if !t.scrollEdgeIntoView(context, primary) && primary != secondary {
@@ -1057,7 +1042,7 @@ func (t *textInputText) scrollCaretIntoView(context *guigui.Context, start, end 
 
 // scrollEdgeIntoView scrolls the panel so target is visible, returning true
 // when a scroll was applied. Walks at most one viewport's worth of items.
-func (t *textInputText) scrollEdgeIntoView(context *guigui.Context, target caretScrollTarget) bool {
+func (t *textInputText) scrollEdgeIntoView(context *guigui.Context, target textwidget.CaretScrollTarget) bool {
 	n := t.itemCount()
 	if n == 0 {
 		return false
@@ -1134,29 +1119,16 @@ func (t *textInputText) measureMaxWidthForViewport(context *guigui.Context) {
 	if !txt.IsMultiline() || len(t.measuredLineHeights) == 0 {
 		return
 	}
-	txt.ensureLineByteOffsets()
-	n := txt.lineByteOffsets.LineCount()
-	face := txt.face(context, false)
-	tabWidth := txt.actualTabWidth(context)
-	keepTailingSpace := txt.keepTailingSpace
+	n := txt.LineCount()
 	measureWidth := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-	if txt.wrapMode == WrapModeNone || measureWidth <= 0 {
+	if txt.WrapMode() == WrapModeNone || measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
 	for lineIdx := range t.measuredLineHeights {
 		if lineIdx < 0 || lineIdx >= n {
 			continue
 		}
-		start := txt.lineByteOffsets.ByteOffsetByLineIndex(lineIdx)
-		end := txt.field.TextLengthInBytes()
-		if lineIdx+1 < n {
-			end = txt.lineByteOffsets.ByteOffsetByLineIndex(lineIdx + 1)
-		}
-		logicalLine := txt.stringValueWithRange(start, end)
-		w := textutil.CachedVisualLineMaxCaretX(
-			measureWidth, logicalLine, textutil.WrapMode(txt.wrapMode), face,
-			tabWidth, keepTailingSpace,
-		)
+		w := txt.core.MaxCaretXOfLogicalLine(context, lineIdx, measureWidth)
 		if mw := int(math.Ceil(w)) + t.padding.Start + t.padding.End; mw > t.measuredMaxWidth {
 			t.measuredMaxWidth = mw
 		}
@@ -1173,10 +1145,10 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	bounds := widgetBounds.Bounds()
 	txt := t.text.Widget()
 	innerWidth := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-	t.measuredMaxWidthWrapMode = txt.wrapMode
+	t.measuredMaxWidthWrapMode = txt.WrapMode()
 	t.measuredMaxWidthInnerWidth = innerWidth
-	txt.setWrapWidth(innerWidth)
-	lh := int(math.Ceil(txt.lineHeight(context)))
+	txt.core.SetWrapWidth(innerWidth)
+	lh := int(math.Ceil(txt.core.LineHeight()))
 
 	viewportInner := bounds.Dy() - t.padding.Top - t.padding.Bottom
 	topIdx, topOff := t.panel.layoutTopItem(context, viewportInner,
@@ -1188,7 +1160,7 @@ func (t *textInputText) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 	// topIdx as its coordinate-system origin via
 	// setFirstLogicalLineInViewport, so positioning here is O(1) and
 	// never walks the document prefix.
-	t.text.Widget().setFirstLogicalLineInViewport(topIdx)
+	t.text.Widget().core.SetFirstLogicalLineInViewport(topIdx)
 
 	textBounds := bounds
 	textBounds.Min.X += t.padding.Start

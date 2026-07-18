@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
 
 func adjustSliceSize[T any](slice []T, size int) []T {
@@ -47,8 +48,16 @@ func MoveItemsInSlice[T any](slice []T, from int, count int, to int) int {
 	return to
 }
 
-func doubleClickLimitInTicks() int {
-	return ebiten.TPS() / 2
+func isDarwin() bool {
+	return textwidget.IsDarwin()
+}
+
+func isKeyRepeating(key ebiten.Key) bool {
+	return textwidget.IsKeyRepeating(key)
+}
+
+func isMouseButtonRepeating(button ebiten.MouseButton) bool {
+	return textwidget.IsMouseButtonRepeating(button)
 }
 
 func defaultIconSize(context *guigui.Context) int {

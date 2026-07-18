@@ -1,26 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Guigui Authors
 
-package basicwidget
+package textwidget
 
 import (
-	"image"
 	"image/color"
 
 	"github.com/guigui-gui/guigui"
 )
-
-// writePoint writes an image.Point into w.
-func writePoint(w *guigui.StateKeyWriter, p image.Point) {
-	w.WriteInt64(int64(p.X))
-	w.WriteInt64(int64(p.Y))
-}
-
-// writeRectangle writes an image.Rectangle into w.
-func writeRectangle(w *guigui.StateKeyWriter, r image.Rectangle) {
-	writePoint(w, r.Min)
-	writePoint(w, r.Max)
-}
 
 // writeColor writes a color.Color into w by its RGBA components.
 // A nil color hashes distinctly from any concrete color.
