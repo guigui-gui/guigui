@@ -737,7 +737,7 @@ func (t *textInputBackground) setEditable(editable bool) {
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
+	clr := draw.ContentBackgroundColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
 	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 
@@ -757,7 +757,7 @@ func (t *textInputIconBackground) setEditable(editable bool) {
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.ControlColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
+	clr := draw.ContentBackgroundColor(context.ColorMode(), context.IsEnabled(t) && t.editable)
 	draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 }
 

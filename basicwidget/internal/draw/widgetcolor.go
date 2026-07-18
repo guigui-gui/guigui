@@ -200,6 +200,26 @@ var (
 		light:         0.9,
 		dark:          0.15,
 	}
+	contentBackgroundEnabledToken = colorToken{
+		semanticColor: SemanticColorBase,
+		light:         1,
+		dark:          0.15,
+	}
+	contentBackgroundDisabledToken = colorToken{
+		semanticColor: SemanticColorBase,
+		light:         0.9,
+		dark:          0.1,
+	}
+	menuBackgroundEnabledToken = colorToken{
+		semanticColor: SemanticColorBase,
+		light:         0.95,
+		dark:          0.3,
+	}
+	menuBackgroundDisabledToken = colorToken{
+		semanticColor: SemanticColorBase,
+		light:         0.85,
+		dark:          0.25,
+	}
 	controlSecondaryEnabledToken = colorToken{
 		semanticColor: SemanticColorBase,
 		light:         0.95,
@@ -408,6 +428,22 @@ func ControlColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 		return controlEnabledToken.color(colorMode)
 	}
 	return controlDisabledToken.color(colorMode)
+}
+
+// ContentBackgroundColor returns the color for a surface that holds content, like a list or a text input.
+func ContentBackgroundColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
+	if enabled {
+		return contentBackgroundEnabledToken.color(colorMode)
+	}
+	return contentBackgroundDisabledToken.color(colorMode)
+}
+
+// MenuBackgroundColor returns the color for the surface of a menu.
+func MenuBackgroundColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
+	if enabled {
+		return menuBackgroundEnabledToken.color(colorMode)
+	}
+	return menuBackgroundDisabledToken.color(colorMode)
 }
 
 func ControlSecondaryColor(colorMode ebiten.ColorMode, enabled bool) color.Color {

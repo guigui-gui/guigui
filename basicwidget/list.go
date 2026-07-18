@@ -49,10 +49,10 @@ const (
 type ListBackgroundStyle int
 
 const (
-	// ListBackgroundStyleControl fills the background with the primary control color.
-	ListBackgroundStyleControl ListBackgroundStyle = iota
-	// ListBackgroundStyleControlSecondary fills the background with the secondary control color.
-	ListBackgroundStyleControlSecondary
+	// ListBackgroundStyleContent fills the background with the content background color.
+	ListBackgroundStyleContent ListBackgroundStyle = iota
+	// ListBackgroundStyleMenu fills the background with the menu background color.
+	ListBackgroundStyleMenu
 	// ListBackgroundStyleNone draws no background fill.
 	ListBackgroundStyleNone
 )
@@ -486,7 +486,7 @@ func (l *List[T]) SetStyle(style ListStyle) {
 	switch style {
 	case ListStyleNormal:
 		l.SetHighlightStyle(ListItemHighlightStyleSelection)
-		l.SetBackgroundStyle(ListBackgroundStyleControl)
+		l.SetBackgroundStyle(ListBackgroundStyleContent)
 		l.SetFrameVisible(true)
 		l.SetCornerRounded(true)
 		l.SetSelectedItemBold(false)
@@ -508,7 +508,7 @@ func (l *List[T]) SetStyle(style ListStyle) {
 		l.content.setVerticalAdjust(listVerticalAdjustNone)
 	case ListStyleMenu:
 		l.SetHighlightStyle(ListItemHighlightStyleHover)
-		l.SetBackgroundStyle(ListBackgroundStyleControlSecondary)
+		l.SetBackgroundStyle(ListBackgroundStyleMenu)
 		l.SetFrameVisible(false)
 		l.SetCornerRounded(true)
 		l.SetSelectedItemBold(false)
@@ -2422,10 +2422,10 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 	var clr color.Color
 	switch l.content.backgroundStyle {
 	case ListBackgroundStyleNone:
-	case ListBackgroundStyleControl:
-		clr = draw.ControlColor(context.ColorMode(), context.IsEnabled(l))
-	case ListBackgroundStyleControlSecondary:
-		clr = draw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
+	case ListBackgroundStyleContent:
+		clr = draw.ContentBackgroundColor(context.ColorMode(), context.IsEnabled(l))
+	case ListBackgroundStyleMenu:
+		clr = draw.MenuBackgroundColor(context.ColorMode(), context.IsEnabled(l))
 	}
 	if clr != nil {
 		bounds := widgetBounds.Bounds()
@@ -2638,7 +2638,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	// Draw a header.
 	if l.headerHeight > 0 {
 		bounds := l.headerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.Corners{
+		draw.DrawRoundedRectWithSharpCorners(context, dst, bounds, draw.ContentBackgroundColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.Corners{
 			TopStart:    false,
 			TopEnd:      false,
 			BottomStart: true,
@@ -2656,7 +2656,7 @@ func (l *listFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	// Draw a footer.
 	if l.footerHeight > 0 {
 		bounds := l.footerBounds(context, widgetBounds)
-		draw.DrawRoundedRectWithSharpCorners(context, dst, bounds, draw.ControlColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.Corners{
+		draw.DrawRoundedRectWithSharpCorners(context, dst, bounds, draw.ContentBackgroundColor(context.ColorMode(), context.IsEnabled(l)), RoundedCornerRadius(context), draw.Corners{
 			TopStart:    true,
 			TopEnd:      true,
 			BottomStart: false,
