@@ -237,7 +237,7 @@ func (s *textStore) Blur() {
 		return
 	}
 	s.focused = false
-	s.composer.Finish()
+	s.composer.Confirm()
 }
 
 // SetBounds sets the bounds used for IME window positioning. The bounds are
@@ -415,11 +415,11 @@ func (s *textStore) Redo() {
 }
 
 // cleanUp ends any active IME session before a programmatic mutation so a
-// later commit cannot overwrite the new state. [textinput.Composer.Finish]
+// later commit cannot overwrite the new state. [textinput.Composer.Confirm]
 // commits any in-progress composition.
 func (s *textStore) cleanUp() {
 	if s.err != nil {
 		return
 	}
-	s.composer.Finish()
+	s.composer.Confirm()
 }
