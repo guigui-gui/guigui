@@ -2455,7 +2455,7 @@ func (l *listBackground1[T]) Draw(context *guigui.Context, widgetBounds *guigui.
 			if !bounds.Overlaps(vb) {
 				continue
 			}
-			clr := draw.ControlSecondaryColor(context.ColorMode(), context.IsEnabled(l))
+			clr := draw.ItemStripeBackgroundColor(context.ColorMode())
 			draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 		}
 	}

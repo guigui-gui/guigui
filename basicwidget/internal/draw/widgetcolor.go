@@ -522,6 +522,10 @@ func ItemHoveredBackgroundColor(colorMode ebiten.ColorMode) color.Color {
 	return itemHoveredBackgroundToken.color(colorMode)
 }
 
+func ItemStripeBackgroundColor(colorMode ebiten.ColorMode) color.Color {
+	return ScaleAlpha(foregroundToken.color(colorMode), 2.0/32)
+}
+
 func DividerColor(colorMode ebiten.ColorMode) color.Color {
 	return dividerToken.color(colorMode)
 }
