@@ -36,25 +36,6 @@ func (o optional[T]) Value() (T, bool) {
 	return o.value, o.set
 }
 
-// Feature is an OpenType feature setting.
-type Feature struct {
-	// Tag identifies the feature, like 'liga'.
-	Tag text.Tag
-
-	// Value is the feature value handed to the font. For typical on/off
-	// features, 0 disables and 1 enables the feature.
-	Value uint32
-}
-
-// Variation is an OpenType variation axis setting.
-type Variation struct {
-	// Tag identifies the axis, like 'wght'.
-	Tag text.Tag
-
-	// Value is the axis value.
-	Value float32
-}
-
 // Style is a set of style overrides for a byte range of a text value. The
 // zero value overrides nothing. Styles are produced by [Runs]; an unset
 // property does not override anything.
@@ -73,8 +54,8 @@ type Style struct {
 
 	// features and variations are sorted by tag with at most one entry per
 	// tag.
-	features   []Feature
-	variations []Variation
+	features   []font.Feature
+	variations []font.Variation
 }
 
 // Family returns the font family override and whether it is set.
@@ -120,12 +101,12 @@ func (s Style) Lang() (language.Tag, bool) {
 }
 
 // Features returns the OpenType feature overrides, sorted by tag.
-func (s Style) Features() []Feature {
+func (s Style) Features() []font.Feature {
 	return s.features
 }
 
 // Variations returns the OpenType variation axis overrides, sorted by tag.
-func (s Style) Variations() []Variation {
+func (s Style) Variations() []font.Variation {
 	return s.variations
 }
 
@@ -184,10 +165,10 @@ func (s Style) merge(other Style) Style {
 	if other.lang.set {
 		s.lang = other.lang
 	}
-	s.features = mergeTagged(s.features, other.features, func(f Feature) text.Tag {
+	s.features = mergeTagged(s.features, other.features, func(f font.Feature) text.Tag {
 		return f.Tag
 	})
-	s.variations = mergeTagged(s.variations, other.variations, func(v Variation) text.Tag {
+	s.variations = mergeTagged(s.variations, other.variations, func(v font.Variation) text.Tag {
 		return v.Tag
 	})
 	return s
@@ -247,10 +228,10 @@ func (s Style) remove(mask styleMask) Style {
 	if mask.lang {
 		s.lang = optional[language.Tag]{}
 	}
-	s.features = removeTagged(s.features, mask.featureTags, func(f Feature) text.Tag {
+	s.features = removeTagged(s.features, mask.featureTags, func(f font.Feature) text.Tag {
 		return f.Tag
 	})
-	s.variations = removeTagged(s.variations, mask.variationTags, func(v Variation) text.Tag {
+	s.variations = removeTagged(s.variations, mask.variationTags, func(v font.Variation) text.Tag {
 		return v.Tag
 	})
 	return s
@@ -279,10 +260,10 @@ func removeTagged[T any](entries []T, tags []text.Tag, tag func(T) text.Tag) []T
 // canonicalized returns s with features and variations sorted by tag and
 // deduplicated, keeping the last entry for each tag.
 func (s Style) canonicalized() Style {
-	s.features = canonicalTagged(s.features, func(f Feature) text.Tag {
+	s.features = canonicalTagged(s.features, func(f font.Feature) text.Tag {
 		return f.Tag
 	})
-	s.variations = canonicalTagged(s.variations, func(v Variation) text.Tag {
+	s.variations = canonicalTagged(s.variations, func(v font.Variation) text.Tag {
 		return v.Tag
 	})
 	return s

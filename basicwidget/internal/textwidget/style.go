@@ -95,19 +95,32 @@ func (s *textStyle) fontFamilyID() uint64 {
 // faceAttributes returns the font attributes to shape the value with. liga
 // sets whether ligatures are enabled.
 func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
-	size := s.baseFontSize * s.scale()
 	weight := text.WeightMedium
 	if s.bold || forceBold {
 		weight = text.WeightBold
 	}
-	return font.Attributes{
-		Size:   size,
-		Weight: weight,
-		Liga:   liga,
-		Tnum:   s.tabular,
-		Lang:   s.lang,
+	a := font.Attributes{
+		Size: s.baseFontSize * s.scale(),
+		Lang: s.lang,
 	}
+	a = a.WithVariation(tagWght, float32(weight))
+	a = a.WithFeature(tagLiga, boolToFeatureValue(liga))
+	a = a.WithFeature(tagTnum, boolToFeatureValue(s.tabular))
+	return a
 }
+
+func boolToFeatureValue(b bool) uint32 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+var (
+	tagWght = text.MustParseTag("wght")
+	tagLiga = text.MustParseTag("liga")
+	tagTnum = text.MustParseTag("tnum")
+)
 
 // ensureStyleRuns clears the ranged style overrides if the store's
 // renderable content has been mutated since they were applied, and returns

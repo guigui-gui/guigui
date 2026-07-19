@@ -124,7 +124,7 @@ func (r *Runs) UnsetLang(start, end int) {
 
 // SetFeature overrides the OpenType feature tag in [start, end) with value.
 func (r *Runs) SetFeature(start, end int, tag text.Tag, value uint32) {
-	r.apply(start, end, Style{features: []Feature{{Tag: tag, Value: value}}})
+	r.apply(start, end, Style{features: []font.Feature{{Tag: tag, Value: value}}})
 }
 
 // UnsetFeature removes the override of the OpenType feature tag in
@@ -136,7 +136,7 @@ func (r *Runs) UnsetFeature(start, end int, tag text.Tag) {
 // SetVariation overrides the OpenType variation axis tag in [start, end)
 // with value.
 func (r *Runs) SetVariation(start, end int, tag text.Tag, value float32) {
-	r.apply(start, end, Style{variations: []Variation{{Tag: tag, Value: value}}})
+	r.apply(start, end, Style{variations: []font.Variation{{Tag: tag, Value: value}}})
 }
 
 // UnsetVariation removes the override of the OpenType variation axis tag in

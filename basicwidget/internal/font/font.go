@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"compress/gzip"
 	_ "embed"
+	"encoding/binary"
+	"iter"
+	"math"
 	"slices"
 	"sync/atomic"
 
@@ -41,26 +44,90 @@ func init() {
 	theDefaultFaceSource = e
 }
 
-var (
-	tagWght = text.MustParseTag("wght")
-	tagLiga = text.MustParseTag("liga")
-	tagTnum = text.MustParseTag("tnum")
-)
+// Feature is an OpenType feature setting.
+type Feature struct {
+	// Tag identifies the feature, like 'liga'.
+	Tag text.Tag
 
-// Attributes is a comparable set of text rendering attributes: size, weight,
-// ligatures, tabular numerals, and language. A face is resolved from
-// Attributes together with a [Family]; the attributes alone do not identify a
-// font.
-//
-// TODO: Weight, Liga, and Tnum are ad-hoc special cases. Represent them as
-// general OpenType variations (wght) and features (liga, tnum) while keeping
-// Attributes comparable (#131).
+	// Value is the feature value handed to the font. For typical on/off
+	// features, 0 disables and 1 enables the feature.
+	Value uint32
+}
+
+// Variation is an OpenType variation axis setting.
+type Variation struct {
+	// Tag identifies the axis, like 'wght'.
+	Tag text.Tag
+
+	// Value is the axis value.
+	Value float32
+}
+
+// taggedValues is a canonical, comparable encoding of OpenType (tag, value)
+// settings: 8 bytes per entry, a big-endian uint32 tag followed by a
+// big-endian uint32 value, sorted by tag with at most one entry per tag.
+type taggedValues string
+
+// uint32At returns the big-endian uint32 at byte offset i.
+func (t taggedValues) uint32At(i int) uint32 {
+	return uint32(t[i])<<24 | uint32(t[i+1])<<16 | uint32(t[i+2])<<8 | uint32(t[i+3])
+}
+
+// with returns t with tag set to value, keeping the canonical order.
+func (t taggedValues) with(tag text.Tag, value uint32) taggedValues {
+	var buf [8]byte
+	binary.BigEndian.PutUint32(buf[:4], uint32(tag))
+	binary.BigEndian.PutUint32(buf[4:], value)
+	entry := taggedValues(buf[:])
+	for i := 0; i < len(t); i += 8 {
+		switch existing := text.Tag(t.uint32At(i)); {
+		case existing < tag:
+			continue
+		case existing == tag:
+			return t[:i] + entry + t[i+8:]
+		default:
+			return t[:i] + entry + t[i:]
+		}
+	}
+	return t + entry
+}
+
+// all iterates the settings in tag order.
+func (t taggedValues) all() iter.Seq2[text.Tag, uint32] {
+	return func(yield func(text.Tag, uint32) bool) {
+		for i := 0; i < len(t); i += 8 {
+			if !yield(text.Tag(t.uint32At(i)), t.uint32At(i+4)) {
+				return
+			}
+		}
+	}
+}
+
+// Attributes is a comparable set of text rendering attributes: size,
+// language, and OpenType variation and feature settings. A face is resolved
+// from Attributes together with a [Family]; the attributes alone do not
+// identify a font.
 type Attributes struct {
-	Size   float64
-	Weight text.Weight
-	Liga   bool
-	Tnum   bool
-	Lang   language.Tag
+	Size float64
+	Lang language.Tag
+
+	// variations is the canonical encoding of the variation axis settings.
+	variations taggedValues
+
+	// features is the canonical encoding of the feature settings.
+	features taggedValues
+}
+
+// WithVariation returns a with the OpenType variation axis tag set to value.
+func (a Attributes) WithVariation(tag text.Tag, value float32) Attributes {
+	a.variations = a.variations.with(tag, math.Float32bits(value))
+	return a
+}
+
+// WithFeature returns a with the OpenType feature tag set to value.
+func (a Attributes) WithFeature(tag text.Tag, value uint32) Attributes {
+	a.features = a.features.with(tag, value)
+	return a
 }
 
 // Face is a resolved text face.
@@ -238,16 +305,11 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 			Size:     attributes.Size,
 			Language: attributes.Lang,
 		}
-		gtf.SetVariation(tagWght, float32(attributes.Weight))
-		if attributes.Liga {
-			gtf.SetFeature(tagLiga, 1)
-		} else {
-			gtf.SetFeature(tagLiga, 0)
+		for tag, value := range attributes.variations.all() {
+			gtf.SetVariation(tag, math.Float32frombits(value))
 		}
-		if attributes.Tnum {
-			gtf.SetFeature(tagTnum, 1)
-		} else {
-			gtf.SetFeature(tagTnum, 0)
+		for tag, value := range attributes.features.all() {
+			gtf.SetFeature(tag, value)
 		}
 
 		var f text.Face

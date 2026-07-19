@@ -6,9 +6,37 @@ package font_test
 import (
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
+
+func TestAttributesCanonical(t *testing.T) {
+	tagWght := text.MustParseTag("wght")
+	tagLiga := text.MustParseTag("liga")
+	tagTnum := text.MustParseTag("tnum")
+
+	// The setting order does not affect equality.
+	a1 := font.Attributes{Size: 16}.WithVariation(tagWght, 700).WithFeature(tagLiga, 1).WithFeature(tagTnum, 0)
+	a2 := font.Attributes{Size: 16}.WithFeature(tagTnum, 0).WithFeature(tagLiga, 1).WithVariation(tagWght, 700)
+	if a1 != a2 {
+		t.Errorf("attributes with the same settings should be equal: %v != %v", a1, a2)
+	}
+
+	// Setting a tag again overwrites the previous value.
+	a3 := font.Attributes{Size: 16}.WithVariation(tagWght, 400).WithVariation(tagWght, 700)
+	a4 := font.Attributes{Size: 16}.WithVariation(tagWght, 700)
+	if a3 != a4 {
+		t.Errorf("overwriting a tag should be equal to setting it once: %v != %v", a3, a4)
+	}
+
+	// Different values are not equal.
+	a5 := font.Attributes{Size: 16}.WithVariation(tagWght, 400)
+	if a4 == a5 {
+		t.Errorf("attributes with different settings should not be equal: %v == %v", a4, a5)
+	}
+}
 
 func TestFaceIDStableForSameRecipe(t *testing.T) {
 	var context guigui.Context

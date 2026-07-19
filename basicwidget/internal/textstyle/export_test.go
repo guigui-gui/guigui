@@ -55,14 +55,14 @@ func (s Style) WithLang(lang language.Tag) Style {
 }
 
 func (s Style) WithFeature(tag text.Tag, value uint32) Style {
-	s.features = mergeTagged(s.features, []Feature{{Tag: tag, Value: value}}, func(f Feature) text.Tag {
+	s.features = mergeTagged(s.features, []font.Feature{{Tag: tag, Value: value}}, func(f font.Feature) text.Tag {
 		return f.Tag
 	})
 	return s
 }
 
 func (s Style) WithVariation(tag text.Tag, value float32) Style {
-	s.variations = mergeTagged(s.variations, []Variation{{Tag: tag, Value: value}}, func(v Variation) text.Tag {
+	s.variations = mergeTagged(s.variations, []font.Variation{{Tag: tag, Value: value}}, func(v font.Variation) text.Tag {
 		return v.Tag
 	})
 	return s

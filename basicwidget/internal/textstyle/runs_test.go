@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
 
@@ -427,7 +428,7 @@ func TestRunsStyleGetters(t *testing.T) {
 	if _, ok := style.Underline(); ok {
 		t.Errorf("Underline(): got set, want unset")
 	}
-	if got, want := style.Features(), []textstyle.Feature{{Tag: tagTnum, Value: 1}}; !slices.Equal(got, want) {
+	if got, want := style.Features(), []font.Feature{{Tag: tagTnum, Value: 1}}; !slices.Equal(got, want) {
 		t.Errorf("Features(): got: %+v, want: %+v", got, want)
 	}
 	if got := style.Variations(); got != nil {
