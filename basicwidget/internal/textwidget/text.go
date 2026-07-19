@@ -16,6 +16,7 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/internal/clipboard"
 )
@@ -46,6 +47,12 @@ type Text struct {
 	textInited    bool
 
 	style textStyle
+
+	// styleRuns holds the ranged style overrides, with byte offsets into the
+	// committed text. Cleared lazily by [Text.ensureStyleRuns] when
+	// [textStore.Generation] advances past styleRunsValidGeneration.
+	styleRuns                textstyle.Runs
+	styleRunsValidGeneration int64
 
 	selectable                  bool
 	editable                    bool
@@ -222,6 +229,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteUint64(t.fontFamilyID())
 	ch := t.contentHashForStateKey()
 	_, _ = w.Write(ch[:])
+	t.writeStyleRunsStateKey(w)
 }
 
 func (t *Text) resetCachedTextSize() {

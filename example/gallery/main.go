@@ -30,6 +30,7 @@ type Root struct {
 	checkboxes        Checkboxes
 	radioButtons      RadioButtons
 	texts             Texts
+	richTexts         RichTexts
 	textInputs        TextInputs
 	numberInputs      NumberInputs
 	sliders           Sliders
@@ -70,6 +71,8 @@ func (r *Root) contentWidget() guigui.Widget {
 		return &r.radioButtons
 	case "texts":
 		return &r.texts
+	case "richtexts":
+		return &r.richTexts
 	case "textinputs":
 		return &r.textInputs
 	case "numberinputs":

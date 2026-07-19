@@ -3,6 +3,12 @@
 
 package textwidget
 
+import (
+	"slices"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
+)
+
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
 	return replaceNewLinesWithSpace(text, start, end)
 }
@@ -29,4 +35,8 @@ func (t *Text) ParagraphStart(position int) int {
 
 func (t *Text) ParagraphEnd(position int) int {
 	return t.paragraphEnd(position)
+}
+
+func (t *Text) StyleRuns() []textstyle.Run {
+	return slices.Collect(t.ensureStyleRuns().All())
 }

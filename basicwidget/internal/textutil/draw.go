@@ -46,6 +46,69 @@ type DrawOptions struct {
 	// glyphs whose drawn rectangle falls entirely outside are not submitted to
 	// [(*ebiten.Image).DrawImage]. An empty rectangle draws nothing.
 	VisibleBounds image.Rectangle
+
+	// StyleRuns are paint-only style overrides applied to byte ranges of the
+	// drawn string, sorted by Start and disjoint. An empty slice draws the
+	// whole string uniformly.
+	StyleRuns []StyleRun
+}
+
+// StyleRun is a paint-only style override applied to a byte range of the
+// drawn string.
+type StyleRun struct {
+	// Start is the inclusive start of the range in bytes.
+	Start int
+
+	// End is the exclusive end of the range in bytes.
+	End int
+
+	// Color overrides the text and decoration color. Nil inherits
+	// [DrawOptions.TextColor].
+	Color color.Color
+
+	// BackgroundColor fills the range's background. Nil draws no background.
+	BackgroundColor color.Color
+
+	// Underline draws a line under the text.
+	Underline bool
+
+	// Strikethrough draws a line through the text.
+	Strikethrough bool
+}
+
+// intersectingStyleRuns returns the subslice of runs that intersect
+// [start, end). runs must be sorted by Start and disjoint.
+func intersectingStyleRuns(runs []StyleRun, start, end int) []StyleRun {
+	lo, _ := slices.BinarySearchFunc(runs, start, func(run StyleRun, start int) int {
+		if run.End <= start {
+			return -1
+		}
+		return 1
+	})
+	n, _ := slices.BinarySearchFunc(runs[lo:], end, func(run StyleRun, end int) int {
+		if run.Start < end {
+			return -1
+		}
+		return 1
+	})
+	return runs[lo : lo+n]
+}
+
+// rangePositionsInVisualLines returns the positions of [start, end) resolved
+// within the visual lines: posStart is start's position (on the second line
+// when start sits on a visual line boundary) and posEnd is end's first
+// position. ok is false when either endpoint cannot be resolved.
+func rangePositionsInVisualLines(layoutWidth int, vls []visualLine, start, end int, style *Style) (posStart, posEnd TextPosition, ok bool) {
+	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), start, style)
+	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), end, style)
+	if countStart == 0 || countEnd == 0 {
+		return TextPosition{}, TextPosition{}, false
+	}
+	posStart = posStart0
+	if countStart == 2 {
+		posStart = posStart1
+	}
+	return posStart, posEnd0, true
 }
 
 var theVisualLinesBuffer []visualLine
@@ -144,19 +207,29 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		start := vl.pos
 		end := vl.pos + len(vl.str)
 
+		lineRuns := intersectingStyleRuns(options.StyleRuns, start, end)
+
+		for _, run := range lineRuns {
+			if run.BackgroundColor == nil {
+				continue
+			}
+			runStart := max(start, run.Start)
+			runEnd := min(end, run.End)
+			if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, runStart, runEnd, &options.Style); ok {
+				x := float32(posStart.X) + float32(bounds.Min.X)
+				y := float32(posStart.Top) + float32(bounds.Min.Y)
+				w := float32(posEnd.X - posStart.X)
+				h := float32(posStart.Bottom - posStart.Top)
+				vector.FillRect(dst, x, y, w, h, run.BackgroundColor, false)
+			}
+		}
+
 		if options.DrawSelection {
 			if start <= options.SelectionEnd && end >= options.SelectionStart {
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
-					if countStart > 0 && countEnd > 0 {
-						posStart := posStart0
-						if countStart == 2 {
-							posStart = posStart1
-						}
-						posEnd := posEnd0
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Top) + float32(bounds.Min.Y)
 						width := float32(posEnd.X - posStart.X)
@@ -172,14 +245,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
-					if countStart > 0 && countEnd > 0 {
-						posStart := posStart0
-						if countStart == 2 {
-							posStart = posStart1
-						}
-						posEnd := posEnd0
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Bottom) + float32(bounds.Min.Y) - options.CompositionBorderWidth
 						w := float32(posEnd.X - posStart.X)
@@ -192,14 +258,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), start, &options.Style)
-					posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(theVisualLinesBuffer), end, &options.Style)
-					if countStart > 0 && countEnd > 0 {
-						posStart := posStart0
-						if countStart == 2 {
-							posStart = posStart1
-						}
-						posEnd := posEnd0
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Bottom) + float32(bounds.Min.Y) - options.CompositionBorderWidth
 						w := float32(posEnd.X - posStart.X)
@@ -216,12 +275,29 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		if !options.KeepTailingSpace {
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
+		// contentLen is the length of the drawn prefix whose bytes keep their
+		// original offsets; an appended ellipsis is excluded.
+		contentLen := len(vlStr)
 		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(layoutWidth) {
 			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(layoutWidth), options.Face.TextFace(), options.TabWidth)
+			contentLen = len(vlStr) - len(options.EllipsisString)
 		}
+		var styled bool
+		for _, run := range lineRuns {
+			if run.Color != nil && run.Start < start+contentLen {
+				styled = true
+				break
+			}
+		}
+		switch {
+		case styled:
+			op.PrimaryAlign = text.AlignStart
+			x := oneLineLeft(layoutWidth, vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			op.GeoM.Translate(x, 0)
+			drawStyledVisualLine(dst, vlStr, start, start+contentLen, lineRuns, options, op)
 		// Ebitengine's text.Draw does not handle tab characters, so lines
 		// containing tabs must use manual alignment via oneLineLeft and GeoM.
-		if !strings.Contains(vlStr, "\t") {
+		case !strings.Contains(vlStr, "\t"):
 			// Use Ebitengine's PrimaryAlign for horizontal alignment so that the
 			// text origin accounts for the alignment offset. This ensures that each
 			// glyph's subpixel position is determined relative to the aligned origin,
@@ -238,7 +314,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				op.PrimaryAlign = text.AlignStart
 			}
 			text.Draw(dst, vlStr, options.Face.TextFace(), op)
-		} else {
+		default:
 			op.PrimaryAlign = text.AlignStart
 			x := oneLineLeft(layoutWidth, vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
 			op.GeoM.Translate(x, 0)
@@ -261,6 +337,137 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			}
 		}
 		op.GeoM = origGeoM
+
+		if len(lineRuns) > 0 {
+			// The ratios approximate the underline and strikeout metrics
+			// that the default face Inter declares in its post and OS/2
+			// tables: thickness/(ascender+descender) = 0.067, underline
+			// center below the baseline / descender = 0.46, and strikeout
+			// center above the baseline / ascender = 0.32. The rendering
+			// face's own table values are not available through
+			// [text.Metrics].
+			//
+			// TODO: Use the rendering font's own underline and strikeout
+			// metrics once the text API exposes them, and decide how to
+			// resolve them when a run is rendered with multiple fonts.
+			const (
+				// decorationThicknessRatio is the thickness of underline and
+				// strikethrough lines as a ratio of the face's ascent+descent
+				// height.
+				decorationThicknessRatio = 1.0 / 14
+
+				// underlineOffsetRatio is the offset of the underline's
+				// center below the baseline as a ratio of the face's descent.
+				underlineOffsetRatio = 0.4
+
+				// strikethroughOffsetRatio is the offset of the
+				// strikethrough's center above the baseline as a ratio of the
+				// face's ascent, putting the line roughly at the middle of
+				// lowercase letters.
+				strikethroughOffsetRatio = 0.3
+			)
+			m := options.Face.TextFace().Metrics()
+			baseline := textPadding(options.Face.TextFace(), options.LineHeight) + m.HAscent
+			thickness := max(1, (m.HAscent+m.HDescent)*decorationThicknessRatio)
+			for _, run := range lineRuns {
+				if !run.Underline && !run.Strikethrough {
+					continue
+				}
+				runStart := max(start, run.Start)
+				runEnd := min(start+contentLen, run.End)
+				if runStart >= runEnd {
+					continue
+				}
+				posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, runStart, runEnd, &options.Style)
+				if !ok {
+					continue
+				}
+				clr := run.Color
+				if clr == nil {
+					clr = options.TextColor
+				}
+				x := float32(posStart.X) + float32(bounds.Min.X)
+				w := float32(posEnd.X - posStart.X)
+				lineTop := posStart.Top + float64(bounds.Min.Y)
+				if run.Underline {
+					y := lineTop + baseline + underlineOffsetRatio*m.HDescent - thickness/2
+					vector.FillRect(dst, x, float32(y), w, float32(thickness), clr, false)
+				}
+				if run.Strikethrough {
+					y := lineTop + baseline - strikethroughOffsetRatio*m.HAscent - thickness/2
+					vector.FillRect(dst, x, float32(y), w, float32(thickness), clr, false)
+				}
+			}
+		}
+
 		op.GeoM.Translate(0, options.LineHeight)
 	}
+}
+
+// drawStyledVisualLine draws vlStr, whose byte i sits at offset lineStart+i
+// of the drawn string, splitting at tab positions and at effective-color
+// boundaries so each segment is drawn in its run's color. runs holds the
+// style runs intersecting the line, sorted and disjoint. Bytes at or past
+// contentEnd (an appended ellipsis) use the base text color. op must be
+// positioned at the line's left origin, with [text.AlignStart].
+func drawStyledVisualLine(dst *ebiten.Image, vlStr string, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions, op *text.DrawOptions) {
+	face := options.Face.TextFace()
+	// colorAt returns the effective color at the absolute byte offset abs and
+	// the absolute offset at which the effective color may next change. It
+	// must be called with nondecreasing offsets: runIdx advances monotonically
+	// over runs, so a whole line costs one pass regardless of segment count.
+	var runIdx int
+	colorAt := func(abs int) (color.Color, int) {
+		if abs >= contentEnd {
+			return options.TextColor, math.MaxInt
+		}
+		for runIdx < len(runs) && runs[runIdx].End <= abs {
+			runIdx++
+		}
+		if runIdx >= len(runs) {
+			return options.TextColor, math.MaxInt
+		}
+		run := runs[runIdx]
+		if abs < run.Start {
+			return options.TextColor, min(run.Start, contentEnd)
+		}
+		clr := run.Color
+		if clr == nil {
+			clr = options.TextColor
+		}
+		return clr, min(run.End, contentEnd)
+	}
+
+	origGeoM := op.GeoM
+	origColorScale := op.ColorScale
+	// origX and pos are the drawing origin set after the last tab: its x
+	// offset from the line's left, and its byte position in vlStr.
+	var origX float64
+	var pos int
+	var i int
+	for i < len(vlStr) {
+		if vlStr[i] == '\t' {
+			x := origX + text.AdvanceAt(vlStr, i, face) - text.AdvanceAt(vlStr, pos, face)
+			nextX := nextIndentPosition(x, options.TabWidth)
+			op.GeoM.Translate(nextX-origX, 0)
+			origX = nextX
+			i++
+			pos = i
+			continue
+		}
+		clr, changeAt := colorAt(lineStart + i)
+		next := min(changeAt-lineStart, len(vlStr))
+		if tabIdx := strings.IndexByte(vlStr[i:], '\t'); tabIdx >= 0 {
+			next = min(next, i+tabIdx)
+		}
+		geoM := op.GeoM
+		op.GeoM.Translate(text.AdvanceAt(vlStr, i, face)-text.AdvanceAt(vlStr, pos, face), 0)
+		op.ColorScale.Reset()
+		op.ColorScale.ScaleWithColor(clr)
+		text.Draw(dst, vlStr[i:next], face, op)
+		op.GeoM = geoM
+		i = next
+	}
+	op.GeoM = origGeoM
+	op.ColorScale = origColorScale
 }

@@ -20,6 +20,7 @@ type Model struct {
 	checkboxes        CheckboxesModel
 	radioButtons      RadioButtonsModel
 	texts             TextsModel
+	richTexts         RichTextsModel
 	textInputs        TextInputsModel
 	numberInputs      NumberInputsModel
 	sliders           SlidersModel
@@ -59,6 +60,10 @@ func (m *Model) RadioButtons() *RadioButtonsModel {
 
 func (m *Model) Texts() *TextsModel {
 	return &m.texts
+}
+
+func (m *Model) RichTexts() *RichTextsModel {
+	return &m.richTexts
 }
 
 func (m *Model) TextInputs() *TextInputsModel {
@@ -264,6 +269,30 @@ func (t *TextsModel) Ellipsis() bool {
 
 func (t *TextsModel) SetEllipsis(ellipsis bool) {
 	t.ellipsis = ellipsis
+}
+
+type RichTextsModel struct {
+	bold       bool
+	selectable bool
+}
+
+// TODO: Replace the whole-text bold toggle with partial bold ranges in the
+// sample text once ranged font weights are implemented. The toggle itself
+// will likely be removed then.
+func (r *RichTextsModel) Bold() bool {
+	return r.bold
+}
+
+func (r *RichTextsModel) SetBold(bold bool) {
+	r.bold = bold
+}
+
+func (r *RichTextsModel) Selectable() bool {
+	return r.selectable
+}
+
+func (r *RichTextsModel) SetSelectable(selectable bool) {
+	r.selectable = selectable
 }
 
 type TextInputsModel struct {

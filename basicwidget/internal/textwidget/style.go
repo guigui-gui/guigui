@@ -9,7 +9,9 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
+	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
@@ -104,5 +106,95 @@ func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
 		Liga:   liga,
 		Tnum:   s.tabular,
 		Lang:   s.lang,
+	}
+}
+
+// ensureStyleRuns clears the ranged style overrides if the store's
+// renderable content has been mutated since they were applied, and returns
+// the runs.
+func (t *Text) ensureStyleRuns() *textstyle.Runs {
+	if gen := t.store.Generation(); t.styleRunsValidGeneration != gen {
+		t.styleRuns.Clear()
+		t.styleRunsValidGeneration = gen
+	}
+	return &t.styleRuns
+}
+
+// SetColorInRange overrides the text color in [startInBytes, endInBytes).
+// The override lasts until the value changes.
+func (t *Text) SetColorInRange(startInBytes, endInBytes int, clr color.Color) {
+	t.ensureStyleRuns().SetColor(startInBytes, endInBytes, clr)
+}
+
+// UnsetColorInRange removes the text color override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetColorInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetColor(startInBytes, endInBytes)
+}
+
+// SetBackgroundColorInRange overrides the background color in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetBackgroundColorInRange(startInBytes, endInBytes int, clr color.Color) {
+	t.ensureStyleRuns().SetBackgroundColor(startInBytes, endInBytes, clr)
+}
+
+// UnsetBackgroundColorInRange removes the background color override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetBackgroundColorInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetBackgroundColor(startInBytes, endInBytes)
+}
+
+// SetUnderlineInRange overrides whether an underline is drawn in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetUnderlineInRange(startInBytes, endInBytes int, underline bool) {
+	t.ensureStyleRuns().SetUnderline(startInBytes, endInBytes, underline)
+}
+
+// UnsetUnderlineInRange removes the underline override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetUnderlineInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetUnderline(startInBytes, endInBytes)
+}
+
+// SetStrikethroughInRange overrides whether a strikethrough is drawn in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
+	t.ensureStyleRuns().SetStrikethrough(startInBytes, endInBytes, strikethrough)
+}
+
+// UnsetStrikethroughInRange removes the strikethrough override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetStrikethrough(startInBytes, endInBytes)
+}
+
+// ResetStylesInRange removes all style overrides in
+// [startInBytes, endInBytes).
+func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().Reset(startInBytes, endInBytes)
+}
+
+// writeStyleRunsStateKey writes the ranged style overrides into the state
+// key.
+func (t *Text) writeStyleRunsStateKey(w *guigui.StateKeyWriter) {
+	for run := range t.ensureStyleRuns().All() {
+		w.WriteInt(run.Start)
+		w.WriteInt(run.End)
+		clr, ok := run.Style.Color()
+		w.WriteBool(ok)
+		if ok {
+			writeColor(w, clr)
+		}
+		clr, ok = run.Style.BackgroundColor()
+		w.WriteBool(ok)
+		if ok {
+			writeColor(w, clr)
+		}
+		underline, ok := run.Style.Underline()
+		w.WriteBool(ok)
+		w.WriteBool(underline)
+		strikethrough, ok := run.Style.Strikethrough()
+		w.WriteBool(ok)
+		w.WriteBool(strikethrough)
 	}
 }

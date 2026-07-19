@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"math"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -277,10 +278,13 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.DrawComposition = false
 	}
 
+	op.StyleRuns = slices.Delete(op.StyleRuns, 0, len(op.StyleRuns))
+
 	if t.masking() {
 		// A masked value is single-line, uniform, and short, so it bypasses
 		// the virtualized restriction path: draw the whole masked string and
-		// remap the selection/composition offsets into masked space.
+		// remap the selection/composition offsets into masked space. Ranged
+		// styles are not drawn on a masked value.
 		m := t.maskMappingForRendering(true)
 		op.Style.WrapMode = textutil.WrapModeNone
 		op.Style.EllipsisString = ""
@@ -317,7 +321,43 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.CompositionActiveEnd -= byteStart
 		}
 	}
+	t.appendStyleRunsToDraw(op, byteStart, len(txt))
 	textutil.Draw(textBounds, dst, txt, op)
+}
+
+// appendStyleRunsToDraw appends the ranged style overrides that intersect
+// the drawn byte window [byteStart, byteStart+txtLen) to op.StyleRuns,
+// rebased to the window. Styles are skipped while an IME composition is
+// active, as their offsets are relative to the committed text and would not
+// match the rendering text.
+func (t *Text) appendStyleRunsToDraw(op *textutil.DrawOptions, byteStart, txtLen int) {
+	if t.store.UncommittedTextLengthInBytes() > 0 {
+		return
+	}
+	for run := range t.ensureStyleRuns().All() {
+		start := run.Start - byteStart
+		end := run.End - byteStart
+		if end <= 0 || start >= txtLen {
+			continue
+		}
+		styleRun := textutil.StyleRun{
+			Start: start,
+			End:   end,
+		}
+		if clr, ok := run.Style.Color(); ok {
+			styleRun.Color = clr
+		}
+		if clr, ok := run.Style.BackgroundColor(); ok {
+			styleRun.BackgroundColor = clr
+		}
+		if underline, ok := run.Style.Underline(); ok {
+			styleRun.Underline = underline
+		}
+		if strikethrough, ok := run.Style.Strikethrough(); ok {
+			styleRun.Strikethrough = strikethrough
+		}
+		op.StyleRuns = append(op.StyleRuns, styleRun)
+	}
 }
 
 // DrawPlainString draws str in clr with the widget's current text style, laid
@@ -346,5 +386,6 @@ func (t *Text) DrawPlainString(context *guigui.Context, widgetBounds *guigui.Wid
 	op.VisibleBounds = widgetBounds.VisibleBounds()
 	op.DrawSelection = false
 	op.DrawComposition = false
+	op.StyleRuns = slices.Delete(op.StyleRuns, 0, len(op.StyleRuns))
 	textutil.Draw(textBounds, dst, str, op)
 }

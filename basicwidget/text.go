@@ -402,6 +402,61 @@ func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
 }
 
+// SetColorInRange overrides the text color in [startInBytes, endInBytes).
+// The override lasts until the value changes. A nil color selects the
+// default color.
+func (t *Text) SetColorInRange(startInBytes, endInBytes int, clr color.Color) {
+	t.core.SetColorInRange(startInBytes, endInBytes, clr)
+}
+
+// UnsetColorInRange removes the text color override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetColorInRange(startInBytes, endInBytes int) {
+	t.core.UnsetColorInRange(startInBytes, endInBytes)
+}
+
+// SetBackgroundColorInRange overrides the background color in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetBackgroundColorInRange(startInBytes, endInBytes int, clr color.Color) {
+	t.core.SetBackgroundColorInRange(startInBytes, endInBytes, clr)
+}
+
+// UnsetBackgroundColorInRange removes the background color override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetBackgroundColorInRange(startInBytes, endInBytes int) {
+	t.core.UnsetBackgroundColorInRange(startInBytes, endInBytes)
+}
+
+// SetUnderlineInRange overrides whether an underline is drawn in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetUnderlineInRange(startInBytes, endInBytes int, underline bool) {
+	t.core.SetUnderlineInRange(startInBytes, endInBytes, underline)
+}
+
+// UnsetUnderlineInRange removes the underline override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetUnderlineInRange(startInBytes, endInBytes int) {
+	t.core.UnsetUnderlineInRange(startInBytes, endInBytes)
+}
+
+// SetStrikethroughInRange overrides whether a strikethrough is drawn in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
+	t.core.SetStrikethroughInRange(startInBytes, endInBytes, strikethrough)
+}
+
+// UnsetStrikethroughInRange removes the strikethrough override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
+	t.core.UnsetStrikethroughInRange(startInBytes, endInBytes)
+}
+
+// ResetStylesInRange removes all style overrides in
+// [startInBytes, endInBytes).
+func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
+	t.core.ResetStylesInRange(startInBytes, endInBytes)
+}
+
 func (t *Text) IsEditable() bool {
 	return t.core.IsEditable()
 }

@@ -85,6 +85,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Value: "texts",
 		},
 		{
+			Text:  "Rich Texts",
+			Value: "richtexts",
+		},
+		{
 			Text:  "Text Inputs",
 			Value: "textinputs",
 		},
