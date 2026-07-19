@@ -51,16 +51,6 @@ func (r *Runs) UnsetFamily(start, end int) {
 	r.unset(start, end, styleMask{family: true})
 }
 
-// SetWeight overrides the font weight in [start, end).
-func (r *Runs) SetWeight(start, end int, weight text.Weight) {
-	r.apply(start, end, Style{weight: opt(weight)})
-}
-
-// UnsetWeight removes the font weight override in [start, end).
-func (r *Runs) UnsetWeight(start, end int) {
-	r.unset(start, end, styleMask{weight: true})
-}
-
 // SetItalic overrides the italic face selection in [start, end).
 func (r *Runs) SetItalic(start, end int, italic bool) {
 	r.apply(start, end, Style{italic: opt(italic)})

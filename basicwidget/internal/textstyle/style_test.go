@@ -25,11 +25,6 @@ func TestStyleIsZero(t *testing.T) {
 			want:  true,
 		},
 		{
-			name:  "weight",
-			style: textstyle.Style{}.WithWeight(text.WeightBold),
-			want:  false,
-		},
-		{
 			name:  "italic",
 			style: textstyle.Style{}.WithItalic(true),
 			want:  false,
@@ -76,7 +71,7 @@ func TestStyleIsZero(t *testing.T) {
 		},
 		{
 			name:  "variation",
-			style: textstyle.Style{}.WithVariation(tagWght, 700),
+			style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)),
 			want:  false,
 		},
 	}

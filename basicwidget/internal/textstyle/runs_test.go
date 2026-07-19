@@ -74,12 +74,12 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "partial overlap merges properties",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetWeight(0, 9, text.WeightBold)
+				runs.SetVariation(0, 9, tagWght, float32(text.WeightBold))
 				runs.SetUnderline(5, 16, true)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 5, Style: textstyle.Style{}.WithWeight(text.WeightBold)},
-				{Start: 5, End: 9, Style: textstyle.Style{}.WithWeight(text.WeightBold).WithUnderline(true)},
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
+				{Start: 5, End: 9, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)).WithUnderline(true)},
 				{Start: 9, End: 16, Style: textstyle.Style{}.WithUnderline(true)},
 			},
 		},
@@ -146,13 +146,13 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "whole-text set then a narrower one",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetWeight(0, math.MaxInt, text.WeightBold)
+				runs.SetVariation(0, math.MaxInt, tagWght, float32(text.WeightBold))
 				runs.SetColor(2, 4, red)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 2, Style: textstyle.Style{}.WithWeight(text.WeightBold)},
-				{Start: 2, End: 4, Style: textstyle.Style{}.WithWeight(text.WeightBold).WithColor(red)},
-				{Start: 4, End: math.MaxInt, Style: textstyle.Style{}.WithWeight(text.WeightBold)},
+				{Start: 0, End: 2, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
+				{Start: 2, End: 4, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)).WithColor(red)},
+				{Start: 4, End: math.MaxInt, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
 			},
 		},
 		{
@@ -194,12 +194,12 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "variations merge by tag",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, 10, tagWght, 400)
-				runs.SetVariation(5, 10, tagWght, 700)
+				runs.SetVariation(0, 10, tagWght, float32(text.WeightNormal))
+				runs.SetVariation(5, 10, tagWght, float32(text.WeightBold))
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(tagWght, 400)},
-				{Start: 5, End: 10, Style: textstyle.Style{}.WithVariation(tagWght, 700)},
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightNormal))},
+				{Start: 5, End: 10, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
 			},
 		},
 	}
@@ -280,7 +280,7 @@ func TestRunsUnset(t *testing.T) {
 		{
 			name: "unset a variation",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, 10, tagWght, 700)
+				runs.SetVariation(0, 10, tagWght, float32(text.WeightBold))
 				runs.UnsetVariation(0, 10, tagWght)
 			},
 			want: nil,

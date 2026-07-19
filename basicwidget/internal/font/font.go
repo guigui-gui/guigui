@@ -51,6 +51,10 @@ var (
 // ligatures, tabular numerals, and language. A face is resolved from
 // Attributes together with a [Family]; the attributes alone do not identify a
 // font.
+//
+// TODO: Weight, Liga, and Tnum are ad-hoc special cases. Represent them as
+// general OpenType variations (wght) and features (liga, tnum) while keeping
+// Attributes comparable (#131).
 type Attributes struct {
 	Size   float64
 	Weight text.Weight

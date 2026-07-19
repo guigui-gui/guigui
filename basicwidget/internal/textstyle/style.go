@@ -59,8 +59,10 @@ type Variation struct {
 // zero value overrides nothing. Styles are produced by [Runs]; an unset
 // property does not override anything.
 type Style struct {
+	// TODO: family and italic are not consumed yet. Implement a face chooser
+	// that selects a concrete face from the font family based on these
+	// face-selection properties (#131).
 	family          optional[*font.Family]
-	weight          optional[text.Weight]
 	italic          optional[bool]
 	scale           optional[float64]
 	color           optional[color.Color]
@@ -78,11 +80,6 @@ type Style struct {
 // Family returns the font family override and whether it is set.
 func (s Style) Family() (*font.Family, bool) {
 	return s.family.Value()
-}
-
-// Weight returns the font weight override and whether it is set.
-func (s Style) Weight() (text.Weight, bool) {
-	return s.weight.Value()
 }
 
 // Italic returns the italic face selection override and whether it is set.
@@ -135,7 +132,6 @@ func (s Style) Variations() []Variation {
 // IsZero reports whether the style overrides nothing.
 func (s Style) IsZero() bool {
 	return !s.family.set &&
-		!s.weight.set &&
 		!s.italic.set &&
 		!s.scale.set &&
 		!s.color.set &&
@@ -150,7 +146,6 @@ func (s Style) IsZero() bool {
 // Equal reports whether two styles are identical.
 func (s Style) Equal(other Style) bool {
 	return s.family == other.family &&
-		s.weight == other.weight &&
 		s.italic == other.italic &&
 		s.scale == other.scale &&
 		s.color == other.color &&
@@ -167,9 +162,6 @@ func (s Style) Equal(other Style) bool {
 func (s Style) merge(other Style) Style {
 	if other.family.set {
 		s.family = other.family
-	}
-	if other.weight.set {
-		s.weight = other.weight
 	}
 	if other.italic.set {
 		s.italic = other.italic
@@ -204,7 +196,6 @@ func (s Style) merge(other Style) Style {
 // styleMask selects style properties without carrying values.
 type styleMask struct {
 	family          bool
-	weight          bool
 	italic          bool
 	scale           bool
 	color           bool
@@ -219,7 +210,6 @@ type styleMask struct {
 // isZero reports whether the mask selects nothing.
 func (m styleMask) isZero() bool {
 	return !m.family &&
-		!m.weight &&
 		!m.italic &&
 		!m.scale &&
 		!m.color &&
@@ -235,9 +225,6 @@ func (m styleMask) isZero() bool {
 func (s Style) remove(mask styleMask) Style {
 	if mask.family {
 		s.family = optional[*font.Family]{}
-	}
-	if mask.weight {
-		s.weight = optional[text.Weight]{}
 	}
 	if mask.italic {
 		s.italic = optional[bool]{}

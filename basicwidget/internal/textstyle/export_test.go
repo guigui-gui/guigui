@@ -19,11 +19,6 @@ func (s Style) WithFamily(family *font.Family) Style {
 	return s
 }
 
-func (s Style) WithWeight(weight text.Weight) Style {
-	s.weight = opt(weight)
-	return s
-}
-
 func (s Style) WithItalic(italic bool) Style {
 	s.italic = opt(italic)
 	return s
