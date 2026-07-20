@@ -211,8 +211,21 @@ func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
 	t.ensureStyleRuns().UnsetFeature(startInBytes, endInBytes, tag)
 }
 
+// SetItalicInRange overrides the italic face selection in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
+	t.ensureStyleRuns().SetItalic(startInBytes, endInBytes, italic)
+}
+
+// UnsetItalicInRange removes the italic face selection override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetItalic(startInBytes, endInBytes)
+}
+
 // hasMetricStyleRuns reports whether any ranged style override affects glyph
-// metrics (currently the variation axes and feature settings).
+// metrics (currently the variation axes, feature settings, and italic face
+// selection).
 func (t *Text) hasMetricStyleRuns() bool {
 	return t.ensureStyleRuns().HasMetricProperties()
 }
@@ -283,16 +296,17 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		return runs
 	}
 	for run := range t.ensureStyleRuns().All() {
-		variations := run.Style.Variations()
-		features := run.Style.Features()
-		if len(variations) == 0 && len(features) == 0 {
+		if !run.Style.HasMetricProperties() {
 			continue
 		}
 		attrs := t.faceAttributes(forceBold)
-		for _, v := range variations {
+		if italic, ok := run.Style.Italic(); ok {
+			attrs.Italic = italic
+		}
+		for _, v := range run.Style.Variations() {
 			attrs = attrs.WithVariation(v.Tag, v.Value)
 		}
-		for _, f := range features {
+		for _, f := range run.Style.Features() {
 			attrs = attrs.WithFeature(f.Tag, f.Value)
 		}
 		runs = append(runs, textutil.FaceRun{

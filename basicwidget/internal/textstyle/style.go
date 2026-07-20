@@ -40,9 +40,8 @@ func (o optional[T]) Value() (T, bool) {
 // zero value overrides nothing. Styles are produced by [Runs]; an unset
 // property does not override anything.
 type Style struct {
-	// TODO: family and italic are not consumed yet. Implement a face chooser
-	// that selects a concrete face from the font family based on these
-	// face-selection properties (#131).
+	// TODO: family is not consumed yet. Resolve the ranged face from the
+	// overriding font family (#131).
 	family          optional[*font.Family]
 	italic          optional[bool]
 	scale           optional[float64]

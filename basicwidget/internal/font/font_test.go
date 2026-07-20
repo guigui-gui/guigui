@@ -9,11 +9,90 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/gobolditalic"
+	"golang.org/x/image/font/gofont/goitalic"
 	"golang.org/x/image/font/gofont/goregular"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
+
+func TestFaceForStyleFamily(t *testing.T) {
+	sources := make(map[string]*text.GoTextFaceSource)
+	for name, ttf := range map[string][]byte{
+		"regular":    goregular.TTF,
+		"bold":       gobold.TTF,
+		"italic":     goitalic.TTF,
+		"bolditalic": gobolditalic.TTF,
+	} {
+		s, err := text.NewGoTextFaceSource(bytes.NewReader(ttf))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sources[name] = s
+	}
+	family := font.NewFamily([]font.FaceSourceEntry{
+		{FaceSource: sources["regular"]},
+		{FaceSource: sources["bold"]},
+		{FaceSource: sources["italic"]},
+		{FaceSource: sources["bolditalic"]},
+	}, &font.FamilyOptions{DisableFallback: true})
+
+	const sample = "Styled sample text"
+	sourceAdvance := func(source *text.GoTextFaceSource) float64 {
+		return text.Advance(sample, &text.GoTextFace{Source: source, Size: 16})
+	}
+	seen := map[float64]string{}
+	for name, source := range sources {
+		a := sourceAdvance(source)
+		if other, ok := seen[a]; ok {
+			t.Fatalf("the %s and %s test fonts should have distinguishable advances", name, other)
+		}
+		seen[a] = name
+	}
+
+	var context guigui.Context
+	tests := []struct {
+		name   string
+		italic bool
+		weight text.Weight
+		want   string
+	}{
+		{
+			name:   "normal",
+			italic: false,
+			weight: text.WeightNormal,
+			want:   "regular",
+		},
+		{
+			name:   "bold",
+			italic: false,
+			weight: text.WeightBold,
+			want:   "bold",
+		},
+		{
+			name:   "italic",
+			italic: true,
+			weight: text.WeightNormal,
+			want:   "italic",
+		},
+		{
+			name:   "bold italic",
+			italic: true,
+			weight: text.WeightBold,
+			want:   "bolditalic",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := font.Attributes{Size: 16, Italic: tt.italic}.WithVariation(font.TagWght, float32(tt.weight))
+			f := font.NewFace(&context, family, a)
+			if got, want := text.Advance(sample, f.TextFace()), sourceAdvance(sources[tt.want]); got != want {
+				t.Errorf("advance: got: %v (%s), want: %v (%s)", got, seen[got], want, tt.want)
+			}
+		})
+	}
+}
 
 func TestFaceForStaticWeightFamily(t *testing.T) {
 	regular, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))

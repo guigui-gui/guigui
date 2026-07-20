@@ -27,8 +27,8 @@ func (r *Runs) WriteStateKey(w Writer) {
 }
 
 // WriteMetricStateKey writes the runs' metric-affecting properties (the
-// variation and feature settings) into w. Runs without any contribute
-// nothing.
+// variation and feature settings and the italic face selection) into w. Runs
+// without any contribute nothing.
 func (r *Runs) WriteMetricStateKey(w Writer) {
 	for _, run := range r.runs {
 		if !run.Style.HasMetricProperties() {
@@ -52,9 +52,9 @@ func (r *Runs) HasMetricProperties() bool {
 }
 
 // HasMetricProperties reports whether the style overrides a metric-affecting
-// property (a variation or feature setting).
+// property (a variation or feature setting, or the italic face selection).
 func (s Style) HasMetricProperties() bool {
-	return len(s.variations) > 0 || len(s.features) > 0
+	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set
 }
 
 // writeStateKey writes the style's consumed properties into w.
@@ -79,8 +79,11 @@ func (s Style) writeStateKey(w Writer) {
 }
 
 // writeMetricProperties writes the metric-affecting properties (the
-// variation and feature settings) into w.
+// variation and feature settings and the italic face selection) into w.
 func (s Style) writeMetricProperties(w Writer) {
+	italic, ok := s.Italic()
+	w.WriteBool(ok)
+	w.WriteBool(italic)
 	variations := s.Variations()
 	w.WriteInt(len(variations))
 	for _, v := range variations {

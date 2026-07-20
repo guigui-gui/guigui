@@ -107,17 +107,22 @@ func (t taggedValues) all() iter.Seq2[text.Tag, uint32] {
 // Tags of the OpenType variation axes and features with dedicated handling.
 var (
 	TagWght = text.MustParseTag("wght")
+	TagItal = text.MustParseTag("ital")
 	TagLiga = text.MustParseTag("liga")
 	TagTnum = text.MustParseTag("tnum")
 )
 
 // Attributes is a comparable set of text rendering attributes: size,
-// language, and OpenType variation and feature settings. A face is resolved
-// from Attributes together with a [Family]; the attributes alone do not
-// identify a font.
+// language, italic face selection, and OpenType variation and feature
+// settings. A face is resolved from Attributes together with a [Family]; the
+// attributes alone do not identify a font.
 type Attributes struct {
 	Size float64
 	Lang language.Tag
+
+	// Italic selects an italic face from the family's sources. When the
+	// family has no italic source, the text renders with a regular face.
+	Italic bool
 
 	// variations is the canonical encoding of the variation axis settings.
 	variations taggedValues
@@ -311,17 +316,22 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	}()
 	if fnt != nil {
 		tmpFaceSourceEntries = append(tmpFaceSourceEntries, fnt.entries...)
-		// Family entries whose weight metadata is closest to the requested
-		// weight resolve first, so a family of static faces (e.g. separate
-		// regular and bold fonts) resolves bold text to the bold source. The
-		// stable sort preserves the coverage-fallback order among equally
-		// matching entries, and the registered fallback stack (appended
-		// below) keeps its priority order.
+		// Family entries whose style and weight metadata best match the
+		// requested attributes resolve first — a style mismatch outranks any
+		// weight distance — so a family of static faces (e.g. separate
+		// regular, bold, and italic fonts) resolves bold or italic text to
+		// the matching source. The stable sort preserves the
+		// coverage-fallback order among equally matching entries, and the
+		// registered fallback stack (appended below) keeps its priority
+		// order.
 		//
-		// TODO: Match the style metadata too once Attributes carries an
-		// italic input (#131).
+		// TODO: Consider the slnt axis for italic selection; it needs a
+		// slant-angle policy (#131).
 		weight := attributes.weight()
 		slices.SortStableFunc(tmpFaceSourceEntries, func(a, b FaceSourceEntry) int {
+			if c := cmp.Compare(styleDistance(a, attributes.Italic), styleDistance(b, attributes.Italic)); c != 0 {
+				return c
+			}
 			return cmp.Compare(weightDistance(a, weight), weightDistance(b, weight))
 		})
 		if fnt.useFallback {
@@ -337,6 +347,11 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 			Source:   entry.FaceSource,
 			Size:     attributes.Size,
 			Language: attributes.Lang,
+		}
+		if attributes.Italic {
+			// A no-op for sources without the ital axis; an explicit ital
+			// variation below overrides this.
+			gtf.SetVariation(TagItal, 1)
 		}
 		for tag, value := range attributes.variations.all() {
 			gtf.SetVariation(tag, math.Float32frombits(value))
@@ -369,6 +384,31 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	theFaceCache[ck] = cachedFace{face: mf, id: id}
 
 	return mf, id
+}
+
+// styleDistance returns 0 when entry matches the italic face selection —
+// its style metadata matches, or its ital variation axis covers the
+// selection — and 1 otherwise.
+func styleDistance(entry FaceSourceEntry, italic bool) int {
+	style := text.StyleNormal
+	var ital float32
+	if italic {
+		style = text.StyleItalic
+		ital = 1
+	}
+	if entry.FaceSource.Metadata().Style == style {
+		return 0
+	}
+	tmpVariationAxes = entry.FaceSource.AppendVariationAxes(tmpVariationAxes)
+	defer func() {
+		tmpVariationAxes = slices.Delete(tmpVariationAxes, 0, len(tmpVariationAxes))
+	}()
+	for _, axis := range tmpVariationAxes {
+		if axis.Tag == TagItal && axis.Min <= ital && ital <= axis.Max {
+			return 0
+		}
+	}
+	return 1
 }
 
 var tmpVariationAxes []text.VariationAxis

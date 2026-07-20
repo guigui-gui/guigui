@@ -416,6 +416,20 @@ func (t *Text) UnsetWeightInRange(startInBytes, endInBytes int) {
 	t.core.UnsetVariationInRange(startInBytes, endInBytes, font.TagWght)
 }
 
+// SetItalicInRange overrides the italic face selection in
+// [startInBytes, endInBytes). The override lasts until the value changes.
+// When the font family has no italic face, the range renders with a regular
+// face.
+func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
+	t.core.SetItalicInRange(startInBytes, endInBytes, italic)
+}
+
+// UnsetItalicInRange removes the italic face selection override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
+	t.core.UnsetItalicInRange(startInBytes, endInBytes)
+}
+
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).
 // The override lasts until the value changes. A nil color selects the
 // default color.
