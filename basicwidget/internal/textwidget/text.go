@@ -54,6 +54,17 @@ type Text struct {
 	styleRuns                textstyle.Runs
 	styleRunsValidGeneration int64
 
+	// faceRunsBuf is the reusable buffer for [Text.appendFaceRunsForStyle]
+	// results; each user clears it with a deferred slices.Delete. During
+	// [Text.Draw], drawOptions.Style.FaceRuns borrows the same slice and is
+	// reset to nil by the deferred cleanup, so the buffer has a single owner.
+	faceRunsBuf []textutil.FaceRun
+
+	// lastMetricStyleRunsFingerprint is the metric style overrides'
+	// fingerprint at the last size measurement, so cached sizes reset when
+	// a metric override changes.
+	lastMetricStyleRunsFingerprint uint64
+
 	selectable                  bool
 	editable                    bool
 	multiline                   bool
@@ -229,7 +240,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteUint64(t.fontFamilyID())
 	ch := t.contentHashForStateKey()
 	_, _ = w.Write(ch[:])
-	t.writeStyleRunsStateKey(w)
+	t.ensureStyleRuns().WriteStateKey(w)
 }
 
 func (t *Text) resetCachedTextSize() {

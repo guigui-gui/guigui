@@ -272,19 +272,7 @@ func (t *TextsModel) SetEllipsis(ellipsis bool) {
 }
 
 type RichTextsModel struct {
-	bold       bool
 	selectable bool
-}
-
-// TODO: Replace the whole-text bold toggle with partial bold ranges in the
-// sample text once ranged font weights are implemented. The toggle itself
-// will likely be removed then.
-func (r *RichTextsModel) Bold() bool {
-	return r.bold
-}
-
-func (r *RichTextsModel) SetBold(bold bool) {
-	r.bold = bold
 }
 
 func (r *RichTextsModel) Selectable() bool {

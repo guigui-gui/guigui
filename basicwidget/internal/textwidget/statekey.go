@@ -18,10 +18,10 @@ func writeColor(w *guigui.StateKeyWriter, c color.Color) {
 	}
 	w.WriteBool(true)
 	r, g, b, a := c.RGBA()
-	w.WriteUint32(r)
-	w.WriteUint32(g)
-	w.WriteUint32(b)
-	w.WriteUint32(a)
+	w.WriteUint16(uint16(r))
+	w.WriteUint16(uint16(g))
+	w.WriteUint16(uint16(b))
+	w.WriteUint16(uint16(a))
 }
 
 // writePadding writes a guigui.Padding into w.

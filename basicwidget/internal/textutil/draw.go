@@ -177,15 +177,17 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		theVisualLinesBuffer = slices.Delete(theVisualLinesBuffer, 0, len(theVisualLinesBuffer))
 	}()
 	var built bool
-	if options.WrapMode != WrapModeNone {
+	// The layout cache is keyed by a single face, so text with face runs
+	// wraps through the run-aware closure instead.
+	if options.WrapMode != WrapModeNone && len(options.FaceRuns) == 0 {
 		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
 			theVisualLinesBuffer = vls
 			built = true
 		}
 	}
 	if !built {
-		for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, indexInBytes int) float64 {
-			return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
+		for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+			return advanceWithFaces(str, strStartInBytes, endIndexInBytes, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace)
 		}) {
 			theVisualLinesBuffer = append(theVisualLinesBuffer, vl)
 		}
@@ -277,21 +279,24 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		// contentLen is the length of the drawn prefix whose bytes keep their
 		// original offsets; an appended ellipsis is excluded.
 		contentLen := len(vlStr)
-		if options.EllipsisString != "" && advance(vlStr, len(vlStr), options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace) > float64(layoutWidth) {
-			vlStr = truncateWithEllipsis(vlStr, options.EllipsisString, float64(layoutWidth), options.Face.TextFace(), options.TabWidth)
+		if options.EllipsisString != "" && advanceWithFaces(vlStr, start, len(vlStr), options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace) > float64(layoutWidth) {
+			vlStr = truncateWithEllipsis(vlStr, start, options.EllipsisString, float64(layoutWidth), options.Face, options.FaceRuns, options.TabWidth)
 			contentLen = len(vlStr) - len(options.EllipsisString)
 		}
-		var styled bool
-		for _, run := range lineRuns {
-			if run.Color != nil && run.Start < start+contentLen {
-				styled = true
-				break
+		mixedFaces := faceRunsIntersect(options.FaceRuns, start, start+contentLen)
+		styled := mixedFaces
+		if !styled {
+			for _, run := range lineRuns {
+				if run.Color != nil && run.Start < start+contentLen {
+					styled = true
+					break
+				}
 			}
 		}
 		switch {
 		case styled:
 			op.PrimaryAlign = text.AlignStart
-			x := oneLineLeft(layoutWidth, vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			x := oneLineLeft(layoutWidth, vlStr, start, &options.Style)
 			op.GeoM.Translate(x, 0)
 			drawStyledVisualLine(dst, vlStr, start, start+contentLen, lineRuns, options, op)
 		// Ebitengine's text.Draw does not handle tab characters, so lines
@@ -315,7 +320,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			text.Draw(dst, vlStr, options.Face.TextFace(), op)
 		default:
 			op.PrimaryAlign = text.AlignStart
-			x := oneLineLeft(layoutWidth, vlStr, options.Face.TextFace(), options.HorizontalAlign, options.TabWidth, options.KeepTailingSpace)
+			x := oneLineLeft(layoutWidth, vlStr, start, &options.Style)
 			op.GeoM.Translate(x, 0)
 			origVlStr := vlStr
 			var origX float64
@@ -403,69 +408,94 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	}
 }
 
-// drawStyledVisualLine draws vlStr, whose byte i sits at offset lineStart+i
-// of the drawn string, splitting at tab positions and at effective-color
-// boundaries so each segment is drawn in its run's color. runs holds the
-// style runs intersecting the line, sorted and disjoint. Bytes at or past
-// contentEnd (an appended ellipsis) use the base text color. op must be
-// positioned at the line's left origin, with [text.AlignStart].
-func drawStyledVisualLine(dst *ebiten.Image, vlStr string, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions, op *text.DrawOptions) {
-	face := options.Face.TextFace()
-	// colorAt returns the effective color at the absolute byte offset abs and
-	// the absolute offset at which the effective color may next change. It
-	// must be called with nondecreasing offsets: runIdx advances monotonically
-	// over runs, so a whole line costs one pass regardless of segment count.
-	var runIdx int
-	colorAt := func(abs int) (color.Color, int) {
-		if abs >= contentEnd {
-			return options.TextColor, math.MaxInt
-		}
-		for runIdx < len(runs) && runs[runIdx].End <= abs {
-			runIdx++
-		}
-		if runIdx >= len(runs) {
-			return options.TextColor, math.MaxInt
-		}
-		run := runs[runIdx]
-		if abs < run.Start {
-			return options.TextColor, min(run.Start, contentEnd)
-		}
-		clr := run.Color
-		if clr == nil {
-			clr = options.TextColor
-		}
-		return clr, min(run.End, contentEnd)
+// styleRunColorAt returns the effective color at textIndexInBytes, a byte
+// offset in the drawn string, and the exclusive offset at which the color
+// may next change ([math.MaxInt] when it no longer changes). runs must be
+// sorted by Start and disjoint. Bytes at or past contentEnd (an appended
+// ellipsis) use textColor.
+func styleRunColorAt(runs []StyleRun, textColor color.Color, contentEnd, textIndexInBytes int) (color.Color, int) {
+	if textIndexInBytes >= contentEnd {
+		return textColor, math.MaxInt
 	}
+	i, ok := slices.BinarySearchFunc(runs, textIndexInBytes, func(run StyleRun, textIndexInBytes int) int {
+		switch {
+		case run.End <= textIndexInBytes:
+			return -1
+		case run.Start > textIndexInBytes:
+			return 1
+		default:
+			return 0
+		}
+	})
+	if ok {
+		clr := runs[i].Color
+		if clr == nil {
+			clr = textColor
+		}
+		return clr, min(runs[i].End, contentEnd)
+	}
+	if i < len(runs) {
+		return textColor, min(runs[i].Start, contentEnd)
+	}
+	return textColor, math.MaxInt
+}
 
+// faceRunsIntersect reports whether any face run intersects [start, end).
+// faceRuns must be sorted by Start and disjoint.
+func faceRunsIntersect(faceRuns []FaceRun, start, end int) bool {
+	lo, _ := slices.BinarySearchFunc(faceRuns, start, func(run FaceRun, start int) int {
+		if run.End <= start {
+			return -1
+		}
+		return 1
+	})
+	return lo < len(faceRuns) && faceRuns[lo].Start < end
+}
+
+// drawStyledVisualLine draws vlStr, whose byte i sits at offset lineStart+i
+// of the drawn string, with runs holding the style runs intersecting the
+// line, sorted and disjoint. Bytes at or past contentEnd (an appended
+// ellipsis) use the base text color. op must be positioned at the line's
+// left origin, with [text.AlignStart].
+func drawStyledVisualLine(dst *ebiten.Image, vlStr string, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions, op *text.DrawOptions) {
 	origGeoM := op.GeoM
 	origColorScale := op.ColorScale
-	// origX and pos are the drawing origin set after the last tab: its x
-	// offset from the line's left, and its byte position in vlStr.
-	var origX float64
-	var pos int
+	var x float64
 	var i int
 	for i < len(vlStr) {
-		if vlStr[i] == '\t' {
-			x := origX + text.AdvanceAt(vlStr, i, face) - text.AdvanceAt(vlStr, pos, face)
-			nextX := nextIndentPosition(x, options.TabWidth)
-			op.GeoM.Translate(nextX-origX, 0)
-			origX = nextX
+		if options.TabWidth != 0 && vlStr[i] == '\t' {
+			x = nextIndentPosition(x, options.TabWidth)
 			i++
-			pos = i
 			continue
 		}
-		clr, changeAt := colorAt(lineStart + i)
-		next := min(changeAt-lineStart, len(vlStr))
-		if tabIdx := strings.IndexByte(vlStr[i:], '\t'); tabIdx >= 0 {
-			next = min(next, i+tabIdx)
+		// A tab- and face-delimited segment is measured standalone and placed
+		// at the cumulative x of the preceding segments, matching
+		// [advanceWithFaces]. Within it, color chunks are placed at
+		// prefix-advance offsets so the shaping context is preserved across
+		// color boundaries.
+		segFace, faceChange := faceAt(options.FaceRuns, options.Face, lineStart+i)
+		segEnd := min(faceChange-lineStart, len(vlStr))
+		if options.TabWidth != 0 {
+			if tabIdx := strings.IndexByte(vlStr[i:segEnd], '\t'); tabIdx >= 0 {
+				segEnd = i + tabIdx
+			}
 		}
-		geoM := op.GeoM
-		op.GeoM.Translate(text.AdvanceAt(vlStr, i, face)-text.AdvanceAt(vlStr, pos, face), 0)
-		op.ColorScale.Reset()
-		op.ColorScale.ScaleWithColor(clr)
-		text.Draw(dst, vlStr[i:next], face, op)
-		op.GeoM = geoM
-		i = next
+		seg := vlStr[i:segEnd]
+		face := segFace.TextFace()
+		var chunkStart int
+		for chunkStart < len(seg) {
+			clr, colorChange := styleRunColorAt(runs, options.TextColor, contentEnd, lineStart+i+chunkStart)
+			chunkEnd := min(colorChange-lineStart-i, len(seg))
+			geoM := op.GeoM
+			op.GeoM.Translate(x+text.AdvanceAt(seg, chunkStart, face), 0)
+			op.ColorScale.Reset()
+			op.ColorScale.ScaleWithColor(clr)
+			text.Draw(dst, seg[chunkStart:chunkEnd], face, op)
+			op.GeoM = geoM
+			chunkStart = chunkEnd
+		}
+		x += text.AdvanceAt(seg, len(seg), face)
+		i = segEnd
 	}
 	op.GeoM = origGeoM
 	op.ColorScale = origColorScale

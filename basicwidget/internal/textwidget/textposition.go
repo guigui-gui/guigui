@@ -5,6 +5,7 @@ package textwidget
 
 import (
 	"image"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -154,9 +155,14 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 
 	width := t.LayoutWidth(textContentBounds)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
+		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.style.hAlign,
 		VerticalAlign:    t.style.vAlign,
@@ -222,9 +228,14 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	}
 
 	width := t.LayoutWidth(textBounds)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
+		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.style.hAlign,
 		VerticalAlign:    t.style.vAlign,
@@ -333,9 +344,14 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	}
 
 	width := t.LayoutWidth(textBounds)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
+		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.style.hAlign,
 		VerticalAlign:    t.style.vAlign,

@@ -102,7 +102,7 @@ func TestTextIndexFromPositionLineOffsetsWordWrap(t *testing.T) {
 		PrecomputedLineByteOffsets: &l,
 	}
 
-	totalVL := textutil.MeasureHeight(narrowWidth, str, textutil.WrapModeNormal, face, lineHeight, 0, false) / lineHeight
+	totalVL := textutil.MeasureHeight(narrowWidth, str, textutil.WrapModeNormal, face, nil, lineHeight, 0, false) / lineHeight
 	for vl := 0; vl < int(totalVL)+1; vl++ {
 		for _, x := range []int{-10, 0, 30, 200} {
 			position := image.Pt(x, int(float64(vl)*lineHeight))
@@ -148,7 +148,7 @@ func TestTextIndexFromPositionHintParity(t *testing.T) {
 			}
 			precVL := precedingVisualLineCountFromString(tc.str, tc.width, tc.wrapMode, face, 0, false)
 
-			totalVL := int(textutil.MeasureHeight(tc.width, tc.str, tc.wrapMode, face, lineHeight, 0, false) / lineHeight)
+			totalVL := int(textutil.MeasureHeight(tc.width, tc.str, tc.wrapMode, face, nil, lineHeight, 0, false) / lineHeight)
 			for hint := 0; hint < n; hint++ {
 				params := &textutil.TextLayoutParams{
 					RenderingTextRange:         func(start, end int) string { return tc.str[start:end] },

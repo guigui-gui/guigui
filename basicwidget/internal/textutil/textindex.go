@@ -31,6 +31,11 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	if p.PrecomputedLineByteOffsets == nil {
 		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
 	}
+	// The per-logical-line fast path measures with a single face; text with
+	// face runs takes the whole-document fallback.
+	if len(p.Style.FaceRuns) > 0 {
+		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
+	}
 	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
 		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
@@ -200,8 +205,8 @@ func textIndexFromPositionInVisualLines(width int, position image.Point, vls ite
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
-	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
+	left := oneLineLeft(width, vlStr, pos, style)
+	pos += indexFromXInVisualLine(vlStr, pos, float64(position.X)-left, style)
 	return pos
 }
 
@@ -218,8 +223,8 @@ func textIndexFromPosition(width int, position image.Point, str string, style *S
 	var pos int
 	var vlStr string
 	var vlIndex int
-	for l := range visualLines(width, str, style.WrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
+	for l := range visualLines(width, str, style.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
@@ -230,7 +235,7 @@ func textIndexFromPosition(width int, position image.Point, str string, style *S
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, style.Face.TextFace(), style.HorizontalAlign, style.TabWidth, style.KeepTailingSpace)
-	pos += indexFromXInVisualLine(vlStr, float64(position.X)-left, style)
+	left := oneLineLeft(width, vlStr, pos, style)
+	pos += indexFromXInVisualLine(vlStr, pos, float64(position.X)-left, style)
 	return pos
 }

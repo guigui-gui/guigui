@@ -27,9 +27,12 @@ func nextIndentPosition(position float64, indentWidth float64) float64 {
 	return float64(int(position/indentWidth)+1) * indentWidth
 }
 
-func advance(str string, indexInBytes int, face text.Face, tabWidth float64, keepTailingSpace bool) float64 {
-	end := indexInBytes
-	var hasLineBreak bool
+// measuredPrefixEnd returns the exclusive end of the part of
+// str[:endIndexInBytes] that is measured with the font: trailing spaces are
+// excluded unless keepTailingSpace, in which case only a trailing line break
+// is excluded and reported as hasLineBreak.
+func measuredPrefixEnd(str string, endIndexInBytes int, keepTailingSpace bool) (end int, hasLineBreak bool) {
+	end = endIndexInBytes
 	if !keepTailingSpace {
 		for end > 0 {
 			r, s := utf8.DecodeLastRuneInString(str[:end])
@@ -38,10 +41,16 @@ func advance(str string, indexInBytes int, face text.Face, tabWidth float64, kee
 			}
 			end -= s
 		}
-	} else if l := tailingLineBreakLen(str[:end]); l > 0 {
-		end -= l
-		hasLineBreak = true
+		return end, false
 	}
+	if l := tailingLineBreakLen(str[:end]); l > 0 {
+		return end - l, true
+	}
+	return end, false
+}
+
+func advance(str string, indexInBytes int, face text.Face, tabWidth float64, keepTailingSpace bool) float64 {
+	end, hasLineBreak := measuredPrefixEnd(str, indexInBytes, keepTailingSpace)
 	if tabWidth == 0 {
 		return text.AdvanceAt(str, end, face)
 	}
@@ -68,13 +77,15 @@ func advance(str string, indexInBytes int, face text.Face, tabWidth float64, kee
 // truncateWithEllipsis truncates str so that str + ellipsis fits within maxWidth.
 // The truncation is done at grapheme cluster boundaries.
 // If ellipsis itself is wider than maxWidth, the ellipsis string is returned as-is.
-func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face text.Face, tabWidth float64) string {
-	if advance(str, len(str), face, tabWidth, false) <= maxWidth {
+// strStartInBytes is the byte offset of str's start in the text that
+// faceRuns' offsets index; the ellipsis is measured with face.
+func truncateWithEllipsis(str string, strStartInBytes int, ellipsis string, maxWidth float64, face font.Face, faceRuns []FaceRun, tabWidth float64) string {
+	if advanceWithFaces(str, strStartInBytes, len(str), face, faceRuns, tabWidth, false) <= maxWidth {
 		return str
 	}
 
 	// Find the longest prefix of str that fits within maxWidth - ellipsisWidth.
-	ellipsisWidth := advance(ellipsis, len(ellipsis), face, tabWidth, false)
+	ellipsisWidth := advance(ellipsis, len(ellipsis), face.TextFace(), tabWidth, false)
 	targetWidth := maxWidth - ellipsisWidth
 	if targetWidth <= 0 {
 		return ellipsis
@@ -83,7 +94,7 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 	str = sanitizedForCache(str)
 	var lastFittingEnd int
 	for end := range theSegmentCache.graphemeBoundaries(str) {
-		if advance(str, end, face, tabWidth, false) > targetWidth {
+		if advanceWithFaces(str, strStartInBytes, end, face, faceRuns, tabWidth, false) > targetWidth {
 			break
 		}
 		lastFittingEnd = end
@@ -93,8 +104,14 @@ func truncateWithEllipsis(str string, ellipsis string, maxWidth float64, face te
 }
 
 type Style struct {
-	WrapMode         WrapMode
-	Face             font.Face
+	WrapMode WrapMode
+	Face     font.Face
+
+	// FaceRuns overrides Face for byte ranges of the laid-out text, sorted
+	// by Start and disjoint. An empty slice measures and draws the whole
+	// text with Face.
+	FaceRuns []FaceRun
+
 	LineHeight       float64
 	HorizontalAlign  HorizontalAlign
 	VerticalAlign    VerticalAlign
@@ -243,8 +260,25 @@ var theCachedGlyphs []text.LazyGlyph
 
 // indexFromXInVisualLine returns the byte index within vlStr at the cluster
 // boundary nearest target, where target is the click X measured from the
-// visual line's left edge.
-func indexFromXInVisualLine(vlStr string, target float64, style *Style) int {
+// visual line's left edge. vlStrStartInBytes is the byte offset of vlStr's
+// start in the text that the face runs' offsets index.
+func indexFromXInVisualLine(vlStr string, vlStrStartInBytes int, target float64, style *Style) int {
+	if len(style.FaceRuns) > 0 {
+		// Mixed faces: resolve by grapheme-cluster advances, matching how
+		// mixed-face text is measured and drawn.
+		var prevEnd int
+		var prevA float64
+		for end := range theSegmentCache.graphemeBoundaries(sanitizedForCache(vlStr)) {
+			a := advanceWithFaces(vlStr, vlStrStartInBytes, end, style.Face, style.FaceRuns, style.TabWidth, true)
+			if target < prevA+(a-prevA)/2 {
+				return prevEnd
+			}
+			prevEnd = end
+			prevA = a
+		}
+		return len(vlStr) - tailingLineBreakLen(vlStr)
+	}
+
 	theCachedGlyphs = appendVisibleGlyphs(theCachedGlyphs[:0], vlStr, style.Face.TextFace(), style.TabWidth)
 	// Drop imager refs on exit so the pooled slice doesn't pin face state.
 	defer func() {
@@ -293,12 +327,14 @@ func init() {
 // width. For [WrapModeNormal] and [WrapModeAnywhere], hard-break-delimited
 // segments may further split at width-based wrap opportunities — at Unicode
 // line break opportunities for the former, at any grapheme cluster boundary
-// for the latter.
-func visualLines(width int, str string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[visualLine] {
+// for the latter. The advance callback returns the advance of the candidate
+// substring's prefix ending at endIndexInBytes; strStartInBytes is the
+// substring's byte offset within str.
+func visualLines(width int, str string, wrapMode WrapMode, advance func(str string, strStartInBytes, endIndexInBytes int) float64) iter.Seq[visualLine] {
 	// Fast path: single visual line that fits within width.
 	// Returns a cached iter.Seq to avoid closure allocation.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, len(str)) <= float64(width) {
+		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, 0, len(str)) <= float64(width) {
 			theCachedSingleVisualLineSeq.visualLine = visualLine{pos: 0, str: str}
 			return theCachedSingleVisualLineSeq.seq
 		}
@@ -343,7 +379,7 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 				if lineEnd-lineStart > 0 {
 					candidate := origStr[lineStart : lineEnd+len(segment)]
 					// TODO: Consider a line alignment and/or editable/selectable states when calculating the width.
-					if advance(candidate, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
+					if advance(candidate, lineStart, len(candidate)-tailingLineBreakLen(candidate)) > float64(width) {
 						if !yield(visualLine{
 							pos: pos,
 							str: origStr[lineStart:lineEnd],
@@ -407,20 +443,23 @@ func visualLines(width int, str string, wrapMode WrapMode, advance func(str stri
 	}
 }
 
-func oneLineLeft(width int, vlStr string, face text.Face, hAlign HorizontalAlign, tabWidth float64, keepTailingSpace bool) float64 {
-	switch hAlign {
+// oneLineLeft returns the left x of the visual line vlStr under style's
+// horizontal alignment. vlStrStartInBytes is the byte offset of vlStr's
+// start in the text that the face runs' offsets index.
+func oneLineLeft(width int, vlStr string, vlStrStartInBytes int, style *Style) float64 {
+	switch style.HorizontalAlign {
 	case HorizontalAlignStart, HorizontalAlignLeft:
 		// For RTL languages, HorizontalAlignStart should be the same as HorizontalAlignRight.
 		return 0
 	case HorizontalAlignCenter:
-		w := advance(vlStr, len(vlStr)-tailingLineBreakLen(vlStr), face, tabWidth, keepTailingSpace)
+		w := advanceWithFaces(vlStr, vlStrStartInBytes, len(vlStr)-tailingLineBreakLen(vlStr), style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 		return (float64(width) - w) / 2
 	case HorizontalAlignEnd, HorizontalAlignRight:
 		// For RTL languages, HorizontalAlignEnd should be the same as HorizontalAlignLeft.
-		w := advance(vlStr, len(vlStr)-tailingLineBreakLen(vlStr), face, tabWidth, keepTailingSpace)
+		w := advanceWithFaces(vlStr, vlStrStartInBytes, len(vlStr)-tailingLineBreakLen(vlStr), style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 		return float64(width) - w
 	default:
-		panic(fmt.Sprintf("textutil: invalid HorizontalAlign: %d", hAlign))
+		panic(fmt.Sprintf("textutil: invalid HorizontalAlign: %d", style.HorizontalAlign))
 	}
 }
 
@@ -623,18 +662,18 @@ func TrimPartialUTF8Suffix(s string) string {
 
 // visualLineCount returns the number of visual lines str produces at the
 // given width.
-func visualLineCount(width int, str string, wrapMode WrapMode, face text.Face, tabWidth float64, keepTailingSpace bool) int {
+func visualLineCount(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, tabWidth float64, keepTailingSpace bool) int {
 	// Fast path: single visual line that fits within width.
 	// This avoids allocating a closure for the advance function.
 	if p, _ := FirstLineBreakPositionAndLen(str); p == -1 {
-		if wrapMode == WrapModeNone || width == math.MaxInt || advance(str, len(str), face, tabWidth, keepTailingSpace) <= float64(width) {
+		if wrapMode == WrapModeNone || width == math.MaxInt || advanceWithFaces(str, 0, len(str), face, faceRuns, tabWidth, keepTailingSpace) <= float64(width) {
 			return 1
 		}
 	}
 
 	var count int
-	for range visualLines(width, str, wrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, face, tabWidth, keepTailingSpace)
+	for range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
 	}) {
 		count++
 	}
@@ -645,23 +684,23 @@ func visualLineCount(width int, str string, wrapMode WrapMode, face text.Face, t
 // need to be computed, this avoids per-visual-line shaping calls and is
 // dramatically cheaper for very long text (e.g. a multi-megabyte editor
 // buffer).
-func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(visualLineCount(width, str, wrapMode, face.TextFace(), tabWidth, keepTailingSpace))
+func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
+	return lineHeight * float64(visualLineCount(width, str, wrapMode, face, faceRuns, tabWidth, keepTailingSpace))
 }
 
-func Measure(width int, str string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range visualLines(width, str, wrapMode, func(str string, indexInBytes int) float64 {
-		return advance(str, indexInBytes, face.TextFace(), tabWidth, keepTailingSpace)
+	for l := range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
 	}) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
 		}
-		vlWidth := advance(vlStr, len(vlStr), face.TextFace(), tabWidth, keepTailingSpace)
+		vlWidth := advanceWithFaces(vlStr, l.pos, len(vlStr), face, faceRuns, tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
-			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face.TextFace(), tabWidth)
-			vlWidth = advance(vlStr, len(vlStr), face.TextFace(), tabWidth, false)
+			vlStr = truncateWithEllipsis(vlStr, l.pos, ellipsisString, float64(width), face, faceRuns, tabWidth)
+			vlWidth = advanceWithFaces(vlStr, l.pos, len(vlStr), face, faceRuns, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
@@ -682,11 +721,11 @@ func textPositionYOffset(size image.Point, str string, style *Style) float64 {
 	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face.TextFace(), style.TabWidth, style.KeepTailingSpace)
+		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 		textHeight := style.LineHeight * float64(c)
 		yOffset += float64(size.Y) - textHeight
 	}

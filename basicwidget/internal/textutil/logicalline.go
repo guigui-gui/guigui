@@ -394,7 +394,7 @@ func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face f
 		}
 		vlWidth := advance(vlStr, len(vlStr), face.TextFace(), tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
-			vlStr = truncateWithEllipsis(vlStr, ellipsisString, float64(width), face.TextFace(), tabWidth)
+			vlStr = truncateWithEllipsis(vlStr, 0, ellipsisString, float64(width), face, nil, tabWidth)
 			vlWidth = advance(vlStr, len(vlStr), face.TextFace(), tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)

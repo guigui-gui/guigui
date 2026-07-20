@@ -65,7 +65,7 @@ func TestMeasureLogicalLineHeightParity(t *testing.T) {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
 
-				whole := textutil.MeasureHeight(width, tc.str, wrapMode, face, lineHeight, 0, false)
+				whole := textutil.MeasureHeight(width, tc.str, wrapMode, face, nil, lineHeight, 0, false)
 
 				var sum float64
 				for _, line := range logicalLineSlices(tc.str) {
@@ -98,7 +98,7 @@ func TestMeasureLogicalLineParity(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			const width = math.MaxInt
-			wholeW, wholeH := textutil.Measure(width, tc.str, textutil.WrapModeNone, face, lineHeight, 0, false, "")
+			wholeW, wholeH := textutil.Measure(width, tc.str, textutil.WrapModeNone, face, nil, lineHeight, 0, false, "")
 
 			var maxW, sumH float64
 			for _, line := range logicalLineSlices(tc.str) {
@@ -171,8 +171,8 @@ func TestCachedVisualLineMaxCaretXExcludesBreakSpace(t *testing.T) {
 
 	// Pick a width that fits "aaa" but not "aaa ", so the break space hangs
 	// past the wrapping width.
-	wordW, _ := textutil.Measure(math.MaxInt, "aaa", textutil.WrapModeNone, face, lineHeight, 0, false, "")
-	wordSpaceW, _ := textutil.Measure(math.MaxInt, "aaa ", textutil.WrapModeNone, face, lineHeight, 0, true, "")
+	wordW, _ := textutil.Measure(math.MaxInt, "aaa", textutil.WrapModeNone, face, nil, lineHeight, 0, false, "")
+	wordSpaceW, _ := textutil.Measure(math.MaxInt, "aaa ", textutil.WrapModeNone, face, nil, lineHeight, 0, true, "")
 	width := int((wordW + wordSpaceW) / 2)
 	if float64(width) < wordW || wordSpaceW <= float64(width) {
 		t.Fatalf("test setup: width %d must satisfy %v <= width < %v", width, wordW, wordSpaceW)
@@ -252,7 +252,7 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 	}
 
 	// Parity with the whole-document MeasureHeight on the same single line.
-	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeNormal, face, lineHeight, 0, false)
+	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, lineHeight, 0, false)
 	if h != whole {
 		t.Errorf("WrapModeNormal MeasureLogicalLineHeight = %v, MeasureHeight whole = %v", h, whole)
 	}
@@ -406,7 +406,7 @@ func TestLinesInLogicalLineNoTrailingEmpty(t *testing.T) {
 		t.Errorf("MeasureLogicalLineHeight(\"\") = %v, want %v", got, want)
 	}
 	// Whole-document: "abc\n" yields 2 visual sublines (incl. trailing empty).
-	if got, want := textutil.MeasureHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, lineHeight, 0, false), 2*lineHeight; got != want {
+	if got, want := textutil.MeasureHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, lineHeight, 0, false), 2*lineHeight; got != want {
 		t.Errorf("MeasureHeight(\"abc\\n\") = %v, want %v", got, want)
 	}
 }

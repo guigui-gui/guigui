@@ -4,7 +4,11 @@
 package textwidget
 
 import (
+	"encoding/binary"
+	"hash"
+	"hash/fnv"
 	"image/color"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
@@ -187,27 +191,121 @@ func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().Reset(startInBytes, endInBytes)
 }
 
-// writeStyleRunsStateKey writes the ranged style overrides into the state
-// key.
-func (t *Text) writeStyleRunsStateKey(w *guigui.StateKeyWriter) {
-	for run := range t.ensureStyleRuns().All() {
-		w.WriteInt(run.Start)
-		w.WriteInt(run.End)
-		clr, ok := run.Style.Color()
-		w.WriteBool(ok)
-		if ok {
-			writeColor(w, clr)
-		}
-		clr, ok = run.Style.BackgroundColor()
-		w.WriteBool(ok)
-		if ok {
-			writeColor(w, clr)
-		}
-		underline, ok := run.Style.Underline()
-		w.WriteBool(ok)
-		w.WriteBool(underline)
-		strikethrough, ok := run.Style.Strikethrough()
-		w.WriteBool(ok)
-		w.WriteBool(strikethrough)
+// SetVariationInRange overrides the OpenType variation axis tag in
+// [startInBytes, endInBytes) with value. The override lasts until the value
+// changes.
+func (t *Text) SetVariationInRange(startInBytes, endInBytes int, tag text.Tag, value float32) {
+	t.ensureStyleRuns().SetVariation(startInBytes, endInBytes, tag, value)
+}
+
+// UnsetVariationInRange removes the override of the OpenType variation axis
+// tag in [startInBytes, endInBytes).
+func (t *Text) UnsetVariationInRange(startInBytes, endInBytes int, tag text.Tag) {
+	t.ensureStyleRuns().UnsetVariation(startInBytes, endInBytes, tag)
+}
+
+// SetFeatureInRange overrides the OpenType feature tag in
+// [startInBytes, endInBytes) with value. The override lasts until the value
+// changes.
+func (t *Text) SetFeatureInRange(startInBytes, endInBytes int, tag text.Tag, value uint32) {
+	t.ensureStyleRuns().SetFeature(startInBytes, endInBytes, tag, value)
+}
+
+// UnsetFeatureInRange removes the override of the OpenType feature tag in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
+	t.ensureStyleRuns().UnsetFeature(startInBytes, endInBytes, tag)
+}
+
+// hasMetricStyleRuns reports whether any ranged style override affects glyph
+// metrics (currently the variation axes and feature settings).
+func (t *Text) hasMetricStyleRuns() bool {
+	return t.ensureStyleRuns().HasMetricProperties()
+}
+
+// metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for
+// fingerprinting the metric style properties.
+type metricHashWriter struct {
+	h   hash.Hash64
+	buf [8]byte
+}
+
+func (w *metricHashWriter) writeUint64(v uint64) {
+	binary.LittleEndian.PutUint64(w.buf[:], v)
+	_, _ = w.h.Write(w.buf[:])
+}
+
+func (w *metricHashWriter) WriteBool(v bool) {
+	if v {
+		w.writeUint64(1)
+	} else {
+		w.writeUint64(0)
 	}
+}
+
+func (w *metricHashWriter) WriteInt(v int) {
+	w.writeUint64(uint64(v))
+}
+
+func (w *metricHashWriter) WriteUint16(v uint16) {
+	w.writeUint64(uint64(v))
+}
+
+func (w *metricHashWriter) WriteUint32(v uint32) {
+	w.writeUint64(uint64(v))
+}
+
+func (w *metricHashWriter) WriteFloat64(v float64) {
+	w.writeUint64(math.Float64bits(v))
+}
+
+// metricStyleRunsFingerprint fingerprints the metric properties of the
+// ranged style overrides.
+func (t *Text) metricStyleRunsFingerprint() uint64 {
+	h := fnv.New64a()
+	w := metricHashWriter{h: h}
+	t.ensureStyleRuns().WriteMetricStateKey(&w)
+	return h.Sum64()
+}
+
+// invalidateSizeCacheForMetricStyleRuns resets the cached text sizes when
+// the metric style overrides have changed since the last measurement.
+func (t *Text) invalidateSizeCacheForMetricStyleRuns() {
+	if fp := t.metricStyleRunsFingerprint(); fp != t.lastMetricStyleRunsFingerprint {
+		t.lastMetricStyleRunsFingerprint = fp
+		t.resetCachedTextSize()
+	}
+}
+
+// appendFaceRunsForStyle appends the face runs derived from the ranged style
+// overrides' metric properties to runs and returns the extended slice, with
+// byte offsets into the committed text. Masked values and values with an
+// active IME composition append no face runs.
+func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.Context, forceBold bool) []textutil.FaceRun {
+	if t.masking() {
+		return runs
+	}
+	if t.store.UncommittedTextLengthInBytes() > 0 {
+		return runs
+	}
+	for run := range t.ensureStyleRuns().All() {
+		variations := run.Style.Variations()
+		features := run.Style.Features()
+		if len(variations) == 0 && len(features) == 0 {
+			continue
+		}
+		attrs := t.faceAttributes(forceBold)
+		for _, v := range variations {
+			attrs = attrs.WithVariation(v.Tag, v.Value)
+		}
+		for _, f := range features {
+			attrs = attrs.WithFeature(f.Tag, f.Value)
+		}
+		runs = append(runs, textutil.FaceRun{
+			Start: run.Start,
+			End:   run.End,
+			Face:  font.NewFace(context, t.style.fontFamily, attrs),
+		})
+	}
+	return runs
 }

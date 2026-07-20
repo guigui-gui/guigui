@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
@@ -400,6 +401,21 @@ func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 
 func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
+}
+
+var tagWght = text.MustParseTag("wght")
+
+// SetWeightInRange overrides the font weight in [startInBytes, endInBytes)
+// by setting the wght variation axis. The override lasts until the value
+// changes.
+func (t *Text) SetWeightInRange(startInBytes, endInBytes int, weight text.Weight) {
+	t.core.SetVariationInRange(startInBytes, endInBytes, tagWght, float32(weight))
+}
+
+// UnsetWeightInRange removes the font weight override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetWeightInRange(startInBytes, endInBytes int) {
+	t.core.UnsetVariationInRange(startInBytes, endInBytes, tagWght)
 }
 
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).

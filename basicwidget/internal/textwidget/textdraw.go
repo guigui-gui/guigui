@@ -55,6 +55,12 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		return materializeFull(), 0, 0, false
 	}
 
+	// The viewport walker measures with a single face; text with metric
+	// style overrides draws unrestricted.
+	if t.hasMetricStyleRuns() {
+		return materializeFull(), 0, 0, false
+	}
+
 	width := t.LayoutWidth(textBounds)
 
 	var compInfo textutil.CompositionInfo
@@ -242,6 +248,12 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	op := &t.drawOptions
 	op.Style.WrapMode = t.wrapMode
 	op.Style.Face = face
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	op.Style.FaceRuns = t.faceRunsBuf
+	defer func() {
+		op.Style.FaceRuns = nil
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	op.Style.LineHeight = t.LineHeight()
 	op.Style.HorizontalAlign = t.style.hAlign
 	op.Style.VerticalAlign = t.style.vAlign
@@ -387,5 +399,6 @@ func (t *Text) DrawPlainString(context *guigui.Context, widgetBounds *guigui.Wid
 	op.DrawSelection = false
 	op.DrawComposition = false
 	op.StyleRuns = slices.Delete(op.StyleRuns, 0, len(op.StyleRuns))
+	op.Style.FaceRuns = nil
 	textutil.Draw(textBounds, dst, str, op)
 }

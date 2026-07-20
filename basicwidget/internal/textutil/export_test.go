@@ -15,9 +15,11 @@ type VisualLine struct {
 	Str string
 }
 
-func VisualLines(width int, str string, wrapMode WrapMode, advance func(str string, indexInBytes int) float64) iter.Seq[VisualLine] {
+func VisualLines(width int, str string, wrapMode WrapMode, advance func(str string, endIndexInBytes int) float64) iter.Seq[VisualLine] {
 	return func(yield func(VisualLine) bool) {
-		for l := range visualLines(width, str, wrapMode, advance) {
+		for l := range visualLines(width, str, wrapMode, func(str string, _, endIndexInBytes int) float64 {
+			return advance(str, endIndexInBytes)
+		}) {
 			if !yield(VisualLine{
 				Pos: l.pos,
 				Str: l.str,
@@ -153,4 +155,12 @@ func (s *SegmentCacheForTest) SoftLineBreakBoundariesNested(outer, inner string)
 		innerOffsets = slices.Collect(s.c.softLineBreakBoundaries(inner))
 	}
 	return outerOffsets, innerOffsets
+}
+
+func AdvanceWithFaces(str string, strStartInBytes, endIndexInBytes int, face font.Face, faceRuns []FaceRun, tabWidth float64, keepTailingSpace bool) float64 {
+	return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
+}
+
+func FaceAt(faceRuns []FaceRun, def font.Face, offset int) (font.Face, int) {
+	return faceAt(faceRuns, def, offset)
 }

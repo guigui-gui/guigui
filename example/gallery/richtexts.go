@@ -8,11 +8,13 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
-const richTextsSampleText = "Colored, highlighted, underlined, and struck-through ranges.\n" +
+const richTextsSampleText = "Colored, highlighted, underlined, struck-through, and bold ranges.\n" +
 	"Combined styles apply to a single range.\n" +
 	"A sufficiently long styled range continues across the visual line boundary when the text wraps, keeping its background and underline on every visual line it covers.\n" +
 	"日本語のテキストにも下線と背景を適用できます。"
@@ -21,8 +23,6 @@ type RichTexts struct {
 	guigui.DefaultWidget
 
 	form             basicwidget.Form
-	boldText         basicwidget.Text
-	boldToggle       basicwidget.Toggle
 	selectableText   basicwidget.Text
 	selectableToggle basicwidget.Toggle
 	sampleText       basicwidget.Text
@@ -48,12 +48,6 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	}
 	model := v.(*Model)
 
-	r.boldText.SetValue("Bold")
-	r.boldToggle.OnValueChanged(func(context *guigui.Context, value bool) {
-		model.RichTexts().SetBold(value)
-	})
-	r.boldToggle.SetValue(model.RichTexts().Bold())
-
 	r.selectableText.SetValue("Selectable")
 	r.selectableToggle.OnValueChanged(func(context *guigui.Context, value bool) {
 		model.RichTexts().SetSelectable(value)
@@ -61,10 +55,6 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	r.selectableToggle.SetValue(model.RichTexts().Selectable())
 
 	r.form.SetItems([]basicwidget.FormItem{
-		{
-			PrimaryWidget:   &r.boldText,
-			SecondaryWidget: &r.boldToggle,
-		},
 		{
 			PrimaryWidget:   &r.selectableText,
 			SecondaryWidget: &r.selectableToggle,
@@ -79,7 +69,6 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t := &r.sampleText
 	t.SetMultiline(true)
 	t.SetWrapMode(basicwidget.WrapModeNormal)
-	t.SetBold(model.RichTexts().Bold())
 	t.SetSelectable(model.RichTexts().Selectable())
 	t.SetValue(richTextsSampleText)
 	styleRichTextsSampleRange("Colored", func(start, end int) {
@@ -94,10 +83,14 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	styleRichTextsSampleRange("struck-through", func(start, end int) {
 		t.SetStrikethroughInRange(start, end, true)
 	})
+	styleRichTextsSampleRange("bold", func(start, end int) {
+		t.SetWeightInRange(start, end, text.WeightBold)
+	})
 	styleRichTextsSampleRange("Combined styles", func(start, end int) {
 		t.SetColorInRange(start, end, blue)
 		t.SetBackgroundColorInRange(start, end, green)
 		t.SetUnderlineInRange(start, end, true)
+		t.SetWeightInRange(start, end, text.WeightBold)
 	})
 	styleRichTextsSampleRange("continues across the visual line boundary when the text wraps, keeping its background and underline", func(start, end int) {
 		t.SetColorInRange(start, end, blue)

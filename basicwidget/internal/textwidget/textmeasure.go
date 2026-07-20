@@ -6,6 +6,7 @@ package textwidget
 import (
 	"image"
 	"math"
+	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
@@ -68,6 +69,7 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 	}
 
 	bold := t.style.bold
+	t.invalidateSizeCacheForMetricStyleRuns()
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
 	if h, ok := t.sizeCache.height(key, constraintWidth); ok {
@@ -83,7 +85,11 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 		// or straddles a logical-line boundary — the rendering text's
 		// logical-line shape doesn't match the committed-text logical-line offsets.
 		txt := t.textToDraw(context, true)
-		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), lineH, t.actualTabWidth(context), t.keepTailingSpace)
+		t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
+		defer func() {
+			t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+		}()
+		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), t.faceRunsBuf, lineH, t.actualTabWidth(context), t.keepTailingSpace)
 		hi = int(math.Ceil(h))
 	}
 
@@ -106,6 +112,10 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 // rendering bytes for the composition's selection line) so no full-
 // document materialization is needed.
 func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int, bold bool) (int, bool) {
+	if t.hasMetricStyleRuns() {
+		// The per-logical-line walk measures with a single face.
+		return 0, false
+	}
 	t.ensureLineByteOffsets()
 	n := t.contentCache.lineByteOffsets.LineCount()
 
@@ -176,6 +186,10 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 // when the composition's selection straddles logical lines; the caller
 // falls back to [textutil.Measure] on the full rendering text.
 func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bold bool, ellipsisString string) (float64, float64, bool) {
+	if t.hasMetricStyleRuns() {
+		// The per-logical-line walk measures with a single face.
+		return 0, 0, false
+	}
 	t.ensureLineByteOffsets()
 	n := t.contentCache.lineByteOffsets.LineCount()
 
@@ -233,7 +247,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		// A masked value is a single uniform line; measure it directly rather
 		// than through the cache, which is populated from the real text.
 		m := t.maskMappingForRendering(true)
-		w, h := textutil.Measure(math.MaxInt, m.maskStr, textutil.WrapModeNone, t.face(context, bold), t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, "")
+		w, h := textutil.Measure(math.MaxInt, m.maskStr, textutil.WrapModeNone, t.face(context, bold), nil, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, "")
 		return image.Pt(max(int(math.Ceil(w)), 1), int(math.Ceil(h)))
 	}
 
@@ -245,6 +259,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		constraintWidth = 1
 	}
 
+	t.invalidateSizeCacheForMetricStyleRuns()
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
 	width, hasWidth := t.sizeCache.width(key, constraintWidth)
@@ -264,7 +279,11 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		// Fallback when the composition contains a hard line break or
 		// straddles logical lines.
 		txt := t.textToDraw(context, true)
-		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
+		t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
+		defer func() {
+			t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+		}()
+		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), t.faceRunsBuf, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
 	}
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its caret is rendered.
 	// Force to set a positive number as the width.
