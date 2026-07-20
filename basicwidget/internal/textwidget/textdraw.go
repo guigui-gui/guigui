@@ -123,7 +123,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 	// and measures only lines from there downward. Other alignments
 	// need a totalHeight-based shift; the branch below computes that
 	// and walks from line 0.
-	if t.style.vAlign == textutil.VerticalAlignTop {
+	if t.baseStyle.vAlign == textutil.VerticalAlignTop {
 		readRendering := t.stringValueWithRange
 		if hasComp {
 			readRendering = t.stringValueForRenderingRange
@@ -159,7 +159,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 	// stays vAlign-agnostic and just walks from line 0 forward.
 	totalHeight := t.textHeight(context, guigui.FixedWidthConstraints(width))
 	var alignOffset int
-	switch t.style.vAlign {
+	switch t.baseStyle.vAlign {
 	case textutil.VerticalAlignMiddle:
 		alignOffset = (textBounds.Dy() - totalHeight) / 2
 	case textutil.VerticalAlignBottom:
@@ -255,8 +255,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
 	}()
 	op.Style.LineHeight = t.LineHeight()
-	op.Style.HorizontalAlign = t.style.hAlign
-	op.Style.VerticalAlign = t.style.vAlign
+	op.Style.HorizontalAlign = t.baseStyle.hAlign
+	op.Style.VerticalAlign = t.baseStyle.vAlign
 	op.Style.TabWidth = t.actualTabWidth(context)
 	op.Style.KeepTailingSpace = t.keepTailingSpace
 	op.LayoutWidth = t.LayoutWidth(textBounds)
@@ -265,14 +265,14 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	} else {
 		op.Style.EllipsisString = ""
 	}
-	op.TextColor = t.style.textColor
+	op.TextColor = t.baseStyle.textColor
 	op.VisibleBounds = widgetBounds.VisibleBounds()
 	if start, end, ok := t.selectionToDraw(context); ok {
 		if context.IsFocused(t) || (t.selectionVisibleWhenUnfocus && start != end) {
 			op.DrawSelection = true
 			op.SelectionStart = start
 			op.SelectionEnd = end
-			op.SelectionColor = t.style.selectionColor
+			op.SelectionColor = t.baseStyle.selectionColor
 		} else {
 			op.DrawSelection = false
 		}
@@ -283,8 +283,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		op.CompositionEnd = uEnd
 		op.CompositionActiveStart = cStart
 		op.CompositionActiveEnd = cEnd
-		op.InactiveCompositionColor = t.style.inactiveCompositionColor
-		op.ActiveCompositionColor = t.style.activeCompositionColor
+		op.InactiveCompositionColor = t.baseStyle.inactiveCompositionColor
+		op.ActiveCompositionColor = t.baseStyle.activeCompositionColor
 		op.CompositionBorderWidth = float32(textCaretWidth(context))
 	} else {
 		op.DrawComposition = false
@@ -384,8 +384,8 @@ func (t *Text) DrawPlainString(context *guigui.Context, widgetBounds *guigui.Wid
 	op.Style.WrapMode = t.wrapMode
 	op.Style.Face = t.face(context, false)
 	op.Style.LineHeight = t.LineHeight()
-	op.Style.HorizontalAlign = t.style.hAlign
-	op.Style.VerticalAlign = t.style.vAlign
+	op.Style.HorizontalAlign = t.baseStyle.hAlign
+	op.Style.VerticalAlign = t.baseStyle.vAlign
 	op.Style.TabWidth = t.actualTabWidth(context)
 	op.Style.KeepTailingSpace = t.keepTailingSpace
 	op.LayoutWidth = t.LayoutWidth(textBounds)

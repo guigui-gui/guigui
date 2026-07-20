@@ -164,8 +164,8 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		Face:             t.face(context, false),
 		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
-		HorizontalAlign:  t.style.hAlign,
-		VerticalAlign:    t.style.vAlign,
+		HorizontalAlign:  t.baseStyle.hAlign,
+		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 	}
@@ -237,8 +237,8 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		Face:             t.face(context, false),
 		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
-		HorizontalAlign:  t.style.hAlign,
-		VerticalAlign:    t.style.vAlign,
+		HorizontalAlign:  t.baseStyle.hAlign,
+		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 	}
@@ -353,8 +353,8 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		Face:             t.face(context, false),
 		FaceRuns:         t.faceRunsBuf,
 		LineHeight:       t.LineHeight(),
-		HorizontalAlign:  t.style.hAlign,
-		VerticalAlign:    t.style.vAlign,
+		HorizontalAlign:  t.baseStyle.hAlign,
+		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 	}

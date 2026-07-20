@@ -157,8 +157,8 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		fnt = t.fontFamily.f
 	}
 	t.core.SetFontFamily(fnt)
-	t.core.SetBaseFontSize(FontSize(context))
-	t.core.SetBaseLineHeight(float64(LineHeight(context)))
+	t.core.SetFontSize(FontSize(context))
+	t.core.SetLineHeight(float64(LineHeight(context)))
 
 	var lang language.Tag
 	if len(t.locales) > 0 {
@@ -345,8 +345,14 @@ func (t *Text) SetLocales(locales []language.Tag) {
 	t.cachedLocalesString = sb.String()
 }
 
+// SetBold renders the value in a bold weight by setting the wght variation
+// axis of the base style.
 func (t *Text) SetBold(bold bool) {
-	t.core.SetBold(bold)
+	if bold {
+		t.core.SetVariation(font.TagWght, float32(text.WeightBold))
+		return
+	}
+	t.core.UnsetVariation(font.TagWght)
 }
 
 // SetFontFamily sets the [FontFamily] used to render the Text. Passing nil
@@ -363,8 +369,14 @@ func (t *Text) fontFamilyID() uint64 {
 	return t.fontFamily.f.ID()
 }
 
+// SetTabular enables tabular figures by setting the tnum feature of the base
+// style.
 func (t *Text) SetTabular(tabular bool) {
-	t.core.SetTabular(tabular)
+	if tabular {
+		t.core.SetFeature(font.TagTnum, 1)
+		return
+	}
+	t.core.UnsetFeature(font.TagTnum)
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {
@@ -401,6 +413,32 @@ func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 
 func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
+}
+
+// SetVariationInRange overrides the OpenType variation axis tag in
+// [startInBytes, endInBytes) with value. The override lasts until the value
+// changes.
+func (t *Text) SetVariationInRange(startInBytes, endInBytes int, tag text.Tag, value float32) {
+	t.core.SetVariationInRange(startInBytes, endInBytes, tag, value)
+}
+
+// UnsetVariationInRange removes the override of the OpenType variation axis
+// tag in [startInBytes, endInBytes).
+func (t *Text) UnsetVariationInRange(startInBytes, endInBytes int, tag text.Tag) {
+	t.core.UnsetVariationInRange(startInBytes, endInBytes, tag)
+}
+
+// SetFeatureInRange overrides the OpenType feature tag in
+// [startInBytes, endInBytes) with value. The override lasts until the value
+// changes.
+func (t *Text) SetFeatureInRange(startInBytes, endInBytes int, tag text.Tag, value uint32) {
+	t.core.SetFeatureInRange(startInBytes, endInBytes, tag, value)
+}
+
+// UnsetFeatureInRange removes the override of the OpenType feature tag in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
+	t.core.UnsetFeatureInRange(startInBytes, endInBytes, tag)
 }
 
 // SetWeightInRange overrides the font weight in [startInBytes, endInBytes)

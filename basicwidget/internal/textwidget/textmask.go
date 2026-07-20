@@ -73,8 +73,8 @@ func (t *Text) maskStyle(context *guigui.Context) textutil.Style {
 		WrapMode:         textutil.WrapModeNone,
 		Face:             t.face(context, false),
 		LineHeight:       t.LineHeight(),
-		HorizontalAlign:  t.style.hAlign,
-		VerticalAlign:    t.style.vAlign,
+		HorizontalAlign:  t.baseStyle.hAlign,
+		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 	}

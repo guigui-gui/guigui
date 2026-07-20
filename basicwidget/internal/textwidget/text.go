@@ -46,7 +46,7 @@ type Text struct {
 	nextSelectAll bool
 	textInited    bool
 
-	style textStyle
+	baseStyle textStyle
 
 	// styleRuns holds the ranged style overrides, with byte offsets into the
 	// committed text. Cleared lazily by [Text.ensureStyleRuns] when
@@ -208,20 +208,28 @@ func (t *Text) ensureLineByteOffsets() {
 }
 
 func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
-	w.WriteUint64(uint64(t.style.hAlign))
-	w.WriteUint64(uint64(t.style.vAlign))
-	writeColor(w, t.style.textColor)
-	writeColor(w, t.style.selectionColor)
-	writeColor(w, t.style.inactiveCompositionColor)
-	writeColor(w, t.style.activeCompositionColor)
-	writeColor(w, t.style.caretColor)
-	w.WriteFloat64(t.style.scaleMinus1)
-	w.WriteBool(t.style.bold)
-	w.WriteBool(t.style.tabular)
-	w.WriteFloat64(t.style.tabWidth)
-	w.WriteFloat64(t.style.baseFontSize)
-	w.WriteFloat64(t.style.baseLineHeight)
-	w.WriteString(t.style.langString)
+	w.WriteUint64(uint64(t.baseStyle.hAlign))
+	w.WriteUint64(uint64(t.baseStyle.vAlign))
+	writeColor(w, t.baseStyle.textColor)
+	writeColor(w, t.baseStyle.selectionColor)
+	writeColor(w, t.baseStyle.inactiveCompositionColor)
+	writeColor(w, t.baseStyle.activeCompositionColor)
+	writeColor(w, t.baseStyle.caretColor)
+	w.WriteFloat64(t.baseStyle.scaleMinus1)
+	w.WriteInt(len(t.baseStyle.variations))
+	for _, v := range t.baseStyle.variations {
+		w.WriteUint32(uint32(v.Tag))
+		w.WriteFloat64(float64(v.Value))
+	}
+	w.WriteInt(len(t.baseStyle.features))
+	for _, f := range t.baseStyle.features {
+		w.WriteUint32(uint32(f.Tag))
+		w.WriteUint32(f.Value)
+	}
+	w.WriteFloat64(t.baseStyle.tabWidth)
+	w.WriteFloat64(t.baseStyle.fontSize)
+	w.WriteFloat64(t.baseStyle.lineHeight)
+	w.WriteString(t.baseStyle.langString)
 	w.WriteBool(t.selectable)
 	w.WriteBool(t.editable)
 	w.WriteBool(t.multiline)
@@ -607,25 +615,48 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	return true
 }
 
-func (t *Text) SetBold(bold bool) {
-	t.style.bold = bold
+// SetVariation sets the OpenType variation axis tag of the base style to
+// value. Ranged variation overrides apply on top.
+func (t *Text) SetVariation(tag text.Tag, value float32) {
+	t.baseStyle.variations = setTagged(t.baseStyle.variations, font.Variation{Tag: tag, Value: value}, func(v font.Variation) text.Tag {
+		return v.Tag
+	})
 }
 
-func (t *Text) SetTabular(tabular bool) {
-	t.style.tabular = tabular
+// UnsetVariation removes the OpenType variation axis tag from the base
+// style.
+func (t *Text) UnsetVariation(tag text.Tag) {
+	t.baseStyle.variations = removeTagged(t.baseStyle.variations, tag, func(v font.Variation) text.Tag {
+		return v.Tag
+	})
+}
+
+// SetFeature sets the OpenType feature tag of the base style to value.
+// Ranged feature overrides apply on top.
+func (t *Text) SetFeature(tag text.Tag, value uint32) {
+	t.baseStyle.features = setTagged(t.baseStyle.features, font.Feature{Tag: tag, Value: value}, func(f font.Feature) text.Tag {
+		return f.Tag
+	})
+}
+
+// UnsetFeature removes the OpenType feature tag from the base style.
+func (t *Text) UnsetFeature(tag text.Tag) {
+	t.baseStyle.features = removeTagged(t.baseStyle.features, tag, func(f font.Feature) text.Tag {
+		return f.Tag
+	})
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {
-	if t.style.tabWidth == tabWidth {
+	if t.baseStyle.tabWidth == tabWidth {
 		return
 	}
-	t.style.tabWidth = tabWidth
+	t.baseStyle.tabWidth = tabWidth
 	t.resetCachedTextSize()
 }
 
 func (t *Text) actualTabWidth(context *guigui.Context) float64 {
-	if t.style.tabWidth > 0 {
-		return t.style.tabWidth
+	if t.baseStyle.tabWidth > 0 {
+		return t.baseStyle.tabWidth
 	}
 	if t.sizeCache.defaultTabWidth > 0 {
 		return t.sizeCache.defaultTabWidth
@@ -636,29 +667,31 @@ func (t *Text) actualTabWidth(context *guigui.Context) float64 {
 	return t.sizeCache.defaultTabWidth
 }
 
-// Scale returns the text scale.
+// Scale returns the base text scale.
 func (t *Text) Scale() float64 {
-	return t.style.scale()
+	return t.baseStyle.scale()
 }
 
+// SetScale sets the base text scale, which ranged scale overrides
+// multiply.
 func (t *Text) SetScale(scale float64) {
-	t.style.scaleMinus1 = scale - 1
+	t.baseStyle.scaleMinus1 = scale - 1
 }
 
 func (t *Text) HorizontalAlign() textutil.HorizontalAlign {
-	return t.style.hAlign
+	return t.baseStyle.hAlign
 }
 
 func (t *Text) SetHorizontalAlign(align textutil.HorizontalAlign) {
-	t.style.hAlign = align
+	t.baseStyle.hAlign = align
 }
 
 func (t *Text) VerticalAlign() textutil.VerticalAlign {
-	return t.style.vAlign
+	return t.baseStyle.vAlign
 }
 
 func (t *Text) SetVerticalAlign(align textutil.VerticalAlign) {
-	t.style.vAlign = align
+	t.baseStyle.vAlign = align
 }
 
 func (t *Text) IsEditable() bool {
@@ -751,14 +784,14 @@ func (t *Text) SetFirstLogicalLineInViewport(idx int) {
 }
 
 func (t *Text) fontFamilyID() uint64 {
-	return t.style.fontFamilyID()
+	return t.baseStyle.fontFamilyID()
 }
 
 func (t *Text) faceAttributes(forceBold bool) font.Attributes {
 	// Disable ligatures for editable, selectable, or masked text so caret
 	// positions land on byte boundaries.
 	liga := !t.selectable && !t.editable && !t.masking()
-	return t.style.faceAttributes(forceBold, liga)
+	return t.baseStyle.faceAttributes(forceBold, liga)
 }
 
 // face must be called after [Text.Build], as it relies on lastFaceAttributes being set.
@@ -767,12 +800,12 @@ func (t *Text) face(context *guigui.Context, forceBold bool) font.Face {
 	if forceBold {
 		attrs = attrs.WithVariation(font.TagWght, float32(text.WeightBold))
 	}
-	return font.NewFace(context, t.style.fontFamily, attrs)
+	return font.NewFace(context, t.baseStyle.fontFamily, attrs)
 }
 
 // LineHeight returns the line height in pixels, with the widget scale applied.
 func (t *Text) LineHeight() float64 {
-	return t.style.lineHeight()
+	return t.baseStyle.scaledLineHeight()
 }
 
 func (t *Text) commit(force bool) {
@@ -930,55 +963,56 @@ func (t *Text) Redo() bool {
 // SetFontFamily sets the resolved font family used to render the value. A nil
 // family renders with the registered face source stack alone.
 func (t *Text) SetFontFamily(fontFamily *font.Family) {
-	t.style.fontFamily = fontFamily
+	t.baseStyle.fontFamily = fontFamily
 }
 
-// SetBaseFontSize sets the font size at scale 1. The rendered size is the
+// SetFontSize sets the font size at scale 1. The rendered size is the
 // base size multiplied by the scale set via [Text.SetScale].
-func (t *Text) SetBaseFontSize(size float64) {
-	t.style.baseFontSize = size
+func (t *Text) SetFontSize(size float64) {
+	t.baseStyle.fontSize = size
 }
 
-// SetBaseLineHeight sets the line height at scale 1. The rendered line height
-// is the base line height multiplied by the scale set via [Text.SetScale].
-func (t *Text) SetBaseLineHeight(lineHeight float64) {
-	if t.style.baseLineHeight == lineHeight {
+// SetLineHeight sets the line height at scale 1. The rendered line height
+// is the base line height multiplied by the scale set via
+// [Text.SetScale].
+func (t *Text) SetLineHeight(lineHeight float64) {
+	if t.baseStyle.lineHeight == lineHeight {
 		return
 	}
-	t.style.baseLineHeight = lineHeight
+	t.baseStyle.lineHeight = lineHeight
 	t.resetCachedTextSize()
 }
 
 // SetLang sets the language used to select the face and its features when
 // shaping the value.
 func (t *Text) SetLang(lang language.Tag) {
-	if t.style.lang == lang {
+	if t.baseStyle.lang == lang {
 		return
 	}
-	t.style.lang = lang
-	t.style.langString = lang.String()
+	t.baseStyle.lang = lang
+	t.baseStyle.langString = lang.String()
 }
 
 // SetTextColor sets the concrete color the value is drawn in.
 func (t *Text) SetTextColor(clr color.Color) {
-	t.style.textColor = clr
+	t.baseStyle.textColor = clr
 }
 
 // SetSelectionColor sets the concrete color of the selection highlight.
 func (t *Text) SetSelectionColor(clr color.Color) {
-	t.style.selectionColor = clr
+	t.baseStyle.selectionColor = clr
 }
 
 // SetCompositionColors sets the concrete colors of the underlines drawn below
 // the inactive and active parts of an IME composition.
 func (t *Text) SetCompositionColors(inactive, active color.Color) {
-	t.style.inactiveCompositionColor = inactive
-	t.style.activeCompositionColor = active
+	t.baseStyle.inactiveCompositionColor = inactive
+	t.baseStyle.activeCompositionColor = active
 }
 
 // SetCaretColor sets the concrete color of the caret.
 func (t *Text) SetCaretColor(clr color.Color) {
-	t.style.caretColor = clr
+	t.baseStyle.caretColor = clr
 }
 
 // SetSelectionWithSide sets the selection to the range spanned by start and

@@ -98,6 +98,6 @@ func (t *textCaret) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	if !b.In(region) {
 		return
 	}
-	clr := draw.ScaleAlpha(t.text.style.caretColor, alpha)
+	clr := draw.ScaleAlpha(t.text.baseStyle.caretColor, alpha)
 	draw.DrawRoundedRect(context, dst, b, clr, b.Dx()/2)
 }

@@ -4,11 +4,13 @@
 package textwidget
 
 import (
+	"cmp"
 	"encoding/binary"
 	"hash"
 	"hash/fnv"
 	"image/color"
 	"math"
+	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
@@ -19,8 +21,11 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
-// textStyle holds a [Text]'s render-style configuration: alignment, scale,
-// font selection, and the concrete colors set by a wrapping widget.
+// textStyle holds a [Text]'s base render-style configuration: alignment,
+// scale, font selection, and the concrete colors set by a wrapping widget.
+// The base style applies to the whole value and persists across value
+// changes; the ranged style overrides in [Text.ensureStyleRuns] apply on top
+// and are cleared when the value changes.
 type textStyle struct {
 	// hAlign is the horizontal alignment of the value.
 	hAlign textutil.HorizontalAlign
@@ -28,14 +33,14 @@ type textStyle struct {
 	// vAlign is the vertical alignment of the value.
 	vAlign textutil.VerticalAlign
 
-	// scaleMinus1 is the text scale minus 1, so the zero value means scale 1.
+	// scaleMinus1 is the base text scale minus 1, so the zero value means
+	// scale 1.
 	scaleMinus1 float64
 
-	// bold renders the value in a bold weight.
-	bold bool
-
-	// tabular enables tabular figures.
-	tabular bool
+	// variations and features are the base OpenType settings, sorted by tag
+	// with at most one entry per tag. Ranged style overrides apply on top.
+	variations []font.Variation
+	features   []font.Feature
 
 	// tabWidth is the tab width in pixels. A non-positive value selects the
 	// default width.
@@ -45,13 +50,13 @@ type textStyle struct {
 	// to render with the registered face source stack alone.
 	fontFamily *font.Family
 
-	// baseFontSize is the font size at scale 1; the rendered size is
-	// baseFontSize multiplied by the widget scale.
-	baseFontSize float64
+	// fontSize is the font size at scale 1; the rendered size is fontSize
+	// multiplied by the widget scale.
+	fontSize float64
 
-	// baseLineHeight is the line height at scale 1; the rendered line height
-	// is baseLineHeight multiplied by the widget scale.
-	baseLineHeight float64
+	// lineHeight is the line height at scale 1; the rendered line height is
+	// lineHeight multiplied by the widget scale.
+	lineHeight float64
 
 	// lang is the language used to select the face and its features when
 	// shaping the value.
@@ -83,9 +88,10 @@ func (s *textStyle) scale() float64 {
 	return s.scaleMinus1 + 1
 }
 
-// lineHeight returns the line height in pixels, with the scale applied.
-func (s *textStyle) lineHeight() float64 {
-	return s.baseLineHeight * s.scale()
+// scaledLineHeight returns the line height in pixels, with the scale
+// applied.
+func (s *textStyle) scaledLineHeight() float64 {
+	return s.lineHeight * s.scale()
 }
 
 // fontFamilyID returns fontFamily's ID, or 0 for a nil family.
@@ -99,25 +105,52 @@ func (s *textStyle) fontFamilyID() uint64 {
 // faceAttributes returns the font attributes to shape the value with. liga
 // sets whether ligatures are enabled.
 func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
-	weight := text.WeightMedium
-	if s.bold || forceBold {
-		weight = text.WeightBold
-	}
 	a := font.Attributes{
-		Size: s.baseFontSize * s.scale(),
+		Size: s.fontSize * s.scale(),
 		Lang: s.lang,
 	}
-	a = a.WithVariation(font.TagWght, float32(weight))
-	a = a.WithFeature(font.TagLiga, boolToFeatureValue(liga))
-	a = a.WithFeature(font.TagTnum, boolToFeatureValue(s.tabular))
+	a = a.WithVariation(font.TagWght, float32(text.WeightMedium))
+	for _, v := range s.variations {
+		a = a.WithVariation(v.Tag, v.Value)
+	}
+	if forceBold {
+		a = a.WithVariation(font.TagWght, float32(text.WeightBold))
+	}
+	for _, f := range s.features {
+		a = a.WithFeature(f.Tag, f.Value)
+	}
+	// A false liga disables ligatures so caret positions land on byte
+	// boundaries; that constraint outranks a base liga feature setting.
+	if !liga {
+		a = a.WithFeature(font.TagLiga, 0)
+	} else if !slices.ContainsFunc(s.features, func(f font.Feature) bool { return f.Tag == font.TagLiga }) {
+		a = a.WithFeature(font.TagLiga, 1)
+	}
 	return a
 }
 
-func boolToFeatureValue(b bool) uint32 {
-	if b {
-		return 1
+// setTagged sets entry in the tag-sorted settings, keeping at most one entry
+// per tag.
+func setTagged[T any](settings []T, entry T, tagOf func(T) text.Tag) []T {
+	i, ok := slices.BinarySearchFunc(settings, tagOf(entry), func(s T, tag text.Tag) int {
+		return cmp.Compare(tagOf(s), tag)
+	})
+	if ok {
+		settings[i] = entry
+		return settings
 	}
-	return 0
+	return slices.Insert(settings, i, entry)
+}
+
+// removeTagged removes tag's entry from the tag-sorted settings.
+func removeTagged[T any](settings []T, tag text.Tag, tagOf func(T) text.Tag) []T {
+	i, ok := slices.BinarySearchFunc(settings, tag, func(s T, tag text.Tag) int {
+		return cmp.Compare(tagOf(s), tag)
+	})
+	if !ok {
+		return settings
+	}
+	return slices.Delete(settings, i, i+1)
 }
 
 // ensureStyleRuns clears the ranged style overrides if the store's
@@ -366,7 +399,7 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		for _, f := range run.Style.Features() {
 			attrs = attrs.WithFeature(f.Tag, f.Value)
 		}
-		family := t.style.fontFamily
+		family := t.baseStyle.fontFamily
 		if f, ok := run.Style.Family(); ok {
 			family = f
 		}

@@ -16,7 +16,7 @@ func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle
 	b := bounds
 	h := t.textHeight(context, guigui.FixedWidthConstraints(t.LayoutWidth(b)))
 
-	switch t.style.vAlign {
+	switch t.baseStyle.vAlign {
 	case textutil.VerticalAlignTop:
 		b.Max.Y = b.Min.Y + h
 	case textutil.VerticalAlignMiddle:
@@ -32,7 +32,7 @@ func (t *Text) textContentBounds(context *guigui.Context, bounds image.Rectangle
 
 // contentBoundsForLayout returns the bounds for laying out content.
 func (t *Text) contentBoundsForLayout(context *guigui.Context, bounds image.Rectangle) image.Rectangle {
-	if t.style.vAlign == textutil.VerticalAlignTop {
+	if t.baseStyle.vAlign == textutil.VerticalAlignTop {
 		// For Top, [Text.textContentBounds] would only tighten Max.Y, which
 		// no caller depends on beyond it staying within bounds. Skip it to
 		// avoid [Text.textHeight], which walks every logical line for wrapped text.
@@ -68,7 +68,7 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 		constraintWidth = 1
 	}
 
-	bold := t.style.bold
+	const bold = false
 	t.invalidateSizeCacheForMetricStyleRuns()
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
@@ -241,7 +241,7 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 }
 
 func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
-	bold := t.style.bold || forceBold
+	bold := forceBold
 
 	if t.masking() {
 		// A masked value is a single uniform line; measure it directly rather
