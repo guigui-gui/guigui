@@ -14,7 +14,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
-const richTextsSampleText = "Colored, highlighted, underlined, struck-through, and bold ranges.\n" +
+const richTextsSampleText = "Colored, light, highlighted, underlined, struck-through, bold, and scaled ranges.\n" +
 	"Combined styles apply to a single range.\n" +
 	"A sufficiently long styled range continues across the visual line boundary when the text wraps, keeping its background and underline on every visual line it covers.\n" +
 	"日本語のテキストにも下線と背景を適用できます。"
@@ -85,6 +85,12 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	})
 	styleRichTextsSampleRange("bold", func(start, end int) {
 		t.SetWeightInRange(start, end, text.WeightBold)
+	})
+	styleRichTextsSampleRange("light", func(start, end int) {
+		t.SetWeightInRange(start, end, text.WeightLight)
+	})
+	styleRichTextsSampleRange("scaled", func(start, end int) {
+		t.SetScaleInRange(start, end, 1.5)
 	})
 	styleRichTextsSampleRange("Combined styles", func(start, end int) {
 		t.SetColorInRange(start, end, blue)

@@ -57,7 +57,7 @@ func (r *Runs) HasMetricProperties() bool {
 // HasMetricProperties reports whether the style overrides a metric-affecting
 // property, such as a variation setting or the font family.
 func (s Style) HasMetricProperties() bool {
-	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set || s.family.set || s.lang.set
+	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set || s.family.set || s.lang.set || s.scale.set
 }
 
 // writeStateKey writes the style's consumed properties into w.
@@ -95,6 +95,11 @@ func (s Style) writeMetricProperties(w Writer) {
 	italic, ok := s.Italic()
 	w.WriteBool(ok)
 	w.WriteBool(italic)
+	scale, ok := s.Scale()
+	w.WriteBool(ok)
+	if ok {
+		w.WriteFloat64(scale)
+	}
 	lang, ok := s.Lang()
 	w.WriteBool(ok)
 	if ok {

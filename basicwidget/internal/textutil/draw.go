@@ -460,6 +460,7 @@ func faceRunsIntersect(faceRuns []FaceRun, start, end int) bool {
 func drawStyledVisualLine(dst *ebiten.Image, vlStr string, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions, op *text.DrawOptions) {
 	origGeoM := op.GeoM
 	origColorScale := op.ColorScale
+	baseAscent := options.Face.TextFace().Metrics().HAscent
 	var x float64
 	var i int
 	for i < len(vlStr) {
@@ -482,12 +483,16 @@ func drawStyledVisualLine(dst *ebiten.Image, vlStr string, lineStart, contentEnd
 		}
 		seg := vlStr[i:segEnd]
 		face := segFace.TextFace()
+		// text.Draw positions text by its top, so a face whose ascent
+		// differs from the base face's shifts by the difference to keep the
+		// baselines aligned.
+		dy := baseAscent - face.Metrics().HAscent
 		var chunkStart int
 		for chunkStart < len(seg) {
 			clr, colorChange := styleRunColorAt(runs, options.TextColor, contentEnd, lineStart+i+chunkStart)
 			chunkEnd := min(colorChange-lineStart-i, len(seg))
 			geoM := op.GeoM
-			op.GeoM.Translate(x+text.AdvanceAt(seg, chunkStart, face), 0)
+			op.GeoM.Translate(x+text.AdvanceAt(seg, chunkStart, face), dy)
 			op.ColorScale.Reset()
 			op.ColorScale.ScaleWithColor(clr)
 			text.Draw(dst, seg[chunkStart:chunkEnd], face, op)

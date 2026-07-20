@@ -447,6 +447,21 @@ func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 	t.core.UnsetItalicInRange(startInBytes, endInBytes)
 }
 
+// SetScaleInRange overrides the font size in [startInBytes, endInBytes) as a
+// multiplier applied to the base font size. The override lasts until the
+// value changes. The line height is unaffected; the range renders on the
+// line's baseline, and glyphs scaled past the line height may overlap
+// adjacent lines.
+func (t *Text) SetScaleInRange(startInBytes, endInBytes int, scale float64) {
+	t.core.SetScaleInRange(startInBytes, endInBytes, scale)
+}
+
+// UnsetScaleInRange removes the font size override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetScaleInRange(startInBytes, endInBytes int) {
+	t.core.UnsetScaleInRange(startInBytes, endInBytes)
+}
+
 // SetLangInRange overrides the language used to select the face and its
 // features when shaping [startInBytes, endInBytes). The override lasts until
 // the value changes.

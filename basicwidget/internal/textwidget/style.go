@@ -224,6 +224,20 @@ func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().UnsetFamily(startInBytes, endInBytes)
 }
 
+// SetScaleInRange overrides the font size in [startInBytes, endInBytes) as a
+// multiplier applied to the base font size. The override lasts until the
+// value changes. The line height is unaffected; the range renders on the
+// line's baseline.
+func (t *Text) SetScaleInRange(startInBytes, endInBytes int, scale float64) {
+	t.ensureStyleRuns().SetScale(startInBytes, endInBytes, scale)
+}
+
+// UnsetScaleInRange removes the font size override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetScaleInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetScale(startInBytes, endInBytes)
+}
+
 // SetLangInRange overrides the language used to select the face and its
 // features when shaping [startInBytes, endInBytes). The override lasts until
 // the value changes.
@@ -339,6 +353,9 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		attrs := t.faceAttributes(forceBold)
 		if italic, ok := run.Style.Italic(); ok {
 			attrs.Italic = italic
+		}
+		if scale, ok := run.Style.Scale(); ok {
+			attrs.Size *= scale
 		}
 		if lang, ok := run.Style.Lang(); ok {
 			attrs.Lang = lang
