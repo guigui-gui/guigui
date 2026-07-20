@@ -38,7 +38,30 @@ import (
 // An empty logicalLine yields a single empty visual line. A logicalLine that
 // contains a mid-line hard break violates the contract; the iterator stops
 // at the first mandatory break it encounters.
-func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) iter.Seq[visualLine] {
+func visualLinesFromLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, tabWidth float64, keepTailingSpace bool) iter.Seq[visualLine] {
+	// A line with face runs wraps through the run-aware closure; the
+	// single-face machinery below measures with one face. [visualLines]
+	// emits a trailing empty line after a final hard break, which belongs
+	// to the next logical line here, so it is dropped.
+	if faceRunsIntersect(faceRuns, logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine)) {
+		return func(yield func(visualLine) bool) {
+			var prev visualLine
+			var hasPrev bool
+			for l := range visualLines(width, logicalLine, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+				return advanceWithFaces(str, logicalLineStartInBytes+strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
+			}) {
+				if hasPrev && !yield(prev) {
+					return
+				}
+				prev = l
+				hasPrev = true
+			}
+			if hasPrev && (prev.pos == 0 || len(prev.str) > 0) {
+				yield(prev)
+			}
+		}
+	}
+
 	// Fast path: a single visual line. Avoids invoking the segmenter for
 	// short content that fits, including the empty-line case.
 	if wrapMode == WrapModeNone || width == math.MaxInt || advance(logicalLine, len(logicalLine), face.TextFace(), tabWidth, keepTailingSpace) <= float64(width) {
@@ -321,17 +344,26 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 // at the given width. This is the per-logical-line counterpart of
 // [MeasureHeight] and is used by virtualized layout to size lines one at a
 // time without scanning the whole document.
-func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace))
+func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
+	return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace))
 }
 
 // VisualLineCountForLogicalLine returns the number of visual lines one
 // logical line wraps into at the given width. With wrapMode set to
-// [WrapModeNone] (or when the line fits) the result is always 1.
-func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
+// [WrapModeNone] (or when the line fits) the result is always 1. faceRuns
+// use whole-text byte offsets; logicalLineStartInBytes is logicalLine's
+// start offset in that text.
+func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, tabWidth float64, keepTailingSpace bool) int {
 	// No packing happens for these, so skip building the layout entirely.
 	if wrapMode == WrapModeNone || width == math.MaxInt {
 		return 1
+	}
+	if faceRunsIntersect(faceRuns, logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine)) {
+		var count int
+		for range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
+			count++
+		}
+		return count
 	}
 	line := sanitizedForCache(logicalLine)
 	ra := newRangeAdvancer(line, face, tabWidth, keepTailingSpace)
@@ -343,20 +375,22 @@ func VisualLineCountForLogicalLine(width int, logicalLine string, wrapMode WrapM
 // line it falls back to the uncached count. Use this for per-tick height
 // measurement of a logical line whose wrap layout the other cached paths (draw,
 // caret, hit-test) also touch, so they share one cache entry.
-func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) int {
-	if wrapMode != WrapModeNone {
+func CachedVisualLineCount(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, tabWidth float64, keepTailingSpace bool) int {
+	// The layout cache is keyed by a single face; a line with face runs
+	// counts uncached through the run-aware path.
+	if wrapMode != WrapModeNone && !faceRunsIntersect(faceRuns, logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine)) {
 		if vlStarts, ok := cachedVisualLineStarts(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace); ok {
 			return len(vlStarts)
 		}
 	}
-	return VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace)
+	return VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace)
 }
 
 // CachedVisualLineMaxCaretX returns the furthest caret position rendered on
 // the logical line's visual lines, using the same content-keyed layout cache
 // as [CachedVisualLineCount].
-func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) float64 {
-	if wrapMode != WrapModeNone {
+func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, tabWidth float64, keepTailingSpace bool) float64 {
+	if wrapMode != WrapModeNone && !faceRunsIntersect(faceRuns, logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine)) {
 		if _, maxCaretX, ok := cachedVisualLineLayout(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace); ok {
 			return maxCaretX
 		}
@@ -364,7 +398,7 @@ func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode,
 	var maxCaretX float64
 	var prev visualLine
 	var hasPrev bool
-	for line := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace) {
+	for line := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
 		if hasPrev {
 			// prev is a non-final visual line: the caret after its final
 			// space sits on the wrap boundary and is rendered at the head of
@@ -372,30 +406,30 @@ func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode,
 			// extent. This mirrors maxVisualLineCaretX.
 			str := prev.str
 			str = str[:len(str)-lastSpaceCharLen(str)]
-			maxCaretX = max(maxCaretX, advance(str, len(str), face.TextFace(), tabWidth, true))
+			maxCaretX = max(maxCaretX, advanceWithFaces(str, logicalLineStartInBytes+prev.pos, len(str), face, faceRuns, tabWidth, true))
 		}
 		prev = line
 		hasPrev = true
 	}
 	if hasPrev {
-		maxCaretX = max(maxCaretX, advance(prev.str, len(prev.str), face.TextFace(), tabWidth, true))
+		maxCaretX = max(maxCaretX, advanceWithFaces(prev.str, logicalLineStartInBytes+prev.pos, len(prev.str), face, faceRuns, tabWidth, true))
 	}
 	return maxCaretX
 }
 
 // MeasureLogicalLine returns the rendered width and height of one logical
 // line at the given width. Per-logical-line counterpart of [Measure].
-func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
-	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, tabWidth, keepTailingSpace) {
+	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
 		vlStr := l.str
 		if !keepTailingSpace {
 			vlStr = trimTailingLineBreak(vlStr)
 		}
-		vlWidth := advance(vlStr, len(vlStr), face.TextFace(), tabWidth, keepTailingSpace)
+		vlWidth := advanceWithFaces(vlStr, logicalLineStartInBytes+l.pos, len(vlStr), face, faceRuns, tabWidth, keepTailingSpace)
 		if ellipsisString != "" && vlWidth > float64(width) {
-			vlStr = truncateWithEllipsis(vlStr, 0, ellipsisString, float64(width), face, nil, tabWidth)
-			vlWidth = advance(vlStr, len(vlStr), face.TextFace(), tabWidth, false)
+			vlStr = truncateWithEllipsis(vlStr, logicalLineStartInBytes+l.pos, ellipsisString, float64(width), face, faceRuns, tabWidth)
+			vlWidth = advanceWithFaces(vlStr, logicalLineStartInBytes+l.pos, len(vlStr), face, faceRuns, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		height += lineHeight
@@ -408,18 +442,22 @@ func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face f
 // are relative to the top of the logical line (so the caller can offset them
 // by the line's origin Y). Counterpart of [TextPositionFromIndex].
 //
-// index is a byte offset in [0, len(logicalLine)]. Out-of-range values yield
+// index is a byte offset in [0, len(logicalLine)]. style's face runs use
+// whole-text byte offsets; logicalLineStartInBytes is logicalLine's start
+// offset in that text. Out-of-range values yield
 // (TextPosition{}, TextPosition{}, 0).
-func TextPositionFromIndexInLogicalLine(width int, logicalLine string, index int, style *Style) (position0, position1 TextPosition, count int) {
+func TextPositionFromIndexInLogicalLine(width int, logicalLine string, logicalLineStartInBytes, index int, style *Style) (position0, position1 TextPosition, count int) {
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace), index, style)
+	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, index, style)
 }
 
 // TextIndexFromPositionInLogicalLine returns the byte offset within one logical line
 // closest to the given position. The position's Y is relative to the top of
-// the logical line. Counterpart of [TextIndexFromPosition].
-func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, style *Style) int {
-	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.TabWidth, style.KeepTailingSpace), style)
+// the logical line. style's face runs use whole-text byte offsets;
+// logicalLineStartInBytes is logicalLine's start offset in that text.
+// Counterpart of [TextIndexFromPosition].
+func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, logicalLineStartInBytes int, style *Style) int {
+	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, style)
 }

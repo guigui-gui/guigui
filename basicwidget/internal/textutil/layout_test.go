@@ -106,7 +106,7 @@ func TestTextPositionFromIndexMatchesShaping(t *testing.T) {
 				Style:                      style,
 				PrecomputedLineByteOffsets: &lbo,
 			}, idx)
-			p0b, p1b, cb := textutil.TextPositionFromIndexInLogicalLine(width, str, idx, &style)
+			p0b, p1b, cb := textutil.TextPositionFromIndexInLogicalLine(width, str, 0, idx, &style)
 			if ca != cb || p0a != p0b || p1a != p1b {
 				t.Errorf("str=%q idx=%d: cache=(%v,%v,%d) shaping=(%v,%v,%d)",
 					str, idx, p0a, p1a, ca, p0b, p1b, cb)

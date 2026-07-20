@@ -5,7 +5,9 @@ package textutil_test
 
 import (
 	"bytes"
+	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
@@ -133,4 +135,32 @@ func TestAdvanceWithFaces(t *testing.T) {
 			t.Errorf("got: %f, want: %f", got, want)
 		}
 	})
+}
+
+// TestFaceRunsMeasureHeightParity asserts that per-logical-line height
+// measurement with face runs sums to the whole-document measurement.
+func TestFaceRunsMeasureHeightParity(t *testing.T) {
+	const lineHeight = 24.0
+	small, large := testFaces(t)
+	str := "abcdef ghij klmno\npqr stu vwx yz\n\nthe last line"
+	faceRuns := []textutil.FaceRun{
+		{Start: 3, End: 10, Face: large},
+		{Start: 22, End: 30, Face: large},
+	}
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
+		for _, width := range []int{math.MaxInt, 80} {
+			t.Run(fmt.Sprintf("width=%d%s", width, wrapModeSuffix(wrapMode)), func(t *testing.T) {
+				whole := textutil.MeasureHeight(width, str, wrapMode, small, faceRuns, lineHeight, 0, false)
+				var sum float64
+				var start int
+				for _, line := range strings.SplitAfter(str, "\n") {
+					sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, small, faceRuns, start, lineHeight, 0, false)
+					start += len(line)
+				}
+				if sum != whole {
+					t.Errorf("sum of MeasureLogicalLineHeight = %v, MeasureHeight = %v", sum, whole)
+				}
+			})
+		}
+	}
 }

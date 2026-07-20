@@ -134,7 +134,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	if t.masking() {
 		m := t.maskMappingForRendering(showComposition)
 		s := t.maskStyle(context)
-		mi := textutil.TextIndexFromPositionInLogicalLine(textContentBounds.Dx(), position.Sub(textContentBounds.Min), m.maskStr, &s)
+		mi := textutil.TextIndexFromPositionInLogicalLine(textContentBounds.Dx(), position.Sub(textContentBounds.Min), m.maskStr, 0, &s)
 		if mi < 0 {
 			return -1
 		}
@@ -212,7 +212,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	if t.masking() {
 		m := t.maskMappingForRendering(showComposition)
 		s := t.maskStyle(context)
-		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, m.offsetToMasked(index), &s)
+		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, 0, m.offsetToMasked(index), &s)
 		if count == 0 {
 			return textutil.TextPosition{}, false
 		}
@@ -327,7 +327,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	if t.masking() {
 		m := t.maskMappingForRendering(showComposition)
 		s := t.maskStyle(context)
-		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, m.offsetToMasked(index), &s)
+		pos0, pos1, count := textutil.TextPositionFromIndexInLogicalLine(textBounds.Dx(), m.maskStr, 0, m.offsetToMasked(index), &s)
 		if count == 0 {
 			return CaretScrollTarget{}, false
 		}
@@ -488,7 +488,7 @@ func (t *Text) VisualLineCountOfLogicalLine(context *guigui.Context, lineIndex, 
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), t.actualTabWidth(context), t.keepTailingSpace)
+	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), nil, start, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the
@@ -503,5 +503,5 @@ func (t *Text) MaxCaretXOfLogicalLine(context *guigui.Context, lineIndex, wrapWi
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), t.actualTabWidth(context), t.keepTailingSpace)
+	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), nil, start, t.actualTabWidth(context), t.keepTailingSpace)
 }

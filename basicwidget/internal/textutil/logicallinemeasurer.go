@@ -22,6 +22,7 @@ type logicalLineMeasurer struct {
 	tabWidth           float64
 	keepTailingSpace   bool
 	wrapMode           WrapMode
+	faceRuns           []FaceRun
 	composition        CompositionInfo
 
 	// compositionRenderingStartPlus1 is one plus the rendering-text byte
@@ -108,6 +109,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		tabWidth:                       p.Style.TabWidth,
 		keepTailingSpace:               p.Style.KeepTailingSpace,
 		wrapMode:                       p.Style.WrapMode,
+		faceRuns:                       p.Style.FaceRuns,
 		composition:                    compInfo,
 		compositionRenderingStartPlus1: compRenderingStartPlus1,
 		compositionRenderingEndPlus1:   compRenderingEndPlus1,
@@ -163,8 +165,10 @@ func (m *logicalLineMeasurer) visualLineCount(idx int) int {
 	}
 	s, e := m.renderingRange(idx)
 	line := m.renderingTextRange(s, e)
-	if vlStarts, ok := cachedVisualLineStarts(m.width, line, m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace); ok {
-		return len(vlStarts)
+	if !faceRunsIntersect(m.faceRuns, s, s+len(line)) {
+		if vlStarts, ok := cachedVisualLineStarts(m.width, line, m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace); ok {
+			return len(vlStarts)
+		}
 	}
-	return VisualLineCountForLogicalLine(m.width, line, m.wrapMode, m.face, m.tabWidth, m.keepTailingSpace)
+	return VisualLineCountForLogicalLine(m.width, line, m.wrapMode, m.face, m.faceRuns, s, m.tabWidth, m.keepTailingSpace)
 }

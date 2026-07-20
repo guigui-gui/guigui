@@ -90,8 +90,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineVisualCountDelta = renderingCount - committedCount
 		}
 	}
@@ -120,6 +120,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		tabWidth:           p.Style.TabWidth,
 		keepTailingSpace:   p.Style.KeepTailingSpace,
 		wrapMode:           p.Style.WrapMode,
+		faceRuns:           p.Style.FaceRuns,
 		composition:        compInfo,
 	}
 
@@ -174,20 +175,22 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Style.LineHeight)
 	localPos := image.Pt(position.X, localY)
 	var pos int
-	if p.Style.WrapMode != WrapModeNone {
+	if p.Style.WrapMode != WrapModeNone && !faceRunsIntersect(p.Style.FaceRuns, renderingLineStart, renderingLineStart+len(line)) {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, vlStarts), &p.Style)
+			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, vlStarts), renderingLineStart, &p.Style)
 			return renderingLineStart + pos
 		}
 	}
-	pos = TextIndexFromPositionInLogicalLine(p.Width, localPos, line, &p.Style)
+	pos = TextIndexFromPositionInLogicalLine(p.Width, localPos, line, renderingLineStart, &p.Style)
 	return renderingLineStart + pos
 }
 
 // textIndexFromPositionInVisualLines returns the byte offset within a logical
-// line closest to position, given that line's visual lines. The position's Y is
-// relative to the top of the logical line.
-func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], style *Style) int {
+// line closest to position, given that line's visual lines. The position's Y
+// is relative to the top of the logical line. style's face runs use
+// whole-text byte offsets; vlsStartInBytes is the whole-text byte offset of
+// vls' first byte.
+func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], vlsStartInBytes int, style *Style) int {
 	// Determine the visual line first.
 	padding := textPadding(style.Face.TextFace(), style.LineHeight)
 	n := int((float64(position.Y) + padding) / style.LineHeight)
@@ -205,8 +208,8 @@ func textIndexFromPositionInVisualLines(width int, position image.Point, vls ite
 	}
 
 	// Determine the index within the visual line.
-	left := oneLineLeft(width, vlStr, pos, style)
-	pos += indexFromXInVisualLine(vlStr, pos, float64(position.X)-left, style)
+	left := oneLineLeft(width, vlStr, vlsStartInBytes+pos, style)
+	pos += indexFromXInVisualLine(vlStr, vlsStartInBytes+pos, float64(position.X)-left, style)
 	return pos
 }
 

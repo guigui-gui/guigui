@@ -284,7 +284,7 @@ func TestVisibleRangeInViewport_WrapModeNormal(t *testing.T) {
 	// Sanity: the long middle line wraps into multiple visual lines.
 	midStart := lbo.ByteOffsetByLineIndex(1)
 	midEnd := lbo.ByteOffsetByLineIndex(2)
-	wraps := textutil.VisualLineCountForLogicalLine(narrowWidth, str[midStart:midEnd], textutil.WrapModeNormal, face, 0, false)
+	wraps := textutil.VisualLineCountForLogicalLine(narrowWidth, str[midStart:midEnd], textutil.WrapModeNormal, face, nil, 0, 0, false)
 	if wraps < 2 {
 		t.Fatalf("expected the middle line to wrap; got wraps=%d", wraps)
 	}

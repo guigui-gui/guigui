@@ -51,7 +51,7 @@ func AdvanceForTest(str string, indexInBytes int, face font.Face) float64 {
 // Draw path (appendVisualLinesFromCachedStarts), mirroring what Draw does, so
 // tests can compare it against VisualLines.
 func VisualLinesFromCachedStarts(width int, str string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) ([]VisualLine, bool) {
-	vls, ok := appendVisualLinesFromCachedStarts(nil, str, width, wrapMode, face, tabWidth, keepTailingSpace)
+	vls, ok := appendVisualLinesFromCachedStarts(nil, str, width, wrapMode, face, nil, tabWidth, keepTailingSpace)
 	out := make([]VisualLine, len(vls))
 	for i, vl := range vls {
 		out[i] = VisualLine{Pos: vl.pos, Str: vl.str}

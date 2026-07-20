@@ -45,7 +45,7 @@ func precedingVisualLineCountFromString(committed string, width int, wrapMode te
 			if i+1 < n {
 				end = l.ByteOffsetByLineIndex(i + 1)
 			}
-			sum += textutil.VisualLineCountForLogicalLine(width, committed[start:end], wrapMode, face, tabWidth, keepTailingSpace)
+			sum += textutil.VisualLineCountForLogicalLine(width, committed[start:end], wrapMode, face, nil, 0, tabWidth, keepTailingSpace)
 		}
 		return sum
 	}

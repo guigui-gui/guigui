@@ -27,9 +27,9 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 	indexInLine = index - renderingLineStart
 
-	if p.Style.WrapMode != WrapModeNone {
+	if p.Style.WrapMode != WrapModeNone && !faceRunsIntersect(p.Style.FaceRuns, renderingLineStart, renderingLineStart+len(line)) {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, vlStarts), indexInLine, &p.Style)
+			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, vlStarts), renderingLineStart, indexInLine, &p.Style)
 			if count == 0 {
 				return 0, 0, TextPosition{}, TextPosition{}, 0
 			}
@@ -37,7 +37,7 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 		}
 	}
 
-	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, indexInLine, &p.Style)
+	pos0, pos1, count = TextPositionFromIndexInLogicalLine(p.Width, line, renderingLineStart, indexInLine, &p.Style)
 	if count == 0 {
 		return 0, 0, TextPosition{}, TextPosition{}, 0
 	}
@@ -75,7 +75,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		vls := visualLines(p.Width, str, p.Style.WrapMode, func(s string, strStartInBytes, endIndexInBytes int) float64 {
 			return advanceWithFaces(s, strStartInBytes, endIndexInBytes, p.Style.Face, p.Style.FaceRuns, p.Style.TabWidth, p.Style.KeepTailingSpace)
 		})
-		return textPositionFromIndexInVisualLines(p.Width, vls, index, &p.Style)
+		return textPositionFromIndexInVisualLines(p.Width, vls, 0, index, &p.Style)
 	}
 
 	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p, index)
@@ -126,7 +126,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		prevLogicalLineIdx := logicalLineIdx - 1
 		prevRenderingLineStart, prevRenderingLineEnd := m.renderingRange(prevLogicalLineIdx)
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
-		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, len(prevLine), &p.Style)
+		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, prevRenderingLineStart, len(prevLine), &p.Style)
 		if prevCount > 0 {
 			prevYOffset := p.Style.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
 			prevPos0.Top += prevYOffset
@@ -140,12 +140,21 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 }
 
 // textPositionFromIndexInVisualLines returns the visual position(s) at byte
-// offset index within the visual lines vls. count is 1, or 2 when index lands
-// on a line-break boundary, in which case position0 is the tail of one visual
-// line and position1 the head of the next. An out-of-range index yields count 0.
-func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], index int, style *Style) (position0, position1 TextPosition, count int) {
+// offset index within the visual lines vls, where index is relative to vls'
+// first byte. style's face runs use whole-text byte offsets; vlsStartInBytes
+// is the whole-text byte offset of vls' first byte, rebasing vls-relative
+// offsets for the face-run lookups. count is 1, or 2 when index lands on a
+// line-break boundary, in which case position0 is the tail of one visual
+// line and position1 the head of the next. An out-of-range index yields
+// count 0.
+func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vlsStartInBytes, index int, style *Style) (position0, position1 TextPosition, count int) {
 	var y, y0, y1 float64
-	var indexInLine0, indexInLine1 int
+	// indexInVisualLine0/1 are index relative to the matched visual line's
+	// start.
+	var indexInVisualLine0, indexInVisualLine1 int
+	// vlStartInBytes0/1 are the matched visual line's start in the whole
+	// text.
+	var vlStartInBytes0, vlStartInBytes1 int
 	var line0, line1 string
 	var found0, found1 bool
 	for l := range vls {
@@ -155,7 +164,8 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 			if !found0 {
 				found0 = true
 				line0 = l.str
-				indexInLine0 = index - l.pos
+				indexInVisualLine0 = index - l.pos
+				vlStartInBytes0 = vlsStartInBytes + l.pos
 				y0 = y
 			} else {
 				// A previous line already matched as the tail position; this line
@@ -163,14 +173,16 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 				// is the head of the next line.
 				found1 = true
 				line1 = l.str
-				indexInLine1 = index - l.pos
+				indexInVisualLine1 = index - l.pos
+				vlStartInBytes1 = vlsStartInBytes + l.pos
 				y1 = y
 				break
 			}
 		} else if l.pos <= index && index < l.pos+len(l.str) {
 			found1 = true
 			line1 = l.str
-			indexInLine1 = index - l.pos
+			indexInVisualLine1 = index - l.pos
+			vlStartInBytes1 = vlsStartInBytes + l.pos
 			y1 = y
 			break
 		}
@@ -185,9 +197,8 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 
 	var pos0, pos1 TextPosition
 	if found0 {
-		base0 := index - indexInLine0
-		x0 := oneLineLeft(width, line0, base0, style)
-		x0 += advanceWithFaces(line0, base0, indexInLine0, style.Face, style.FaceRuns, style.TabWidth, true)
+		x0 := oneLineLeft(width, line0, vlStartInBytes0, style)
+		x0 += advanceWithFaces(line0, vlStartInBytes0, indexInVisualLine0, style.Face, style.FaceRuns, style.TabWidth, true)
 		pos0 = TextPosition{
 			X:      x0,
 			Top:    y0 + paddingY,
@@ -195,9 +206,8 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], ind
 		}
 	}
 	if found1 {
-		base1 := index - indexInLine1
-		x1 := oneLineLeft(width, line1, base1, style)
-		x1 += advanceWithFaces(line1, base1, indexInLine1, style.Face, style.FaceRuns, style.TabWidth, true)
+		x1 := oneLineLeft(width, line1, vlStartInBytes1, style)
+		x1 += advanceWithFaces(line1, vlStartInBytes1, indexInVisualLine1, style.Face, style.FaceRuns, style.TabWidth, true)
 		pos1 = TextPosition{
 			X:      x1,
 			Top:    y1 + paddingY,

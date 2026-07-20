@@ -103,8 +103,8 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, nil, 0, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, nil, 0, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{
@@ -179,6 +179,10 @@ type VisibleRangeInViewportParams struct {
 	TabWidth         float64
 	KeepTailingSpace bool
 
+	// FaceRuns are the per-range face overrides of the rendering text,
+	// sorted by Start and disjoint.
+	FaceRuns []FaceRun
+
 	// WrapMode toggles between a per-line shaping walk (any wrapping
 	// mode) and a flat LineHeight*idx arithmetic ([WrapModeNone]).
 	WrapMode WrapMode
@@ -221,6 +225,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		tabWidth:           p.TabWidth,
 		keepTailingSpace:   p.KeepTailingSpace,
 		wrapMode:           p.WrapMode,
+		faceRuns:           p.FaceRuns,
 		composition:        p.Composition,
 	}
 

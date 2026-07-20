@@ -99,8 +99,8 @@ func intersectingStyleRuns(runs []StyleRun, start, end int) []StyleRun {
 // when start sits on a visual line boundary) and posEnd is end's first
 // position. ok is false when either endpoint cannot be resolved.
 func rangePositionsInVisualLines(layoutWidth int, vls []visualLine, start, end int, style *Style) (posStart, posEnd TextPosition, ok bool) {
-	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), start, style)
-	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), end, style)
+	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), 0, start, style)
+	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), 0, end, style)
 	if countStart == 0 || countEnd == 0 {
 		return TextPosition{}, TextPosition{}, false
 	}
@@ -116,10 +116,11 @@ var theVisualLinesBuffer []visualLine
 // appendVisualLinesFromCachedStarts reproduces visualLines for str by reading
 // each logical line's wrap points from the layout cache (cachedVisualLineStarts)
 // instead of shaping. str is split at hard breaks (the break stays with the
-// preceding line), including the trailing empty line after a final break. ok is
-// false (dst left unchanged) when a line's starts are unavailable, so the caller
-// falls back to shaping.
-func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (lines []visualLine, ok bool) {
+// preceding line), including the trailing empty line after a final break. A
+// line intersecting a face run wraps through the run-aware path instead of
+// the single-face cache. ok is false (dst left unchanged) when a line's
+// starts are unavailable, so the caller falls back to shaping.
+func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, tabWidth float64, keepTailingSpace bool) (lines []visualLine, ok bool) {
 	base := len(dst)
 	var pos int
 	for {
@@ -130,17 +131,23 @@ func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, 
 			lineEnd = pos + p + l
 		}
 		line := str[pos:lineEnd]
-		s, sok := cachedVisualLineStarts(width, line, wrapMode, face, tabWidth, keepTailingSpace)
-		if !sok {
-			return slices.Delete(dst, base, len(dst)), false
-		}
-		for i := range s {
-			rs := pos + s[i]
-			re := lineEnd
-			if i+1 < len(s) {
-				re = pos + s[i+1]
+		if faceRunsIntersect(faceRuns, pos, lineEnd) {
+			for vl := range visualLinesFromLogicalLine(width, line, wrapMode, face, faceRuns, pos, tabWidth, keepTailingSpace) {
+				dst = append(dst, visualLine{pos: pos + vl.pos, str: vl.str})
 			}
-			dst = append(dst, visualLine{pos: rs, str: str[rs:re]})
+		} else {
+			s, sok := cachedVisualLineStarts(width, line, wrapMode, face, tabWidth, keepTailingSpace)
+			if !sok {
+				return slices.Delete(dst, base, len(dst)), false
+			}
+			for i := range s {
+				rs := pos + s[i]
+				re := lineEnd
+				if i+1 < len(s) {
+					re = pos + s[i+1]
+				}
+				dst = append(dst, visualLine{pos: rs, str: str[rs:re]})
+			}
 		}
 		if last {
 			break
@@ -180,7 +187,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	// The layout cache is keyed by a single face, so text with face runs
 	// wraps through the run-aware closure instead.
 	if options.WrapMode != WrapModeNone && len(options.FaceRuns) == 0 {
-		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.TabWidth, options.KeepTailingSpace); ok {
+		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace); ok {
 			theVisualLinesBuffer = vls
 			built = true
 		}

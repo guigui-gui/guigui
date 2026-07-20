@@ -167,7 +167,7 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, tabW, keepTailing)
+		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, nil, cs, tabW, keepTailing)
 	}
 	return count, true
 }
@@ -233,7 +233,7 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, lineH, tabW, keepTailing, ellipsisString)
+		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, nil, cs, lineH, tabW, keepTailing, ellipsisString)
 		maxWidth = max(maxWidth, w)
 		height += h
 	}

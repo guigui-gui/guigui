@@ -69,7 +69,7 @@ func TestMeasureLogicalLineHeightParity(t *testing.T) {
 
 				var sum float64
 				for _, line := range logicalLineSlices(tc.str) {
-					sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, face, lineHeight, 0, false)
+					sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, face, nil, 0, lineHeight, 0, false)
 				}
 
 				if whole != sum {
@@ -102,7 +102,7 @@ func TestMeasureLogicalLineParity(t *testing.T) {
 
 			var maxW, sumH float64
 			for _, line := range logicalLineSlices(tc.str) {
-				w, h := textutil.MeasureLogicalLine(width, line, textutil.WrapModeNone, face, lineHeight, 0, false, "")
+				w, h := textutil.MeasureLogicalLine(width, line, textutil.WrapModeNone, face, nil, 0, lineHeight, 0, false, "")
 				maxW = max(maxW, w)
 				sumH += h
 			}
@@ -142,16 +142,16 @@ func TestCachedVisualLineMaxCaretXIncludesTrailingSpaces(t *testing.T) {
 					Face:       face,
 					LineHeight: 24,
 				}
-				position, _, count := textutil.TextPositionFromIndexInLogicalLine(width, tc.line, len(tc.line), &style)
+				position, _, count := textutil.TextPositionFromIndexInLogicalLine(width, tc.line, 0, len(tc.line), &style)
 				if count == 0 {
 					t.Fatal("TextPositionFromIndexInLogicalLine returned no position")
 				}
-				got := textutil.CachedVisualLineMaxCaretX(width, tc.line, wrapMode, face, 0, false)
+				got := textutil.CachedVisualLineMaxCaretX(width, tc.line, wrapMode, face, nil, 0, 0, false)
 				if got < position.X {
 					t.Errorf("CachedVisualLineMaxCaretX = %v, trailing caret X = %v", got, position.X)
 				}
 				if tc.name == "one trailing space" && wrapMode == textutil.WrapModeNormal {
-					rendered, _ := textutil.MeasureLogicalLine(width, tc.line, wrapMode, face, 0, 0, false, "")
+					rendered, _ := textutil.MeasureLogicalLine(width, tc.line, wrapMode, face, nil, 0, 0, 0, false, "")
 					if position.X <= rendered {
 						t.Fatalf("test setup: trailing caret X = %v, rendered width = %v", position.X, rendered)
 					}
@@ -186,14 +186,14 @@ func TestCachedVisualLineMaxCaretXExcludesBreakSpace(t *testing.T) {
 
 	t.Run("single break space", func(t *testing.T) {
 		const line = "aaa bbb"
-		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, 0, false); got != 2 {
+		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, nil, 0, 0, false); got != 2 {
 			t.Fatalf("test setup: visual line count = %d, want 2", got)
 		}
-		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, len("aaa "), &style)
+		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, 0, len("aaa "), &style)
 		if count != 2 {
 			t.Fatalf("test setup: the caret at the wrap boundary must have two positions, got %d", count)
 		}
-		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, 0, false)
+		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, nil, 0, 0, false)
 		if got >= tailPos.X {
 			t.Errorf("CachedVisualLineMaxCaretX = %v, want less than the boundary tail X %v", got, tailPos.X)
 		}
@@ -205,18 +205,18 @@ func TestCachedVisualLineMaxCaretXExcludesBreakSpace(t *testing.T) {
 	t.Run("multiple hanging spaces", func(t *testing.T) {
 		const line = "aaa      bbb"
 		boundary := len("aaa      ")
-		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, 0, false); got != 2 {
+		if got := textutil.CachedVisualLineCount(width, line, textutil.WrapModeNormal, face, nil, 0, 0, false); got != 2 {
 			t.Fatalf("test setup: visual line count = %d, want 2", got)
 		}
-		innerPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, boundary-1, &style)
+		innerPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, 0, boundary-1, &style)
 		if count != 1 {
 			t.Fatalf("test setup: the caret between hanging spaces must have one position, got %d", count)
 		}
-		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, boundary, &style)
+		tailPos, _, count := textutil.TextPositionFromIndexInLogicalLine(width, line, 0, boundary, &style)
 		if count != 2 {
 			t.Fatalf("test setup: the caret at the wrap boundary must have two positions, got %d", count)
 		}
-		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, 0, false)
+		got := textutil.CachedVisualLineMaxCaretX(width, line, textutil.WrapModeNormal, face, nil, 0, 0, false)
 		if got < innerPos.X {
 			t.Errorf("CachedVisualLineMaxCaretX = %v, want at least the last in-line caret X %v", got, innerPos.X)
 		}
@@ -246,7 +246,7 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 		t.Fatalf("test setup: line fits in %d px (advance=%v); pick a narrower width", narrowWidth, advance(logical))
 	}
 
-	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeNormal, face, lineHeight, 0, false)
+	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, 0, lineHeight, 0, false)
 	if h <= lineHeight {
 		t.Errorf("MeasureLogicalLineHeight with WrapModeNormal = %v, expected > %v (single visual subline)", h, lineHeight)
 	}
@@ -293,7 +293,7 @@ func TestTextPositionFromIndexInLogicalLineMatchesWholeDoc(t *testing.T) {
 				within := idx - lineStart
 				originY := float64(lineIdx) * lineHeight
 
-				lp0, _, lpCount := textutil.TextPositionFromIndexInLogicalLine(width, lines[lineIdx], within, &s)
+				lp0, _, lpCount := textutil.TextPositionFromIndexInLogicalLine(width, lines[lineIdx], 0, within, &s)
 				if lpCount == 0 {
 					t.Errorf("idx=%d: per-logical count=0", idx)
 					continue
@@ -373,7 +373,7 @@ func TestTextIndexFromPositionInLogicalLineMatchesWholeDoc(t *testing.T) {
 			originY := float64(q.lineIndex) * lineHeight
 			// Local Y near the top of the per-logical line maps to a whole-doc
 			// Y of originY.
-			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], &s)
+			perLine := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(q.x, 0), lines[q.lineIndex], 0, &s)
 			whole := textutil.TextIndexFromPosition(&textutil.TextLayoutParams{
 				RenderingTextRange:  func(start, end int) string { return str[start:end] },
 				RenderingTextLength: len(str),
@@ -398,11 +398,11 @@ func TestLinesInLogicalLineNoTrailingEmpty(t *testing.T) {
 	face := newTestFace(t)
 
 	// "abc\n" as one logical line: should be exactly one visual subline tall.
-	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, lineHeight, 0, false), lineHeight; got != want {
+	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, 0, lineHeight, 0, false), lineHeight; got != want {
 		t.Errorf("MeasureLogicalLineHeight(\"abc\\n\") = %v, want %v", got, want)
 	}
 	// The empty trailing line as its own logical line: also one subline.
-	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "", textutil.WrapModeNone, face, lineHeight, 0, false), lineHeight; got != want {
+	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "", textutil.WrapModeNone, face, nil, 0, lineHeight, 0, false), lineHeight; got != want {
 		t.Errorf("MeasureLogicalLineHeight(\"\") = %v, want %v", got, want)
 	}
 	// Whole-document: "abc\n" yields 2 visual sublines (incl. trailing empty).
