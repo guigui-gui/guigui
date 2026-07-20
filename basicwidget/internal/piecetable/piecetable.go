@@ -344,7 +344,7 @@ func (p *PieceTable) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func (p *PieceTable) resetHistory() {
-	p.history = p.history[:0]
+	p.history = slices.Delete(p.history, 0, len(p.history))
 	p.history = append(p.history, historyItem{
 		items: []pieceTableItem{
 			{
@@ -573,7 +573,7 @@ func (p *PieceTable) maybeAppendHistory(text string, start, end int, fromIME boo
 func (p *PieceTable) appendHistory(undoStart, undoEnd, redoStart, redoEnd int) {
 	// Truncate the history.
 	if p.historyIndex < len(p.history)-1 {
-		p.history = p.history[:p.historyIndex+1]
+		p.history = slices.Delete(p.history, p.historyIndex+1, len(p.history))
 	}
 
 	// Append the current items (cloned) to the history.

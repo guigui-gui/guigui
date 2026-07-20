@@ -110,7 +110,7 @@ func (c *Combobox) OnValueChanged(f func(context *guigui.Context, value string, 
 
 func (c *Combobox) updateFilteredItems() {
 	input := strings.ToLower(c.textInput.Value())
-	c.filteredItems = c.filteredItems[:0]
+	c.filteredItems = slices.Delete(c.filteredItems, 0, len(c.filteredItems))
 	for _, item := range c.items {
 		if input == "" || strings.Contains(strings.ToLower(item), input) {
 			c.filteredItems = append(c.filteredItems, PopupMenuItem[string]{

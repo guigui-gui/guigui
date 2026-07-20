@@ -365,7 +365,7 @@ func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 
 func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	t.linearLayoutItems = slices.Delete(t.linearLayoutItems, 0, len(t.linearLayoutItems))
-	t.textColumnLayouts = t.textColumnLayouts[:0]
+	t.textColumnLayouts = slices.Delete(t.textColumnLayouts, 0, len(t.textColumnLayouts))
 	t.textColumnLayoutItems = slices.Delete(t.textColumnLayoutItems, 0, len(t.textColumnLayoutItems))
 	for i := range t.table.columnWidthsInPixels {
 		if i < len(t.row.Cells) && t.row.Cells[i].Content != nil {

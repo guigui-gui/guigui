@@ -132,7 +132,7 @@ func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, 
 		line := str[pos:lineEnd]
 		s, sok := cachedVisualLineStarts(width, line, wrapMode, face, tabWidth, keepTailingSpace)
 		if !sok {
-			return dst[:base], false
+			return slices.Delete(dst, base, len(dst)), false
 		}
 		for i := range s {
 			rs := pos + s[i]
@@ -184,7 +184,6 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		}
 	}
 	if !built {
-		theVisualLinesBuffer = theVisualLinesBuffer[:0]
 		for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, indexInBytes int) float64 {
 			return advance(str, indexInBytes, options.Face.TextFace(), options.TabWidth, options.KeepTailingSpace)
 		}) {

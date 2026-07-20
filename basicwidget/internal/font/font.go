@@ -270,8 +270,9 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	tmpLocales = context.AppendLocales(tmpLocales[:0])
 	if !slices.Equal(prevLocales, tmpLocales) {
 		clear(theFaceCache)
-		prevLocales = append(prevLocales[:0], tmpLocales...)
+		prevLocales = append(slices.Delete(prevLocales, 0, len(prevLocales)), tmpLocales...)
 	}
+	tmpLocales = slices.Delete(tmpLocales, 0, len(tmpLocales))
 
 	var familyID uint64
 	if fnt != nil {
