@@ -42,6 +42,9 @@ type textStyle struct {
 	variations []font.Variation
 	features   []font.Feature
 
+	// italic selects an italic face from the font family.
+	italic bool
+
 	// tabWidth is the tab width in pixels. A non-positive value selects the
 	// default width.
 	tabWidth float64
@@ -106,8 +109,9 @@ func (s *textStyle) fontFamilyID() uint64 {
 // sets whether ligatures are enabled.
 func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
 	a := font.Attributes{
-		Size: s.fontSize * s.scale(),
-		Lang: s.lang,
+		Size:   s.fontSize * s.scale(),
+		Lang:   s.lang,
+		Italic: s.italic,
 	}
 	a = a.WithVariation(font.TagWght, float32(text.WeightMedium))
 	for _, v := range s.variations {

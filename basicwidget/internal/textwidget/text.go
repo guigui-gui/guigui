@@ -216,6 +216,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	writeColor(w, t.baseStyle.activeCompositionColor)
 	writeColor(w, t.baseStyle.caretColor)
 	w.WriteFloat64(t.baseStyle.scaleMinus1)
+	w.WriteBool(t.baseStyle.italic)
 	w.WriteInt(len(t.baseStyle.variations))
 	for _, v := range t.baseStyle.variations {
 		w.WriteUint32(uint32(v.Tag))
@@ -613,6 +614,12 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	t.textInited = true
 
 	return true
+}
+
+// SetItalic sets the italic face selection of the base style. Ranged italic
+// overrides apply on top.
+func (t *Text) SetItalic(italic bool) {
+	t.baseStyle.italic = italic
 }
 
 // SetVariation sets the OpenType variation axis tag of the base style to

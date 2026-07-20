@@ -101,6 +101,14 @@ type Text struct {
 	// placeholder is drawn in a subdued color when the value is empty and no
 	// IME composition is active. An empty string disables it.
 	placeholder string
+
+	// fontSize is the font size at scale 1. A non-positive value selects the
+	// default font size ([FontSize]).
+	fontSize float64
+
+	// lineHeight is the line height at scale 1. A non-positive value selects
+	// the default line height ([LineHeight]).
+	lineHeight float64
 }
 
 // OnValueChanged sets the event handler that is called when the text value changes.
@@ -146,6 +154,8 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteString(t.placeholder)
 	w.WriteString(t.cachedLocalesString)
 	w.WriteUint64(t.fontFamilyID())
+	w.WriteFloat64(t.fontSize)
+	w.WriteFloat64(t.lineHeight)
 }
 
 func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -157,8 +167,16 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		fnt = t.fontFamily.f
 	}
 	t.core.SetFontFamily(fnt)
-	t.core.SetFontSize(FontSize(context))
-	t.core.SetLineHeight(float64(LineHeight(context)))
+	fontSize := FontSize(context)
+	if t.fontSize > 0 {
+		fontSize = t.fontSize
+	}
+	t.core.SetFontSize(fontSize)
+	lineHeight := float64(LineHeight(context))
+	if t.lineHeight > 0 {
+		lineHeight = t.lineHeight
+	}
+	t.core.SetLineHeight(lineHeight)
 
 	var lang language.Tag
 	if len(t.locales) > 0 {
@@ -349,10 +367,70 @@ func (t *Text) SetLocales(locales []language.Tag) {
 // axis of the base style.
 func (t *Text) SetBold(bold bool) {
 	if bold {
-		t.core.SetVariation(font.TagWght, float32(text.WeightBold))
+		t.SetWeight(text.WeightBold)
 		return
 	}
+	t.UnsetWeight()
+}
+
+// SetWeight sets the font weight of the base style by setting the wght
+// variation axis. Ranged weight overrides apply on top.
+func (t *Text) SetWeight(weight text.Weight) {
+	t.core.SetVariation(font.TagWght, float32(weight))
+}
+
+// UnsetWeight removes the font weight of the base style, restoring the
+// default weight.
+func (t *Text) UnsetWeight() {
 	t.core.UnsetVariation(font.TagWght)
+}
+
+// SetItalic sets the italic face selection of the base style. Ranged italic
+// overrides apply on top. When the font family has no italic face, the value
+// renders with a regular face.
+func (t *Text) SetItalic(italic bool) {
+	t.core.SetItalic(italic)
+}
+
+// SetVariation sets the OpenType variation axis tag of the base style to
+// value. Ranged variation overrides apply on top.
+func (t *Text) SetVariation(tag text.Tag, value float32) {
+	t.core.SetVariation(tag, value)
+}
+
+// UnsetVariation removes the OpenType variation axis tag from the base
+// style.
+func (t *Text) UnsetVariation(tag text.Tag) {
+	t.core.UnsetVariation(tag)
+}
+
+// SetFeature sets the OpenType feature tag of the base style to value.
+// Ranged feature overrides apply on top.
+func (t *Text) SetFeature(tag text.Tag, value uint32) {
+	t.core.SetFeature(tag, value)
+}
+
+// UnsetFeature removes the OpenType feature tag from the base style.
+func (t *Text) UnsetFeature(tag text.Tag) {
+	t.core.UnsetFeature(tag)
+}
+
+// SetFontSize sets the font size at scale 1. A non-positive size selects the
+// default font size ([FontSize]). Unlike the default, the specified size is
+// not multiplied by [guigui.Context.Scale], so it can express a size
+// independent of the app scale; multiply it explicitly when it should follow
+// the app scale.
+func (t *Text) SetFontSize(size float64) {
+	t.fontSize = size
+}
+
+// SetLineHeight sets the line height at scale 1. A non-positive height
+// selects the default line height ([LineHeight]). Unlike the default, the
+// specified height is not multiplied by [guigui.Context.Scale], so it can
+// express a height independent of the app scale; multiply it explicitly when
+// it should follow the app scale.
+func (t *Text) SetLineHeight(lineHeight float64) {
+	t.lineHeight = lineHeight
 }
 
 // SetFontFamily sets the [FontFamily] used to render the Text. Passing nil
