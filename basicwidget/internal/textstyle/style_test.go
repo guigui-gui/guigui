@@ -10,6 +10,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
 
@@ -66,12 +67,12 @@ func TestStyleIsZero(t *testing.T) {
 		},
 		{
 			name:  "feature",
-			style: textstyle.Style{}.WithFeature(tagTnum, 1),
+			style: textstyle.Style{}.WithFeature(font.TagTnum, 1),
 			want:  false,
 		},
 		{
 			name:  "variation",
-			style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)),
+			style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold)),
 			want:  false,
 		},
 	}
@@ -126,20 +127,20 @@ func TestStyleEqual(t *testing.T) {
 		},
 		{
 			name: "same features",
-			a:    textstyle.Style{}.WithFeature(tagLiga, 1),
-			b:    textstyle.Style{}.WithFeature(tagLiga, 1),
+			a:    textstyle.Style{}.WithFeature(font.TagLiga, 1),
+			b:    textstyle.Style{}.WithFeature(font.TagLiga, 1),
 			want: true,
 		},
 		{
 			name: "different feature values",
-			a:    textstyle.Style{}.WithFeature(tagLiga, 1),
-			b:    textstyle.Style{}.WithFeature(tagLiga, 0),
+			a:    textstyle.Style{}.WithFeature(font.TagLiga, 1),
+			b:    textstyle.Style{}.WithFeature(font.TagLiga, 0),
 			want: false,
 		},
 		{
 			name: "feature build order does not matter",
-			a:    textstyle.Style{}.WithFeature(tagLiga, 1).WithFeature(tagTnum, 1),
-			b:    textstyle.Style{}.WithFeature(tagTnum, 1).WithFeature(tagLiga, 1),
+			a:    textstyle.Style{}.WithFeature(font.TagLiga, 1).WithFeature(font.TagTnum, 1),
+			b:    textstyle.Style{}.WithFeature(font.TagTnum, 1).WithFeature(font.TagLiga, 1),
 			want: true,
 		},
 	}

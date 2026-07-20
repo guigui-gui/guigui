@@ -5,6 +5,7 @@ package font
 
 import (
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	_ "embed"
 	"encoding/binary"
@@ -103,6 +104,13 @@ func (t taggedValues) all() iter.Seq2[text.Tag, uint32] {
 	}
 }
 
+// Tags of the OpenType variation axes and features with dedicated handling.
+var (
+	TagWght = text.MustParseTag("wght")
+	TagLiga = text.MustParseTag("liga")
+	TagTnum = text.MustParseTag("tnum")
+)
+
 // Attributes is a comparable set of text rendering attributes: size,
 // language, and OpenType variation and feature settings. A face is resolved
 // from Attributes together with a [Family]; the attributes alone do not
@@ -128,6 +136,17 @@ func (a Attributes) WithVariation(tag text.Tag, value float32) Attributes {
 func (a Attributes) WithFeature(tag text.Tag, value uint32) Attributes {
 	a.features = a.features.with(tag, value)
 	return a
+}
+
+// weight returns the wght variation setting, or [text.WeightNormal] when
+// unset.
+func (a Attributes) weight() text.Weight {
+	for tag, value := range a.variations.all() {
+		if tag == TagWght {
+			return text.Weight(math.Float32frombits(value))
+		}
+	}
+	return text.WeightNormal
 }
 
 // Face is a resolved text face.
@@ -292,6 +311,25 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	}()
 	if fnt != nil {
 		tmpFaceSourceEntries = append(tmpFaceSourceEntries, fnt.entries...)
+		// Family entries whose weight metadata is closest to the requested
+		// weight resolve first, so a family of static faces (e.g. separate
+		// regular and bold fonts) resolves bold text to the bold source. The
+		// stable sort preserves the coverage-fallback order among equally
+		// matching entries, and the registered fallback stack (appended
+		// below) keeps its priority order.
+		//
+		// TODO: Match the style metadata too once Attributes carries an
+		// italic input (#131).
+		//
+		// TODO: Treat a weight within a variable font's wght axis range as
+		// an exact match instead of matching by the metadata
+		// (default-instance) weight. This needs the axis ranges, which
+		// [text.GoTextFaceSource] does not expose apart from the unstable
+		// UnsafeInternal (#131).
+		weight := attributes.weight()
+		slices.SortStableFunc(tmpFaceSourceEntries, func(a, b FaceSourceEntry) int {
+			return cmp.Compare(weightDistance(a, weight), weightDistance(b, weight))
+		})
 		if fnt.useFallback {
 			tmpFaceSourceEntries = appendFontFaceEntries(tmpFaceSourceEntries, context)
 		}
@@ -337,6 +375,11 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	theFaceCache[ck] = cachedFace{face: mf, id: id}
 
 	return mf, id
+}
+
+// weightDistance returns how far entry's weight metadata is from weight.
+func weightDistance(entry FaceSourceEntry, weight text.Weight) float64 {
+	return math.Abs(float64(entry.FaceSource.Metadata().Weight) - float64(weight))
 }
 
 // DefaultFaceSourceEntry returns the entry for the bundled default face.

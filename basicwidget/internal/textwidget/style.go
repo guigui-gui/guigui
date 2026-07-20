@@ -107,9 +107,9 @@ func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
 		Size: s.baseFontSize * s.scale(),
 		Lang: s.lang,
 	}
-	a = a.WithVariation(tagWght, float32(weight))
-	a = a.WithFeature(tagLiga, boolToFeatureValue(liga))
-	a = a.WithFeature(tagTnum, boolToFeatureValue(s.tabular))
+	a = a.WithVariation(font.TagWght, float32(weight))
+	a = a.WithFeature(font.TagLiga, boolToFeatureValue(liga))
+	a = a.WithFeature(font.TagTnum, boolToFeatureValue(s.tabular))
 	return a
 }
 
@@ -119,12 +119,6 @@ func boolToFeatureValue(b bool) uint32 {
 	}
 	return 0
 }
-
-var (
-	tagWght = text.MustParseTag("wght")
-	tagLiga = text.MustParseTag("liga")
-	tagTnum = text.MustParseTag("tnum")
-)
 
 // ensureStyleRuns clears the ranged style overrides if the store's
 // renderable content has been mutated since they were applied, and returns

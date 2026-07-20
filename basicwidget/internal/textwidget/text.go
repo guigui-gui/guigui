@@ -765,7 +765,7 @@ func (t *Text) faceAttributes(forceBold bool) font.Attributes {
 func (t *Text) face(context *guigui.Context, forceBold bool) font.Face {
 	attrs := t.lastFaceAttributes
 	if forceBold {
-		attrs = attrs.WithVariation(tagWght, float32(text.WeightBold))
+		attrs = attrs.WithVariation(font.TagWght, float32(text.WeightBold))
 	}
 	return font.NewFace(context, t.style.fontFamily, attrs)
 }

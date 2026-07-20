@@ -403,19 +403,17 @@ func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
 }
 
-var tagWght = text.MustParseTag("wght")
-
 // SetWeightInRange overrides the font weight in [startInBytes, endInBytes)
 // by setting the wght variation axis. The override lasts until the value
 // changes.
 func (t *Text) SetWeightInRange(startInBytes, endInBytes int, weight text.Weight) {
-	t.core.SetVariationInRange(startInBytes, endInBytes, tagWght, float32(weight))
+	t.core.SetVariationInRange(startInBytes, endInBytes, font.TagWght, float32(weight))
 }
 
 // UnsetWeightInRange removes the font weight override in
 // [startInBytes, endInBytes).
 func (t *Text) UnsetWeightInRange(startInBytes, endInBytes int) {
-	t.core.UnsetVariationInRange(startInBytes, endInBytes, tagWght)
+	t.core.UnsetVariationInRange(startInBytes, endInBytes, font.TagWght)
 }
 
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).

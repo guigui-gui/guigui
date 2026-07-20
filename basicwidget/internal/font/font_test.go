@@ -4,35 +4,94 @@
 package font_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/goregular"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
 
-func TestAttributesCanonical(t *testing.T) {
-	tagWght := text.MustParseTag("wght")
-	tagLiga := text.MustParseTag("liga")
-	tagTnum := text.MustParseTag("tnum")
+func TestFaceForStaticWeightFamily(t *testing.T) {
+	regular, err := text.NewGoTextFaceSource(bytes.NewReader(goregular.TTF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	bold, err := text.NewGoTextFaceSource(bytes.NewReader(gobold.TTF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	family := font.NewFamily([]font.FaceSourceEntry{
+		{FaceSource: regular},
+		{FaceSource: bold},
+	}, &font.FamilyOptions{DisableFallback: true})
 
+	const sample = "Static weights"
+	sourceAdvance := func(source *text.GoTextFaceSource) float64 {
+		return text.Advance(sample, &text.GoTextFace{Source: source, Size: 16})
+	}
+	if sourceAdvance(regular) == sourceAdvance(bold) {
+		t.Fatal("the test fonts should have distinguishable advances")
+	}
+
+	var context guigui.Context
+	tests := []struct {
+		name   string
+		weight text.Weight
+		want   *text.GoTextFaceSource
+	}{
+		{
+			name:   "normal picks the regular source",
+			weight: text.WeightNormal,
+			want:   regular,
+		},
+		{
+			name:   "medium is closer to the regular source",
+			weight: text.WeightMedium,
+			want:   regular,
+		},
+		{
+			name:   "bold picks the bold source",
+			weight: text.WeightBold,
+			want:   bold,
+		},
+		{
+			name:   "black is closer to the bold source",
+			weight: text.WeightBlack,
+			want:   bold,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := font.Attributes{Size: 16}.WithVariation(font.TagWght, float32(tt.weight))
+			f := font.NewFace(&context, family, a)
+			if got, want := text.Advance(sample, f.TextFace()), sourceAdvance(tt.want); got != want {
+				t.Errorf("advance for weight %v: got: %v, want: %v", tt.weight, got, want)
+			}
+		})
+	}
+}
+
+func TestAttributesCanonical(t *testing.T) {
 	// The setting order does not affect equality.
-	a1 := font.Attributes{Size: 16}.WithVariation(tagWght, 700).WithFeature(tagLiga, 1).WithFeature(tagTnum, 0)
-	a2 := font.Attributes{Size: 16}.WithFeature(tagTnum, 0).WithFeature(tagLiga, 1).WithVariation(tagWght, 700)
+	a1 := font.Attributes{Size: 16}.WithVariation(font.TagWght, 700).WithFeature(font.TagLiga, 1).WithFeature(font.TagTnum, 0)
+	a2 := font.Attributes{Size: 16}.WithFeature(font.TagTnum, 0).WithFeature(font.TagLiga, 1).WithVariation(font.TagWght, 700)
 	if a1 != a2 {
 		t.Errorf("attributes with the same settings should be equal: %v != %v", a1, a2)
 	}
 
 	// Setting a tag again overwrites the previous value.
-	a3 := font.Attributes{Size: 16}.WithVariation(tagWght, 400).WithVariation(tagWght, 700)
-	a4 := font.Attributes{Size: 16}.WithVariation(tagWght, 700)
+	a3 := font.Attributes{Size: 16}.WithVariation(font.TagWght, 400).WithVariation(font.TagWght, 700)
+	a4 := font.Attributes{Size: 16}.WithVariation(font.TagWght, 700)
 	if a3 != a4 {
 		t.Errorf("overwriting a tag should be equal to setting it once: %v != %v", a3, a4)
 	}
 
 	// Different values are not equal.
-	a5 := font.Attributes{Size: 16}.WithVariation(tagWght, 400)
+	a5 := font.Attributes{Size: 16}.WithVariation(font.TagWght, 400)
 	if a4 == a5 {
 		t.Errorf("attributes with different settings should not be equal: %v == %v", a4, a5)
 	}

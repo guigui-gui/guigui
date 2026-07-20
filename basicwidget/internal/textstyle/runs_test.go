@@ -16,12 +16,6 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
 
-var (
-	tagLiga = text.MustParseTag("liga")
-	tagTnum = text.MustParseTag("tnum")
-	tagWght = text.MustParseTag("wght")
-)
-
 func equalRuns(a, b []textstyle.Run) bool {
 	return slices.EqualFunc(a, b, func(x, y textstyle.Run) bool {
 		return x.Start == y.Start && x.End == y.End && x.Style.Equal(y.Style)
@@ -75,12 +69,12 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "partial overlap merges properties",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, 9, tagWght, float32(text.WeightBold))
+				runs.SetVariation(0, 9, font.TagWght, float32(text.WeightBold))
 				runs.SetUnderline(5, 16, true)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
-				{Start: 5, End: 9, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)).WithUnderline(true)},
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold))},
+				{Start: 5, End: 9, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold)).WithUnderline(true)},
 				{Start: 9, End: 16, Style: textstyle.Style{}.WithUnderline(true)},
 			},
 		},
@@ -147,13 +141,13 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "whole-text set then a narrower one",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, math.MaxInt, tagWght, float32(text.WeightBold))
+				runs.SetVariation(0, math.MaxInt, font.TagWght, float32(text.WeightBold))
 				runs.SetColor(2, 4, red)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 2, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
-				{Start: 2, End: 4, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold)).WithColor(red)},
-				{Start: 4, End: math.MaxInt, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
+				{Start: 0, End: 2, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold))},
+				{Start: 2, End: 4, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold)).WithColor(red)},
+				{Start: 4, End: math.MaxInt, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold))},
 			},
 		},
 		{
@@ -171,36 +165,36 @@ func TestRunsSet(t *testing.T) {
 		{
 			name: "features merge by tag with the later value winning",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetFeature(0, 10, tagLiga, 1)
-				runs.SetFeature(5, 15, tagLiga, 0)
-				runs.SetFeature(5, 15, tagTnum, 1)
+				runs.SetFeature(0, 10, font.TagLiga, 1)
+				runs.SetFeature(5, 15, font.TagLiga, 0)
+				runs.SetFeature(5, 15, font.TagTnum, 1)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 5, Style: textstyle.Style{}.WithFeature(tagLiga, 1)},
-				{Start: 5, End: 15, Style: textstyle.Style{}.WithFeature(tagLiga, 0).WithFeature(tagTnum, 1)},
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithFeature(font.TagLiga, 1)},
+				{Start: 5, End: 15, Style: textstyle.Style{}.WithFeature(font.TagLiga, 0).WithFeature(font.TagTnum, 1)},
 			},
 		},
 		{
 			name: "feature lists stay canonical across merges",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetFeature(0, 10, tagTnum, 1)
-				runs.SetFeature(0, 10, tagLiga, 1)
-				runs.SetFeature(0, 10, tagLiga, 0)
-				runs.SetFeature(0, 10, tagLiga, 1)
+				runs.SetFeature(0, 10, font.TagTnum, 1)
+				runs.SetFeature(0, 10, font.TagLiga, 1)
+				runs.SetFeature(0, 10, font.TagLiga, 0)
+				runs.SetFeature(0, 10, font.TagLiga, 1)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 10, Style: textstyle.Style{}.WithFeature(tagLiga, 1).WithFeature(tagTnum, 1)},
+				{Start: 0, End: 10, Style: textstyle.Style{}.WithFeature(font.TagLiga, 1).WithFeature(font.TagTnum, 1)},
 			},
 		},
 		{
 			name: "variations merge by tag",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, 10, tagWght, float32(text.WeightNormal))
-				runs.SetVariation(5, 10, tagWght, float32(text.WeightBold))
+				runs.SetVariation(0, 10, font.TagWght, float32(text.WeightNormal))
+				runs.SetVariation(5, 10, font.TagWght, float32(text.WeightBold))
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightNormal))},
-				{Start: 5, End: 10, Style: textstyle.Style{}.WithVariation(tagWght, float32(text.WeightBold))},
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightNormal))},
+				{Start: 5, End: 10, Style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold))},
 			},
 		},
 	}
@@ -270,19 +264,19 @@ func TestRunsUnset(t *testing.T) {
 		{
 			name: "unset a feature keeps other features",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetFeature(0, 10, tagLiga, 1)
-				runs.SetFeature(0, 10, tagTnum, 1)
-				runs.UnsetFeature(0, 10, tagLiga)
+				runs.SetFeature(0, 10, font.TagLiga, 1)
+				runs.SetFeature(0, 10, font.TagTnum, 1)
+				runs.UnsetFeature(0, 10, font.TagLiga)
 			},
 			want: []textstyle.Run{
-				{Start: 0, End: 10, Style: textstyle.Style{}.WithFeature(tagTnum, 1)},
+				{Start: 0, End: 10, Style: textstyle.Style{}.WithFeature(font.TagTnum, 1)},
 			},
 		},
 		{
 			name: "unset a variation",
 			ops: func(runs *textstyle.Runs) {
-				runs.SetVariation(0, 10, tagWght, float32(text.WeightBold))
-				runs.UnsetVariation(0, 10, tagWght)
+				runs.SetVariation(0, 10, font.TagWght, float32(text.WeightBold))
+				runs.UnsetVariation(0, 10, font.TagWght)
 			},
 			want: nil,
 		},
@@ -291,7 +285,7 @@ func TestRunsUnset(t *testing.T) {
 			ops: func(runs *textstyle.Runs) {
 				runs.SetColor(0, 10, red)
 				runs.UnsetUnderline(0, 10)
-				runs.UnsetFeature(0, 10, tagLiga)
+				runs.UnsetFeature(0, 10, font.TagLiga)
 			},
 			want: []textstyle.Run{
 				{Start: 0, End: 10, Style: textstyle.Style{}.WithColor(red)},
@@ -419,7 +413,7 @@ func TestRunsStyleGetters(t *testing.T) {
 
 	var runs textstyle.Runs
 	runs.SetColor(0, 10, red)
-	runs.SetFeature(0, 10, tagTnum, 1)
+	runs.SetFeature(0, 10, font.TagTnum, 1)
 
 	style := runs.StyleAt(0)
 	if got, ok := style.Color(); !ok || got != color.Color(red) {
@@ -428,7 +422,7 @@ func TestRunsStyleGetters(t *testing.T) {
 	if _, ok := style.Underline(); ok {
 		t.Errorf("Underline(): got set, want unset")
 	}
-	if got, want := style.Features(), []font.Feature{{Tag: tagTnum, Value: 1}}; !slices.Equal(got, want) {
+	if got, want := style.Features(), []font.Feature{{Tag: font.TagTnum, Value: 1}}; !slices.Equal(got, want) {
 		t.Errorf("Features(): got: %+v, want: %+v", got, want)
 	}
 	if got := style.Variations(); got != nil {
