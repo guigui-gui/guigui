@@ -55,12 +55,6 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		return materializeFull(), 0, 0, false
 	}
 
-	// The viewport walker measures with a single face; text with metric
-	// style overrides draws unrestricted.
-	if t.hasMetricStyleRuns() {
-		return materializeFull(), 0, 0, false
-	}
-
 	width := t.LayoutWidth(textBounds)
 
 	var compInfo textutil.CompositionInfo
@@ -141,6 +135,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			LineHeight:       t.LineHeight(),
 			TabWidth:         t.actualTabWidth(context),
 			KeepTailingSpace: t.keepTailingSpace,
+			FaceRuns:         t.faceRunsBuf,
 			WrapMode:         t.wrapMode,
 			Composition:      compInfo,
 		})
@@ -249,9 +244,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	op.Style.WrapMode = t.wrapMode
 	op.Style.Face = face
 	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	op.Style.FaceRuns = t.faceRunsBuf
 	defer func() {
-		op.Style.FaceRuns = nil
+		op.Style.FaceRuns = slices.Delete(op.Style.FaceRuns, 0, len(op.Style.FaceRuns))
 		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
 	}()
 	op.Style.LineHeight = t.LineHeight()
@@ -333,8 +327,27 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.CompositionActiveEnd -= byteStart
 		}
 	}
+	t.appendFaceRunsToDraw(op, byteStart, len(txt))
 	t.appendStyleRunsToDraw(op, byteStart, len(txt))
 	textutil.Draw(textBounds, dst, txt, op)
+}
+
+// appendFaceRunsToDraw appends the face runs that intersect the drawn byte
+// window [byteStart, byteStart+txtLen) to op.Style.FaceRuns, rebased to the
+// window.
+func (t *Text) appendFaceRunsToDraw(op *textutil.DrawOptions, byteStart, txtLen int) {
+	for _, run := range t.faceRunsBuf {
+		start := run.Start - byteStart
+		end := run.End - byteStart
+		if end <= 0 || start >= txtLen {
+			continue
+		}
+		op.Style.FaceRuns = append(op.Style.FaceRuns, textutil.FaceRun{
+			Start: start,
+			End:   end,
+			Face:  run.Face,
+		})
+	}
 }
 
 // appendStyleRunsToDraw appends the ranged style overrides that intersect

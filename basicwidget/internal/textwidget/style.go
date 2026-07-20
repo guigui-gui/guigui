@@ -300,13 +300,6 @@ func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().UnsetItalic(startInBytes, endInBytes)
 }
 
-// hasMetricStyleRuns reports whether any ranged style override affects glyph
-// metrics (currently the variation axes, feature settings, and face-selection
-// overrides).
-func (t *Text) hasMetricStyleRuns() bool {
-	return t.ensureStyleRuns().HasMetricProperties()
-}
-
 // metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for
 // fingerprinting the metric style properties.
 type metricHashWriter struct {
@@ -384,7 +377,7 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		return runs
 	}
 	for run := range t.ensureStyleRuns().All() {
-		if !run.Style.HasMetricProperties() {
+		if !run.Style.AffectsFaceSelection() {
 			continue
 		}
 		attrs := t.faceAttributes(forceBold)

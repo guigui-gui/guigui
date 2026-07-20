@@ -488,7 +488,11 @@ func (t *Text) VisualLineCountOfLogicalLine(context *guigui.Context, lineIndex, 
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), nil, start, t.actualTabWidth(context), t.keepTailingSpace)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
+	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), t.faceRunsBuf, start, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the
@@ -503,5 +507,9 @@ func (t *Text) MaxCaretXOfLogicalLine(context *guigui.Context, lineIndex, wrapWi
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), nil, start, t.actualTabWidth(context), t.keepTailingSpace)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
+	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), t.faceRunsBuf, start, t.actualTabWidth(context), t.keepTailingSpace)
 }

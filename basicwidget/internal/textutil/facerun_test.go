@@ -6,6 +6,7 @@ package textutil_test
 import (
 	"bytes"
 	"fmt"
+	"image"
 	"math"
 	"strings"
 	"testing"
@@ -135,6 +136,65 @@ func TestAdvanceWithFaces(t *testing.T) {
 			t.Errorf("got: %f, want: %f", got, want)
 		}
 	})
+}
+
+// TestFaceRunsFastPathParity asserts the offset-accelerated hit-testing and
+// caret paths match the whole-document fallbacks when face runs are present.
+func TestFaceRunsFastPathParity(t *testing.T) {
+	const lineHeight = 24.0
+	small, large := testFaces(t)
+	str := "abcdef ghij klmno\npqr stu vwx yz\n\nthe last line"
+	faceRuns := []textutil.FaceRun{
+		{Start: 3, End: 10, Face: large},
+		{Start: 22, End: 30, Face: large},
+	}
+	for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
+		for _, width := range []int{math.MaxInt, 80} {
+			t.Run(fmt.Sprintf("width=%d%s", width, wrapModeSuffix(wrapMode)), func(t *testing.T) {
+				s := textutil.Style{
+					Face:       small,
+					FaceRuns:   faceRuns,
+					LineHeight: lineHeight,
+					WrapMode:   wrapMode,
+				}
+				var l textutil.LineByteOffsets
+				rebuildFromString(&l, str)
+				params := &textutil.TextLayoutParams{
+					RenderingTextRange:         func(start, end int) string { return str[start:end] },
+					RenderingTextLength:        len(str),
+					Width:                      width,
+					Style:                      s,
+					PrecomputedLineByteOffsets: &l,
+				}
+
+				for idx := 0; idx <= len(str); idx++ {
+					wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+					gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
+					if gotCount != wantCount {
+						t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
+						continue
+					}
+					if gotCount >= 1 && gotP0 != wantP0 {
+						t.Errorf("idx=%d: pos0=%+v, want %+v", idx, gotP0, wantP0)
+					}
+					if gotCount == 2 && gotP1 != wantP1 {
+						t.Errorf("idx=%d: pos1=%+v, want %+v", idx, gotP1, wantP1)
+					}
+				}
+
+				for y := -8; y < 8*int(lineHeight); y += 7 {
+					for x := -8; x < 240; x += 7 {
+						pos := image.Pt(x, y)
+						want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), pos)
+						got := textutil.TextIndexFromPosition(params, pos)
+						if got != want {
+							t.Fatalf("position=%v: index=%d, want %d", pos, got, want)
+						}
+					}
+				}
+			})
+		}
+	}
 }
 
 // TestFaceRunsMeasureHeightParity asserts that per-logical-line height

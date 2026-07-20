@@ -34,7 +34,7 @@ func (r *Runs) WriteStateKey(w Writer) {
 // Runs without any contribute nothing.
 func (r *Runs) WriteMetricStateKey(w Writer) {
 	for _, run := range r.runs {
-		if !run.Style.HasMetricProperties() {
+		if !run.Style.AffectsFaceSelection() {
 			continue
 		}
 		w.WriteInt(run.Start)
@@ -43,20 +43,10 @@ func (r *Runs) WriteMetricStateKey(w Writer) {
 	}
 }
 
-// HasMetricProperties reports whether any run overrides a metric-affecting
-// property.
-func (r *Runs) HasMetricProperties() bool {
-	for _, run := range r.runs {
-		if run.Style.HasMetricProperties() {
-			return true
-		}
-	}
-	return false
-}
-
-// HasMetricProperties reports whether the style overrides a metric-affecting
-// property, such as a variation setting or the font family.
-func (s Style) HasMetricProperties() bool {
+// AffectsFaceSelection reports whether the style overrides a property that
+// affects font face selection, such as a variation setting or the font
+// family.
+func (s Style) AffectsFaceSelection() bool {
 	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set || s.family.set || s.lang.set || s.scale.set
 }
 

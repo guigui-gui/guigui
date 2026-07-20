@@ -112,10 +112,6 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 // rendering bytes for the composition's selection line) so no full-
 // document materialization is needed.
 func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int, bold bool) (int, bool) {
-	if t.hasMetricStyleRuns() {
-		// The per-logical-line walk measures with a single face.
-		return 0, false
-	}
 	t.ensureLineByteOffsets()
 	n := t.contentCache.lineByteOffsets.LineCount()
 
@@ -153,6 +149,10 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 	if measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	totalLen := t.store.TextLengthInBytes()
 	var count int
 	for i := range n {
@@ -167,7 +167,7 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, nil, cs, tabW, keepTailing)
+		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, t.faceRunsBuf, cs, tabW, keepTailing)
 	}
 	return count, true
 }
@@ -186,10 +186,6 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 // when the composition's selection straddles logical lines; the caller
 // falls back to [textutil.Measure] on the full rendering text.
 func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bold bool, ellipsisString string) (float64, float64, bool) {
-	if t.hasMetricStyleRuns() {
-		// The per-logical-line walk measures with a single face.
-		return 0, 0, false
-	}
 	t.ensureLineByteOffsets()
 	n := t.contentCache.lineByteOffsets.LineCount()
 
@@ -218,6 +214,10 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 	if measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
 	totalLen := t.store.TextLengthInBytes()
 
 	var maxWidth, height float64
@@ -233,7 +233,7 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, nil, cs, lineH, tabW, keepTailing, ellipsisString)
+		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, t.faceRunsBuf, cs, lineH, tabW, keepTailing, ellipsisString)
 		maxWidth = max(maxWidth, w)
 		height += h
 	}

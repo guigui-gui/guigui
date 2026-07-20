@@ -14,7 +14,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
 
-func TestStyleHasMetricProperties(t *testing.T) {
+func TestStyleAffectsFaceSelection(t *testing.T) {
 	tests := []struct {
 		name  string
 		style textstyle.Style
@@ -69,7 +69,7 @@ func TestStyleHasMetricProperties(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := tt.style.HasMetricProperties(); got != tt.want {
+			if got := tt.style.AffectsFaceSelection(); got != tt.want {
 				t.Errorf("got: %t, want: %t", got, tt.want)
 			}
 		})

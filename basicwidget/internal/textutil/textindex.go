@@ -31,11 +31,6 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	if p.PrecomputedLineByteOffsets == nil {
 		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
 	}
-	// The per-logical-line fast path measures with a single face; text with
-	// face runs takes the whole-document fallback.
-	if len(p.Style.FaceRuns) > 0 {
-		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
-	}
 	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
 		return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)

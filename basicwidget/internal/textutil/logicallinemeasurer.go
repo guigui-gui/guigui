@@ -45,11 +45,6 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 	if p.PrecomputedLineByteOffsets == nil {
 		return nil, false
 	}
-	// The per-logical-line fast paths measure with a single face; text with
-	// face runs takes the whole-document fallbacks.
-	if len(p.Style.FaceRuns) > 0 {
-		return nil, false
-	}
 	n := p.PrecomputedLineByteOffsets.LineCount()
 	if n == 0 {
 		return nil, false

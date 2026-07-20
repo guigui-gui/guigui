@@ -184,9 +184,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		theVisualLinesBuffer = slices.Delete(theVisualLinesBuffer, 0, len(theVisualLinesBuffer))
 	}()
 	var built bool
-	// The layout cache is keyed by a single face, so text with face runs
-	// wraps through the run-aware closure instead.
-	if options.WrapMode != WrapModeNone && len(options.FaceRuns) == 0 {
+	if options.WrapMode != WrapModeNone {
 		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace); ok {
 			theVisualLinesBuffer = vls
 			built = true
