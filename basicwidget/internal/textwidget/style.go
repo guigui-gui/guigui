@@ -211,6 +211,19 @@ func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
 	t.ensureStyleRuns().UnsetFeature(startInBytes, endInBytes, tag)
 }
 
+// SetFontFamilyInRange overrides the font family in
+// [startInBytes, endInBytes). The override lasts until the value changes. A
+// nil family resolves faces with the registered face source stack alone.
+func (t *Text) SetFontFamilyInRange(startInBytes, endInBytes int, family *font.Family) {
+	t.ensureStyleRuns().SetFamily(startInBytes, endInBytes, family)
+}
+
+// UnsetFontFamilyInRange removes the font family override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetFamily(startInBytes, endInBytes)
+}
+
 // SetItalicInRange overrides the italic face selection in
 // [startInBytes, endInBytes). The override lasts until the value changes.
 func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
@@ -224,8 +237,8 @@ func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 }
 
 // hasMetricStyleRuns reports whether any ranged style override affects glyph
-// metrics (currently the variation axes, feature settings, and italic face
-// selection).
+// metrics (currently the variation axes, feature settings, and face-selection
+// overrides).
 func (t *Text) hasMetricStyleRuns() bool {
 	return t.ensureStyleRuns().HasMetricProperties()
 }
@@ -260,6 +273,10 @@ func (w *metricHashWriter) WriteUint16(v uint16) {
 
 func (w *metricHashWriter) WriteUint32(v uint32) {
 	w.writeUint64(uint64(v))
+}
+
+func (w *metricHashWriter) WriteUint64(v uint64) {
+	w.writeUint64(v)
 }
 
 func (w *metricHashWriter) WriteFloat64(v float64) {
@@ -309,10 +326,14 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		for _, f := range run.Style.Features() {
 			attrs = attrs.WithFeature(f.Tag, f.Value)
 		}
+		family := t.style.fontFamily
+		if f, ok := run.Style.Family(); ok {
+			family = f
+		}
 		runs = append(runs, textutil.FaceRun{
 			Start: run.Start,
 			End:   run.End,
-			Face:  font.NewFace(context, t.style.fontFamily, attrs),
+			Face:  font.NewFace(context, family, attrs),
 		})
 	}
 	return runs

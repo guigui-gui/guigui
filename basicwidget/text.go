@@ -416,6 +416,23 @@ func (t *Text) UnsetWeightInRange(startInBytes, endInBytes int) {
 	t.core.UnsetVariationInRange(startInBytes, endInBytes, font.TagWght)
 }
 
+// SetFontFamilyInRange overrides the font family in
+// [startInBytes, endInBytes). The override lasts until the value changes. A
+// nil family renders the range with the registered face source stack alone.
+func (t *Text) SetFontFamilyInRange(startInBytes, endInBytes int, family *FontFamily) {
+	var f *font.Family
+	if family != nil {
+		f = family.f
+	}
+	t.core.SetFontFamilyInRange(startInBytes, endInBytes, f)
+}
+
+// UnsetFontFamilyInRange removes the font family override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
+	t.core.UnsetFontFamilyInRange(startInBytes, endInBytes)
+}
+
 // SetItalicInRange overrides the italic face selection in
 // [startInBytes, endInBytes). The override lasts until the value changes.
 // When the font family has no italic face, the range renders with a regular

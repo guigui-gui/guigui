@@ -14,6 +14,58 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
 
+func TestStyleHasMetricProperties(t *testing.T) {
+	tests := []struct {
+		name  string
+		style textstyle.Style
+		want  bool
+	}{
+		{
+			name:  "zero",
+			style: textstyle.Style{},
+			want:  false,
+		},
+		{
+			name:  "color",
+			style: textstyle.Style{}.WithColor(color.RGBA{R: 0xff, A: 0xff}),
+			want:  false,
+		},
+		{
+			name:  "underline",
+			style: textstyle.Style{}.WithUnderline(true),
+			want:  false,
+		},
+		{
+			name:  "variation",
+			style: textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightBold)),
+			want:  true,
+		},
+		{
+			name:  "feature",
+			style: textstyle.Style{}.WithFeature(font.TagTnum, 1),
+			want:  true,
+		},
+		{
+			name:  "italic",
+			style: textstyle.Style{}.WithItalic(true),
+			want:  true,
+		},
+		{
+			name:  "explicit nil family",
+			style: textstyle.Style{}.WithFamily(nil),
+			want:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.style.HasMetricProperties(); got != tt.want {
+				t.Errorf("got: %t, want: %t", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestStyleIsZero(t *testing.T) {
 	tests := []struct {
 		name  string
