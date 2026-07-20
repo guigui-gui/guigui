@@ -5,6 +5,8 @@ package textstyle
 
 import (
 	"image/color"
+
+	"golang.org/x/text/language"
 )
 
 // Writer receives the serialized style properties of [Runs.WriteStateKey]
@@ -16,6 +18,7 @@ type Writer interface {
 	WriteUint32(v uint32)
 	WriteUint64(v uint64)
 	WriteFloat64(v float64)
+	WriteString(v string)
 }
 
 // WriteStateKey writes the runs into w.
@@ -27,8 +30,7 @@ func (r *Runs) WriteStateKey(w Writer) {
 	}
 }
 
-// WriteMetricStateKey writes the runs' metric-affecting properties (the
-// variation and feature settings and the face-selection overrides) into w.
+// WriteMetricStateKey writes the runs' metric-affecting properties into w.
 // Runs without any contribute nothing.
 func (r *Runs) WriteMetricStateKey(w Writer) {
 	for _, run := range r.runs {
@@ -55,7 +57,7 @@ func (r *Runs) HasMetricProperties() bool {
 // HasMetricProperties reports whether the style overrides a metric-affecting
 // property, such as a variation setting or the font family.
 func (s Style) HasMetricProperties() bool {
-	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set || s.family.set
+	return len(s.variations) > 0 || len(s.features) > 0 || s.italic.set || s.family.set || s.lang.set
 }
 
 // writeStateKey writes the style's consumed properties into w.
@@ -79,8 +81,7 @@ func (s Style) writeStateKey(w Writer) {
 	w.WriteBool(strikethrough)
 }
 
-// writeMetricProperties writes the metric-affecting properties (the
-// variation and feature settings and the face-selection overrides) into w.
+// writeMetricProperties writes the metric-affecting properties into w.
 func (s Style) writeMetricProperties(w Writer) {
 	family, ok := s.Family()
 	w.WriteBool(ok)
@@ -94,6 +95,11 @@ func (s Style) writeMetricProperties(w Writer) {
 	italic, ok := s.Italic()
 	w.WriteBool(ok)
 	w.WriteBool(italic)
+	lang, ok := s.Lang()
+	w.WriteBool(ok)
+	if ok {
+		w.WriteString(langString(lang))
+	}
 	variations := s.Variations()
 	w.WriteInt(len(variations))
 	for _, v := range variations {
@@ -106,6 +112,20 @@ func (s Style) writeMetricProperties(w Writer) {
 		w.WriteUint32(uint32(f.Tag))
 		w.WriteUint32(f.Value)
 	}
+}
+
+// langStrings caches the string forms of language tags, so writing a state
+// key does not re-resolve them.
+var langStrings = map[language.Tag]string{}
+
+// langString returns lang's string form.
+func langString(lang language.Tag) string {
+	s, ok := langStrings[lang]
+	if !ok {
+		s = lang.String()
+		langStrings[lang] = s
+	}
+	return s
 }
 
 func writeColor(w Writer, c color.Color) {

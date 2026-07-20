@@ -55,6 +55,11 @@ func TestStyleHasMetricProperties(t *testing.T) {
 			style: textstyle.Style{}.WithFamily(nil),
 			want:  true,
 		},
+		{
+			name:  "lang",
+			style: textstyle.Style{}.WithLang(language.Japanese),
+			want:  true,
+		},
 	}
 
 	for _, tt := range tests {

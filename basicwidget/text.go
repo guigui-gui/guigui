@@ -447,6 +447,19 @@ func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 	t.core.UnsetItalicInRange(startInBytes, endInBytes)
 }
 
+// SetLangInRange overrides the language used to select the face and its
+// features when shaping [startInBytes, endInBytes). The override lasts until
+// the value changes.
+func (t *Text) SetLangInRange(startInBytes, endInBytes int, lang language.Tag) {
+	t.core.SetLangInRange(startInBytes, endInBytes, lang)
+}
+
+// UnsetLangInRange removes the language override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetLangInRange(startInBytes, endInBytes int) {
+	t.core.UnsetLangInRange(startInBytes, endInBytes)
+}
+
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).
 // The override lasts until the value changes. A nil color selects the
 // default color.

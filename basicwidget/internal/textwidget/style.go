@@ -224,6 +224,19 @@ func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().UnsetFamily(startInBytes, endInBytes)
 }
 
+// SetLangInRange overrides the language used to select the face and its
+// features when shaping [startInBytes, endInBytes). The override lasts until
+// the value changes.
+func (t *Text) SetLangInRange(startInBytes, endInBytes int, lang language.Tag) {
+	t.ensureStyleRuns().SetLang(startInBytes, endInBytes, lang)
+}
+
+// UnsetLangInRange removes the language override in
+// [startInBytes, endInBytes).
+func (t *Text) UnsetLangInRange(startInBytes, endInBytes int) {
+	t.ensureStyleRuns().UnsetLang(startInBytes, endInBytes)
+}
+
 // SetItalicInRange overrides the italic face selection in
 // [startInBytes, endInBytes). The override lasts until the value changes.
 func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
@@ -246,8 +259,9 @@ func (t *Text) hasMetricStyleRuns() bool {
 // metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for
 // fingerprinting the metric style properties.
 type metricHashWriter struct {
-	h   hash.Hash64
-	buf [8]byte
+	h      hash.Hash64
+	buf    [8]byte
+	strbuf []byte
 }
 
 func (w *metricHashWriter) writeUint64(v uint64) {
@@ -281,6 +295,12 @@ func (w *metricHashWriter) WriteUint64(v uint64) {
 
 func (w *metricHashWriter) WriteFloat64(v float64) {
 	w.writeUint64(math.Float64bits(v))
+}
+
+func (w *metricHashWriter) WriteString(v string) {
+	w.WriteInt(len(v))
+	w.strbuf = append(w.strbuf[:0], v...)
+	_, _ = w.h.Write(w.strbuf)
 }
 
 // metricStyleRunsFingerprint fingerprints the metric properties of the
@@ -319,6 +339,9 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		attrs := t.faceAttributes(forceBold)
 		if italic, ok := run.Style.Italic(); ok {
 			attrs.Italic = italic
+		}
+		if lang, ok := run.Style.Lang(); ok {
+			attrs.Lang = lang
 		}
 		for _, v := range run.Style.Variations() {
 			attrs = attrs.WithVariation(v.Tag, v.Value)

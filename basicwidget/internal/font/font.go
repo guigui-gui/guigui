@@ -327,6 +327,10 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 		//
 		// TODO: Consider the slnt axis for italic selection; it needs a
 		// slant-angle policy (#131).
+		//
+		// TODO: Consider selecting sources by Attributes' language;
+		// [FaceSourceEntry] carries no language metadata yet, so a language
+		// only affects shaping within the resolved source stack (#131).
 		weight := attributes.weight()
 		slices.SortStableFunc(tmpFaceSourceEntries, func(a, b FaceSourceEntry) int {
 			if c := cmp.Compare(styleDistance(a, attributes.Italic), styleDistance(b, attributes.Italic)); c != 0 {
