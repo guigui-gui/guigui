@@ -320,12 +320,6 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 		//
 		// TODO: Match the style metadata too once Attributes carries an
 		// italic input (#131).
-		//
-		// TODO: Treat a weight within a variable font's wght axis range as
-		// an exact match instead of matching by the metadata
-		// (default-instance) weight. This needs the axis ranges, which
-		// [text.GoTextFaceSource] does not expose apart from the unstable
-		// UnsafeInternal (#131).
 		weight := attributes.weight()
 		slices.SortStableFunc(tmpFaceSourceEntries, func(a, b FaceSourceEntry) int {
 			return cmp.Compare(weightDistance(a, weight), weightDistance(b, weight))
@@ -377,9 +371,24 @@ func resolveFace(context *guigui.Context, fnt *Family, attributes Attributes) (t
 	return mf, id
 }
 
-// weightDistance returns how far entry's weight metadata is from weight.
-func weightDistance(entry FaceSourceEntry, weight text.Weight) float64 {
-	return math.Abs(float64(entry.FaceSource.Metadata().Weight) - float64(weight))
+var tmpVariationAxes []text.VariationAxis
+
+// weightDistance returns how far entry can be from weight: the distance from
+// weight to the source's wght variation axis range when the source has the
+// axis, or to the source's weight metadata otherwise.
+func weightDistance(entry FaceSourceEntry, weight text.Weight) float32 {
+	tmpVariationAxes = entry.FaceSource.AppendVariationAxes(tmpVariationAxes)
+	defer func() {
+		tmpVariationAxes = slices.Delete(tmpVariationAxes, 0, len(tmpVariationAxes))
+	}()
+	for _, axis := range tmpVariationAxes {
+		if axis.Tag != TagWght {
+			continue
+		}
+		clamped := min(max(float32(weight), axis.Min), axis.Max)
+		return float32(math.Abs(float64(clamped - float32(weight))))
+	}
+	return float32(math.Abs(float64(entry.FaceSource.Metadata().Weight - weight)))
 }
 
 // DefaultFaceSourceEntry returns the entry for the bundled default face.

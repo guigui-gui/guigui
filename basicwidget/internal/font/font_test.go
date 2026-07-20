@@ -49,7 +49,7 @@ func TestFaceForStaticWeightFamily(t *testing.T) {
 			want:   regular,
 		},
 		{
-			name:   "medium is closer to the regular source",
+			name:   "medium ties and the earlier source wins",
 			weight: text.WeightMedium,
 			want:   regular,
 		},
@@ -72,6 +72,45 @@ func TestFaceForStaticWeightFamily(t *testing.T) {
 				t.Errorf("advance for weight %v: got: %v, want: %v", tt.weight, got, want)
 			}
 		})
+	}
+}
+
+func TestFaceForMixedStaticVariableFamily(t *testing.T) {
+	bold, err := text.NewGoTextFaceSource(bytes.NewReader(gobold.TTF))
+	if err != nil {
+		t.Fatal(err)
+	}
+	variable := font.DefaultFaceSourceEntry().FaceSource
+	family := font.NewFamily([]font.FaceSourceEntry{
+		{FaceSource: bold},
+		{FaceSource: variable},
+	}, &font.FamilyOptions{DisableFallback: true})
+
+	const sample = "Mixed sources"
+	variableAdvance := func(weight text.Weight) float64 {
+		gtf := &text.GoTextFace{Source: variable, Size: 16}
+		gtf.SetVariation(font.TagWght, float32(weight))
+		return text.Advance(sample, gtf)
+	}
+	boldAdvance := text.Advance(sample, &text.GoTextFace{Source: bold, Size: 16})
+	if boldAdvance == variableAdvance(text.WeightSemibold) {
+		t.Fatal("the test fonts should have distinguishable advances")
+	}
+
+	var context guigui.Context
+
+	// The variable font's wght axis covers the normal weight exactly, so it
+	// wins over the static bold source listed before it.
+	normal := font.NewFace(&context, family, font.Attributes{Size: 16}.WithVariation(font.TagWght, float32(text.WeightNormal)))
+	if got, want := text.Advance(sample, normal.TextFace()), variableAdvance(text.WeightNormal); got != want {
+		t.Errorf("advance for the normal weight: got: %v, want: %v", got, want)
+	}
+
+	// Both sources match the semibold weight exactly (the static bold
+	// font's metadata weight is 600); the earlier entry wins.
+	semibold := font.NewFace(&context, family, font.Attributes{Size: 16}.WithVariation(font.TagWght, float32(text.WeightSemibold)))
+	if got, want := text.Advance(sample, semibold.TextFace()), boldAdvance; got != want {
+		t.Errorf("advance for the semibold weight: got: %v, want: %v", got, want)
 	}
 }
 
