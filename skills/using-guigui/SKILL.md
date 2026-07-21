@@ -538,11 +538,24 @@ will *not* repaint unless you do one of:
    variants), `WriteFloat32/64`, `WriteString`, `WriteWidget`, and raw `Write`.
    Writing nothing opts out (the default).
 
-2. **Call `guigui.RequestRebuild()`** at the mutation site if you do not want to
-   maintain a state key. It re-runs `Build` but does not repaint on its own;
-   pair it with `guigui.RequestRedraw(widget)` when the appearance also changes
-   within unchanged bounds. For a purely paint-only change, skip the rebuild
-   and call `RequestRedraw` alone.
+2. **Call `guigui.RequestRebuild()`** at the mutation site when the key
+   mechanism structurally cannot observe the change. Keys are only checked for
+   widgets currently in the tree, so this is needed when:
+
+   - the owning widget may be **out of the tree** at mutation time — a widget
+     gated out of its parent's `Build` has no key evaluated, so a transition
+     that should bring it back in (e.g. reopening a closed popup) must be an
+     explicit rebuild;
+   - the mutation has **no owner widget** — app-level code mutates a shared
+     model that no widget hashes (though giving the root, or whichever widget
+     owns the model, a key or generation counter is usually the better fix);
+   - the state is **too expensive to hash** at every checkpoint and no cheap
+     generation counter is feasible.
+
+   `RequestRebuild` re-runs `Build` but does not repaint on its own; pair it
+   with `guigui.RequestRedraw(widget)` when the appearance also changes within
+   unchanged bounds. For a purely paint-only change, skip the rebuild and call
+   `RequestRedraw` alone.
 
 `guigui.RequestRedraw(widget)` forces a repaint **without** a rebuild — use it
 only when nothing in the tree structure changed (e.g. an animation frame).
@@ -576,6 +589,10 @@ For a large mutable model, prefer hashing a cheap monotonic generation counter
 in `WriteStateKey` over serializing every collection. Increment the generation
 for every mutation that affects the UI. State deliberately omitted from the key
 still needs an explicit `RequestRebuild` at its mutation sites.
+
+The ladder, in order: `WriteStateKey` by default; `RequestRedraw` for
+paint-only state; `RequestRebuild` only when the key mechanism structurally
+cannot observe the change.
 
 ## Context utilities
 
