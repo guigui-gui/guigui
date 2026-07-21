@@ -150,7 +150,6 @@ func (e *Expander) Measure(context *guigui.Context, constraints guigui.Constrain
 func (e *Expander) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if e.count > 0 {
 		e.count--
-		guigui.RequestRedraw(e)
 	}
 	return nil
 }
