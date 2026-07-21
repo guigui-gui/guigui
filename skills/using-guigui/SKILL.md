@@ -539,11 +539,31 @@ will *not* repaint unless you do one of:
    Writing nothing opts out (the default).
 
 2. **Call `guigui.RequestRebuild()`** at the mutation site if you do not want to
-   maintain a state key. It re-runs `Build` but does not repaint on its own, so
-   for a paint-only change also call `guigui.RequestRedraw(widget)`.
+   maintain a state key. It re-runs `Build` but does not repaint on its own;
+   pair it with `guigui.RequestRedraw(widget)` when the appearance also changes
+   within unchanged bounds. For a purely paint-only change, skip the rebuild
+   and call `RequestRedraw` alone.
 
 `guigui.RequestRedraw(widget)` forces a repaint **without** a rebuild — use it
 only when nothing in the tree structure changed (e.g. an animation frame).
+
+**Choosing between them: prefer `WriteStateKey` in usual cases.** The
+exception is paint-only state. For state mutated outside `Build`, ask: does
+the change alter what `Build` or `Measure` would produce? If yes (a child
+appears or disappears, a size animates), put it in `WriteStateKey` — the
+rebuild a key change triggers is exactly what's needed. If no — the widget
+merely paints differently inside unchanged bounds (hover or pressed tinting,
+an alpha fade, a caret blink, a thumb sliding within the widget) — keep that
+state **out** of the key and call `RequestRedraw` at the mutation site. A
+state-key change rebuilds the whole tree, so for a paint-only change every
+`Build` would re-run only to produce the identical tree, at whole-tree cost
+per animation tick or hover flip.
+
+Caveat: paint-only state that is only ever set from an ancestor's `Build`
+(e.g. a flag a parent pushes down on each build) is still fine in the key —
+that path is detected by the post-build snapshot and repaints without any
+extra rebuild. The rebuild cost bites only for state that changes at
+`Tick`/input-handling time.
 
 A state key rebuilds only when its hashed bytes *change*, so a value that holds
 steady across ticks (e.g. an `isPlaying` flag that stays `true` for the whole
@@ -624,8 +644,9 @@ or global shortcut handlers behind it.
 5. Read shared models via `context.Env`; bubble events up with a generated
    `EventKey` + `On…` setter + `DispatchEvent`.
 6. If a field can change outside input/event handlers, expose it via
-   `WriteStateKey` or call `RequestRebuild` when you mutate it (add
-   `RequestRedraw` too for a paint-only change).
+   `WriteStateKey` (preferred) or call `RequestRebuild` when you mutate it —
+   unless the change is paint-only (unchanged bounds and children), in which
+   case keep it out of the key and call `RequestRedraw` alone.
 
 ## Verify your work — do not trust this file alone
 
@@ -664,8 +685,8 @@ drift from an alpha API. Before considering a change done:
   Never zero the application root's own struct (see "Resetting a widget's cached
   state").
 - **Expecting a field write to repaint.** Only handler-driven or
-  state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (plus
-  `RequestRedraw` if the change is paint-only).
+  state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (or
+  just `RequestRedraw` if the change is paint-only).
 - **Allocating a fresh items slice every `Layout`.** Reuse with
   `slices.Delete(s, 0, len(s))`; `Layout` runs frequently.
 - **Hard-coded pixel sizes.** Use `basicwidget.UnitSize(context)` so layouts
