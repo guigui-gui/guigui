@@ -1006,6 +1006,10 @@ func (l *listContent[T]) WriteStateKey(context *guigui.Context, w *guigui.StateK
 	w.WriteInt(l.expandAnimatingIndexPlus1)
 	w.WriteInt(l.expandAnimatingChildrenEnd)
 	w.WriteInt(l.expandAnimatingCount)
+	w.WriteBool(l.stripeVisible)
+	w.WriteBool(l.unfocusedSelectionHidden)
+	w.WriteInt(l.dragSrcIndexPlus1)
+	w.WriteInt(l.dragDstIndexPlus1)
 }
 
 func (l *listContent[T]) SetReservesCheckmarkSpace(reserves bool) {
@@ -1705,20 +1709,11 @@ func (l *listContent[T]) ensureItemVisibleByIndex(index int, force bool) {
 }
 
 func (l *listContent[T]) SetStripeVisible(visible bool) {
-	if l.stripeVisible == visible {
-		return
-	}
 	l.stripeVisible = visible
-	guigui.RequestRedraw(l)
 }
 
 func (l *listContent[T]) SetUnfocusedSelectionVisible(visible bool) {
-	hidden := !visible
-	if l.unfocusedSelectionHidden == hidden {
-		return
-	}
-	l.unfocusedSelectionHidden = hidden
-	guigui.RequestRedraw(l)
+	l.unfocusedSelectionHidden = !visible
 }
 
 func (l *listContent[T]) showsHoverHighlight() bool {
@@ -2021,7 +2016,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				} else {
 					l.dragDstIndexPlus1 = 0
 				}
-				guigui.RequestRedraw(l)
 				return guigui.HandleInputByWidget(l)
 			}
 			return guigui.AbortHandlingInputByWidget(l)
@@ -2041,7 +2035,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			l.dragDstIndexPlus1 = 0
 		}
 		l.dragSrcIndexPlus1 = 0
-		guigui.RequestRedraw(l)
 		return guigui.HandleInputByWidget(l)
 	}
 

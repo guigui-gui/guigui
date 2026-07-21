@@ -727,12 +727,12 @@ type textInputBackground struct {
 	editable bool
 }
 
+func (t *textInputBackground) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteBool(t.editable)
+}
+
 func (t *textInputBackground) setEditable(editable bool) {
-	if t.editable == editable {
-		return
-	}
 	t.editable = editable
-	guigui.RequestRedraw(t)
 }
 
 func (t *textInputBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -747,12 +747,12 @@ type textInputIconBackground struct {
 	editable bool
 }
 
+func (t *textInputIconBackground) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteBool(t.editable)
+}
+
 func (t *textInputIconBackground) setEditable(editable bool) {
-	if t.editable == editable {
-		return
-	}
 	t.editable = editable
-	guigui.RequestRedraw(t)
 }
 
 func (t *textInputIconBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -767,12 +767,12 @@ type textInputFrame struct {
 	hasError bool
 }
 
+func (t *textInputFrame) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteBool(t.hasError)
+}
+
 func (t *textInputFrame) setError(hasError bool) {
-	if t.hasError == hasError {
-		return
-	}
 	t.hasError = hasError
-	guigui.RequestRedraw(t)
 }
 
 func (t *textInputFrame) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

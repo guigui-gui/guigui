@@ -17,12 +17,12 @@ type Background struct {
 	semanticColor draw.SemanticColor
 }
 
+func (b *Background) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteUint64(uint64(b.semanticColor))
+}
+
 func (b *Background) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	if b.semanticColor == draw.SemanticColor(semanticColor) {
-		return
-	}
 	b.semanticColor = draw.SemanticColor(semanticColor)
-	guigui.RequestRedraw(b)
 }
 
 func (b *Background) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {

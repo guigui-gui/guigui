@@ -73,6 +73,14 @@ type Root struct {
 	layoutItems []guigui.LinearLayoutItem
 }
 
+func (r *Root) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteBool(r.building)
+	w.WriteString(r.builtBinary)
+	w.WriteString(r.status)
+	w.WriteInt(r.tps)
+	w.WriteInt(r.requestedTPS)
+}
+
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
 	adder.AddWidget(&r.ebitengineWidget)
@@ -171,7 +179,6 @@ func (r *Root) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) 
 			r.launchedPackage = res.pkg
 			r.status = "Launching " + res.pkg
 		}
-		guigui.RequestRebuild()
 	default:
 	}
 	return nil
@@ -195,7 +202,6 @@ func (r *Root) startBuild(pkg string) {
 		dir, err := os.MkdirTemp("", "guigui-ebitengine-example")
 		if err != nil {
 			r.status = "Error: " + err.Error()
-			guigui.RequestRebuild()
 			return
 		}
 		r.dir = dir
@@ -217,7 +223,6 @@ func (r *Root) startBuild(pkg string) {
 		err := buildGuest(r.dir, bin, pkg)
 		r.buildResults <- buildResult{pkg: pkg, bin: bin, err: err}
 	}()
-	guigui.RequestRebuild()
 }
 
 // packageField is a form field with a package text input and a launch button.

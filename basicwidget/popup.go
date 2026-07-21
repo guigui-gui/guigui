@@ -793,12 +793,12 @@ type popupBlurredBackground struct {
 	openingRate float64
 }
 
+func (p *popupBlurredBackground) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteFloat64(p.openingRate)
+}
+
 func (p *popupBlurredBackground) SetOpeningRate(rate float64) {
-	if p.openingRate == rate {
-		return
-	}
 	p.openingRate = rate
-	guigui.RequestRedraw(p)
 }
 
 func (p *popupBlurredBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -827,12 +827,12 @@ type popupDarkBackground struct {
 	openingRate float64
 }
 
+func (p *popupDarkBackground) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	w.WriteFloat64(p.openingRate)
+}
+
 func (p *popupDarkBackground) SetOpeningRate(rate float64) {
-	if p.openingRate == rate {
-		return
-	}
 	p.openingRate = rate
-	guigui.RequestRedraw(p)
 }
 
 func (p *popupDarkBackground) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
@@ -851,15 +851,12 @@ type popupShadow struct {
 }
 
 func (p *popupShadow) SetOpeningRate(rate float64) {
-	if p.openingRate == rate {
-		return
-	}
 	p.openingRate = rate
-	guigui.RequestRedraw(p)
 }
 
 func (p *popupShadow) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
 	writeRectangle(w, p.contentBounds)
+	w.WriteFloat64(p.openingRate)
 }
 
 func (p *popupShadow) SetContentBounds(bounds image.Rectangle) {
