@@ -4,6 +4,7 @@
 package main
 
 import (
+	"fmt"
 	"image/color"
 	"slices"
 	"strings"
@@ -17,15 +18,18 @@ import (
 const richTextsSampleText = "Colored, light, highlighted, underlined, struck-through, bold, and scaled ranges.\n" +
 	"Combined styles apply to a single range.\n" +
 	"A sufficiently long styled range continues across the visual line boundary when the text wraps, keeping its background and underline on every visual line it covers.\n" +
+	"The clickable range counts clicks.\n" +
 	"日本語のテキストにも下線と背景を適用できます。"
 
 type RichTexts struct {
 	guigui.DefaultWidget
 
-	form             basicwidget.Form
-	selectableText   basicwidget.Text
-	selectableToggle basicwidget.Toggle
-	sampleText       basicwidget.Text
+	form                basicwidget.Form
+	selectableText      basicwidget.Text
+	selectableToggle    basicwidget.Toggle
+	clickCountText      basicwidget.Text
+	clickCountValueText basicwidget.Text
+	sampleText          basicwidget.Text
 
 	layoutItems []guigui.LinearLayoutItem
 }
@@ -54,10 +58,29 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	})
 	r.selectableToggle.SetValue(model.RichTexts().Selectable())
 
+	r.clickCountText.SetValue("Clickable range clicks")
+	r.clickCountValueText.SetValue(fmt.Sprintf("%d", model.RichTexts().ClickCount()))
+
+	styleRichTextsSampleRange("clickable range", func(start, end int) {
+		r.sampleText.SetHotspotRanges([]basicwidget.TextRange{
+			{
+				StartInBytes: start,
+				EndInBytes:   end,
+			},
+		})
+	})
+	r.sampleText.OnHotspotUp(func(context *guigui.Context, textRange basicwidget.TextRange) {
+		model.RichTexts().IncrementClickCount()
+	})
+
 	r.form.SetItems([]basicwidget.FormItem{
 		{
 			PrimaryWidget:   &r.selectableText,
 			SecondaryWidget: &r.selectableToggle,
+		},
+		{
+			PrimaryWidget:   &r.clickCountText,
+			SecondaryWidget: &r.clickCountValueText,
 		},
 	})
 
@@ -103,6 +126,10 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		t.SetBackgroundColorInRange(start, end, green)
 		t.SetUnderlineInRange(start, end, true)
 	})
+	styleRichTextsSampleRange("clickable range", func(start, end int) {
+		t.SetColorInRange(start, end, blue)
+		t.SetUnderlineInRange(start, end, true)
+	})
 	styleRichTextsSampleRange("下線", func(start, end int) {
 		t.SetUnderlineInRange(start, end, true)
 	})
@@ -111,6 +138,12 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	})
 
 	return nil
+}
+
+func (r *RichTexts) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
+	if v, ok := context.Env(r, modelKeyModel); ok {
+		w.WriteInt(v.(*Model).RichTexts().ClickCount())
+	}
 }
 
 func (r *RichTexts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {

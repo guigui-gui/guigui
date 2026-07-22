@@ -92,6 +92,10 @@ type Text struct {
 	locales       []language.Tag
 	fontFamily    *FontFamily
 
+	// hotspotRangesBuf is scratch for converting the hotspot ranges handed
+	// to the core widget.
+	hotspotRangesBuf []textwidget.TextRange
+
 	// cachedLocalesString is a comparable fingerprint of t.locales, refreshed
 	// only at [Text.SetLocales] (which has a slices.Equal guard). Included in
 	// [Text.WriteStateKey] so locale changes trigger automatic rebuilds without
@@ -644,6 +648,63 @@ func (t *Text) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
 // [startInBytes, endInBytes).
 func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
 	t.core.ResetStylesInRange(startInBytes, endInBytes)
+}
+
+// AppendBoundsOfTextRange appends the bounding rectangles covering the text
+// range [startInBytes, endInBytes) to dst and returns the extended slice,
+// one rectangle per crossed visual line, in order. bounds is the widget's
+// bounds; the rectangles are in the same coordinate space. A masked value
+// appends nothing. Endpoints outside the text are clamped.
+func (t *Text) AppendBoundsOfTextRange(dst []image.Rectangle, context *guigui.Context, bounds image.Rectangle, startInBytes, endInBytes int) []image.Rectangle {
+	return t.core.AppendBoundsOfTextRange(dst, context, bounds, startInBytes, endInBytes)
+}
+
+// TextRange is a byte range of a text value.
+type TextRange struct {
+	// StartInBytes is the inclusive start of the range in bytes.
+	StartInBytes int
+
+	// EndInBytes is the exclusive end of the range in bytes.
+	EndInBytes int
+}
+
+// SetHotspotRanges sets the hotspot ranges: over their rectangles the cursor
+// turns into a pointer, and mouse presses and releases fire the hotspot down
+// and up events.
+func (t *Text) SetHotspotRanges(ranges []TextRange) {
+	t.hotspotRangesBuf = slices.Delete(t.hotspotRangesBuf, 0, len(t.hotspotRangesBuf))
+	for _, r := range ranges {
+		t.hotspotRangesBuf = append(t.hotspotRangesBuf, textwidget.TextRange{
+			StartInBytes: r.StartInBytes,
+			EndInBytes:   r.EndInBytes,
+		})
+	}
+	t.core.SetHotspotRanges(t.hotspotRangesBuf)
+}
+
+// OnHotspotDown sets the event handler that is called when the left mouse
+// button is pressed on a hotspot range. The handler is given the pressed
+// range.
+func (t *Text) OnHotspotDown(f func(context *guigui.Context, textRange TextRange)) {
+	t.core.OnHotspotDown(func(context *guigui.Context, textRange textwidget.TextRange) {
+		f(context, TextRange{
+			StartInBytes: textRange.StartInBytes,
+			EndInBytes:   textRange.EndInBytes,
+		})
+	})
+}
+
+// OnHotspotUp sets the event handler that is called when the left mouse
+// button is released on the hotspot range it was pressed on, unless a
+// selection was made in between: a drag selects, it does not click. The
+// handler is given the released range.
+func (t *Text) OnHotspotUp(f func(context *guigui.Context, textRange TextRange)) {
+	t.core.OnHotspotUp(func(context *guigui.Context, textRange textwidget.TextRange) {
+		f(context, TextRange{
+			StartInBytes: textRange.StartInBytes,
+			EndInBytes:   textRange.EndInBytes,
+		})
+	})
 }
 
 func (t *Text) IsEditable() bool {

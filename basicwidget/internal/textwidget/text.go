@@ -131,6 +131,21 @@ type Text struct {
 	// parents set it via [Text.SetFirstLogicalLineInViewport] so drawing,
 	// hit-testing, and caret positioning work relative to the viewport.
 	firstLogicalLineInViewport int
+
+	// hotspotRanges are the interactive byte ranges set via
+	// [Text.SetHotspotRanges].
+	hotspotRanges []TextRange
+
+	// hotspotBoundsBuf is scratch for one hotspot range's rectangles.
+	hotspotBoundsBuf []image.Rectangle
+
+	// pressedHotspotRange is the hotspot range the active press started on.
+	// It is meaningful only while hotspotPressed is true.
+	pressedHotspotRange TextRange
+
+	// hotspotPressed reports whether the active mouse press started on a
+	// hotspot range.
+	hotspotPressed bool
 }
 
 // OnValueChanged sets the event handler that is called when the text value

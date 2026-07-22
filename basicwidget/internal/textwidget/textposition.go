@@ -513,3 +513,43 @@ func (t *Text) MaxCaretXOfLogicalLine(context *guigui.Context, lineIndex, wrapWi
 	}()
 	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), t.faceRunsBuf, start, t.actualTabWidth(context), t.keepTailingSpace)
 }
+
+// AppendBoundsOfTextRange appends the bounding rectangles covering the text
+// range [startInBytes, endInBytes) to dst and returns the extended slice,
+// one rectangle per crossed visual line, in order. bounds is the widget's
+// bounds; the rectangles are in the same coordinate space. A masked value
+// appends nothing. Endpoints outside the text are clamped.
+func (t *Text) AppendBoundsOfTextRange(dst []image.Rectangle, context *guigui.Context, bounds image.Rectangle, startInBytes, endInBytes int) []image.Rectangle {
+	if t.masking() {
+		return dst
+	}
+	textBounds := t.contentBoundsForLayout(context, bounds)
+	width := t.LayoutWidth(textBounds)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
+	defer func() {
+		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
+	}()
+	s := textutil.Style{
+		WrapMode:         t.wrapMode,
+		Face:             t.face(context, false),
+		FaceRuns:         t.faceRunsBuf,
+		LineHeight:       t.LineHeight(),
+		HorizontalAlign:  t.baseStyle.hAlign,
+		VerticalAlign:    t.baseStyle.vAlign,
+		TabWidth:         t.actualTabWidth(context),
+		KeepTailingSpace: t.keepTailingSpace,
+	}
+	t.ensureLineByteOffsets()
+	n := len(dst)
+	dst = textutil.AppendBoundsOfTextRange(dst, &textutil.TextLayoutParams{
+		RenderingTextRange:         t.stringValueWithRange,
+		RenderingTextLength:        t.store.TextLengthInBytes(),
+		Width:                      width,
+		Style:                      s,
+		PrecomputedLineByteOffsets: &t.contentCache.lineByteOffsets,
+	}, startInBytes, endInBytes)
+	for i := n; i < len(dst); i++ {
+		dst[i] = dst[i].Add(textBounds.Min)
+	}
+	return dst
+}

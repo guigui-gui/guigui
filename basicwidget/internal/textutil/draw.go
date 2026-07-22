@@ -97,10 +97,12 @@ func intersectingStyleRuns(runs []StyleRun, start, end int) []StyleRun {
 // rangePositionsInVisualLines returns the positions of [start, end) resolved
 // within the visual lines: posStart is start's position (on the second line
 // when start sits on a visual line boundary) and posEnd is end's first
-// position. ok is false when either endpoint cannot be resolved.
-func rangePositionsInVisualLines(layoutWidth int, vls []visualLine, start, end int, style *Style) (posStart, posEnd TextPosition, ok bool) {
-	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), 0, start, style)
-	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), 0, end, style)
+// position. start, end, and each visualLine's pos are relative to vls' first
+// byte; vlsStartInBytes is the whole-text byte offset of that byte. ok is
+// false when either endpoint cannot be resolved.
+func rangePositionsInVisualLines(layoutWidth int, vls []visualLine, vlsStartInBytes, start, end int, style *Style) (posStart, posEnd TextPosition, ok bool) {
+	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, start, style)
+	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, end, style)
 	if countStart == 0 || countEnd == 0 {
 		return TextPosition{}, TextPosition{}, false
 	}
@@ -221,7 +223,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 			}
 			runStart := max(start, run.Start)
 			runEnd := min(end, run.End)
-			if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, runStart, runEnd, &options.Style); ok {
+			if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, runStart, runEnd, &options.Style); ok {
 				x := float32(posStart.X) + float32(bounds.Min.X)
 				y := float32(posStart.Top) + float32(bounds.Min.Y)
 				w := float32(posEnd.X - posStart.X)
@@ -235,7 +237,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.SelectionStart)
 				end := min(end, options.SelectionEnd)
 				if start != end {
-					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Top) + float32(bounds.Min.Y)
 						width := float32(posEnd.X - posStart.X)
@@ -251,7 +253,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionStart)
 				end := min(end, options.CompositionEnd)
 				if start != end {
-					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Bottom) + float32(bounds.Min.Y) - options.CompositionBorderWidth
 						w := float32(posEnd.X - posStart.X)
@@ -264,7 +266,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				start := max(start, options.CompositionActiveStart)
 				end := min(end, options.CompositionActiveEnd)
 				if start != end {
-					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, start, end, &options.Style); ok {
+					if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, start, end, &options.Style); ok {
 						x := float32(posStart.X) + float32(bounds.Min.X)
 						y := float32(posStart.Bottom) + float32(bounds.Min.Y) - options.CompositionBorderWidth
 						w := float32(posEnd.X - posStart.X)
@@ -387,7 +389,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 				if runStart >= runEnd {
 					continue
 				}
-				posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, runStart, runEnd, &options.Style)
+				posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, runStart, runEnd, &options.Style)
 				if !ok {
 					continue
 				}

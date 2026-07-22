@@ -4,7 +4,9 @@
 package textutil
 
 import (
+	"image"
 	"iter"
+	"math"
 )
 
 type TextPosition struct {
@@ -221,4 +223,80 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 		return pos1, TextPosition{}, 1
 	}
 	return pos0, pos1, 2
+}
+
+// AppendBoundsOfTextRange appends the bounding rectangles covering the byte
+// range [start, end) of the rendering text to dst and returns the extended
+// slice, one rectangle per crossed visual line, in order. A visual line
+// holding an empty part of the range appends nothing. Coordinates are
+// relative to the text layout origin, rounded outward to integers.
+// Endpoints outside the text are clamped.
+func AppendBoundsOfTextRange(dst []image.Rectangle, p *TextLayoutParams, start, end int) []image.Rectangle {
+	start = max(start, 0)
+	end = min(end, p.RenderingTextLength)
+	if start >= end {
+		return dst
+	}
+
+	m, ok := newLogicalLineMeasurer(p)
+	if !ok {
+		str := p.RenderingTextRange(0, p.RenderingTextLength)
+		var vls []visualLine
+		for vl := range visualLines(p.Width, str, p.Style.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+			return advanceWithFaces(str, strStartInBytes, endIndexInBytes, p.Style.Face, p.Style.FaceRuns, p.Style.TabWidth, p.Style.KeepTailingSpace)
+		}) {
+			vls = append(vls, vl)
+		}
+		return appendBoundsOfRangeInVisualLines(dst, p.Width, vls, 0, 0, start, end, &p.Style)
+	}
+
+	firstLogicalLineIdx := m.logicalLineIndexForRenderingIndex(start)
+	var yOrigin float64
+	for i := range firstLogicalLineIdx {
+		yOrigin += p.Style.LineHeight * float64(m.visualLineCount(i))
+	}
+	var vls []visualLine
+	for i := firstLogicalLineIdx; i < m.logicalLineCount; i++ {
+		renderingLineStart, renderingLineEnd := m.renderingRange(i)
+		if renderingLineStart >= end {
+			break
+		}
+		line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
+		vls = vls[:0]
+		for vl := range visualLinesFromLogicalLine(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, renderingLineStart, p.Style.TabWidth, p.Style.KeepTailingSpace) {
+			vls = append(vls, vl)
+		}
+		lineRangeStart := max(start-renderingLineStart, 0)
+		lineRangeEnd := min(end-renderingLineStart, len(line))
+		dst = appendBoundsOfRangeInVisualLines(dst, p.Width, vls, renderingLineStart, yOrigin, lineRangeStart, lineRangeEnd, &p.Style)
+		yOrigin += p.Style.LineHeight * float64(len(vls))
+	}
+	return dst
+}
+
+// appendBoundsOfRangeInVisualLines appends the rectangles covering
+// [start, end) within the visual lines vls to dst, one per crossed visual
+// line holding a non-empty part of the range. start, end, and each
+// visualLine's pos are relative to vls' first byte; vlsStartInBytes is the
+// whole-text byte offset of that byte. yOrigin is added to the vertical
+// coordinates.
+func appendBoundsOfRangeInVisualLines(dst []image.Rectangle, width int, vls []visualLine, vlsStartInBytes int, yOrigin float64, start, end int, style *Style) []image.Rectangle {
+	for _, vl := range vls {
+		segStart := max(start, vl.pos)
+		segEnd := min(end, vl.pos+len(vl.str))
+		if segStart >= segEnd {
+			continue
+		}
+		posStart, posEnd, ok := rangePositionsInVisualLines(width, vls, vlsStartInBytes, segStart, segEnd, style)
+		if !ok {
+			continue
+		}
+		dst = append(dst, image.Rect(
+			int(math.Floor(posStart.X)),
+			int(math.Floor(yOrigin+posStart.Top)),
+			int(math.Ceil(posEnd.X)),
+			int(math.Ceil(yOrigin+posStart.Bottom)),
+		))
+	}
+	return dst
 }

@@ -4,7 +4,9 @@
 package textutil_test
 
 import (
+	"fmt"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
@@ -642,6 +644,109 @@ func TestTextPositionFromIndexNilLineOffsets(t *testing.T) {
 		}
 		if gotCount == 2 && gotP1 != wantP1 {
 			t.Errorf("idx=%d: pos1=%+v, want %+v", idx, gotP1, wantP1)
+		}
+	}
+}
+
+// TestAppendBoundsOfTextRange asserts the offset-accelerated range-bounds
+// query matches the whole-document fallback, with and without face runs, and
+// checks the rectangles' basic shape.
+func TestAppendBoundsOfTextRange(t *testing.T) {
+	const lineHeight = 24.0
+	small, large := testFaces(t)
+	str := "abcdef ghij klmno\npqr stu vwx yz\n\nthe last line"
+	faceRunVariants := map[string][]textutil.FaceRun{
+		"noFaceRuns": nil,
+		"faceRuns": {
+			{Start: 3, End: 10, Face: large},
+			{Start: 22, End: 30, Face: large},
+		},
+	}
+	byteRanges := [][2]int{
+		{0, 3},
+		{3, 10},
+		{15, 25},
+		{0, len(str)},
+		{30, 34},
+		{-5, 3},
+		{40, len(str) + 10},
+		{5, 5},
+		{len(str), len(str) + 1},
+	}
+	for variant, faceRuns := range faceRunVariants {
+		for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
+			for _, width := range []int{math.MaxInt, 80} {
+				t.Run(fmt.Sprintf("%s/width=%d%s", variant, width, wrapModeSuffix(wrapMode)), func(t *testing.T) {
+					s := textutil.Style{
+						Face:       small,
+						FaceRuns:   faceRuns,
+						LineHeight: lineHeight,
+						WrapMode:   wrapMode,
+					}
+					var l textutil.LineByteOffsets
+					rebuildFromString(&l, str)
+					params := &textutil.TextLayoutParams{
+						RenderingTextRange:         func(start, end int) string { return str[start:end] },
+						RenderingTextLength:        len(str),
+						Width:                      width,
+						Style:                      s,
+						PrecomputedLineByteOffsets: &l,
+					}
+
+					for _, r := range byteRanges {
+						start, end := r[0], r[1]
+						got := textutil.AppendBoundsOfTextRange(nil, params, start, end)
+						want := textutil.AppendBoundsOfTextRange(nil, withoutLineOffsets(params), start, end)
+						if !slices.Equal(got, want) {
+							t.Errorf("range [%d, %d): bounds = %v, want %v", start, end, got, want)
+						}
+						if max(start, 0) >= min(end, len(str)) {
+							if len(got) != 0 {
+								t.Errorf("range [%d, %d): bounds = %v, want none", start, end, got)
+							}
+							continue
+						}
+						if len(got) == 0 {
+							t.Errorf("range [%d, %d): no bounds", start, end)
+						}
+						for _, b := range got {
+							if b.Dx() < 0 || b.Dy() <= 0 {
+								t.Errorf("range [%d, %d): degenerate rectangle %v", start, end, b)
+							}
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
+// TestAppendBoundsOfTextRangeAcrossLines asserts a range crossing a hard
+// break yields one rectangle per crossed visual line, vertically stacked.
+func TestAppendBoundsOfTextRangeAcrossLines(t *testing.T) {
+	const lineHeight = 24.0
+	face := newTestFace(t)
+	str := "abc\ndef\nghi"
+	s := textutil.Style{
+		Face:       face,
+		LineHeight: lineHeight,
+	}
+	var l textutil.LineByteOffsets
+	rebuildFromString(&l, str)
+	params := &textutil.TextLayoutParams{
+		RenderingTextRange:         func(start, end int) string { return str[start:end] },
+		RenderingTextLength:        len(str),
+		Width:                      math.MaxInt,
+		Style:                      s,
+		PrecomputedLineByteOffsets: &l,
+	}
+	bounds := textutil.AppendBoundsOfTextRange(nil, params, 1, len(str))
+	if got, want := len(bounds), 3; got != want {
+		t.Fatalf("len(bounds) = %d, want %d", got, want)
+	}
+	for i := 1; i < len(bounds); i++ {
+		if bounds[i].Min.Y <= bounds[i-1].Min.Y {
+			t.Errorf("bounds[%d].Min.Y = %d, want greater than bounds[%d].Min.Y = %d", i, bounds[i].Min.Y, i-1, bounds[i-1].Min.Y)
 		}
 	}
 }

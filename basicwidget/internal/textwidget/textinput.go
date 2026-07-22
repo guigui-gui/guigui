@@ -234,11 +234,12 @@ func (t *Text) navigateForward(shift bool, target func(position int) (int, bool)
 }
 
 func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if !t.selectable && !t.editable {
-		return guigui.HandleInputResult{}
-	}
-
 	cursorPosition := image.Pt(ebiten.CursorPosition())
+	hotspotResult := t.handleHotspotPointingInput(context, widgetBounds, cursorPosition)
+
+	if !t.selectable && !t.editable {
+		return hotspotResult
+	}
 	if t.dragState.dragging {
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), cursorPosition, false)
@@ -722,6 +723,9 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
+	if _, ok := t.hotspotRangeAt(context, widgetBounds, image.Pt(ebiten.CursorPosition())); ok {
+		return ebiten.CursorShapePointer, true
+	}
 	if t.selectable || t.editable {
 		return ebiten.CursorShapeText, true
 	}

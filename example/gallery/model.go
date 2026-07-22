@@ -273,6 +273,7 @@ func (t *TextsModel) SetEllipsis(ellipsis bool) {
 
 type RichTextsModel struct {
 	selectable bool
+	clickCount int
 }
 
 func (r *RichTextsModel) Selectable() bool {
@@ -281,6 +282,14 @@ func (r *RichTextsModel) Selectable() bool {
 
 func (r *RichTextsModel) SetSelectable(selectable bool) {
 	r.selectable = selectable
+}
+
+func (r *RichTextsModel) ClickCount() int {
+	return r.clickCount
+}
+
+func (r *RichTextsModel) IncrementClickCount() {
+	r.clickCount++
 }
 
 type TextInputsModel struct {
