@@ -240,16 +240,11 @@ func (t *Text) HandlePointingInput(context *guigui.Context, widgetBounds *guigui
 	if !t.selectable && !t.editable {
 		return hotspotResult
 	}
-	if t.dragState.dragging {
+	if t.dragState.isDragging() {
+		t.dragState.trackCursorMovement(cursorPosition)
 		if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 			idx := t.textIndexFromPosition(context, widgetBounds.Bounds(), cursorPosition, false)
-			start, end := idx, idx
-			if t.dragState.startPlus1-1 >= 0 {
-				start = min(start, t.dragState.startPlus1-1)
-			}
-			if t.dragState.endPlus1-1 >= 0 {
-				end = max(idx, t.dragState.endPlus1-1)
-			}
+			start, end := t.dragState.extendedSelection(idx)
 			// idx is the dragged-to position; record whichever endpoint it
 			// became as the moving end so a subsequent Shift+click or
 			// Shift+arrow extends from the opposite, anchored end. While the
@@ -318,25 +313,29 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 	if leftClick && idx >= 0 && ebiten.IsKeyPressed(ebiten.KeyShift) && context.IsFocusedOrHasFocusedDescendant(t) {
 		selStart, selEnd := t.store.Selection()
 		anchor := shiftClickAnchor(selStart, selEnd, t.shiftSelectionSide, idx)
-		t.dragState.dragging = true
-		t.dragState.startPlus1 = anchor + 1
-		t.dragState.endPlus1 = anchor + 1
+		t.dragState.start(cursorPosition, anchor, anchor)
 		t.setSelection(anchor, idx, SelectionSideEnd, false)
 		context.SetFocused(t, true)
 		// Reset the click count so a following plain click is not treated as a
 		// double- or triple-click.
-		t.dragState.clickCounter.reset(ebiten.Tick(), idx)
+		t.dragState.resetClickCount(ebiten.Tick(), idx)
 		return
 	}
 
-	clickCount := t.dragState.clickCounter.click(ebiten.Tick(), idx, leftClick)
+	var clickCount int
+	if t.hotspotPressed {
+		// A press on a hotspot is always an individual click: double- and
+		// triple-clicks must not select a word or the whole text there.
+		t.dragState.resetClickCount(ebiten.Tick(), idx)
+		clickCount = 1
+	} else {
+		clickCount = t.dragState.click(ebiten.Tick(), idx, leftClick)
+	}
 
 	switch clickCount {
 	case 1:
 		if leftClick {
-			t.dragState.dragging = true
-			t.dragState.startPlus1 = idx + 1
-			t.dragState.endPlus1 = idx + 1
+			t.dragState.start(cursorPosition, idx, idx)
 		} else {
 			t.dragState.reset()
 		}
@@ -346,10 +345,8 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 			}
 		}
 	case 2:
-		t.dragState.dragging = true
 		start, end := t.findWordBoundaries(idx)
-		t.dragState.startPlus1 = start + 1
-		t.dragState.endPlus1 = end + 1
+		t.dragState.start(cursorPosition, start, end)
 		t.setSelection(start, end, SelectionSideNone, false)
 	case 3:
 		t.doSelectAll()
@@ -723,8 +720,11 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 }
 
 func (t *Text) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	if _, ok := t.hotspotRangeAt(context, widgetBounds, image.Pt(ebiten.CursorPosition())); ok {
-		return ebiten.CursorShapePointer, true
+	cursorPosition := image.Pt(ebiten.CursorPosition())
+	if !t.dragState.moved(cursorPosition) {
+		if _, ok := t.hotspotRangeAt(context, widgetBounds, cursorPosition); ok {
+			return ebiten.CursorShapePointer, true
+		}
 	}
 	if t.selectable || t.editable {
 		return ebiten.CursorShapeText, true

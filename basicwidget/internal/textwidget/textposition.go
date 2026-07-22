@@ -419,7 +419,7 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, widgetBounds *guigui.
 	if !ok {
 		return
 	}
-	if t.prevStart == start && t.prevEnd == end && !t.dragState.dragging {
+	if t.prevStart == start && t.prevEnd == end && !t.dragState.isDragging() {
 		return
 	}
 	t.prevStart = start
@@ -428,7 +428,7 @@ func (t *Text) adjustScrollOffset(context *guigui.Context, widgetBounds *guigui.
 	textBounds := widgetBounds.Bounds()
 	textVisibleBounds := widgetBounds.VisibleBounds()
 
-	if t.dragState.dragging {
+	if t.dragState.isDragging() {
 		// Drag autoscroll tracks the mouse, not the caret.
 		cx, cy := ebiten.CursorPosition()
 		exEnd := float64(textVisibleBounds.Max.X) - float64(cx) - float64(t.paddingForScrollOffset.End)

@@ -695,9 +695,10 @@ func (t *Text) OnHotspotDown(f func(context *guigui.Context, textRange TextRange
 }
 
 // OnHotspotUp sets the event handler that is called when the left mouse
-// button is released on the hotspot range it was pressed on, unless a
-// selection was made in between: a drag selects, it does not click. The
-// handler is given the released range.
+// button is released on the hotspot range it was pressed on. For selectable
+// or editable text, the click is canceled when the cursor moved or a
+// selection was made between the press and the release: a drag selects, it
+// does not click. The handler is given the released range.
 func (t *Text) OnHotspotUp(f func(context *guigui.Context, textRange TextRange)) {
 	t.core.OnHotspotUp(func(context *guigui.Context, textRange textwidget.TextRange) {
 		f(context, TextRange{

@@ -42,9 +42,10 @@ func (t *Text) OnHotspotDown(f func(context *guigui.Context, textRange TextRange
 }
 
 // OnHotspotUp sets the event handler that is called when the left mouse
-// button is released on the hotspot range it was pressed on, unless a
-// selection was made in between: a drag selects, it does not click. The
-// handler is given the released range.
+// button is released on the hotspot range it was pressed on. For selectable
+// or editable text, the click is canceled when the cursor moved or a
+// selection was made between the press and the release: a drag selects, it
+// does not click. The handler is given the released range.
 func (t *Text) OnHotspotUp(f func(context *guigui.Context, textRange TextRange)) {
 	guigui.SetEventHandler(t, textEventHotspotUp, f)
 }
@@ -92,7 +93,7 @@ func (t *Text) handleHotspotPointingInput(context *guigui.Context, widgetBounds 
 	}
 	if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && t.hotspotPressed {
 		t.hotspotPressed = false
-		if r, ok := t.hotspotRangeAt(context, widgetBounds, cursorPosition); ok && r == t.pressedHotspotRange {
+		if r, ok := t.hotspotRangeAt(context, widgetBounds, cursorPosition); ok && r == t.pressedHotspotRange && !t.dragState.moved(cursorPosition) {
 			if start, end := t.store.Selection(); start == end {
 				guigui.DispatchEvent(t, textEventHotspotUp, r)
 				fired = true

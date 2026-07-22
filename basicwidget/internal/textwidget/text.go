@@ -352,8 +352,7 @@ func (t *Text) SetSelectable(selectable bool) {
 		return
 	}
 	t.selectable = selectable
-	t.dragState.startPlus1 = 0
-	t.dragState.endPlus1 = 0
+	t.dragState.clearAnchor()
 	t.shiftSelectionSide = SelectionSideNone
 	if !t.selectable {
 		t.setSelection(0, 0, SelectionSideNone, false)
@@ -726,8 +725,7 @@ func (t *Text) SetEditable(editable bool) {
 	}
 
 	if editable {
-		t.dragState.startPlus1 = 0
-		t.dragState.endPlus1 = 0
+		t.dragState.clearAnchor()
 		t.shiftSelectionSide = SelectionSideNone
 	} else if t.store.IsFocused() {
 		// Blur immediately so Ebitengine's BeforeUpdate hook stops auto-committing
