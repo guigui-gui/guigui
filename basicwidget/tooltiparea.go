@@ -13,9 +13,9 @@ import (
 )
 
 // TooltipArea is a standalone widget that shows a balloon popup when the mouse cursor hovers
-// over the area specified by its bounds.
-// The tooltip appears above the bounds and has a black background regardless of the color mode.
-// The tooltip automatically disappears when the mouse cursor moves out of the bounds.
+// over the area specified by its bounds, or over the areas set by [TooltipArea.SetHitAreas].
+// The tooltip appears above the hovered area and has a black background regardless of the color mode.
+// The tooltip automatically disappears when the mouse cursor moves out of the area.
 //
 // TooltipArea shows a modeless popup: it does not prevent user interactions with other widgets.
 type TooltipArea struct {
@@ -24,10 +24,14 @@ type TooltipArea struct {
 	popup          Popup
 	tooltipContent tooltipContent
 
+	hitAreas    []image.Rectangle
+	hasHitAreas bool
+
 	hovering      bool
 	hoverTicks    int
 	toShowTooltip bool
 	showPosition  image.Point
+	showArea      image.Rectangle
 }
 
 // SetContent sets a custom content widget for the tooltip balloon.
@@ -40,6 +44,36 @@ func (t *TooltipArea) SetContent(widget guigui.Widget) {
 // [TooltipArea.SetContent] and [TooltipArea.SetText] are exclusive; [TooltipArea.SetContent] takes priority.
 func (t *TooltipArea) SetText(text string) {
 	t.tooltipContent.textContent = text
+}
+
+// SetHitAreas sets the areas, in screen coordinates, where hovering triggers the tooltip.
+// The areas take effect only within the widget's bounds.
+// A nil slice means the whole bounds; a non-nil empty slice means no area triggers the tooltip.
+func (t *TooltipArea) SetHitAreas(areas []image.Rectangle) {
+	t.hitAreas = append(t.hitAreas[:0], areas...)
+	t.hasHitAreas = areas != nil
+}
+
+// hitAreaAtCursor returns the area under the cursor that triggers the tooltip, and whether one
+// exists. The returned area anchors the balloon.
+func (t *TooltipArea) hitAreaAtCursor(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (image.Rectangle, bool) {
+	if !context.IsVisible(t) || !context.IsEnabled(t) {
+		return image.Rectangle{}, false
+	}
+	// IsHitAtCursor covers visibility, clipping, and obscuring by higher-layer widgets such as popups.
+	if !widgetBounds.IsHitAtCursor() {
+		return image.Rectangle{}, false
+	}
+	if !t.hasHitAreas {
+		return widgetBounds.Bounds(), true
+	}
+	cursorPosition := image.Pt(ebiten.CursorPosition())
+	for _, area := range t.hitAreas {
+		if cursorPosition.In(area) {
+			return area, true
+		}
+	}
+	return image.Rectangle{}, false
 }
 
 // Build implements [guigui.Widget.Build].
@@ -67,14 +101,14 @@ func (t *TooltipArea) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 	// Measure the tooltip content to position it.
 	tooltipSize := t.tooltipContent.Measure(context, guigui.Constraints{})
 
-	// Position the tooltip above the hover bounds, centered horizontally on the cursor.
-	hb := widgetBounds.Bounds()
+	// Position the tooltip above the hovered area, centered horizontally on the cursor.
+	area := t.showArea
 	pos := t.showPosition
 	u := UnitSize(context)
 	gap := u / 8
 	tooltipBounds := image.Rectangle{
-		Min: image.Pt(pos.X-tooltipSize.X/2, hb.Min.Y-tooltipSize.Y-gap),
-		Max: image.Pt(pos.X+tooltipSize.X/2+tooltipSize.X%2, hb.Min.Y-gap),
+		Min: image.Pt(pos.X-tooltipSize.X/2, area.Min.Y-tooltipSize.Y-gap),
+		Max: image.Pt(pos.X+tooltipSize.X/2+tooltipSize.X%2, area.Min.Y-gap),
 	}
 
 	// Clamp to app bounds so it doesn't go off screen.
@@ -86,10 +120,10 @@ func (t *TooltipArea) Layout(context *guigui.Context, widgetBounds *guigui.Widge
 		tooltipBounds = tooltipBounds.Add(image.Pt(appBounds.Max.X-tooltipBounds.Max.X, 0))
 	}
 	if tooltipBounds.Min.Y < appBounds.Min.Y {
-		// If no room above, show below the hover bounds.
+		// If no room above, show below the hovered area.
 		tooltipBounds = image.Rectangle{
-			Min: image.Pt(tooltipBounds.Min.X, hb.Max.Y+gap),
-			Max: image.Pt(tooltipBounds.Max.X, hb.Max.Y+gap+tooltipSize.Y),
+			Min: image.Pt(tooltipBounds.Min.X, area.Max.Y+gap),
+			Max: image.Pt(tooltipBounds.Max.X, area.Max.Y+gap+tooltipSize.Y),
 		}
 	}
 
@@ -111,8 +145,7 @@ func (t *TooltipArea) WriteStateKey(context *guigui.Context, w *guigui.StateKeyW
 func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	// Detect hover in Tick, not in an input handler: Tick always runs, but pointing
 	// input can be intercepted by a widget capturing the cursor (e.g. a dragged button).
-	cursorPos := image.Pt(ebiten.CursorPosition())
-	if context.IsVisible(t) && context.IsEnabled(t) && widgetBounds.IsHitAtCursor() {
+	if area, ok := t.hitAreaAtCursor(context, widgetBounds); ok {
 		if !t.hovering {
 			t.hovering = true
 			t.hoverTicks = 0
@@ -120,9 +153,10 @@ func (t *TooltipArea) Tick(context *guigui.Context, widgetBounds *guigui.WidgetB
 			// popup that opens during this hover suppresses the tooltip.
 			t.popup.recordSubordinateTrigger()
 		}
-		// Freeze the position once the tooltip is shown.
+		// Freeze the position and the anchor once the tooltip is shown.
 		if !t.toShowTooltip && !t.popup.IsOpen() {
-			t.showPosition = cursorPos
+			t.showPosition = image.Pt(ebiten.CursorPosition())
+			t.showArea = area
 		}
 		t.hoverTicks++
 		if t.hoverTicks == tooltipShowDelay() {

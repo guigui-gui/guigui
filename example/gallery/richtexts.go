@@ -5,6 +5,7 @@ package main
 
 import (
 	"fmt"
+	"image"
 	"image/color"
 	"slices"
 	"strings"
@@ -30,8 +31,11 @@ type RichTexts struct {
 	clickCountText      basicwidget.Text
 	clickCountValueText basicwidget.Text
 	sampleText          basicwidget.Text
+	hotspotTooltipArea  basicwidget.TooltipArea
 
-	layoutItems []guigui.LinearLayoutItem
+	hotspotRange     basicwidget.TextRange
+	layoutItems      []guigui.LinearLayoutItem
+	hotspotBoundsArr []image.Rectangle
 }
 
 func styleRichTextsSampleRange(sub string, f func(start, end int)) {
@@ -44,6 +48,7 @@ func styleRichTextsSampleRange(sub string, f func(start, end int)) {
 
 func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.sampleText)
+	adder.AddWidget(&r.hotspotTooltipArea)
 	adder.AddWidget(&r.form)
 
 	v, ok := context.Env(r, modelKeyModel)
@@ -62,16 +67,17 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	r.clickCountValueText.SetValue(fmt.Sprintf("%d", model.RichTexts().ClickCount()))
 
 	styleRichTextsSampleRange("clickable range", func(start, end int) {
-		r.sampleText.SetHotspotRanges([]basicwidget.TextRange{
-			{
-				StartInBytes: start,
-				EndInBytes:   end,
-			},
-		})
+		r.hotspotRange = basicwidget.TextRange{
+			StartInBytes: start,
+			EndInBytes:   end,
+		}
+		r.sampleText.SetHotspotRanges([]basicwidget.TextRange{r.hotspotRange})
 	})
 	r.sampleText.OnHotspotUp(func(context *guigui.Context, textRange basicwidget.TextRange) {
 		model.RichTexts().IncrementClickCount()
 	})
+
+	r.hotspotTooltipArea.SetText(fmt.Sprintf("Clicks: %d", model.RichTexts().ClickCount()))
 
 	r.form.SetItems([]basicwidget.FormItem{
 		{
@@ -158,7 +164,7 @@ func (r *RichTexts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 			Widget: &r.form,
 		},
 	)
-	(guigui.LinearLayout{
+	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items:     r.layoutItems,
 		Gap:       u / 2,
@@ -168,5 +174,13 @@ func (r *RichTexts) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 			End:    u / 2,
 			Bottom: u / 2,
 		},
-	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+	}
+	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+
+	// Cover the sample text with the tooltip area, and restrict its hit areas to the
+	// hotspot range's rectangles so that only the clickable range shows the tooltip.
+	sampleTextBounds := layout.ItemBoundsAt(0, context, widgetBounds.Bounds())
+	r.hotspotBoundsArr = r.sampleText.AppendBoundsOfTextRange(r.hotspotBoundsArr[:0], context, sampleTextBounds, r.hotspotRange.StartInBytes, r.hotspotRange.EndInBytes)
+	r.hotspotTooltipArea.SetHitAreas(r.hotspotBoundsArr)
+	layouter.LayoutWidget(&r.hotspotTooltipArea, sampleTextBounds)
 }
