@@ -33,3 +33,10 @@ If you use an AI coding agent to write or modify Guigui code, point it at
 [`skills`](skills). The `using-guigui` skill
 there documents the widget lifecycle, layout, and conventions so the agent
 produces idiomatic Guigui code.
+
+Guigui runs on [Ebitengine](https://ebitengine.org/), so to run, test, or
+screenshot a Guigui app without a window, also point the agent at
+Ebitengine's
+[`run-ebitengine-app-headless`](https://github.com/hajimehoshi/ebiten/tree/main/skills/run-ebitengine-app-headless)
+skill. It drives an app headlessly, injects input, and reads back rendered
+frames so the agent can verify behavior end to end.
