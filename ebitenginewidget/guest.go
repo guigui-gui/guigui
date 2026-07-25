@@ -77,10 +77,26 @@ type startGuestOptions struct {
 	env []string
 }
 
-// startGuest launches the guest binary at binPath pointed at the host's endpoint and returns a handle
-// once it has connected. It is safe to call off the main goroutine; only the returned session's
-// screen-touching methods (SetOutsideScreen, CompositeFrame, Close) must run on the host frame.
-func startGuest(listener net.Listener, binPath, endpoint string, options *startGuestOptions) (gp *guestProcess, err error) {
+// startGuest launches the guest binary at binPath pointed at a listener of its own at sockPath, and
+// returns a handle once it has connected. It is safe to call off the main goroutine; only the returned
+// session's screen-touching methods (SetOutsideScreen, CompositeFrame, Close) must run on the host frame.
+func startGuest(binPath, sockPath string, options *startGuestOptions) (gp *guestProcess, err error) {
+	// The guest gets a listener of its own, closed when the launch completes: the endpoint addresses one
+	// guest session, so it must not outlive the launch, and a process the guest starts must not be able
+	// to reach the host through it. Closing a Unix listener removes its socket file too.
+	ln, err := net.ListenUnix("unix", &net.UnixAddr{Name: sockPath, Net: "unix"})
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		err = errors.Join(err, ln.Close())
+	}()
+
+	endpoint, err := vmhost.EndpointURLFromAddr(ln.Addr())
+	if err != nil {
+		return nil, err
+	}
+
 	cmd := exec.Command(binPath, options.args...)
 	// The endpoint comes last, so the widget's endpoint wins over an env entry of the same name.
 	cmd.Env = append(os.Environ(), options.env...)
@@ -97,11 +113,11 @@ func startGuest(listener net.Listener, binPath, endpoint string, options *startG
 		}
 	}()
 
-	// Both *net.UnixListener and *net.TCPListener provide SetDeadline.
-	if err := listener.(interface{ SetDeadline(time.Time) error }).SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
+	// A guest that never dials must not block the launch forever.
+	if err := ln.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return nil, err
 	}
-	conn, err := listener.Accept()
+	conn, err := ln.Accept()
 	if err != nil {
 		return nil, &GuestNotConnectedError{
 			BinaryPath: binPath,

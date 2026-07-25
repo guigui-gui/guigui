@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
-	"net"
 	"os"
 	"path/filepath"
 	"slices"
@@ -117,14 +116,11 @@ type Ebitengine struct {
 	// state is the launcher's lifecycle state; the zero value is ebitengineStateIdle.
 	state ebitengineState
 
-	// listener is the listener guests dial.
-	listener net.Listener
-
-	// dir is the temporary directory holding the listener's socket.
+	// dir is the temporary directory holding the guests' sockets.
 	dir string
 
-	// endpoint is the listener's address as an endpoint URL, handed to guests via EBITENGINE_VM_ENDPOINT.
-	endpoint string
+	// launchGen numbers the launches, giving each guest's listener its own socket path.
+	launchGen int
 
 	// launchResultCh receives the outcome of the launch in flight; it is created by setup.
 	launchResultCh chan launchResult
@@ -512,10 +508,6 @@ func (e *Ebitengine) Close() error {
 	}
 
 	var err error
-	if e.listener != nil {
-		err = errors.Join(err, e.listener.Close())
-		e.listener = nil
-	}
 	if e.dir != "" {
 		err = errors.Join(err, os.RemoveAll(e.dir))
 		e.dir = ""
@@ -566,45 +558,38 @@ func (e *Ebitengine) guestTickCount() int {
 // launch kicks off an asynchronous launch of binPath. Connecting runs in a goroutine so the UI stays
 // responsive; the result is adopted in [Ebitengine.Tick].
 func (e *Ebitengine) launch(binPath string) {
-	if e.listener == nil {
+	if e.dir == "" {
 		if err := e.setup(); err != nil {
 			e.dispatchError(err)
 			return
 		}
 	}
 	e.state = ebitengineStateLaunching
+	e.launchGen++
 
-	listener, endpoint := e.listener, e.endpoint
+	// A socket path is never reused, so a lingering file from an earlier launch cannot make the listen
+	// fail.
+	sockPath := filepath.Join(e.dir, fmt.Sprintf("s%d", e.launchGen))
 	options := &startGuestOptions{
 		args: e.commandArgs,
 		env:  e.commandEnv,
 	}
 	go func() {
-		gp, err := startGuest(listener, binPath, endpoint, options)
+		gp, err := startGuest(binPath, sockPath, options)
 		e.launchResultCh <- launchResult{gp: gp, err: err}
 	}()
 }
 
-// setup performs the one-time host setup: a temporary directory and a listener for guests to dial.
+// setup performs the one-time host setup: a temporary directory for the guests' sockets.
 func (e *Ebitengine) setup() error {
 	e.launchResultCh = make(chan launchResult, 1)
 
-	// A short directory name keeps the Unix socket path within sun_path (~104 bytes on macOS).
+	// A short directory name keeps the Unix socket paths within sun_path (~104 bytes on macOS).
 	dir, err := os.MkdirTemp("", "guigui-vm")
 	if err != nil {
 		return err
 	}
-	ln, err := net.Listen("unix", filepath.Join(dir, "s"))
-	if err != nil {
-		return errors.Join(err, os.RemoveAll(dir))
-	}
-	endpoint, err := vmhost.EndpointURLFromAddr(ln.Addr())
-	if err != nil {
-		return errors.Join(err, ln.Close(), os.RemoveAll(dir))
-	}
 	e.dir = dir
-	e.listener = ln
-	e.endpoint = endpoint
 	return nil
 }
 
