@@ -40,3 +40,7 @@ Ebitengine's
 [`run-ebitengine-app-headless`](https://github.com/hajimehoshi/ebiten/tree/main/skills/run-ebitengine-app-headless)
 skill. It drives an app headlessly, injects input, and reads back rendered
 frames so the agent can verify behavior end to end.
+
+The link above points at Ebitengine's `main` branch. The skill documents the
+APIs of the version it ships with, so use the tag or branch matching the
+Ebitengine version your project depends on.
