@@ -81,6 +81,25 @@ type startGuestOptions struct {
 // returns a handle once it has connected. It is safe to call off the main goroutine; only the returned
 // session's screen-touching methods (SetOutsideScreen, CompositeFrame, Close) must run on the host frame.
 func startGuest(binPath, sockPath string, options *startGuestOptions) (gp *guestProcess, err error) {
+	// The process and the connection outlive this function only on success. This releases them together,
+	// and is registered before either is acquired so that it runs after every deferred call below
+	// (deferred calls run in reverse order) and sees the final error, including one reported by the
+	// listener's deferred close.
+	var cmd *exec.Cmd
+	var conn net.Conn
+	defer func() {
+		if err == nil {
+			return
+		}
+		gp = nil
+		if conn != nil {
+			err = errors.Join(err, conn.Close())
+		}
+		if cmd != nil {
+			err = errors.Join(err, cmd.Process.Kill(), cmd.Wait())
+		}
+	}()
+
 	// The guest gets a listener of its own, closed when the launch completes: the endpoint addresses one
 	// guest session, so it must not outlive the launch, and a process the guest starts must not be able
 	// to reach the host through it. Closing a Unix listener removes its socket file too.
@@ -97,39 +116,29 @@ func startGuest(binPath, sockPath string, options *startGuestOptions) (gp *guest
 		return nil, err
 	}
 
-	cmd := exec.Command(binPath, options.args...)
+	c := exec.Command(binPath, options.args...)
 	// The endpoint comes last, so the widget's endpoint wins over an env entry of the same name.
-	cmd.Env = append(os.Environ(), options.env...)
-	cmd.Env = append(cmd.Env, "EBITENGINE_VM_ENDPOINT="+endpoint)
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
+	c.Env = append(os.Environ(), options.env...)
+	c.Env = append(c.Env, "EBITENGINE_VM_ENDPOINT="+endpoint)
+	c.Stdout = os.Stderr
+	c.Stderr = os.Stderr
+	if err := c.Start(); err != nil {
 		return nil, fmt.Errorf("ebitenginewidget: starting %s failed: %w", binPath, err)
 	}
-	defer func() {
-		// The process outlives this function only on success.
-		if err != nil {
-			err = errors.Join(err, cmd.Process.Kill(), cmd.Wait())
-		}
-	}()
+	// Only a started process is this function's to reap.
+	cmd = c
 
 	// A guest that never dials must not block the launch forever.
 	if err := ln.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 		return nil, err
 	}
-	conn, err := ln.Accept()
+	conn, err = ln.Accept()
 	if err != nil {
 		return nil, &GuestNotConnectedError{
 			BinaryPath: binPath,
 			Err:        err,
 		}
 	}
-	defer func() {
-		// The connection outlives this function only on success (the session takes ownership).
-		if err != nil {
-			err = errors.Join(err, conn.Close())
-		}
-	}()
 
 	// The handlers below capture gp, so build it before the session; its session field is filled in once
 	// NewGuestSession returns.
