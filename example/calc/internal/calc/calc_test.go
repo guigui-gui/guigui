@@ -73,7 +73,7 @@ func TestCalc(t *testing.T) {
 		{
 			name:    "division by zero",
 			buttons: []calc.ButtonLabel{"1", "÷", "0", "="},
-			want:    "Error",
+			want:    calc.ErrorDisplay,
 		},
 		{
 			name:    "clear resets",

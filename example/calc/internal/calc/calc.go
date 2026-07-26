@@ -35,6 +35,9 @@ const (
 	ButtonLabelClear    ButtonLabel = "C"
 )
 
+// ErrorDisplay is the display value after an operation whose result is not representable.
+const ErrorDisplay = "Error"
+
 type operator int
 
 const (
@@ -170,7 +173,7 @@ func (c *Calc) evaluate() {
 		result = c.operand / current
 	}
 	if math.IsInf(result, 0) || math.IsNaN(result) {
-		c.display = "Error"
+		c.display = ErrorDisplay
 		c.operand = 0
 		c.operator = operatorNone
 		c.newOperand = true
