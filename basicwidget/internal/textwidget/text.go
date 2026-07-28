@@ -137,8 +137,11 @@ type Text struct {
 	firstLogicalLineInViewport int
 
 	// hotspotRanges are the interactive byte ranges set via
-	// [Text.SetHotspotRanges].
-	hotspotRanges []TextRange
+	// [Text.SetHotspotRanges], brought up to date with the content lazily
+	// by [Text.ensureHotspotRanges] when [textStore.Generation] advances
+	// past hotspotRangesValidGeneration.
+	hotspotRanges                []TextRange
+	hotspotRangesValidGeneration int64
 
 	// hotspotBoundsBuf is scratch for one hotspot range's rectangles.
 	hotspotBoundsBuf []image.Rectangle
@@ -146,6 +149,13 @@ type Text struct {
 	// pressedHotspotRange is the hotspot range the active press started on.
 	// It is meaningful only while hotspotPressed is true.
 	pressedHotspotRange TextRange
+
+	// hotspotPressSelectionStart and hotspotPressSelectionEnd are the
+	// selection when the active press started, distinguishing a selection
+	// made during the press from a preexisting one. They are meaningful
+	// only while hotspotPressed is true.
+	hotspotPressSelectionStart int
+	hotspotPressSelectionEnd   int
 
 	// hotspotPressed reports whether the active mouse press started on a
 	// hotspot range.

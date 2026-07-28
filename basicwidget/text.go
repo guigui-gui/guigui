@@ -537,7 +537,7 @@ func (t *Text) UnsetWeightInRange(startInBytes, endInBytes int) {
 }
 
 // SetFontFamilyInRange overrides the font family in
-// [startInBytes, endInBytes). The override lasts until the value changes. A
+// [startInBytes, endInBytes). The override follows the text through edits. A
 // nil family renders the range with the registered face source stack alone.
 func (t *Text) SetFontFamilyInRange(startInBytes, endInBytes int, family *FontFamily) {
 	var f *font.Family
@@ -554,7 +554,7 @@ func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
 }
 
 // SetItalicInRange overrides the italic face selection in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 // When the font family has no italic face, the range renders with a regular
 // face.
 func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
@@ -596,7 +596,7 @@ func (t *Text) UnsetLangInRange(startInBytes, endInBytes int) {
 }
 
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).
-// The override lasts until the value changes. A nil color selects the
+// The override follows the text through edits. A nil color selects the
 // default color.
 func (t *Text) SetColorInRange(startInBytes, endInBytes int, clr color.Color) {
 	t.core.SetColorInRange(startInBytes, endInBytes, clr)
@@ -609,7 +609,7 @@ func (t *Text) UnsetColorInRange(startInBytes, endInBytes int) {
 }
 
 // SetBackgroundColorInRange overrides the background color in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetBackgroundColorInRange(startInBytes, endInBytes int, clr color.Color) {
 	t.core.SetBackgroundColorInRange(startInBytes, endInBytes, clr)
 }
@@ -621,7 +621,7 @@ func (t *Text) UnsetBackgroundColorInRange(startInBytes, endInBytes int) {
 }
 
 // SetUnderlineInRange overrides whether an underline is drawn in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetUnderlineInRange(startInBytes, endInBytes int, underline bool) {
 	t.core.SetUnderlineInRange(startInBytes, endInBytes, underline)
 }
@@ -633,7 +633,7 @@ func (t *Text) UnsetUnderlineInRange(startInBytes, endInBytes int) {
 }
 
 // SetStrikethroughInRange overrides whether a strikethrough is drawn in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
 	t.core.SetStrikethroughInRange(startInBytes, endInBytes, strikethrough)
 }
@@ -670,7 +670,8 @@ type TextRange struct {
 
 // SetHotspotRanges sets the hotspot ranges: over their rectangles the cursor
 // turns into a pointer, and mouse presses and releases fire the hotspot down
-// and up events.
+// and up events. The ranges follow the text through edits like the ranged
+// styles. While the value is editable, the hotspots are inert.
 func (t *Text) SetHotspotRanges(ranges []TextRange) {
 	t.hotspotRangesBuf = slices.Delete(t.hotspotRangesBuf, 0, len(t.hotspotRangesBuf))
 	for _, r := range ranges {
@@ -680,6 +681,23 @@ func (t *Text) SetHotspotRanges(ranges []TextRange) {
 		})
 	}
 	t.core.SetHotspotRanges(t.hotspotRangesBuf)
+}
+
+// AppendHotspotRanges appends the current hotspot ranges to dst and returns
+// the extended slice, reflecting the adjustments made for edits since
+// [Text.SetHotspotRanges].
+func (t *Text) AppendHotspotRanges(dst []TextRange) []TextRange {
+	t.hotspotRangesBuf = t.core.AppendHotspotRanges(t.hotspotRangesBuf[:0])
+	defer func() {
+		t.hotspotRangesBuf = slices.Delete(t.hotspotRangesBuf, 0, len(t.hotspotRangesBuf))
+	}()
+	for _, r := range t.hotspotRangesBuf {
+		dst = append(dst, TextRange{
+			StartInBytes: r.StartInBytes,
+			EndInBytes:   r.EndInBytes,
+		})
+	}
+	return dst
 }
 
 // OnHotspotDown sets the event handler that is called when the left mouse
@@ -696,9 +714,9 @@ func (t *Text) OnHotspotDown(f func(context *guigui.Context, textRange TextRange
 
 // OnHotspotUp sets the event handler that is called when the left mouse
 // button is released on the hotspot range it was pressed on. For selectable
-// or editable text, the click is canceled when the cursor moved or a
-// selection was made between the press and the release: a drag selects, it
-// does not click. The handler is given the released range.
+// text, the click is canceled when the cursor moved or a selection was made
+// between the press and the release: a drag selects, it does not click. The
+// handler is given the released range.
 func (t *Text) OnHotspotUp(f func(context *guigui.Context, textRange TextRange)) {
 	t.core.OnHotspotUp(func(context *guigui.Context, textRange textwidget.TextRange) {
 		f(context, TextRange{
