@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
@@ -43,4 +44,8 @@ func (t *Text) StyleRuns() []textstyle.Run {
 
 func (t *Text) ReplaceTextAt(text string, start, end int) {
 	t.replaceTextAt(text, start, end)
+}
+
+func AppendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
+	return appendFaceRunsThroughComposition(dst, src, selStart, selEnd, compLen)
 }

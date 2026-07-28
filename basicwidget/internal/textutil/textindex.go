@@ -65,18 +65,21 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			CompositionText:        p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
-			LineByteOffsets:        p.PrecomputedLineByteOffsets,
-			SelectionStart:         p.SelectionStart,
-			SelectionEnd:           p.SelectionEnd,
-			WrapMode:               p.Style.WrapMode,
-			CommittedSelectionLine: committedSelectionLine,
-			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Style.Face,
-			LineHeight:             p.Style.LineHeight,
-			TabWidth:               p.Style.TabWidth,
-			KeepTailingSpace:       p.Style.KeepTailingSpace,
-			WrapWidth:              p.Width,
+			CompositionText:           p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
+			LineByteOffsets:           p.PrecomputedLineByteOffsets,
+			SelectionStart:            p.SelectionStart,
+			SelectionEnd:              p.SelectionEnd,
+			WrapMode:                  p.Style.WrapMode,
+			CommittedSelectionLine:    committedSelectionLine,
+			RenderingSelectionLine:    renderingSelectionLine,
+			Face:                      p.Style.Face,
+			LineHeight:                p.Style.LineHeight,
+			TabWidth:                  p.Style.TabWidth,
+			KeepTailingSpace:          p.Style.KeepTailingSpace,
+			CommittedFaceRuns:         p.CommittedFaceRuns,
+			RenderingFaceRuns:         p.Style.FaceRuns,
+			SelectionLineStartInBytes: cs,
+			WrapWidth:                 p.Width,
 		})
 		if !ok {
 			return textIndexFromPosition(p.Width, position, p.RenderingTextRange(0, p.RenderingTextLength), &p.Style)
@@ -85,7 +88,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineVisualCountDelta = renderingCount - committedCount
 		}

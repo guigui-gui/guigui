@@ -47,6 +47,18 @@ type CompositionInfoParams struct {
 	TabWidth         float64
 	KeepTailingSpace bool
 
+	// CommittedFaceRuns and RenderingFaceRuns override Face for byte
+	// ranges of the selection line, in committed-text and rendering-text
+	// whole-text byte offsets respectively. Consulted only when WrapMode
+	// is not [WrapModeNone]; nil means no overrides.
+	CommittedFaceRuns []FaceRun
+	RenderingFaceRuns []FaceRun
+
+	// SelectionLineStartInBytes is the selection line's whole-text start
+	// offset. The line start precedes the splice, so the offset is the
+	// same in the committed and rendering texts.
+	SelectionLineStartInBytes int
+
 	// WrapWidth is the pixel width at which logical lines wrap into
 	// visual sublines. Values <= 0 are treated as math.MaxInt (no
 	// wrapping).
@@ -103,8 +115,8 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, nil, 0, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, nil, 0, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.CommittedFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.RenderingFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{

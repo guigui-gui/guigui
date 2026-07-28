@@ -383,13 +383,9 @@ func (t *Text) invalidateSizeCacheForMetricStyleRuns() {
 
 // appendFaceRunsForStyle appends the face runs derived from the ranged style
 // overrides' metric properties to runs and returns the extended slice, with
-// byte offsets into the committed text. Masked values and values with an
-// active IME composition append no face runs.
+// byte offsets into the committed text. Masked values append no face runs.
 func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.Context, forceBold bool) []textutil.FaceRun {
 	if t.masking() {
-		return runs
-	}
-	if t.store.UncommittedTextLengthInBytes() > 0 {
 		return runs
 	}
 	for run := range t.ensureStyleRuns().All() {
@@ -423,4 +419,65 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		})
 	}
 	return runs
+}
+
+// faceRunsMark records the face-run buffer lengths at an
+// [Text.acquireFaceRuns] call, for [Text.releaseFaceRuns].
+type faceRunsMark struct {
+	committed int
+	rendering int
+}
+
+// acquireFaceRuns appends the ranged style overrides' face runs to the
+// reusable buffers and returns them as committed (committed-text byte
+// offsets) and rendering (rendering-text byte offsets) slices.
+// showComposition reports whether the caller lays out the rendering text
+// with the active IME composition spliced in; without an applicable
+// transform both returns are the same slice. The slices are views into
+// buffers owned by t: pass mark to [Text.releaseFaceRuns] when done,
+// typically deferred, and do not retain the slices past that call.
+func (t *Text) acquireFaceRuns(context *guigui.Context, forceBold, showComposition bool) (committed, rendering []textutil.FaceRun, mark faceRunsMark) {
+	mark = faceRunsMark{
+		committed: len(t.faceRunsBuf),
+		rendering: len(t.renderingFaceRunsBuf),
+	}
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, forceBold)
+	committed = t.faceRunsBuf[mark.committed:]
+	rendering = committed
+	if showComposition && len(committed) > 0 {
+		if compLen := t.store.UncommittedTextLengthInBytes(); compLen > 0 {
+			selStart, selEnd := t.store.Selection()
+			t.renderingFaceRunsBuf = appendFaceRunsThroughComposition(t.renderingFaceRunsBuf, committed, selStart, selEnd, compLen)
+			rendering = t.renderingFaceRunsBuf[mark.rendering:]
+		}
+	}
+	return committed, rendering, mark
+}
+
+// releaseFaceRuns truncates the face-run buffers back to their lengths at
+// the matching [Text.acquireFaceRuns] call.
+func (t *Text) releaseFaceRuns(mark faceRunsMark) {
+	t.faceRunsBuf = slices.Delete(t.faceRunsBuf, mark.committed, len(t.faceRunsBuf))
+	t.renderingFaceRunsBuf = slices.Delete(t.renderingFaceRunsBuf, mark.rendering, len(t.renderingFaceRunsBuf))
+}
+
+// appendFaceRunsThroughComposition appends src's committed-text face runs to
+// dst with their offsets transformed to the rendering text, whose composition
+// splice replaces the committed byte range [selStart, selEnd) with compLen
+// bytes, with the movement rules of [replaceTextRanges]. A run whose text the
+// splice fully replaces is dropped.
+func appendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
+	if selStart > selEnd {
+		selStart, selEnd = selEnd, selStart
+	}
+	for _, run := range src {
+		r, ok := replaceTextRange(TextRange{StartInBytes: run.Start, EndInBytes: run.End}, selStart, selEnd, compLen)
+		if !ok {
+			continue
+		}
+		run.Start = r.StartInBytes
+		run.End = r.EndInBytes
+		dst = append(dst, run)
+	}
+	return dst
 }

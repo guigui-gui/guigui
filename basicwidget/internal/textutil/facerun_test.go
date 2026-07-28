@@ -224,3 +224,225 @@ func TestFaceRunsMeasureHeightParity(t *testing.T) {
 		}
 	}
 }
+
+// TestFaceRunsCompositionParity asserts the offset-accelerated hit-testing
+// and caret paths match the whole-document fallbacks when face runs and an
+// IME composition are both present. Style.FaceRuns carries rendering-text
+// offsets and CommittedFaceRuns the same runs in committed-text offsets.
+func TestFaceRunsCompositionParity(t *testing.T) {
+	const lineHeight = 24.0
+	small, large := testFaces(t)
+	committed := "abcdef ghij klmno\npqr stu vwx yz\n\nthe last line"
+	committedFaceRuns := []textutil.FaceRun{
+		{Start: 3, End: 10, Face: large},
+		{Start: 22, End: 30, Face: large},
+	}
+
+	cases := []struct {
+		name              string
+		selStart, selEnd  int
+		comp              string
+		renderingFaceRuns []textutil.FaceRun
+	}{
+		{
+			// Insertion inside the first run extends it; the second run
+			// shifts by the composition length.
+			name:     "insertion inside a run",
+			selStart: 5, selEnd: 5,
+			comp: "XYZ",
+			renderingFaceRuns: []textutil.FaceRun{
+				{Start: 3, End: 13, Face: large},
+				{Start: 25, End: 33, Face: large},
+			},
+		},
+		{
+			// Insertion at the first run's end extends it.
+			name:     "insertion at a run end",
+			selStart: 10, selEnd: 10,
+			comp: "XY",
+			renderingFaceRuns: []textutil.FaceRun{
+				{Start: 3, End: 12, Face: large},
+				{Start: 24, End: 32, Face: large},
+			},
+		},
+		{
+			// Replacement starting inside the first run stays part of it.
+			name:     "replacement over a run",
+			selStart: 8, selEnd: 12,
+			comp: "0123456",
+			renderingFaceRuns: []textutil.FaceRun{
+				{Start: 3, End: 15, Face: large},
+				{Start: 25, End: 33, Face: large},
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
+			for _, width := range []int{math.MaxInt, 80} {
+				t.Run(fmt.Sprintf("%s width=%d%s", tc.name, width, wrapModeSuffix(wrapMode)), func(t *testing.T) {
+					rendering := committed[:tc.selStart] + tc.comp + committed[tc.selEnd:]
+					s := textutil.Style{
+						Face:       small,
+						FaceRuns:   tc.renderingFaceRuns,
+						LineHeight: lineHeight,
+						WrapMode:   wrapMode,
+					}
+					var l textutil.LineByteOffsets
+					rebuildFromString(&l, committed)
+					params := &textutil.TextLayoutParams{
+						RenderingTextRange:         func(start, end int) string { return rendering[start:end] },
+						RenderingTextLength:        len(rendering),
+						Width:                      width,
+						Style:                      s,
+						CommittedTextRange:         func(start, end int) string { return committed[start:end] },
+						CommittedFaceRuns:          committedFaceRuns,
+						PrecomputedLineByteOffsets: &l,
+						SelectionStart:             tc.selStart,
+						SelectionEnd:               tc.selEnd,
+						CompositionLen:             len(tc.comp),
+					}
+
+					for idx := 0; idx <= len(rendering); idx++ {
+						wantP0, wantP1, wantCount := textutil.TextPositionFromIndex(withoutLineOffsets(params), idx)
+						gotP0, gotP1, gotCount := textutil.TextPositionFromIndex(params, idx)
+						if gotCount != wantCount {
+							t.Errorf("idx=%d: count=%d, want %d", idx, gotCount, wantCount)
+							continue
+						}
+						if gotCount >= 1 && gotP0 != wantP0 {
+							t.Errorf("idx=%d: pos0=%+v, want %+v", idx, gotP0, wantP0)
+						}
+						if gotCount == 2 && gotP1 != wantP1 {
+							t.Errorf("idx=%d: pos1=%+v, want %+v", idx, gotP1, wantP1)
+						}
+					}
+
+					for y := -8; y < 8*int(lineHeight); y += 7 {
+						for x := -8; x < 240; x += 7 {
+							pos := image.Pt(x, y)
+							want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), pos)
+							got := textutil.TextIndexFromPosition(params, pos)
+							if got != want {
+								t.Fatalf("position=%v: index=%d, want %d", pos, got, want)
+							}
+						}
+					}
+				})
+			}
+		}
+	}
+}
+
+// TestComputeCompositionInfoFaceRuns asserts the splice line's committed and
+// rendering heights are measured with their respective face runs.
+func TestComputeCompositionInfoFaceRuns(t *testing.T) {
+	const (
+		lineHeight = 24.0
+		width      = 80
+	)
+	small, large := testFaces(t)
+	committed := "xxxx\naaaa bbbb cccc"
+	// The selection line starts at byte 5; the runs use whole-text offsets.
+	const lineStart = 5
+	committedFaceRuns := []textutil.FaceRun{{Start: 5, End: 9, Face: large}}
+	const selStart, selEnd = 7, 7
+	comp := "zzzz zzzz zzzz zzzz zzzz zzzz"
+	renderingFaceRuns := []textutil.FaceRun{{Start: 5, End: 9 + len(comp), Face: large}}
+	committedLine := committed[lineStart:]
+	renderingLine := committed[lineStart:selStart] + comp + committed[selEnd:]
+
+	var l textutil.LineByteOffsets
+	rebuildFromString(&l, committed)
+	info, ok := textutil.ComputeCompositionInfo(&textutil.CompositionInfoParams{
+		CompositionText:           comp,
+		LineByteOffsets:           &l,
+		SelectionStart:            selStart,
+		SelectionEnd:              selEnd,
+		WrapMode:                  textutil.WrapModeNormal,
+		CommittedSelectionLine:    committedLine,
+		RenderingSelectionLine:    renderingLine,
+		Face:                      small,
+		LineHeight:                lineHeight,
+		CommittedFaceRuns:         committedFaceRuns,
+		RenderingFaceRuns:         renderingFaceRuns,
+		SelectionLineStartInBytes: lineStart,
+		WrapWidth:                 width,
+	})
+	if !ok {
+		t.Fatal("ComputeCompositionInfo: ok = false, want true")
+	}
+	committedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, committedFaceRuns, lineStart, lineHeight, 0, false)
+	renderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, renderingFaceRuns, lineStart, lineHeight, 0, false)
+	want := int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
+	if info.RenderingYShift != want {
+		t.Errorf("RenderingYShift = %d, want %d", info.RenderingYShift, want)
+	}
+	// Guard that the assertion has teeth: the same delta measured without
+	// face runs must differ, or the run plumbing is unobservable here.
+	runlessCommittedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, nil, 0, lineHeight, 0, false)
+	runlessRenderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, nil, 0, lineHeight, 0, false)
+	if runless := int(math.Ceil(runlessRenderingH)) - int(math.Ceil(runlessCommittedH)); runless == want {
+		t.Fatalf("test data has no teeth: run-aware and runless deltas are both %d", want)
+	}
+}
+
+// TestFaceRunsCompositionHintParity asserts the committed-text hint
+// translation accounts for face runs: a hint placed past the splice line
+// resolves like the whole-document walk anchored at the hint line's
+// committed placement.
+func TestFaceRunsCompositionHintParity(t *testing.T) {
+	const (
+		lineHeight = 24.0
+		width      = 80
+	)
+	small, large := testFaces(t)
+	committed := "abcdef ghij klmno\npqr stu vwx yz\n\nthe last line"
+	committedFaceRuns := []textutil.FaceRun{{Start: 3, End: 10, Face: large}}
+	const selStart, selEnd = 5, 5
+	comp := "XYZ XYZ XYZ XYZ"
+	renderingFaceRuns := []textutil.FaceRun{{Start: 3, End: 10 + len(comp), Face: large}}
+	rendering := committed[:selStart] + comp + committed[selEnd:]
+
+	var l textutil.LineByteOffsets
+	rebuildFromString(&l, committed)
+	params := &textutil.TextLayoutParams{
+		RenderingTextRange:  func(start, end int) string { return rendering[start:end] },
+		RenderingTextLength: len(rendering),
+		Width:               width,
+		Style: textutil.Style{
+			Face:       small,
+			FaceRuns:   renderingFaceRuns,
+			LineHeight: lineHeight,
+			WrapMode:   textutil.WrapModeNormal,
+		},
+		CommittedTextRange:         func(start, end int) string { return committed[start:end] },
+		CommittedFaceRuns:          committedFaceRuns,
+		PrecomputedLineByteOffsets: &l,
+		SelectionStart:             selStart,
+		SelectionEnd:               selEnd,
+		CompositionLen:             len(comp),
+		LogicalLineIndexHint:       2,
+	}
+
+	// The hint line's committed-anchored origin: the visual lines of the
+	// committed lines before it, measured with the committed face runs.
+	var originVL int
+	for i := range 2 {
+		cs := l.ByteOffsetByLineIndex(i)
+		ce := l.ByteOffsetByLineIndex(i + 1)
+		originVL += textutil.VisualLineCountForLogicalLine(width, committed[cs:ce], textutil.WrapModeNormal, small, committedFaceRuns, cs, 0, false)
+	}
+	originY := originVL * int(lineHeight)
+
+	for y := -8 - originY; y < 6*int(lineHeight); y += 5 {
+		for x := -8; x < 240; x += 7 {
+			pos := image.Pt(x, y)
+			got := textutil.TextIndexFromPosition(params, pos)
+			want := textutil.TextIndexFromPosition(withoutIndexLineOffsets(params), pos.Add(image.Pt(0, originY)))
+			if got != want {
+				t.Fatalf("position=%v: index=%d, want %d", pos, got, want)
+			}
+		}
+	}
+}

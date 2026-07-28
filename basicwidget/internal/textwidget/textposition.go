@@ -5,7 +5,6 @@ package textwidget
 
 import (
 	"image"
-	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -155,14 +154,12 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 	}
 
 	width := t.LayoutWidth(textContentBounds)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, renderingFaceRuns, mark := t.acquireFaceRuns(context, false, showComposition)
+	defer t.releaseFaceRuns(mark)
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
-		FaceRuns:         t.faceRunsBuf,
+		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
@@ -194,6 +191,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		Width:                      width,
 		Style:                      s,
 		CommittedTextRange:         readCommitted,
+		CommittedFaceRuns:          committedFaceRuns,
 		PrecomputedLineByteOffsets: &t.contentCache.lineByteOffsets,
 		SelectionStart:             sStart,
 		SelectionEnd:               sEnd,
@@ -228,14 +226,12 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 	}
 
 	width := t.LayoutWidth(textBounds)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, renderingFaceRuns, mark := t.acquireFaceRuns(context, false, showComposition)
+	defer t.releaseFaceRuns(mark)
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
-		FaceRuns:         t.faceRunsBuf,
+		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
@@ -283,6 +279,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		Width:                      width,
 		Style:                      s,
 		CommittedTextRange:         readCommitted,
+		CommittedFaceRuns:          committedFaceRuns,
 		PrecomputedLineByteOffsets: &t.contentCache.lineByteOffsets,
 		SelectionStart:             sStart,
 		SelectionEnd:               sEnd,
@@ -344,14 +341,12 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 	}
 
 	width := t.LayoutWidth(textBounds)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, renderingFaceRuns, mark := t.acquireFaceRuns(context, false, showComposition)
+	defer t.releaseFaceRuns(mark)
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
-		FaceRuns:         t.faceRunsBuf,
+		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
@@ -383,6 +378,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		Width:                      width,
 		Style:                      s,
 		CommittedTextRange:         readCommitted,
+		CommittedFaceRuns:          committedFaceRuns,
 		PrecomputedLineByteOffsets: &t.contentCache.lineByteOffsets,
 		SelectionStart:             sStart,
 		SelectionEnd:               sEnd,
@@ -488,11 +484,9 @@ func (t *Text) VisualLineCountOfLogicalLine(context *guigui.Context, lineIndex, 
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
-	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), t.faceRunsBuf, start, t.actualTabWidth(context), t.keepTailingSpace)
+	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
+	defer t.releaseFaceRuns(mark)
+	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, start, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the
@@ -507,11 +501,9 @@ func (t *Text) MaxCaretXOfLogicalLine(context *guigui.Context, lineIndex, wrapWi
 		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
 	}
 	line := t.stringValueWithRange(start, end)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
-	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), t.faceRunsBuf, start, t.actualTabWidth(context), t.keepTailingSpace)
+	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
+	defer t.releaseFaceRuns(mark)
+	return textutil.CachedVisualLineMaxCaretX(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, start, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // AppendBoundsOfTextRange appends the bounding rectangles covering the text
@@ -525,14 +517,12 @@ func (t *Text) AppendBoundsOfTextRange(dst []image.Rectangle, context *guigui.Co
 	}
 	textBounds := t.contentBoundsForLayout(context, bounds)
 	width := t.LayoutWidth(textBounds)
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, false)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
+	defer t.releaseFaceRuns(mark)
 	s := textutil.Style{
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
-		FaceRuns:         t.faceRunsBuf,
+		FaceRuns:         committedFaceRuns,
 		LineHeight:       t.LineHeight(),
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,

@@ -171,12 +171,17 @@ type TextLayoutParams struct {
 	Width int
 
 	// Style carries face, lineHeight, wrap mode, alignment, tab
-	// width, etc.
+	// width, etc. Style.FaceRuns uses rendering-text byte offsets.
 	Style Style
 
 	// CommittedTextRange returns committed[start:end). Required when
 	// CompositionLen > 0; ignored otherwise.
 	CommittedTextRange func(start, end int) string
+
+	// CommittedFaceRuns carries the same face overrides as Style.FaceRuns
+	// in committed-text byte offsets. Consulted only when CompositionLen
+	// > 0; nil means no overrides.
+	CommittedFaceRuns []FaceRun
 
 	// PrecomputedLineByteOffsets is the logical-line layout of the committed text.
 	// Optional; when nil the query falls back to an O(documentLen) walk

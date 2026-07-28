@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
 
@@ -141,4 +142,68 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 			t.Errorf("got: %+v, want: nil", got)
 		}
 	})
+}
+
+func TestAppendFaceRunsThroughComposition(t *testing.T) {
+	src := []textutil.FaceRun{
+		{Start: 5, End: 10},
+		{Start: 20, End: 25},
+	}
+	tests := []struct {
+		name             string
+		selStart, selEnd int
+		compLen          int
+		want             []textutil.FaceRun
+	}{
+		{
+			name:     "insertion before the runs shifts them",
+			selStart: 2, selEnd: 2, compLen: 3,
+			want: []textutil.FaceRun{{Start: 8, End: 13}, {Start: 23, End: 28}},
+		},
+		{
+			name:     "insertion at a run start shifts the run",
+			selStart: 5, selEnd: 5, compLen: 3,
+			want: []textutil.FaceRun{{Start: 8, End: 13}, {Start: 23, End: 28}},
+		},
+		{
+			name:     "insertion inside a run extends it",
+			selStart: 7, selEnd: 7, compLen: 3,
+			want: []textutil.FaceRun{{Start: 5, End: 13}, {Start: 23, End: 28}},
+		},
+		{
+			name:     "insertion at a run end extends it",
+			selStart: 10, selEnd: 10, compLen: 3,
+			want: []textutil.FaceRun{{Start: 5, End: 13}, {Start: 23, End: 28}},
+		},
+		{
+			name:     "insertion between the runs",
+			selStart: 15, selEnd: 15, compLen: 3,
+			want: []textutil.FaceRun{{Start: 5, End: 10}, {Start: 23, End: 28}},
+		},
+		{
+			name:     "replacement covering a run drops it",
+			selStart: 4, selEnd: 11, compLen: 2,
+			want: []textutil.FaceRun{{Start: 15, End: 20}},
+		},
+		{
+			name:     "replacement starting inside a run stays part of it",
+			selStart: 8, selEnd: 12, compLen: 4,
+			want: []textutil.FaceRun{{Start: 5, End: 12}, {Start: 20, End: 25}},
+		},
+		{
+			name:     "inverted selection is normalized",
+			selStart: 12, selEnd: 8, compLen: 4,
+			want: []textutil.FaceRun{{Start: 5, End: 12}, {Start: 20, End: 25}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := textwidget.AppendFaceRunsThroughComposition(nil, src, tt.selStart, tt.selEnd, tt.compLen)
+			if !slices.EqualFunc(got, tt.want, func(x, y textutil.FaceRun) bool {
+				return x.Start == y.Start && x.End == y.End
+			}) {
+				t.Errorf("got: %+v, want: %+v", got, tt.want)
+			}
+		})
+	}
 }

@@ -6,7 +6,6 @@ package textwidget
 import (
 	"image"
 	"math"
-	"slices"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
@@ -85,11 +84,9 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 		// or straddles a logical-line boundary — the rendering text's
 		// logical-line shape doesn't match the committed-text logical-line offsets.
 		txt := t.textToDraw(context, true)
-		t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
-		defer func() {
-			t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-		}()
-		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), t.faceRunsBuf, lineH, t.actualTabWidth(context), t.keepTailingSpace)
+		_, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
+		defer t.releaseFaceRuns(mark)
+		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, lineH, t.actualTabWidth(context), t.keepTailingSpace)
 		hi = int(math.Ceil(h))
 	}
 
@@ -149,10 +146,8 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 	if measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
+	defer t.releaseFaceRuns(mark)
 	totalLen := t.store.TextLengthInBytes()
 	var count int
 	for i := range n {
@@ -162,12 +157,16 @@ func (t *Text) totalRenderingVisualLineCount(context *guigui.Context, width int,
 			ce = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
 		}
 		var line string
+		faceRuns := committedFaceRuns
 		if hasComp && i == selectionLineIdx {
+			// The splice line is read in rendering coordinates; its start
+			// offset cs precedes the splice and is the same in both spaces.
 			line = t.stringValueForRenderingRange(cs, ce+byteDelta)
+			faceRuns = renderingFaceRuns
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, t.faceRunsBuf, cs, tabW, keepTailing)
+		count += textutil.VisualLineCountForLogicalLine(measureWidth, line, t.wrapMode, face, faceRuns, cs, tabW, keepTailing)
 	}
 	return count, true
 }
@@ -214,10 +213,8 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 	if measureWidth <= 0 {
 		measureWidth = math.MaxInt
 	}
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
-	defer func() {
-		t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-	}()
+	committedFaceRuns, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
+	defer t.releaseFaceRuns(mark)
 	totalLen := t.store.TextLengthInBytes()
 
 	var maxWidth, height float64
@@ -228,12 +225,16 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 			ce = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(i + 1)
 		}
 		var line string
+		faceRuns := committedFaceRuns
 		if hasComp && i == selectionLineIdx {
+			// The splice line is read in rendering coordinates; its start
+			// offset cs precedes the splice and is the same in both spaces.
 			line = t.stringValueForRenderingRange(cs, ce+byteDelta)
+			faceRuns = renderingFaceRuns
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, t.faceRunsBuf, cs, lineH, tabW, keepTailing, ellipsisString)
+		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, faceRuns, cs, lineH, tabW, keepTailing, ellipsisString)
 		maxWidth = max(maxWidth, w)
 		height += h
 	}
@@ -279,11 +280,9 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		// Fallback when the composition contains a hard line break or
 		// straddles logical lines.
 		txt := t.textToDraw(context, true)
-		t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, bold)
-		defer func() {
-			t.faceRunsBuf = slices.Delete(t.faceRunsBuf, 0, len(t.faceRunsBuf))
-		}()
-		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), t.faceRunsBuf, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
+		_, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
+		defer t.releaseFaceRuns(mark)
+		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
 	}
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its caret is rendered.
 	// Force to set a positive number as the width.

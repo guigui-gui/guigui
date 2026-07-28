@@ -59,10 +59,18 @@ type Text struct {
 	textEditsBuf []textEdit
 
 	// faceRunsBuf is the reusable buffer for [Text.appendFaceRunsForStyle]
-	// results; each user clears it with a deferred slices.Delete. During
-	// [Text.Draw], drawOptions.Style.FaceRuns borrows the same slice and is
-	// reset to nil by the deferred cleanup, so the buffer has a single owner.
+	// results, with byte offsets into the committed text. Each user records
+	// the buffer length before appending and truncates back to it with a
+	// deferred slices.Delete, so users may nest ([Text.Draw] reaches
+	// [Text.textHeight] through [Text.restrictedTextToDraw]).
 	faceRunsBuf []textutil.FaceRun
+
+	// renderingFaceRunsBuf is the reusable buffer for the face runs
+	// transformed to rendering-text offsets by
+	// [appendFaceRunsThroughComposition] while an IME composition is
+	// active. Same nesting-safe truncation discipline as
+	// [Text.faceRunsBuf].
+	renderingFaceRunsBuf []textutil.FaceRun
 
 	// lastMetricStyleRunsFingerprint is the metric style overrides'
 	// fingerprint at the last size measurement, so cached sizes reset when

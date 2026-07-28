@@ -73,18 +73,21 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		}
 
 		info, ok := ComputeCompositionInfo(&CompositionInfoParams{
-			CompositionText:        p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
-			LineByteOffsets:        p.PrecomputedLineByteOffsets,
-			SelectionStart:         p.SelectionStart,
-			SelectionEnd:           p.SelectionEnd,
-			WrapMode:               p.Style.WrapMode,
-			CommittedSelectionLine: committedSelectionLine,
-			RenderingSelectionLine: renderingSelectionLine,
-			Face:                   p.Style.Face,
-			LineHeight:             p.Style.LineHeight,
-			TabWidth:               p.Style.TabWidth,
-			KeepTailingSpace:       p.Style.KeepTailingSpace,
-			WrapWidth:              p.Width,
+			CompositionText:           p.RenderingTextRange(p.SelectionStart, p.SelectionStart+p.CompositionLen),
+			LineByteOffsets:           p.PrecomputedLineByteOffsets,
+			SelectionStart:            p.SelectionStart,
+			SelectionEnd:              p.SelectionEnd,
+			WrapMode:                  p.Style.WrapMode,
+			CommittedSelectionLine:    committedSelectionLine,
+			RenderingSelectionLine:    renderingSelectionLine,
+			Face:                      p.Style.Face,
+			LineHeight:                p.Style.LineHeight,
+			TabWidth:                  p.Style.TabWidth,
+			KeepTailingSpace:          p.Style.KeepTailingSpace,
+			CommittedFaceRuns:         p.CommittedFaceRuns,
+			RenderingFaceRuns:         p.Style.FaceRuns,
+			SelectionLineStartInBytes: cs,
+			WrapWidth:                 p.Width,
 		})
 		if !ok {
 			return nil, false
