@@ -7,6 +7,7 @@ import (
 	"image"
 	"io"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
@@ -52,6 +53,27 @@ type textStore struct {
 	err error
 
 	generation int64
+
+	// edits records the positional mutations of the committed text, newest
+	// last, one per generation bump. Mutations without a positional record
+	// (whole-value resets, undo, redo) leave a generation gap.
+	edits []textEdit
+}
+
+// textEdit is a positional mutation of the committed text: a replacement of
+// [start, end) with newLen bytes.
+type textEdit struct {
+	// generation is the store generation right after the mutation.
+	generation int64
+
+	// start is the inclusive start of the replaced range in bytes.
+	start int
+
+	// end is the exclusive end of the replaced range in bytes.
+	end int
+
+	// newLen is the length of the replacing text in bytes.
+	newLen int
 }
 
 func (s *textStore) ensureComposerInited() {
@@ -84,7 +106,9 @@ func (s *textStore) onIMEComposition(c *textinput.Composition) {
 	s.composition = text
 	s.compositionSelStart = selStart
 	s.compositionSelEnd = selEnd
-	s.bumpGeneration()
+	// The composition changes the rendering text only; the committed text
+	// is untouched.
+	s.bumpGenerationForEdit(0, 0, 0)
 }
 
 func (s *textStore) onIMECommit(c *textinput.Commit) {
@@ -102,7 +126,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 		s.composition = ""
 		s.compositionSelStart = 0
 		s.compositionSelEnd = 0
-		s.bumpGeneration()
+		s.bumpGenerationForEdit(start, end, len(text))
 		return
 	}
 
@@ -140,7 +164,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	s.composition = ""
 	s.compositionSelStart = 0
 	s.compositionSelEnd = 0
-	s.bumpGeneration()
+	s.bumpGenerationForEdit(insStart, insEnd, len(insText))
 }
 
 // commonPrefixLen returns the length in bytes of the longest common prefix
@@ -201,8 +225,50 @@ func (s *textStore) lineAroundSelection() (before, after string) {
 	return before, after
 }
 
+// bumpGeneration advances the generation without recording a positional
+// edit. Mutations that cannot be described as a single replacement (whole-
+// value resets, undo, redo) call this directly; the resulting gap in the
+// edit record makes [textStore.appendEditsSince] report non-coverage.
 func (s *textStore) bumpGeneration() {
 	s.generation++
+}
+
+// bumpGenerationForEdit advances the generation and records the mutation as
+// a replacement of [start, end) with newLen bytes. A mutation that leaves
+// the committed text unchanged records a zero-length replacement.
+func (s *textStore) bumpGenerationForEdit(start, end, newLen int) {
+	s.bumpGeneration()
+	s.edits = append(s.edits, textEdit{
+		generation: s.generation,
+		start:      start,
+		end:        end,
+		newLen:     newLen,
+	})
+	// maxRecordedTextEdits caps the edit record; overflowing entries are
+	// dropped, leaving a generation gap.
+	const maxRecordedTextEdits = 256
+	if len(s.edits) > maxRecordedTextEdits {
+		s.edits = slices.Delete(s.edits, 0, len(s.edits)-maxRecordedTextEdits)
+	}
+}
+
+// appendEditsSince appends the positional edits recorded after the
+// generation sinceGen to dst, oldest first, and returns the extended slice.
+// ok is false when the mutations since sinceGen are not fully covered by
+// positional records, so the caller cannot replay them.
+func (s *textStore) appendEditsSince(dst []textEdit, sinceGen int64) (edits []textEdit, ok bool) {
+	// edits is ascending in generation; find the first entry past sinceGen.
+	i, _ := slices.BinarySearchFunc(s.edits, sinceGen, func(e textEdit, gen int64) int {
+		if e.generation > gen {
+			return 1
+		}
+		return -1
+	})
+	tail := s.edits[i:]
+	if int64(len(tail)) != s.generation-sinceGen {
+		return dst, false
+	}
+	return append(dst, tail...), true
 }
 
 // Generation returns a counter that advances when the store's renderable
@@ -379,7 +445,7 @@ func (s *textStore) ReplaceText(text string, startInBytes, endInBytes int) {
 	s.pieceTable.Replace(text, startInBytes, endInBytes)
 	s.selectionStartInBytes = startInBytes + len(text)
 	s.selectionEndInBytes = s.selectionStartInBytes
-	s.bumpGeneration()
+	s.bumpGenerationForEdit(startInBytes, endInBytes, len(text))
 }
 
 // CanUndo reports whether the store can undo.

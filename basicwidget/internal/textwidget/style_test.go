@@ -64,15 +64,63 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		}
 	})
 
-	t.Run("edit clears styles", func(t *testing.T) {
+	t.Run("replacement adopts the replaced text's style", func(t *testing.T) {
 		var txt textwidget.Text
 		txt.SetEditable(true)
 		txt.ForceSetValue("hello")
 		txt.SetColorInRange(0, 5, red)
 		txt.SetSelection(0, 2)
 		txt.ReplaceValueAtSelection("xy")
-		if got := txt.StyleRuns(); got != nil {
-			t.Errorf("got: %+v, want: nil", got)
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(0, 5, red)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("insertion shifts styles", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.SetColorInRange(2, 4, red)
+		txt.SetSelection(0, 0)
+		txt.ReplaceValueAtSelection("ab")
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(4, 6, red)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("insertion inside a style extends it", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.SetColorInRange(1, 4, red)
+		txt.SetSelection(2, 2)
+		txt.ReplaceValueAtSelection("ab")
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(1, 6, red)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("deletion merges adjacent equal styles", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello world")
+		txt.SetColorInRange(0, 3, red)
+		txt.SetColorInRange(5, 8, red)
+		txt.ReplaceTextAt("", 3, 5)
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(0, 6, red)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
 

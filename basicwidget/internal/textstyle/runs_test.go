@@ -429,3 +429,200 @@ func TestRunsStyleGetters(t *testing.T) {
 		t.Errorf("Variations(): got: %+v, want: nil", got)
 	}
 }
+
+func TestRunsReplace(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	tests := []struct {
+		name string
+		ops  func(runs *textstyle.Runs)
+		want []textstyle.Run
+	}{
+		{
+			name: "insertion before a run shifts it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(2, 2, 3)
+			},
+			want: []textstyle.Run{
+				{Start: 8, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "insertion after a run keeps it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(12, 12, 3)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 10, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "insertion strictly inside a run extends it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(7, 7, 3)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "insertion at a run's start shifts it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(5, 5, 3)
+			},
+			want: []textstyle.Run{
+				{Start: 8, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "insertion at a run's end extends it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(10, 10, 3)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "insertion between adjacent runs extends the former",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(0, 3, red)
+				runs.SetColor(3, 6, blue)
+				runs.Replace(3, 3, 2)
+			},
+			want: []textstyle.Run{
+				{Start: 0, End: 5, Style: textstyle.Style{}.WithColor(red)},
+				{Start: 5, End: 8, Style: textstyle.Style{}.WithColor(blue)},
+			},
+		},
+		{
+			name: "deletion before a run shifts it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(0, 3, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 2, End: 7, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "deletion inside a run shrinks it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(6, 8, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 8, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "deletion covering a run removes it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(4, 11, 0)
+			},
+			want: nil,
+		},
+		{
+			name: "deletion overlapping a run's head truncates it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(3, 7, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 3, End: 6, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "deletion overlapping a run's tail truncates it",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(8, 12, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 8, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "deletion between equal runs merges them",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(0, 3, red)
+				runs.SetColor(5, 8, red)
+				runs.Replace(3, 5, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 0, End: 6, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "deletion between different runs keeps them apart",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(0, 3, red)
+				runs.SetColor(5, 8, blue)
+				runs.Replace(3, 5, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 0, End: 3, Style: textstyle.Style{}.WithColor(red)},
+				{Start: 3, End: 6, Style: textstyle.Style{}.WithColor(blue)},
+			},
+		},
+		{
+			name: "replacement inside a run adopts the run's style",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(6, 8, 2)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 10, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "replacement across runs adopts the first replaced byte's style",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(0, 5, red)
+				runs.SetColor(5, 10, blue)
+				runs.Replace(3, 7, 1)
+			},
+			want: []textstyle.Run{
+				{Start: 0, End: 4, Style: textstyle.Style{}.WithColor(red)},
+				{Start: 4, End: 7, Style: textstyle.Style{}.WithColor(blue)},
+			},
+		},
+		{
+			name: "replacement starting on unstyled text stays unstyled",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(3, 7, 2)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 8, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+		{
+			name: "zero-length replacement is a no-op",
+			ops: func(runs *textstyle.Runs) {
+				runs.SetColor(5, 10, red)
+				runs.Replace(3, 3, 0)
+			},
+			want: []textstyle.Run{
+				{Start: 5, End: 10, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var runs textstyle.Runs
+			tt.ops(&runs)
+			if got := slices.Collect(runs.All()); !equalRuns(got, tt.want) {
+				t.Errorf("got: %+v, want: %+v", got, tt.want)
+			}
+		})
+	}
+}

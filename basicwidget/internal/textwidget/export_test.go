@@ -40,3 +40,7 @@ func (t *Text) ParagraphEnd(position int) int {
 func (t *Text) StyleRuns() []textstyle.Run {
 	return slices.Collect(t.ensureStyleRuns().All())
 }
+
+func (t *Text) ReplaceTextAt(text string, start, end int) {
+	t.replaceTextAt(text, start, end)
+}

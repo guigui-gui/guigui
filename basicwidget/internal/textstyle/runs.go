@@ -37,7 +37,8 @@ type Runs struct {
 	// runs with equal styles.
 	runs []Run
 
-	// buf is scratch for rebuilding runs, swapped with runs at each rebuild.
+	// buf is scratch for rebuilding runs, cleared with a deferred
+	// slices.Delete by each rebuild.
 	buf []Run
 }
 
@@ -152,20 +153,61 @@ func (r *Runs) Reset(start, end int) {
 		return
 	}
 
-	runs := r.buf[:0]
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
 	for _, run := range r.runs {
 		if run.End <= start || run.Start >= end {
-			runs = appendRun(runs, run)
+			r.buf = appendRun(r.buf, run)
 			continue
 		}
 		if run.Start < start {
-			runs = appendRun(runs, Run{Start: run.Start, End: start, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: run.Start, End: start, Style: run.Style})
 		}
 		if run.End > end {
-			runs = appendRun(runs, Run{Start: end, End: run.End, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: end, End: run.End, Style: run.Style})
 		}
 	}
-	r.setRuns(runs)
+	r.setRuns()
+}
+
+// Replace adjusts the runs for a replacement of the byte range [start, end)
+// with newLen bytes of text: styles keep covering the text around the
+// replacement. Inserted text adopts the style right before the insertion
+// point, extending the run it is inserted inside or at the end of;
+// replacing text adopts the style of the first replaced byte.
+func (r *Runs) Replace(start, end, newLen int) {
+	start = max(start, 0)
+	end = max(end, start)
+	newLen = max(newLen, 0)
+	if start == end && newLen == 0 {
+		return
+	}
+	delta := newLen - (end - start)
+
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
+	for _, run := range r.runs {
+		switch {
+		case start == end && run.Start < start && run.End >= start:
+			r.buf = appendRun(r.buf, Run{Start: run.Start, End: run.End + delta, Style: run.Style})
+		case run.End <= start:
+			r.buf = appendRun(r.buf, run)
+		case run.Start >= end:
+			r.buf = appendRun(r.buf, Run{Start: run.Start + delta, End: run.End + delta, Style: run.Style})
+		default:
+			if run.Start <= start {
+				r.buf = appendRun(r.buf, Run{Start: run.Start, End: start + newLen, Style: run.Style})
+			}
+			if run.End > end {
+				r.buf = appendRun(r.buf, Run{Start: end + delta, End: run.End + delta, Style: run.Style})
+			}
+		}
+	}
+	r.setRuns()
 }
 
 // Clear removes all style overrides.
@@ -211,40 +253,43 @@ func (r *Runs) apply(start, end int, style Style) {
 		return
 	}
 
-	runs := r.buf[:0]
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
 	// pos is the start of the part of [start, end) not yet emitted.
 	pos := start
 	for _, run := range r.runs {
 		if run.End <= start {
-			runs = appendRun(runs, run)
+			r.buf = appendRun(r.buf, run)
 			continue
 		}
 		if run.Start >= end {
 			if pos < end {
-				runs = appendRun(runs, Run{Start: pos, End: end, Style: style})
+				r.buf = appendRun(r.buf, Run{Start: pos, End: end, Style: style})
 				pos = end
 			}
-			runs = appendRun(runs, run)
+			r.buf = appendRun(r.buf, run)
 			continue
 		}
 		if run.Start < start {
-			runs = appendRun(runs, Run{Start: run.Start, End: start, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: run.Start, End: start, Style: run.Style})
 		}
 		overlapStart := max(run.Start, start)
 		if pos < overlapStart {
-			runs = appendRun(runs, Run{Start: pos, End: overlapStart, Style: style})
+			r.buf = appendRun(r.buf, Run{Start: pos, End: overlapStart, Style: style})
 		}
 		overlapEnd := min(run.End, end)
-		runs = appendRun(runs, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.merge(style)})
+		r.buf = appendRun(r.buf, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.merge(style)})
 		pos = overlapEnd
 		if run.End > end {
-			runs = appendRun(runs, Run{Start: end, End: run.End, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: end, End: run.End, Style: run.Style})
 		}
 	}
 	if pos < end {
-		runs = appendRun(runs, Run{Start: pos, End: end, Style: style})
+		r.buf = appendRun(r.buf, Run{Start: pos, End: end, Style: style})
 	}
-	r.setRuns(runs)
+	r.setRuns()
 }
 
 // unset removes the style properties selected by mask in [start, end). A
@@ -258,23 +303,26 @@ func (r *Runs) unset(start, end int, mask styleMask) {
 		return
 	}
 
-	runs := r.buf[:0]
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
 	for _, run := range r.runs {
 		if run.End <= start || run.Start >= end {
-			runs = appendRun(runs, run)
+			r.buf = appendRun(r.buf, run)
 			continue
 		}
 		if run.Start < start {
-			runs = appendRun(runs, Run{Start: run.Start, End: start, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: run.Start, End: start, Style: run.Style})
 		}
 		overlapStart := max(run.Start, start)
 		overlapEnd := min(run.End, end)
-		runs = appendRun(runs, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.remove(mask)})
+		r.buf = appendRun(r.buf, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.remove(mask)})
 		if run.End > end {
-			runs = appendRun(runs, Run{Start: end, End: run.End, Style: run.Style})
+			r.buf = appendRun(r.buf, Run{Start: end, End: run.End, Style: run.Style})
 		}
 	}
-	r.setRuns(runs)
+	r.setRuns()
 }
 
 // appendRun appends run to runs, dropping an empty or zero-styled run and
@@ -290,10 +338,9 @@ func appendRun(runs []Run, run Run) []Run {
 	return append(runs, run)
 }
 
-// setRuns installs runs, built in r.buf, as the current run list, and
-// retires the old list as the next scratch buffer.
-func (r *Runs) setRuns(runs []Run) {
-	r.runs, r.buf = runs, r.runs
-	clear(r.buf)
-	r.buf = r.buf[:0]
+// setRuns installs the runs built in r.buf as the current run list by
+// copying them.
+func (r *Runs) setRuns() {
+	r.runs = slices.Delete(r.runs, 0, len(r.runs))
+	r.runs = append(r.runs, r.buf...)
 }

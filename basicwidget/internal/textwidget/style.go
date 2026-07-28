@@ -24,8 +24,9 @@ import (
 // textStyle holds a [Text]'s base render-style configuration: alignment,
 // scale, font selection, and the concrete colors set by a wrapping widget.
 // The base style applies to the whole value and persists across value
-// changes; the ranged style overrides in [Text.ensureStyleRuns] apply on top
-// and are cleared when the value changes.
+// changes; the ranged style overrides in [Text.ensureStyleRuns] apply on
+// top, follow the text through edits, and are cleared when the value is
+// replaced wholesale, undone, or redone.
 type textStyle struct {
 	// hAlign is the horizontal alignment of the value.
 	hAlign textutil.HorizontalAlign
@@ -157,19 +158,34 @@ func removeTagged[T any](settings []T, tag text.Tag, tagOf func(T) text.Tag) []T
 	return slices.Delete(settings, i, i+1)
 }
 
-// ensureStyleRuns clears the ranged style overrides if the store's
-// renderable content has been mutated since they were applied, and returns
-// the runs.
+// ensureStyleRuns brings the ranged style overrides up to date with the
+// store's content and returns the runs. Positional edits since the last call
+// are replayed so the overrides keep covering the same text; mutations
+// without a positional record (whole-value replacements, undo, redo) clear
+// the overrides.
 func (t *Text) ensureStyleRuns() *textstyle.Runs {
-	if gen := t.store.Generation(); t.styleRunsValidGeneration != gen {
-		t.styleRuns.Clear()
-		t.styleRunsValidGeneration = gen
+	gen := t.store.Generation()
+	if t.styleRunsValidGeneration == gen {
+		return &t.styleRuns
 	}
+	defer func() {
+		t.textEditsBuf = slices.Delete(t.textEditsBuf, 0, len(t.textEditsBuf))
+	}()
+	var covered bool
+	t.textEditsBuf, covered = t.store.appendEditsSince(t.textEditsBuf, t.styleRunsValidGeneration)
+	if covered {
+		for _, e := range t.textEditsBuf {
+			t.styleRuns.Replace(e.start, e.end, e.newLen)
+		}
+	} else {
+		t.styleRuns.Clear()
+	}
+	t.styleRunsValidGeneration = gen
 	return &t.styleRuns
 }
 
 // SetColorInRange overrides the text color in [startInBytes, endInBytes).
-// The override lasts until the value changes.
+// The override follows the text through edits.
 func (t *Text) SetColorInRange(startInBytes, endInBytes int, clr color.Color) {
 	t.ensureStyleRuns().SetColor(startInBytes, endInBytes, clr)
 }
@@ -181,7 +197,7 @@ func (t *Text) UnsetColorInRange(startInBytes, endInBytes int) {
 }
 
 // SetBackgroundColorInRange overrides the background color in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetBackgroundColorInRange(startInBytes, endInBytes int, clr color.Color) {
 	t.ensureStyleRuns().SetBackgroundColor(startInBytes, endInBytes, clr)
 }
@@ -193,7 +209,7 @@ func (t *Text) UnsetBackgroundColorInRange(startInBytes, endInBytes int) {
 }
 
 // SetUnderlineInRange overrides whether an underline is drawn in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetUnderlineInRange(startInBytes, endInBytes int, underline bool) {
 	t.ensureStyleRuns().SetUnderline(startInBytes, endInBytes, underline)
 }
@@ -205,7 +221,7 @@ func (t *Text) UnsetUnderlineInRange(startInBytes, endInBytes int) {
 }
 
 // SetStrikethroughInRange overrides whether a strikethrough is drawn in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
 	t.ensureStyleRuns().SetStrikethrough(startInBytes, endInBytes, strikethrough)
 }
@@ -249,7 +265,7 @@ func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
 }
 
 // SetFontFamilyInRange overrides the font family in
-// [startInBytes, endInBytes). The override lasts until the value changes. A
+// [startInBytes, endInBytes). The override follows the text through edits. A
 // nil family resolves faces with the registered face source stack alone.
 func (t *Text) SetFontFamilyInRange(startInBytes, endInBytes int, family *font.Family) {
 	t.ensureStyleRuns().SetFamily(startInBytes, endInBytes, family)
@@ -289,7 +305,7 @@ func (t *Text) UnsetLangInRange(startInBytes, endInBytes int) {
 }
 
 // SetItalicInRange overrides the italic face selection in
-// [startInBytes, endInBytes). The override lasts until the value changes.
+// [startInBytes, endInBytes). The override follows the text through edits.
 func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
 	t.ensureStyleRuns().SetItalic(startInBytes, endInBytes, italic)
 }

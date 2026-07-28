@@ -49,10 +49,14 @@ type Text struct {
 	baseStyle textStyle
 
 	// styleRuns holds the ranged style overrides, with byte offsets into the
-	// committed text. Cleared lazily by [Text.ensureStyleRuns] when
-	// [textStore.Generation] advances past styleRunsValidGeneration.
+	// committed text. Brought up to date lazily by [Text.ensureStyleRuns]
+	// when [textStore.Generation] advances past styleRunsValidGeneration.
 	styleRuns                textstyle.Runs
 	styleRunsValidGeneration int64
+
+	// textEditsBuf is scratch for replaying the store's positional edits in
+	// [Text.ensureStyleRuns].
+	textEditsBuf []textEdit
 
 	// faceRunsBuf is the reusable buffer for [Text.appendFaceRunsForStyle]
 	// results; each user clears it with a deferred slices.Delete. During
