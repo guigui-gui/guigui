@@ -6,21 +6,11 @@ package main
 import (
 	"fmt"
 	"image"
-	"image/color"
 	"slices"
-	"strings"
-
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
-
-const richTextsSampleText = "Colored, light, highlighted, underlined, struck-through, bold, and scaled ranges.\n" +
-	"Combined styles apply to a single range.\n" +
-	"A sufficiently long styled range continues across the visual line boundary when the text wraps, keeping its background and underline on every visual line it covers.\n" +
-	"The clickable range counts clicks.\n" +
-	"日本語のテキストにも下線と背景を適用できます。"
 
 type RichTexts struct {
 	guigui.DefaultWidget
@@ -40,14 +30,6 @@ type RichTexts struct {
 	hotspotRanges    []basicwidget.TextRange
 	layoutItems      []guigui.LinearLayoutItem
 	hotspotBoundsArr []image.Rectangle
-}
-
-func styleRichTextsSampleRange(sub string, f func(start, end int)) {
-	idx := strings.Index(richTextsSampleText, sub)
-	if idx < 0 {
-		return
-	}
-	f(idx, idx+len(sub))
 }
 
 func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -76,9 +58,13 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	r.resetText.SetValue("Reset the sample text")
 	r.resetButton.SetText("Reset")
 	r.resetButton.OnDown(func(context *guigui.Context) {
-		model.RichTexts().SetSampleText(richTextsSampleText)
+		// ForceSetValue synchronously dispatches the value-changed handler,
+		// which writes the widget's cleared styles and hotspots back to the
+		// model, so the model is reset afterwards and then reinstalled.
 		r.sampleText.ForceSetValue(richTextsSampleText)
-		applyRichTextsSampleStyles(&r.sampleText)
+		model.RichTexts().ResetSampleText()
+		r.sampleText.SetStyles(model.RichTexts().SampleTextStyles())
+		r.sampleText.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	})
 
 	r.clickCountText.SetValue("Clickable range clicks")
@@ -115,83 +101,21 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.SetSelectable(model.RichTexts().Selectable())
 	t.SetEditable(model.RichTexts().Editable())
 
-	// The ranged styles are applied once, at the first build and at a
-	// reset; afterwards they follow the text through edits on their own,
-	// so the sample value round-trips through the model without any style
-	// re-application.
-	value, inited := model.RichTexts().SampleText()
-	if !inited {
-		value = richTextsSampleText
-		model.RichTexts().SetSampleText(value)
-		t.SetValue(value)
-		applyRichTextsSampleStyles(t)
-	} else {
-		t.SetValue(value)
-	}
+	// The model owns the sample value, its ranged styles, and its hotspot
+	// ranges. Each build restores them into the widget — SetValue comes
+	// first, as a changed value clears the widget's followed styles and
+	// hotspots before the model's are installed — and each change writes
+	// the widget's followed state back to the model.
+	t.SetValue(model.RichTexts().SampleText())
+	t.SetStyles(model.RichTexts().SampleTextStyles())
+	t.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	t.OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		model.RichTexts().SetSampleText(text)
+		model.RichTexts().SetSampleTextStyles(r.sampleText.Styles())
+		model.RichTexts().SetSampleTextHotspots(r.sampleText.AppendHotspotRanges(nil))
 	})
 
 	return nil
-}
-
-// applyRichTextsSampleStyles applies the ranged styles for the pristine
-// sample text. The current value must be richTextsSampleText, as the byte
-// ranges refer to it.
-func applyRichTextsSampleStyles(t *basicwidget.Text) {
-	red := color.RGBA{R: 0xff, G: 0x4b, B: 0x00, A: 0xff}
-	blue := color.RGBA{R: 0x00, G: 0x5a, B: 0xff, A: 0xff}
-	yellow := color.NRGBA{R: 0xff, G: 0xf1, B: 0x00, A: 0x60}
-	green := color.NRGBA{R: 0x03, G: 0xaf, B: 0x7a, A: 0x50}
-
-	styleRichTextsSampleRange("Colored", func(start, end int) {
-		t.SetColorInRange(start, end, red)
-	})
-	styleRichTextsSampleRange("highlighted", func(start, end int) {
-		t.SetBackgroundColorInRange(start, end, yellow)
-	})
-	styleRichTextsSampleRange("underlined", func(start, end int) {
-		t.SetUnderlineInRange(start, end, true)
-	})
-	styleRichTextsSampleRange("struck-through", func(start, end int) {
-		t.SetStrikethroughInRange(start, end, true)
-	})
-	styleRichTextsSampleRange("bold", func(start, end int) {
-		t.SetWeightInRange(start, end, text.WeightBold)
-	})
-	styleRichTextsSampleRange("light", func(start, end int) {
-		t.SetWeightInRange(start, end, text.WeightLight)
-	})
-	styleRichTextsSampleRange("scaled", func(start, end int) {
-		t.SetScaleInRange(start, end, 1.5)
-	})
-	styleRichTextsSampleRange("Combined styles", func(start, end int) {
-		t.SetColorInRange(start, end, blue)
-		t.SetBackgroundColorInRange(start, end, green)
-		t.SetUnderlineInRange(start, end, true)
-		t.SetWeightInRange(start, end, text.WeightBold)
-	})
-	styleRichTextsSampleRange("continues across the visual line boundary when the text wraps, keeping its background and underline", func(start, end int) {
-		t.SetColorInRange(start, end, blue)
-		t.SetBackgroundColorInRange(start, end, green)
-		t.SetUnderlineInRange(start, end, true)
-	})
-	styleRichTextsSampleRange("clickable range", func(start, end int) {
-		t.SetColorInRange(start, end, blue)
-		t.SetUnderlineInRange(start, end, true)
-		t.SetHotspotRanges([]basicwidget.TextRange{
-			{
-				StartInBytes: start,
-				EndInBytes:   end,
-			},
-		})
-	})
-	styleRichTextsSampleRange("下線", func(start, end int) {
-		t.SetUnderlineInRange(start, end, true)
-	})
-	styleRichTextsSampleRange("背景", func(start, end int) {
-		t.SetBackgroundColorInRange(start, end, yellow)
-	})
 }
 
 func (r *RichTexts) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {

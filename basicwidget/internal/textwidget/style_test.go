@@ -207,3 +207,27 @@ func TestAppendFaceRunsThroughComposition(t *testing.T) {
 		})
 	}
 }
+
+func TestStyleRunsRoundTrip(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetValue("hello world")
+	txt.SetColorInRange(0, 5, red)
+	txt.ReplaceTextAt("!!", 5, 5)
+
+	// The copied-out runs reflect the edit; installing them into another
+	// text reproduces the same overrides.
+	var runs textstyle.Runs
+	txt.CopyStyleRunsTo(&runs)
+	var txt2 textwidget.Text
+	txt2.SetValue("hello!! world")
+	txt2.CopyStyleRunsFrom(&runs)
+
+	var wantRuns textstyle.Runs
+	wantRuns.SetColor(0, 7, red)
+	want := slices.Collect(wantRuns.All())
+	if got := txt2.StyleRuns(); !equalStyleRuns(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+}

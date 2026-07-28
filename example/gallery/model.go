@@ -5,9 +5,13 @@ package main
 
 import (
 	"fmt"
+	"image/color"
 	"iter"
 	"math/big"
 	"slices"
+	"strings"
+
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
 	"github.com/guigui-gui/guigui/basicwidget"
 )
@@ -276,8 +280,83 @@ type RichTextsModel struct {
 	editable   bool
 	clickCount int
 
-	sampleText       string
-	sampleTextInited bool
+	sampleText         string
+	sampleTextStyles   basicwidget.TextStyles
+	sampleTextHotspots []basicwidget.TextRange
+	sampleTextInited   bool
+}
+
+const richTextsSampleText = "Colored, light, highlighted, underlined, struck-through, bold, and scaled ranges.\n" +
+	"Combined styles apply to a single range.\n" +
+	"A sufficiently long styled range continues across the visual line boundary when the text wraps, keeping its background and underline on every visual line it covers.\n" +
+	"The clickable range counts clicks.\n" +
+	"日本語のテキストにも下線と背景を適用できます。"
+
+func styleRichTextsSampleRange(sub string, f func(start, end int)) {
+	idx := strings.Index(richTextsSampleText, sub)
+	if idx < 0 {
+		return
+	}
+	f(idx, idx+len(sub))
+}
+
+// richTextsSampleStylesAndHotspots returns the initial ranged styles and
+// hotspot ranges of [richTextsSampleText]; the byte ranges refer to it.
+func richTextsSampleStylesAndHotspots() (basicwidget.TextStyles, []basicwidget.TextRange) {
+	red := color.RGBA{R: 0xff, G: 0x4b, B: 0x00, A: 0xff}
+	blue := color.RGBA{R: 0x00, G: 0x5a, B: 0xff, A: 0xff}
+	yellow := color.NRGBA{R: 0xff, G: 0xf1, B: 0x00, A: 0x60}
+	green := color.NRGBA{R: 0x03, G: 0xaf, B: 0x7a, A: 0x50}
+
+	var styles basicwidget.TextStyles
+	var hotspots []basicwidget.TextRange
+	styleRichTextsSampleRange("Colored", func(start, end int) {
+		styles.SetColorInRange(start, end, red)
+	})
+	styleRichTextsSampleRange("highlighted", func(start, end int) {
+		styles.SetBackgroundColorInRange(start, end, yellow)
+	})
+	styleRichTextsSampleRange("underlined", func(start, end int) {
+		styles.SetUnderlineInRange(start, end, true)
+	})
+	styleRichTextsSampleRange("struck-through", func(start, end int) {
+		styles.SetStrikethroughInRange(start, end, true)
+	})
+	styleRichTextsSampleRange("bold", func(start, end int) {
+		styles.SetWeightInRange(start, end, text.WeightBold)
+	})
+	styleRichTextsSampleRange("light", func(start, end int) {
+		styles.SetWeightInRange(start, end, text.WeightLight)
+	})
+	styleRichTextsSampleRange("scaled", func(start, end int) {
+		styles.SetScaleInRange(start, end, 1.5)
+	})
+	styleRichTextsSampleRange("Combined styles", func(start, end int) {
+		styles.SetColorInRange(start, end, blue)
+		styles.SetBackgroundColorInRange(start, end, green)
+		styles.SetUnderlineInRange(start, end, true)
+		styles.SetWeightInRange(start, end, text.WeightBold)
+	})
+	styleRichTextsSampleRange("continues across the visual line boundary when the text wraps, keeping its background and underline", func(start, end int) {
+		styles.SetColorInRange(start, end, blue)
+		styles.SetBackgroundColorInRange(start, end, green)
+		styles.SetUnderlineInRange(start, end, true)
+	})
+	styleRichTextsSampleRange("clickable range", func(start, end int) {
+		styles.SetColorInRange(start, end, blue)
+		styles.SetUnderlineInRange(start, end, true)
+		hotspots = append(hotspots, basicwidget.TextRange{
+			StartInBytes: start,
+			EndInBytes:   end,
+		})
+	})
+	styleRichTextsSampleRange("下線", func(start, end int) {
+		styles.SetUnderlineInRange(start, end, true)
+	})
+	styleRichTextsSampleRange("背景", func(start, end int) {
+		styles.SetBackgroundColorInRange(start, end, yellow)
+	})
+	return styles, hotspots
 }
 
 func (r *RichTextsModel) Selectable() bool {
@@ -310,13 +389,47 @@ func (r *RichTextsModel) IncrementClickCount() {
 	r.clickCount++
 }
 
-func (r *RichTextsModel) SampleText() (string, bool) {
-	return r.sampleText, r.sampleTextInited
+// ensureSampleText initializes the sample value, styles, and hotspots on
+// the first access.
+func (r *RichTextsModel) ensureSampleText() {
+	if !r.sampleTextInited {
+		r.ResetSampleText()
+	}
+}
+
+// ResetSampleText restores the pristine sample value, styles, and hotspots.
+func (r *RichTextsModel) ResetSampleText() {
+	r.sampleText = richTextsSampleText
+	r.sampleTextStyles, r.sampleTextHotspots = richTextsSampleStylesAndHotspots()
+	r.sampleTextInited = true
+}
+
+func (r *RichTextsModel) SampleText() string {
+	r.ensureSampleText()
+	return r.sampleText
 }
 
 func (r *RichTextsModel) SetSampleText(text string) {
 	r.sampleText = text
 	r.sampleTextInited = true
+}
+
+func (r *RichTextsModel) SampleTextStyles() basicwidget.TextStyles {
+	r.ensureSampleText()
+	return r.sampleTextStyles
+}
+
+func (r *RichTextsModel) SetSampleTextStyles(styles basicwidget.TextStyles) {
+	r.sampleTextStyles = styles
+}
+
+func (r *RichTextsModel) SampleTextHotspots() []basicwidget.TextRange {
+	r.ensureSampleText()
+	return r.sampleTextHotspots
+}
+
+func (r *RichTextsModel) SetSampleTextHotspots(hotspots []basicwidget.TextRange) {
+	r.sampleTextHotspots = hotspots
 }
 
 type TextInputsModel struct {

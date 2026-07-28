@@ -238,6 +238,20 @@ func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().Reset(startInBytes, endInBytes)
 }
 
+// CopyStyleRunsTo replaces dst's runs with a copy of the ranged style
+// overrides, reflecting the adjustments made for edits since the overrides
+// were set.
+func (t *Text) CopyStyleRunsTo(dst *textstyle.Runs) {
+	dst.CopyFrom(t.ensureStyleRuns())
+}
+
+// CopyStyleRunsFrom replaces the ranged style overrides with a copy of
+// runs.
+func (t *Text) CopyStyleRunsFrom(runs *textstyle.Runs) {
+	t.styleRuns.CopyFrom(runs)
+	t.styleRunsValidGeneration = t.store.Generation()
+}
+
 // SetVariationInRange overrides the OpenType variation axis tag in
 // [startInBytes, endInBytes) with value. The override lasts until the value
 // changes.

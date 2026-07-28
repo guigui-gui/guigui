@@ -241,6 +241,12 @@ func (r *Runs) All() iter.Seq[Run] {
 	return slices.Values(r.runs)
 }
 
+// CopyFrom replaces the run list with a copy of src's.
+func (r *Runs) CopyFrom(src *Runs) {
+	r.runs = slices.Delete(r.runs, 0, len(r.runs))
+	r.runs = append(r.runs, src.runs...)
+}
+
 // apply overrides [start, end) with style's set properties, on top of any
 // styles applied earlier. A zero style is a no-op.
 func (r *Runs) apply(start, end int, style Style) {
