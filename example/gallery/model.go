@@ -273,7 +273,11 @@ func (t *TextsModel) SetEllipsis(ellipsis bool) {
 
 type RichTextsModel struct {
 	selectable bool
+	editable   bool
 	clickCount int
+
+	sampleText       string
+	sampleTextInited bool
 }
 
 func (r *RichTextsModel) Selectable() bool {
@@ -282,6 +286,20 @@ func (r *RichTextsModel) Selectable() bool {
 
 func (r *RichTextsModel) SetSelectable(selectable bool) {
 	r.selectable = selectable
+	if !selectable {
+		r.editable = false
+	}
+}
+
+func (r *RichTextsModel) Editable() bool {
+	return r.editable
+}
+
+func (r *RichTextsModel) SetEditable(editable bool) {
+	r.editable = editable
+	if editable {
+		r.selectable = true
+	}
 }
 
 func (r *RichTextsModel) ClickCount() int {
@@ -290,6 +308,15 @@ func (r *RichTextsModel) ClickCount() int {
 
 func (r *RichTextsModel) IncrementClickCount() {
 	r.clickCount++
+}
+
+func (r *RichTextsModel) SampleText() (string, bool) {
+	return r.sampleText, r.sampleTextInited
+}
+
+func (r *RichTextsModel) SetSampleText(text string) {
+	r.sampleText = text
+	r.sampleTextInited = true
 }
 
 type TextInputsModel struct {
