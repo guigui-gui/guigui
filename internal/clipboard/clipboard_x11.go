@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 	"unsafe"
@@ -37,15 +38,33 @@ type x11Clipboard struct {
 	atomClipboard xAtom
 	atomUTF8      xAtom
 	atomString    xAtom
+	atomHTML      xAtom
+	atomPNG       xAtom
 	atomTargets   xAtom
+	atomTimestamp xAtom
 	atomProp      xAtom
 	atomIncr      xAtom
 
-	mu      sync.Mutex
-	ownData []byte
+	mu sync.Mutex
+	// owned reports whether this client currently owns the selection;
+	// ownContents is what it serves while it does.
+	owned       bool
+	ownContents Contents
+	// ownGeneration counts selection acquisitions by this client and is served
+	// as the TIMESTAMP target. It is not a server timestamp (the acquisition
+	// uses CurrentTime, so no server timestamp is available), but it changes
+	// with every acquisition, which is what selection-change detection needs.
+	ownGeneration uint
 
 	notifyCh   chan xSelectionEvent
 	propertyCh chan xPropertyEvent
+
+	// Change-detection state for polling another client's selection.
+	// Accessed only from the clipboard goroutine.
+	lastOwner     xID
+	lastTimestamp xTime
+	hasLast       bool
+	lastContents  Contents
 
 	incrSendsMu sync.Mutex
 	incrSends   map[incrSendKey]*incrSend
@@ -129,7 +148,10 @@ func newX11Clipboard() (*x11Clipboard, error) {
 	}{
 		{&c.atomClipboard, "CLIPBOARD"},
 		{&c.atomUTF8, "UTF8_STRING"},
+		{&c.atomHTML, "text/html"},
+		{&c.atomPNG, "image/png"},
 		{&c.atomTargets, "TARGETS"},
+		{&c.atomTimestamp, "TIMESTAMP"},
 		{&c.atomProp, x11PropName},
 		{&c.atomIncr, "INCR"},
 	} {
@@ -150,7 +172,7 @@ func (c *x11Clipboard) eventLoop() {
 		case xSelectionRequest:
 			c.handleSelectionRequest(*(*xSelectionRequestEvent)(unsafe.Pointer(&ev)))
 		case xSelectionClear:
-			c.setOwnData(nil)
+			c.clearOwnContents()
 		case xSelectionNotify:
 			select {
 			case c.notifyCh <- *(*xSelectionEvent)(unsafe.Pointer(&ev)):
@@ -162,21 +184,31 @@ func (c *x11Clipboard) eventLoop() {
 	}
 }
 
-func (c *x11Clipboard) getOwnData() []byte {
+// getOwnContents returns the contents this client serves and whether it
+// currently owns the selection. The returned contents are internal and must
+// not be mutated.
+func (c *x11Clipboard) getOwnContents() (Contents, uint, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	return c.ownData
+	return c.ownContents, c.ownGeneration, c.owned
 }
 
-func (c *x11Clipboard) setOwnData(data []byte) {
-	var cp []byte
-	if data != nil {
-		cp = make([]byte, len(data))
-		copy(cp, data)
-	}
+func (c *x11Clipboard) setOwnContents(contents Contents) {
+	contentsCopy := contents.clone()
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.ownData = cp
+	c.ownContents = contentsCopy
+	c.owned = true
+	c.ownGeneration++
+}
+
+func (c *x11Clipboard) clearOwnContents() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	// The old buffers may still be aliased by in-flight INCR transfers, so
+	// they are dropped for the GC rather than kept for reuse.
+	c.ownContents = Contents{}
+	c.owned = false
 }
 
 func (c *x11Clipboard) handleSelectionRequest(e xSelectionRequestEvent) {
@@ -195,17 +227,40 @@ func (c *x11Clipboard) handleSelectionRequest(e xSelectionRequestEvent) {
 		prop = e.target
 	}
 
-	data := c.getOwnData()
+	contents, generation, _ := c.getOwnContents()
 
 	switch e.target {
 	case c.atomTargets:
 		// With format 32, Xlib reads the data as an array of C long, so the
 		// atoms must be native words rather than packed 32-bit values.
-		targets := []uint{uint(c.atomTargets), uint(c.atomUTF8), uint(c.atomString)}
+		targets := []uint{uint(c.atomTargets), uint(c.atomTimestamp)}
+		if contents.Text != nil {
+			targets = append(targets, uint(c.atomUTF8), uint(c.atomString))
+		}
+		if contents.HTML != nil {
+			targets = append(targets, uint(c.atomHTML))
+		}
+		if contents.PNG != nil {
+			targets = append(targets, uint(c.atomPNG))
+		}
 		xChangeProperty(c.display, e.requestor, prop, xaAtom, 32, xPropModeReplace,
 			unsafe.Pointer(&targets[0]), int32(len(targets)))
 		notify.property = prop
-	case c.atomUTF8, c.atomString:
+	case c.atomTimestamp:
+		timestamp := generation
+		xChangeProperty(c.display, e.requestor, prop, xaInteger, 32, xPropModeReplace,
+			unsafe.Pointer(&timestamp), 1)
+		notify.property = prop
+	case c.atomUTF8, c.atomString, c.atomHTML, c.atomPNG:
+		var data []byte
+		switch e.target {
+		case c.atomUTF8, c.atomString:
+			data = contents.Text
+		case c.atomHTML:
+			data = contents.HTML
+		case c.atomPNG:
+			data = contents.PNG
+		}
 		switch {
 		case data == nil:
 			notify.property = xAtomNone
@@ -236,8 +291,8 @@ func (c *x11Clipboard) startIncrSend(requestor xID, property, target xAtom, data
 	// handler and the transfer is dropped by the staleness timer.
 	xSelectInput(c.display, requestor, xPropertyChangeMask)
 
-	// The data slice is an internal copy returned by getOwnData, so retain it
-	// directly without an extra copy.
+	// The data slice is an internal copy owned by ownContents and is never
+	// mutated in place, so retain it directly without an extra copy.
 	key := incrSendKey{requestor, property}
 	s := &incrSend{
 		target:       target,
@@ -388,36 +443,106 @@ func (c *x11Clipboard) handlePropertyNotify(e xPropertyEvent) {
 	}
 }
 
-func readAll() ([]byte, error) {
+func readContents() (Contents, error) {
 	c := ensureX11()
 	if c == nil {
-		return nil, nil
+		return Contents{}, nil
 	}
 	return c.read()
 }
 
-func writeAll(data []byte) error {
+func writeContents(contents Contents) error {
 	c := ensureX11()
 	if c == nil {
 		return nil
 	}
-	return c.write(data)
+	return c.write(contents)
 }
 
-func (c *x11Clipboard) read() ([]byte, error) {
-	if data := c.getOwnData(); data != nil {
-		out := make([]byte, len(data))
-		copy(out, data)
-		return out, nil
+func (c *x11Clipboard) read() (Contents, error) {
+	if contents, _, owned := c.getOwnContents(); owned {
+		return contents, nil
 	}
 
 	owner := xGetSelectionOwner(c.display, c.atomClipboard)
 	if owner == xWindowNone {
-		return nil, nil
+		c.hasLast = false
+		return Contents{}, nil
 	}
 
+	// The TIMESTAMP target reports when the owner acquired the selection, so
+	// an unchanged (owner, timestamp) pair means unchanged contents and the
+	// data transfers can be skipped. Owners that do not support TIMESTAMP are
+	// re-read on every poll.
+	timestamp, timestampOK := c.fetchTimestamp()
+	if timestampOK && c.hasLast && owner == c.lastOwner && timestamp == c.lastTimestamp {
+		return c.lastContents, nil
+	}
+
+	targets, err := c.fetchTargets()
+	if err != nil {
+		return Contents{}, err
+	}
+	// An owner that does not answer TARGETS may still serve plain text.
+	if targets == nil {
+		targets = []uint{uint(c.atomUTF8)}
+	}
+
+	var contents Contents
+	for _, ft := range []struct {
+		target xAtom
+		dst    *[]byte
+	}{
+		{c.atomUTF8, &contents.Text},
+		{c.atomHTML, &contents.HTML},
+		{c.atomPNG, &contents.PNG},
+	} {
+		if !slices.Contains(targets, uint(ft.target)) {
+			continue
+		}
+		data, err := c.fetchData(ft.target)
+		if err != nil {
+			return Contents{}, err
+		}
+		*ft.dst = data
+	}
+
+	c.lastOwner = owner
+	c.lastTimestamp = timestamp
+	c.hasLast = timestampOK
+	c.lastContents = contents
+	return contents, nil
+}
+
+// convert requests a conversion of the clipboard selection to the given
+// target and waits for the owner's reply. It returns the reply property, or
+// None when the owner cannot serve the target.
+func (c *x11Clipboard) convert(target xAtom) (xAtom, error) {
 	// Drain any stray notifications before issuing the request so only this
 	// reply is observed.
+	c.drainPending()
+
+	xConvertSelection(c.display, c.atomClipboard, target, c.atomProp, c.win, xCurrentTime)
+	xFlush(c.display)
+
+	timer := time.NewTimer(x11ReadTimeout)
+	defer timer.Stop()
+	for {
+		select {
+		case ev := <-c.notifyCh:
+			// A reply to a previous, timed-out request may still arrive;
+			// match on the target.
+			if ev.target != target {
+				continue
+			}
+			return ev.property, nil
+		case <-timer.C:
+			return xAtomNone, errors.New("clipboard: read timeout")
+		}
+	}
+}
+
+func (c *x11Clipboard) drainPending() {
 	for {
 		select {
 		case <-c.notifyCh:
@@ -434,26 +559,52 @@ func (c *x11Clipboard) read() ([]byte, error) {
 		}
 		break
 	}
+}
 
-	xConvertSelection(c.display, c.atomClipboard, c.atomUTF8, c.atomProp, c.win, xCurrentTime)
-	xFlush(c.display)
-
-	var ev xSelectionEvent
-	select {
-	case ev = <-c.notifyCh:
-	case <-time.After(x11ReadTimeout):
-		return nil, errors.New("clipboard: read timeout")
+// fetchTimestamp returns the owner's selection acquisition timestamp, with
+// ok reporting whether the owner supports the TIMESTAMP target.
+func (c *x11Clipboard) fetchTimestamp() (timestamp xTime, ok bool) {
+	prop, err := c.convert(c.atomTimestamp)
+	if err != nil || prop == xAtomNone {
+		return 0, false
 	}
-	if ev.property == xAtomNone {
+	values, err := c.readPropertyLongs(prop)
+	if err != nil || len(values) == 0 {
+		return 0, false
+	}
+	return xTime(values[0]), true
+}
+
+// fetchTargets returns the targets offered by the selection owner, or nil
+// when the owner does not answer the TARGETS request.
+func (c *x11Clipboard) fetchTargets() ([]uint, error) {
+	prop, err := c.convert(c.atomTargets)
+	if err != nil {
+		return nil, err
+	}
+	if prop == xAtomNone {
 		return nil, nil
 	}
+	return c.readPropertyLongs(prop)
+}
 
-	value, typeAtom, err := c.readProperty(ev.property)
+// fetchData transfers the selection contents converted to the given target,
+// following the INCR protocol when the owner chooses it. It returns nil when
+// the owner cannot serve the target.
+func (c *x11Clipboard) fetchData(target xAtom) ([]byte, error) {
+	prop, err := c.convert(target)
+	if err != nil {
+		return nil, err
+	}
+	if prop == xAtomNone {
+		return nil, nil
+	}
+	value, typeAtom, err := c.readProperty(prop)
 	if err != nil {
 		return nil, err
 	}
 	if typeAtom == c.atomIncr {
-		return c.readIncr(ev.property)
+		return c.readIncr(prop)
 	}
 	return value, nil
 }
@@ -481,7 +632,7 @@ func (c *x11Clipboard) readProperty(property xAtom) ([]byte, xAtom, error) {
 		if offset == 0 {
 			typeAtom = actualType
 		}
-		// Only byte data (format 8: the UTF8_STRING/STRING payload and INCR
+		// Only byte data (format 8: the string/markup/image payload and INCR
 		// chunks) is consumed. Non-8 formats — such as the format-32 INCR size
 		// hint — are read solely to advance the loop and are ignored here.
 		if prop != 0 {
@@ -492,6 +643,37 @@ func (c *x11Clipboard) readProperty(property xAtom) ([]byte, xAtom, error) {
 		}
 		if bytesAfter == 0 {
 			return value, typeAtom, nil
+		}
+		// Advance by the number of 32-bit units consumed.
+		offset += int(nitems) * (int(actualFormat) / 8) / 4
+	}
+}
+
+// readPropertyLongs reads the entire current value of a format-32 property on
+// c.win as native words, deleting it on completion. Xlib delivers format-32
+// data as an array of C long, so each item is one native word.
+func (c *x11Clipboard) readPropertyLongs(property xAtom) ([]uint, error) {
+	var value []uint
+	var offset int
+	for {
+		var actualType xAtom
+		var actualFormat int32
+		var nitems uint
+		var bytesAfter uint
+		var prop uintptr
+		if status := xGetWindowProperty(c.display, c.win, property,
+			offset, 1<<20, true, xAnyPropertyType,
+			&actualType, &actualFormat, &nitems, &bytesAfter, &prop); status != xSuccess {
+			return nil, fmt.Errorf("clipboard: XGetWindowProperty failed: status %d", status)
+		}
+		if prop != 0 {
+			if actualFormat == 32 && nitems > 0 {
+				value = append(value, unsafe.Slice((*uint)(unsafe.Pointer(prop)), nitems)...)
+			}
+			xFree(prop)
+		}
+		if bytesAfter == 0 {
+			return value, nil
 		}
 		// Advance by the number of 32-bit units consumed.
 		offset += int(nitems) * (int(actualFormat) / 8) / 4
@@ -544,15 +726,15 @@ func (c *x11Clipboard) readIncr(property xAtom) (out []byte, err error) {
 	}
 }
 
-func (c *x11Clipboard) write(data []byte) error {
-	c.setOwnData(data)
+func (c *x11Clipboard) write(contents Contents) error {
+	c.setOwnContents(contents)
 
 	xSetSelectionOwner(c.display, c.atomClipboard, c.win, xCurrentTime)
 	xFlush(c.display)
 
 	owner := xGetSelectionOwner(c.display, c.atomClipboard)
 	if owner != c.win {
-		c.setOwnData(nil)
+		c.clearOwnContents()
 		return errors.New("clipboard: failed to take selection ownership")
 	}
 	return nil

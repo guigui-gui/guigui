@@ -921,12 +921,12 @@ func (t *Text) CanPaste() bool {
 	if !t.editable {
 		return false
 	}
-	ct, err := clipboard.ReadAll()
+	contents, err := clipboard.Read()
 	if err != nil {
 		slog.Error(err.Error())
 		return false
 	}
-	return len(ct) > 0
+	return len(contents.Text) > 0
 }
 
 func (t *Text) CanUndo() bool {
@@ -951,7 +951,9 @@ func (t *Text) Cut() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.bytesValueWithRange(start, end)); err != nil {
+	if err := clipboard.Write(clipboard.Contents{
+		Text: t.bytesValueWithRange(start, end),
+	}); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -967,7 +969,9 @@ func (t *Text) Copy() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.WriteAll(t.bytesValueWithRange(start, end)); err != nil {
+	if err := clipboard.Write(clipboard.Contents{
+		Text: t.bytesValueWithRange(start, end),
+	}); err != nil {
 		slog.Error(err.Error())
 		return false
 	}
@@ -975,12 +979,12 @@ func (t *Text) Copy() bool {
 }
 
 func (t *Text) Paste() bool {
-	ct, err := clipboard.ReadAll()
+	contents, err := clipboard.Read()
 	if err != nil {
 		slog.Error(err.Error())
 		return false
 	}
-	t.replaceTextAtSelection(string(ct))
+	t.replaceTextAtSelection(string(contents.Text))
 	return true
 }
 

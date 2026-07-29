@@ -5,10 +5,10 @@
 
 package clipboard
 
-func readAll() ([]byte, error) {
-	return nil, nil
+func readContents() (Contents, error) {
+	return Contents{}, nil
 }
 
-func writeAll(text []byte) error {
+func writeContents(contents Contents) error {
 	return nil
 }

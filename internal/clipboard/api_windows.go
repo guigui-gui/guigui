@@ -6,6 +6,7 @@ package clipboard
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -20,14 +21,17 @@ var (
 	procCloseClipboard             = user32.NewProc("CloseClipboard")
 	procEmptyClipboard             = user32.NewProc("EmptyClipboard")
 	procGetClipboardData           = user32.NewProc("GetClipboardData")
+	procGetClipboardSequenceNumber = user32.NewProc("GetClipboardSequenceNumber")
 	procIsClipboardFormatAvailable = user32.NewProc("IsClipboardFormatAvailable")
 	procOpenClipboard              = user32.NewProc("OpenClipboard")
+	procRegisterClipboardFormatW   = user32.NewProc("RegisterClipboardFormatW")
 	procSetClipboardData           = user32.NewProc("SetClipboardData")
 
 	kernel32         = windows.NewLazySystemDLL("kernel32.dll")
 	procGlobalAlloc  = kernel32.NewProc("GlobalAlloc")
 	procGlobalFree   = kernel32.NewProc("GlobalFree")
 	procGlobalLock   = kernel32.NewProc("GlobalLock")
+	procGlobalSize   = kernel32.NewProc("GlobalSize")
 	procGlobalUnlock = kernel32.NewProc("GlobalUnlock")
 )
 
@@ -51,6 +55,29 @@ func _EmptyClipboard() error {
 		return fmt.Errorf("clipboard: EmptyClipboard failed: returned 0")
 	}
 	return nil
+}
+
+// _GetClipboardSequenceNumber returns the clipboard sequence number, which
+// changes whenever the clipboard contents change. It returns 0 when the
+// caller has no access to the clipboard.
+func _GetClipboardSequenceNumber() uint32 {
+	r, _, _ := procGetClipboardSequenceNumber.Call()
+	return uint32(r)
+}
+
+func _RegisterClipboardFormatW(name string) (uint32, error) {
+	p, err := windows.UTF16PtrFromString(name)
+	if err != nil {
+		return 0, fmt.Errorf("clipboard: RegisterClipboardFormatW failed: %w", err)
+	}
+	r, _, err := procRegisterClipboardFormatW.Call(uintptr(unsafe.Pointer(p)))
+	if r == 0 {
+		if err != nil && !errors.Is(err, windows.ERROR_SUCCESS) {
+			return 0, fmt.Errorf("clipboard: RegisterClipboardFormatW failed: %w", err)
+		}
+		return 0, fmt.Errorf("clipboard: RegisterClipboardFormatW failed: returned 0")
+	}
+	return uint32(r), nil
 }
 
 func _GetClipboardData(format uint32) (uintptr, error) {
@@ -111,6 +138,17 @@ func _GlobalFree(h uintptr) error {
 		return fmt.Errorf("clipboard: GlobalFree failed: returned non-zero")
 	}
 	return nil
+}
+
+func _GlobalSize(h uintptr) (uintptr, error) {
+	r, _, err := procGlobalSize.Call(h)
+	if r == 0 {
+		if err != nil && !errors.Is(err, windows.ERROR_SUCCESS) {
+			return 0, fmt.Errorf("clipboard: GlobalSize failed: %w", err)
+		}
+		return 0, fmt.Errorf("clipboard: GlobalSize failed: returned 0")
+	}
+	return r, nil
 }
 
 func _GlobalLock(h uintptr) (uintptr, error) {

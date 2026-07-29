@@ -4,17 +4,42 @@
 package clipboard
 
 import (
+	"bytes"
 	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
 )
 
+// Contents is the clipboard contents: one logical value represented as up to
+// one data payload per format. A nil field means its format is absent.
+type Contents struct {
+	// Text is the UTF-8 plain text representation.
+	Text []byte
+
+	// HTML is the UTF-8 HTML markup representation.
+	HTML []byte
+
+	// PNG is the encoded PNG stream representation.
+	PNG []byte
+}
+
+func (c Contents) clone() Contents {
+	return Contents{
+		Text: bytes.Clone(c.Text),
+		HTML: bytes.Clone(c.HTML),
+		PNG:  bytes.Clone(c.PNG),
+	}
+}
+
 var (
-	clipboardWriteCh    = make(chan []byte, 1)
-	cachedClipboardData atomic.Value
+	clipboardWriteCh        = make(chan Contents, 1)
+	cachedClipboardContents atomic.Value
 )
 
+// readContents and writeContents are implemented per platform. They are
+// called only from the goroutine started here, so their implementations can
+// keep unsynchronized state.
 func init() {
 	go func() {
 		t := time.NewTicker(time.Second)
@@ -23,8 +48,8 @@ func init() {
 			select {
 			case <-t.C:
 				readToCache()
-			case text := <-clipboardWriteCh:
-				if err := writeAll(text); err != nil {
+			case contents := <-clipboardWriteCh:
+				if err := writeContents(contents); err != nil {
 					slog.Error("failed to write clipboard", "error", err)
 					continue
 				}
@@ -34,30 +59,29 @@ func init() {
 }
 
 func readToCache() {
-	data, err := readAll()
+	contents, err := readContents()
 	if err != nil {
 		slog.Error("failed to read clipboard", "error", err)
 		return
 	}
-	cachedClipboardData.Store(data)
+	cachedClipboardContents.Store(contents)
 }
 
-func ReadAll() ([]byte, error) {
-	v, ok := cachedClipboardData.Load().([]byte)
-	if !ok {
-		return nil, nil
-	}
-	return v, nil
+// Read returns the current clipboard contents.
+func Read() (Contents, error) {
+	contents, _ := cachedClipboardContents.Load().(Contents)
+	return contents, nil
 }
 
-func WriteAll(bs []byte) error {
-	v := make([]byte, len(bs))
-	copy(v, bs)
+// Write atomically replaces the entire clipboard contents with contents:
+// every format is replaced at once. A nil field leaves its format absent.
+func Write(contents Contents) error {
+	contentsCopy := contents.clone()
 	select {
-	case clipboardWriteCh <- v:
+	case clipboardWriteCh <- contentsCopy:
 	case <-time.After(100 * time.Millisecond):
 		return errors.New("clipboard: timeout")
 	}
-	cachedClipboardData.Store(v)
+	cachedClipboardContents.Store(contentsCopy)
 	return nil
 }

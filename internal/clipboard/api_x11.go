@@ -41,6 +41,7 @@ const (
 	xAtomNone        xAtom = 0
 	xAnyPropertyType xAtom = 0
 	xaAtom           xAtom = 4  // XA_ATOM
+	xaInteger        xAtom = 19 // XA_INTEGER
 	xaString         xAtom = 31 // XA_STRING
 
 	xCurrentTime xTime = 0
