@@ -502,7 +502,7 @@ func TestPieceTableWriteRangeAfterUndoRedo(t *testing.T) {
 	check(7, 12, "World")
 
 	// Undo back to "Hello".
-	if _, _, ok := p.Undo(); !ok {
+	if _, _, _, ok := p.Undo(); !ok {
 		t.Fatal("Undo failed")
 	}
 	check(0, 5, "Hello")
@@ -512,7 +512,7 @@ func TestPieceTableWriteRangeAfterUndoRedo(t *testing.T) {
 	check(7, 12, "")
 
 	// Redo back to "Hello, World".
-	if _, _, ok := p.Redo(); !ok {
+	if _, _, _, ok := p.Redo(); !ok {
 		t.Fatal("Redo failed")
 	}
 	check(0, 12, "Hello, World")
@@ -891,7 +891,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\nWorld")
 
 	// Undo Op 3
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -901,7 +901,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\n")
 
 	// Undo Op 2 and 1
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -911,14 +911,14 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("")
 
 	// Undo (No effect)
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if ok {
 		t.Fatalf("Undo should not be possible")
 	}
 	check("")
 
 	// Redo Op 1 and 2
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -928,7 +928,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\n")
 
 	// Redo Op 3
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -938,14 +938,14 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\nWorld")
 
 	// Redo (No effect)
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if ok {
 		t.Fatalf("Redo should not be possible")
 	}
 	check("Hello\nWorld")
 
 	// Undo Op 3
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -959,7 +959,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\nGopher")
 
 	// Undo Op 3
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -969,7 +969,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\n")
 
 	// Redo Op 3
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -979,7 +979,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\nGopher")
 
 	// Undo Op 3
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -989,7 +989,7 @@ func TestPieceTableUndoRedo(t *testing.T) {
 	check("Hello\n")
 
 	// Undo Op 2 and 1
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1020,7 +1020,7 @@ func TestPieceTableHistoryMerging(t *testing.T) {
 	check("abc")
 
 	// Undo Op 1
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1030,7 +1030,7 @@ func TestPieceTableHistoryMerging(t *testing.T) {
 	check("")
 
 	// Redo Op 1
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1048,7 +1048,7 @@ func TestPieceTableHistoryMerging(t *testing.T) {
 	check("abc\nd")
 
 	// Undo Op 3
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1058,7 +1058,7 @@ func TestPieceTableHistoryMerging(t *testing.T) {
 	check("abc\n")
 
 	// Redo Op 3
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1072,7 +1072,7 @@ func TestPieceTableHistoryMerging(t *testing.T) {
 	check("xabc\nd")
 
 	// Undo Op 4
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1116,7 +1116,7 @@ func TestPieceTableHistoryDelete(t *testing.T) {
 	check("")
 
 	// Undo Op 2
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1126,7 +1126,7 @@ func TestPieceTableHistoryDelete(t *testing.T) {
 	check("Hel")
 
 	// Undo Op 1
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1136,7 +1136,7 @@ func TestPieceTableHistoryDelete(t *testing.T) {
 	check("Hello")
 
 	// Redo Op 1
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1146,7 +1146,7 @@ func TestPieceTableHistoryDelete(t *testing.T) {
 	check("Hel")
 
 	// Redo Op 2
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1195,7 +1195,7 @@ func TestPieceTableHistoryMergingApplePressHold(t *testing.T) {
 	check("fooàà")
 
 	// Undo Op 5, 4, 3, 2
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1205,14 +1205,14 @@ func TestPieceTableHistoryMergingApplePressHold(t *testing.T) {
 	check("foo")
 
 	// Undo Op 1 fails, as the initial state is determined by Replace.
-	_, _, ok = p.Undo()
+	_, _, _, ok = p.Undo()
 	if ok {
 		t.Fatal("Undo should fail")
 	}
 	check("foo")
 
 	// Redo Op 2, 3, 4, 5
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1251,7 +1251,7 @@ func TestPieceTableReset(t *testing.T) {
 	check("baz")
 
 	// Undo Op 3
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1261,7 +1261,7 @@ func TestPieceTableReset(t *testing.T) {
 	check("bar")
 
 	// Undo Op 2
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1271,14 +1271,14 @@ func TestPieceTableReset(t *testing.T) {
 	check("foo")
 
 	// Undo Op 1 fails, as the initial state is determined by Replace.
-	_, _, ok = p.Undo()
+	_, _, _, ok = p.Undo()
 	if ok {
 		t.Fatal("Undo should fail")
 	}
 	check("foo")
 
 	// Redo Op 2
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1288,7 +1288,7 @@ func TestPieceTableReset(t *testing.T) {
 	check("bar")
 
 	// Redo Op 3
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1331,7 +1331,7 @@ func TestPieceTableResetInMiddle(t *testing.T) {
 	check("qux")
 
 	// Undo Op 4
-	start, end, ok := p.Undo()
+	start, end, _, ok := p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1341,7 +1341,7 @@ func TestPieceTableResetInMiddle(t *testing.T) {
 	check("baz")
 
 	// Undo Op 3
-	start, end, ok = p.Undo()
+	start, end, _, ok = p.Undo()
 	if !ok {
 		t.Fatal("Undo failed")
 	}
@@ -1351,14 +1351,14 @@ func TestPieceTableResetInMiddle(t *testing.T) {
 	check("bar")
 
 	// Undo Op 2 fails
-	_, _, ok = p.Undo()
+	_, _, _, ok = p.Undo()
 	if ok {
 		t.Fatal("Undo should fail")
 	}
 	check("bar")
 
 	// Redo Op 3
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1368,7 +1368,7 @@ func TestPieceTableResetInMiddle(t *testing.T) {
 	check("baz")
 
 	// Redo Op 4
-	start, end, ok = p.Redo()
+	start, end, _, ok = p.Redo()
 	if !ok {
 		t.Fatal("Redo failed")
 	}
@@ -1451,7 +1451,7 @@ func TestPieceTableReadFrom(t *testing.T) {
 		}
 		check(t, &p, "new")
 		// History is reset: undo should not restore the previous text.
-		if _, _, ok := p.Undo(); ok {
+		if _, _, _, ok := p.Undo(); ok {
 			t.Errorf("Undo should fail after ReadFrom")
 		}
 	})
@@ -1825,5 +1825,137 @@ func TestPieceTableFindLineBounds(t *testing.T) {
 					tt.selStart, tt.selEnd, gotStart, gotEnd, tt.want.lineStart, tt.want.lineEnd)
 			}
 		})
+	}
+}
+
+func TestPieceTableRangedState(t *testing.T) {
+	var p piecetable.PieceTable
+	p.Reset("hello")
+
+	states := []*piecetable.RangedState{
+		{},
+		{},
+		{},
+	}
+
+	// Recording the current state before each mutation associates it with
+	// the position the edit leaves.
+	p.SetCurrentRangedState(states[0])
+	p.Replace(" world", 5, 5)
+	p.SetCurrentRangedState(states[1])
+	p.Replace("", 0, 5)
+
+	// Undo returns the state recorded for the position being returned to;
+	// recording first keeps the current position restorable by Redo.
+	p.SetCurrentRangedState(states[2])
+	_, _, state, ok := p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := state, states[1]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+
+	_, _, state, ok = p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := state, states[0]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+
+	// Redo returns the state recorded for the position being returned to.
+	_, _, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := state, states[1]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+
+	_, _, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := state, states[2]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+
+	// An Undo without re-recording leaves the states unchanged.
+	_, _, state, ok = p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := state, states[1]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+	_, _, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := state, states[2]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+}
+
+func TestPieceTableRangedStateCoalescedOps(t *testing.T) {
+	var p piecetable.PieceTable
+	p.Reset("hello")
+
+	states := []*piecetable.RangedState{
+		{},
+		{},
+		{},
+	}
+
+	// Consecutive deletes whose ranges touch coalesce into one entry. The
+	// state recorded before the group's first delete stays associated with
+	// the pre-group position; mid-group records are transient and are
+	// superseded before the position is left.
+	p.SetCurrentRangedState(states[0])
+	p.Replace("", 4, 5)
+	p.SetCurrentRangedState(states[1])
+	p.Replace("", 3, 4)
+
+	p.SetCurrentRangedState(states[2])
+	_, _, state, ok := p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := state, states[0]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+	if p.CanUndo() {
+		t.Error("CanUndo must return false after undoing the coalesced entry")
+	}
+
+	_, _, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := state, states[2]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+}
+
+func TestPieceTableWithoutRangedState(t *testing.T) {
+	var p piecetable.PieceTable
+	p.Reset("hello")
+	p.Replace("x", 0, 0)
+
+	_, _, state, ok := p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if state != nil {
+		t.Errorf("got: %v, want: nil", state)
+	}
+
+	_, _, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if state != nil {
+		t.Errorf("got: %v, want: nil", state)
 	}
 }

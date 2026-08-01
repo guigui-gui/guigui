@@ -6,6 +6,7 @@ package textwidget_test
 import (
 	"image/color"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
@@ -229,5 +230,161 @@ func TestStyleRunsRoundTrip(t *testing.T) {
 	want := slices.Collect(wantRuns.All())
 	if got := txt2.StyleRuns(); !equalStyleRuns(got, want) {
 		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+}
+
+func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	t.Run("undo of an insertion", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.SetColorInRange(1, 4, red)
+		want := txt.StyleRuns()
+
+		txt.SetSelection(2, 2)
+		txt.ReplaceValueAtSelection("ab")
+		if !txt.Undo() {
+			t.Fatal("Undo must return true")
+		}
+		if got, wantValue := txt.Value(), "hello"; got != wantValue {
+			t.Errorf("got: %q, want: %q", got, wantValue)
+		}
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("undo resurrects a deleted uniquely-styled span", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello world")
+		txt.SetColorInRange(6, 11, red)
+		want := txt.StyleRuns()
+
+		// Deleting the styled span removes its run entirely; positional
+		// adjustment alone cannot bring it back.
+		txt.ReplaceTextAt("", 5, 11)
+		if got := txt.StyleRuns(); got != nil {
+			t.Fatalf("got: %+v, want: nil", got)
+		}
+
+		if !txt.Undo() {
+			t.Fatal("Undo must return true")
+		}
+		if got, wantValue := txt.Value(), "hello world"; got != wantValue {
+			t.Errorf("got: %q, want: %q", got, wantValue)
+		}
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("redo restores the post-edit styles", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.SetColorInRange(0, 5, red)
+
+		// Deleting the head truncates the run to [0, 3).
+		txt.ReplaceTextAt("", 0, 2)
+		afterEdit := txt.StyleRuns()
+
+		if !txt.Undo() {
+			t.Fatal("Undo must return true")
+		}
+		if !txt.Redo() {
+			t.Fatal("Redo must return true")
+		}
+		if got, wantValue := txt.Value(), "llo"; got != wantValue {
+			t.Errorf("got: %q, want: %q", got, wantValue)
+		}
+		if got := txt.StyleRuns(); !equalStyleRuns(got, afterEdit) {
+			t.Errorf("got: %+v, want: %+v", got, afterEdit)
+		}
+	})
+}
+
+func TestTextUndoCoalescedEditsRestoresStyleRuns(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+	txt.SetColorInRange(0, 5, red)
+	want := txt.StyleRuns()
+
+	// Backspace-like consecutive deletes coalesce into one undo entry.
+	txt.ReplaceTextAt("", 4, 5)
+	txt.ReplaceTextAt("", 3, 4)
+	txt.ReplaceTextAt("", 2, 3)
+	if got, wantValue := txt.Value(), "he"; got != wantValue {
+		t.Fatalf("got: %q, want: %q", got, wantValue)
+	}
+
+	// One undo reverts the whole group and restores the group-start styles.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, wantValue := txt.Value(), "hello"; got != wantValue {
+		t.Errorf("got: %q, want: %q", got, wantValue)
+	}
+	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing the coalesced entry")
+	}
+}
+
+func TestTextUndoAfterWholeValueReplacement(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+	txt.SetColorInRange(0, 5, red)
+	want := txt.StyleRuns()
+
+	// A whole-value replacement clears the styles.
+	txt.ForceSetValue("goodbye")
+	if got := txt.StyleRuns(); got != nil {
+		t.Fatalf("got: %+v, want: nil", got)
+	}
+
+	// Undoing the replacement restores the previous value and its styles.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, wantValue := txt.Value(), "hello"; got != wantValue {
+		t.Errorf("got: %q, want: %q", got, wantValue)
+	}
+	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+}
+
+func TestTextResetClearsHistoryAndStyles(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+	txt.SetColorInRange(0, 5, red)
+	txt.ReplaceTextAt("x", 0, 0)
+
+	// Resetting the value clears the undo history and the styles.
+	if _, err := txt.ReadValueFrom(strings.NewReader("goodbye")); err != nil {
+		t.Fatal(err)
+	}
+	if got := txt.StyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after a reset")
+	}
+	if txt.Undo() {
+		t.Error("Undo must return false after a reset")
 	}
 }

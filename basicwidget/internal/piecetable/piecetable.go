@@ -7,7 +7,28 @@ package piecetable
 import (
 	"io"
 	"slices"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
+
+// TextRange is a byte range of a text value.
+type TextRange struct {
+	// StartInBytes is the inclusive start of the range in bytes.
+	StartInBytes int
+
+	// EndInBytes is the exclusive end of the range in bytes.
+	EndInBytes int
+}
+
+// RangedState is the ranged text state at a history position: the ranged
+// style overrides and the hotspot ranges of the text.
+type RangedState struct {
+	// StyleRuns is the ranged style overrides of the text.
+	StyleRuns textstyle.Runs
+
+	// HotspotRanges is the hotspot ranges of the text.
+	HotspotRanges []TextRange
+}
 
 type opType int
 
@@ -40,6 +61,11 @@ type historyItem struct {
 	undoSelectionEnd   int
 	redoSelectionStart int
 	redoSelectionEnd   int
+
+	// rangedState is the ranged text state at this history position,
+	// recorded by SetCurrentRangedState. Undo and Redo arriving at this
+	// position hand it back.
+	rangedState *RangedState
 }
 
 type pieceTableItem struct {
@@ -490,28 +516,42 @@ func (p *PieceTable) CanRedo() bool {
 	return p.historyIndex < len(p.history)-1
 }
 
-// Undo reverts the last operation and returns the selection to restore.
-// The boolean is false when there is nothing to undo.
-func (p *PieceTable) Undo() (int, int, bool) {
-	if !p.CanUndo() {
-		return 0, 0, false
+// SetCurrentRangedState records state as the ranged text state of the
+// current history position: Undo and Redo arriving back at this position
+// hand it back. Record the current state before every mutation and before
+// Undo, so the position being left restores correctly.
+func (p *PieceTable) SetCurrentRangedState(state *RangedState) {
+	if p.history == nil {
+		p.history = []historyItem{{}}
 	}
-	item := p.history[p.historyIndex]
-	p.historyIndex--
-	p.lastOp.valid = false
-	return item.undoSelectionStart, item.undoSelectionEnd, true
+	p.history[p.historyIndex].rangedState = state
 }
 
-// Redo re-applies the last undone operation and returns the selection to
-// restore. The boolean is false when there is nothing to redo.
-func (p *PieceTable) Redo() (int, int, bool) {
+// Undo reverts the last operation and returns the selection and the ranged
+// state to restore. The returned state is the one recorded for the position
+// being returned to. The boolean is false when there is nothing to undo.
+func (p *PieceTable) Undo() (selectionStart, selectionEnd int, state *RangedState, ok bool) {
+	if !p.CanUndo() {
+		return 0, 0, nil, false
+	}
+	item := &p.history[p.historyIndex]
+	p.historyIndex--
+	p.lastOp.valid = false
+	return item.undoSelectionStart, item.undoSelectionEnd, p.history[p.historyIndex].rangedState, true
+}
+
+// Redo re-applies the last undone operation and returns the selection and
+// the ranged state to restore. The returned state is the one recorded for
+// the position being returned to. The boolean is false when there is nothing
+// to redo.
+func (p *PieceTable) Redo() (selectionStart, selectionEnd int, state *RangedState, ok bool) {
 	if !p.CanRedo() {
-		return 0, 0, false
+		return 0, 0, nil, false
 	}
 	p.historyIndex++
 	p.lastOp.valid = false
-	item := p.history[p.historyIndex]
-	return item.redoSelectionStart, item.redoSelectionEnd, true
+	item := &p.history[p.historyIndex]
+	return item.redoSelectionStart, item.redoSelectionEnd, item.rangedState, true
 }
 
 func (p *PieceTable) maybeAppendHistory(text string, start, end int, fromIME bool) {

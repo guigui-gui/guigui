@@ -58,6 +58,14 @@ type textStore struct {
 	// last, one per generation bump. Mutations without a positional record
 	// (whole-value resets, undo, redo) leave a generation gap.
 	edits []textEdit
+
+	// readRangedState, when non-nil, reads the caller's current ranged text
+	// state into its argument. It is registered once via
+	// setRangedStateReadFunc and shares the owning widget's lifetime. The
+	// store calls it just before a mutation leaves a history position — in
+	// particular inside the composer callbacks, whose IME commits are not
+	// observable from outside the store.
+	readRangedState func(state *piecetable.RangedState)
 }
 
 // textEdit is a positional mutation of the committed text: a replacement of
@@ -120,6 +128,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 		if start > end {
 			start, end = end, start
 		}
+		s.recordCurrentRangedState()
 		s.pieceTable.UpdateByIME(text, start, end)
 		s.selectionStartInBytes = start + len(text)
 		s.selectionEndInBytes = s.selectionStartInBytes
@@ -156,6 +165,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	insEnd := s.imeTextEnd - suffixLen
 	insText := newContent[prefixLen : len(newContent)-suffixLen]
 
+	s.recordCurrentRangedState()
 	s.pieceTable.UpdateByIME(insText, insStart, insEnd)
 	// Caret lands at the end of the IME's committed text within the new
 	// joined content laid out at [imeTextStart, imeTextEnd).
@@ -428,6 +438,7 @@ func (s *textStore) ReadTextFrom(r io.Reader) (int64, error) {
 func (s *textStore) SetTextAndSelection(text string, selectionStartInBytes, selectionEndInBytes int) {
 	s.cleanUp()
 	l := s.pieceTable.Len()
+	s.recordCurrentRangedState()
 	s.pieceTable.Replace(text, 0, l)
 	s.selectionStartInBytes = min(max(selectionStartInBytes, 0), len(text))
 	s.selectionEndInBytes = min(max(selectionEndInBytes, 0), len(text))
@@ -442,10 +453,28 @@ func (s *textStore) ReplaceText(text string, startInBytes, endInBytes int) {
 	if text == "" && startInBytes == endInBytes {
 		return
 	}
+	s.recordCurrentRangedState()
 	s.pieceTable.Replace(text, startInBytes, endInBytes)
 	s.selectionStartInBytes = startInBytes + len(text)
 	s.selectionEndInBytes = s.selectionStartInBytes
 	s.bumpGenerationForEdit(startInBytes, endInBytes, len(text))
+}
+
+// setRangedStateReadFunc registers f to read the caller's current ranged
+// text state for the undo history.
+func (s *textStore) setRangedStateReadFunc(f func(state *piecetable.RangedState)) {
+	s.readRangedState = f
+}
+
+// recordCurrentRangedState records a snapshot of the caller's current ranged
+// text state as the state of the current history position.
+func (s *textStore) recordCurrentRangedState() {
+	if s.readRangedState == nil {
+		return
+	}
+	var state piecetable.RangedState
+	s.readRangedState(&state)
+	s.pieceTable.SetCurrentRangedState(&state)
 }
 
 // CanUndo reports whether the store can undo.
@@ -458,26 +487,36 @@ func (s *textStore) CanRedo() bool {
 	return s.pieceTable.CanRedo()
 }
 
-// Undo undoes the last operation.
-func (s *textStore) Undo() {
-	start, end, ok := s.pieceTable.Undo()
+// Undo undoes the last operation and returns the ranged state recorded for
+// the position being returned to. The current state is recorded first, so a
+// later Redo restores it. ok is false when there is nothing to undo.
+func (s *textStore) Undo() (state *piecetable.RangedState, ok bool) {
+	if !s.pieceTable.CanUndo() {
+		return nil, false
+	}
+	s.recordCurrentRangedState()
+	start, end, state, ok := s.pieceTable.Undo()
 	if !ok {
-		return
+		return nil, false
 	}
 	s.selectionStartInBytes = start
 	s.selectionEndInBytes = end
 	s.bumpGeneration()
+	return state, true
 }
 
-// Redo redoes the last undone operation.
-func (s *textStore) Redo() {
-	start, end, ok := s.pieceTable.Redo()
+// Redo redoes the last undone operation and returns the ranged state
+// recorded for the position being returned to. ok is false when there is
+// nothing to redo.
+func (s *textStore) Redo() (state *piecetable.RangedState, ok bool) {
+	start, end, state, ok := s.pieceTable.Redo()
 	if !ok {
-		return
+		return nil, false
 	}
 	s.selectionStartInBytes = start
 	s.selectionEndInBytes = end
 	s.bumpGeneration()
+	return state, true
 }
 
 // cleanUp ends any active IME session before a programmatic mutation so a

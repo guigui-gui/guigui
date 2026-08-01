@@ -11,6 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/internal/piecetable"
 )
 
 var (
@@ -19,13 +20,7 @@ var (
 )
 
 // TextRange is a byte range of a text value.
-type TextRange struct {
-	// StartInBytes is the inclusive start of the range in bytes.
-	StartInBytes int
-
-	// EndInBytes is the exclusive end of the range in bytes.
-	EndInBytes int
-}
+type TextRange = piecetable.TextRange
 
 // SetHotspotRanges sets the hotspot ranges: over their rectangles the cursor
 // turns into a pointer, and mouse presses and releases fire the hotspot down
@@ -46,7 +41,9 @@ func (t *Text) AppendHotspotRanges(dst []TextRange) []TextRange {
 // ensureHotspotRanges brings the hotspot ranges up to date with the store's
 // content and returns them. Positional edits since the last call are
 // replayed so the ranges keep covering the same text; mutations without a
-// positional record (whole-value replacements, undo, redo) clear the ranges.
+// positional record (whole-value replacements) clear the ranges. Undo and
+// redo reinstall the ranges from their history snapshots via
+// [Text.restoreRangedState] instead.
 func (t *Text) ensureHotspotRanges() []TextRange {
 	gen := t.store.Generation()
 	if t.hotspotRangesValidGeneration == gen {

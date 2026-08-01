@@ -78,3 +78,33 @@ func equalTextRanges(a, b []textwidget.TextRange) bool {
 	}
 	return true
 }
+
+func TestTextUndoRedoRestoresHotspotRanges(t *testing.T) {
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+	txt.SetHotspotRanges([]textwidget.TextRange{
+		{StartInBytes: 6, EndInBytes: 11},
+	})
+	want := txt.AppendHotspotRanges(nil)
+
+	// Deleting the hotspot's span removes the range entirely.
+	txt.ReplaceTextAt("", 5, 11)
+	if got := txt.AppendHotspotRanges(nil); got != nil {
+		t.Fatalf("got: %+v, want: nil", got)
+	}
+
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got := txt.AppendHotspotRanges(nil); !equalTextRanges(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got := txt.AppendHotspotRanges(nil); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+}

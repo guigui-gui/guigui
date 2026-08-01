@@ -25,8 +25,8 @@ import (
 // scale, font selection, and the concrete colors set by a wrapping widget.
 // The base style applies to the whole value and persists across value
 // changes; the ranged style overrides in [Text.ensureStyleRuns] apply on
-// top, follow the text through edits, and are cleared when the value is
-// replaced wholesale, undone, or redone.
+// top, follow the text through edits and undo and redo, and are cleared when
+// the value is replaced wholesale.
 type textStyle struct {
 	// hAlign is the horizontal alignment of the value.
 	hAlign textutil.HorizontalAlign
@@ -161,8 +161,9 @@ func removeTagged[T any](settings []T, tag text.Tag, tagOf func(T) text.Tag) []T
 // ensureStyleRuns brings the ranged style overrides up to date with the
 // store's content and returns the runs. Positional edits since the last call
 // are replayed so the overrides keep covering the same text; mutations
-// without a positional record (whole-value replacements, undo, redo) clear
-// the overrides.
+// without a positional record (whole-value replacements) clear the
+// overrides. Undo and redo reinstall the overrides from their history
+// snapshots via [Text.restoreRangedState] instead.
 func (t *Text) ensureStyleRuns() *textstyle.Runs {
 	gen := t.store.Generation()
 	if t.styleRunsValidGeneration == gen {

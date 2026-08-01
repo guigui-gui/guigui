@@ -16,6 +16,7 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
+	"github.com/guigui-gui/guigui/basicwidget/internal/piecetable"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/internal/clipboard"
@@ -57,6 +58,10 @@ type Text struct {
 	// textEditsBuf is scratch for replaying the store's positional edits in
 	// [Text.ensureStyleRuns].
 	textEditsBuf []textEdit
+
+	// rangedStateReadFuncSet reports whether the ranged state read callback
+	// has been registered on the store.
+	rangedStateReadFuncSet bool
 
 	// faceRunsBuf is the reusable buffer for [Text.appendFaceRunsForStyle]
 	// results, with byte offsets into the committed text. Each user records
@@ -588,6 +593,7 @@ func (t *Text) replaceTextAtSelection(text string) {
 }
 
 func (t *Text) replaceTextAt(text string, start, end int) {
+	t.ensureRangedStateReadFunc()
 	if !t.IsMultiline() {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
@@ -610,6 +616,7 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 }
 
 func (t *Text) setText(text string, selectAll bool) bool {
+	t.ensureRangedStateReadFunc()
 	if !t.IsMultiline() {
 		text, _, _ = replaceNewLinesWithSpace(text, 0, 0)
 	}
@@ -992,8 +999,16 @@ func (t *Text) Undo() bool {
 	if !t.store.CanUndo() {
 		return false
 	}
-	t.store.Undo()
+	t.ensureRangedStateReadFunc()
+	state, ok := t.store.Undo()
+	if !ok {
+		return false
+	}
+	t.restoreRangedState(state)
 	t.resetCachedTextSize()
+	t.dispatchValueChanged(false, false)
+	t.nextText = ""
+	t.nextTextSet = false
 	return true
 }
 
@@ -1001,9 +1016,47 @@ func (t *Text) Redo() bool {
 	if !t.store.CanRedo() {
 		return false
 	}
-	t.store.Redo()
+	state, ok := t.store.Redo()
+	if !ok {
+		return false
+	}
+	t.restoreRangedState(state)
 	t.resetCachedTextSize()
+	t.dispatchValueChanged(false, false)
+	t.nextText = ""
+	t.nextTextSet = false
 	return true
+}
+
+// ensureRangedStateReadFunc registers the ranged state read callback on the
+// store once.
+func (t *Text) ensureRangedStateReadFunc() {
+	if t.rangedStateReadFuncSet {
+		return
+	}
+	t.store.setRangedStateReadFunc(t.readRangedState)
+	t.rangedStateReadFuncSet = true
+}
+
+// readRangedState reads the current ranged style overrides and hotspot
+// ranges into state.
+func (t *Text) readRangedState(state *piecetable.RangedState) {
+	state.StyleRuns.CopyFrom(t.ensureStyleRuns())
+	state.HotspotRanges = append(state.HotspotRanges[:0], t.ensureHotspotRanges()...)
+}
+
+// restoreRangedState reinstalls a snapshot read by [Text.readRangedState],
+// replacing the ranged style overrides and the hotspot ranges. A nil state
+// leaves them cleared.
+func (t *Text) restoreRangedState(state *piecetable.RangedState) {
+	if state == nil {
+		return
+	}
+	gen := t.store.Generation()
+	t.styleRuns.CopyFrom(&state.StyleRuns)
+	t.styleRunsValidGeneration = gen
+	t.hotspotRanges = append(t.hotspotRanges[:0], state.HotspotRanges...)
+	t.hotspotRangesValidGeneration = gen
 }
 
 // SetFontFamily sets the resolved font family used to render the value. A nil
