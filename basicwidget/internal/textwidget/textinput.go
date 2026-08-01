@@ -428,7 +428,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAtSelection("")
 			} else if start > 0 {
 				pos := t.prevPositionOnGraphemes(start)
-				t.replaceTextAt("", pos, start)
+				t.replaceTextAt("", pos, start, nil)
 			}
 			return guigui.HandleInputByWidget(t)
 		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyD) ||
@@ -439,19 +439,25 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAtSelection("")
 			} else if IsDarwin() && end < t.store.TextLengthInBytes() {
 				pos := t.nextPositionOnGraphemes(end)
-				t.replaceTextAt("", start, pos)
+				t.replaceTextAt("", start, pos, nil)
 			}
 			return guigui.HandleInputByWidget(t)
 		case IsKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if start, end := t.store.Selection(); end < t.store.TextLengthInBytes() {
 				pos := t.nextPositionOnGraphemes(end)
-				t.replaceTextAt("", start, pos)
+				t.replaceTextAt("", start, pos, nil)
 			}
 			return guigui.HandleInputByWidget(t)
 		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyX) ||
 			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyX):
 			t.Cut()
+			return guigui.HandleInputByWidget(t)
+		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV) ||
+			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV):
+			// Paste without styles. An additionally held Option also lands
+			// here, covering the macOS Paste and Match Style chord.
+			t.PasteWithoutStyles()
 			return guigui.HandleInputByWidget(t)
 		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyV) ||
 			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyV):
@@ -707,7 +713,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 		}
 		t.tmpClipboard = t.stringValueWithRange(start, end)
-		t.replaceTextAt("", start, end)
+		t.replaceTextAt("", start, end, nil)
 		return guigui.HandleInputByWidget(t)
 	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY):
 		// 'Yank' the killed text.

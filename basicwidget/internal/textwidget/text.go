@@ -19,7 +19,6 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/piecetable"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
-	"github.com/guigui-gui/guigui/internal/clipboard"
 )
 
 var (
@@ -82,8 +81,13 @@ type Text struct {
 	// a metric override changes.
 	lastMetricStyleRunsFingerprint uint64
 
-	selectable                  bool
-	editable                    bool
+	selectable bool
+	editable   bool
+
+	// richTextEditable sets whether pasting applies the ranged styles copied
+	// along with the text.
+	richTextEditable bool
+
 	multiline                   bool
 	wrapMode                    textutil.WrapMode
 	caretStatic                 bool
@@ -404,10 +408,6 @@ func (t *Text) stringValueWithRange(start, end int) string {
 	return t.contentCache.stringWithRange(&t.store, start, end, false)
 }
 
-func (t *Text) bytesValueWithRange(start, end int) []byte {
-	return t.contentCache.bytesWithRange(&t.store, start, end)
-}
-
 // stringValueForRenderingRange returns the bytes of the rendering text
 // (committed text with the active IME composition spliced in) in
 // [start, end). Coordinates are in rendering space; clamped by
@@ -589,10 +589,14 @@ func (t *Text) setSelection(start, end int, shiftSide SelectionSide, adjustScrol
 
 func (t *Text) replaceTextAtSelection(text string) {
 	start, end := t.store.Selection()
-	t.replaceTextAt(text, start, end)
+	t.replaceTextAt(text, start, end, nil)
 }
 
-func (t *Text) replaceTextAt(text string, start, end int) {
+// replaceTextAt replaces the byte range spanned by start and end with text.
+// When styleRuns is non-nil, the inserted text takes styleRuns (with byte
+// offsets rebased to 0, applied at the insertion point) in place of the
+// styles it would adopt from the surrounding text.
+func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.Runs) {
 	t.ensureRangedStateReadFunc()
 	if !t.IsMultiline() {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
@@ -603,10 +607,21 @@ func (t *Text) replaceTextAt(text string, start, end int) {
 		start, end = end, start
 	}
 	if s, e := t.store.Selection(); text == t.stringValueWithRange(start, end) && s == start && e == end {
-		return
+		if styleRuns == nil {
+			return
+		}
+	} else {
+		t.store.ReplaceText(text, start, end)
+		t.contentCache.applyReplaceToLineByteOffsets(&t.store, text, start, end)
 	}
-	t.store.ReplaceText(text, start, end)
-	t.contentCache.applyReplaceToLineByteOffsets(&t.store, text, start, end)
+
+	if styleRuns != nil {
+		// The edit-follow machinery bleeds the neighboring styles into the
+		// inserted span; reset the span before installing the pasted styles.
+		runs := t.ensureStyleRuns()
+		runs.Reset(start, start+len(text))
+		runs.ApplyAt(styleRuns, start)
+	}
 
 	t.resetCachedTextSize()
 	t.dispatchValueChanged(false, false)
@@ -762,6 +777,13 @@ func (t *Text) SetEditable(editable bool) {
 		t.store.Blur()
 	}
 	t.editable = editable
+}
+
+// SetRichTextEditable sets whether pasting applies the ranged styles copied
+// along with the text. The default is false: pasting inserts plain text and
+// the inserted text adopts the style of the surrounding text.
+func (t *Text) SetRichTextEditable(richTextEditable bool) {
+	t.richTextEditable = richTextEditable
 }
 
 // IsMultiline reports whether the value may span multiple lines. It is always
@@ -928,7 +950,7 @@ func (t *Text) CanPaste() bool {
 	if !t.editable {
 		return false
 	}
-	contents, err := clipboard.Read()
+	contents, err := clipboardRead()
 	if err != nil {
 		slog.Error(err.Error())
 		return false
@@ -958,10 +980,7 @@ func (t *Text) Cut() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.Write(clipboard.Contents{
-		Text: t.bytesValueWithRange(start, end),
-	}); err != nil {
-		slog.Error(err.Error())
+	if !t.copyRangeToClipboard(start, end) {
 		return false
 	}
 	t.replaceTextAtSelection("")
@@ -976,22 +995,35 @@ func (t *Text) Copy() bool {
 	if start == end {
 		return false
 	}
-	if err := clipboard.Write(clipboard.Contents{
-		Text: t.bytesValueWithRange(start, end),
-	}); err != nil {
-		slog.Error(err.Error())
-		return false
-	}
-	return true
+	return t.copyRangeToClipboard(start, end)
 }
 
 func (t *Text) Paste() bool {
-	contents, err := clipboard.Read()
+	return t.paste(true)
+}
+
+// PasteWithoutStyles pastes the clipboard text without the ranged styles
+// copied along with it, even when the widget is rich text editable. The
+// inserted text adopts the style of the surrounding text.
+func (t *Text) PasteWithoutStyles() bool {
+	return t.paste(false)
+}
+
+// paste pastes the clipboard text. withStyles allows applying the ranged
+// styles copied along with the text, subject to [Text.canPasteRichText].
+func (t *Text) paste(withStyles bool) bool {
+	contents, err := clipboardRead()
 	if err != nil {
 		slog.Error(err.Error())
 		return false
 	}
-	t.replaceTextAtSelection(string(contents.Text))
+	text := string(contents.Text)
+	if withStyles && t.canPasteRichText(text) {
+		start, end := t.store.Selection()
+		t.replaceTextAt(text, start, end, &theRichClipboard.styleRuns)
+		return true
+	}
+	t.replaceTextAtSelection(text)
 	return true
 }
 

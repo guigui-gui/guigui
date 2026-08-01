@@ -8,6 +8,7 @@ import (
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
+	"github.com/guigui-gui/guigui/internal/clipboard"
 )
 
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {
@@ -43,9 +44,27 @@ func (t *Text) StyleRuns() []textstyle.Run {
 }
 
 func (t *Text) ReplaceTextAt(text string, start, end int) {
-	t.replaceTextAt(text, start, end)
+	t.replaceTextAt(text, start, end, nil)
 }
 
 func AppendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
 	return appendFaceRunsThroughComposition(dst, src, selStart, selEnd, compLen)
+}
+
+// SetClipboardForTest substitutes the OS clipboard access with read and
+// write, and returns a function restoring the real access.
+func SetClipboardForTest(read func() (clipboard.Contents, error), write func(clipboard.Contents) error) (restore func()) {
+	origRead, origWrite := clipboardRead, clipboardWrite
+	clipboardRead = read
+	clipboardWrite = write
+	return func() {
+		clipboardRead = origRead
+		clipboardWrite = origWrite
+	}
+}
+
+// ResetRichClipboardForTest empties the process-global rich clipboard slot.
+func ResetRichClipboardForTest() {
+	theRichClipboard.text = ""
+	theRichClipboard.styleRuns.Clear()
 }

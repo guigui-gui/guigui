@@ -118,18 +118,6 @@ func (c *textContentCache) stringWithRange(store *textStore, start, end int, for
 	return str
 }
 
-// bytesWithRange returns the committed bytes in [start, end). A negative end
-// means the text length. The returned slice is only valid until the next call
-// on the cache.
-func (c *textContentCache) bytesWithRange(store *textStore, start, end int) []byte {
-	if end < 0 {
-		end = store.TextLengthInBytes()
-	}
-	c.valueBuilder.Reset()
-	_, _ = store.WriteTextRangeTo(&c.valueBuilder, start, end)
-	return c.valueBuilder.Bytes()
-}
-
 // contentHash returns a 128-bit fingerprint of the store's rendering text
 // (matching what drawing and measuring see).
 func (c *textContentCache) contentHash(store *textStore) [16]byte {
