@@ -734,6 +734,13 @@ func (t *Text) SetEditable(editable bool) {
 	t.core.SetEditable(editable)
 }
 
+// SetRichTextEditable sets whether pasting applies the ranged styles copied
+// along with the text. The default is false: pasting inserts plain text and
+// the inserted text adopts the style of the surrounding text.
+func (t *Text) SetRichTextEditable(richTextEditable bool) {
+	t.core.SetRichTextEditable(richTextEditable)
+}
+
 // IsMultiline reports whether the value may span multiple lines. It is always
 // false while masking, which is single-line.
 func (t *Text) IsMultiline() bool {
@@ -818,6 +825,13 @@ func (t *Text) Copy() bool {
 
 func (t *Text) Paste() bool {
 	return t.core.Paste()
+}
+
+// PasteWithoutStyles pastes the clipboard text without the ranged styles
+// copied along with it, even when the widget is rich text editable. The
+// inserted text adopts the style of the surrounding text.
+func (t *Text) PasteWithoutStyles() bool {
+	return t.core.PasteWithoutStyles()
 }
 
 func (t *Text) Undo() bool {

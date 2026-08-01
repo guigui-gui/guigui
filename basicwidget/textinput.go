@@ -240,6 +240,13 @@ func (t *TextInput) SetEditable(editable bool) {
 	t.textInput.SetEditable(editable)
 }
 
+// SetRichTextEditable sets whether pasting applies the ranged styles copied
+// along with the text. The default is false: pasting inserts plain text and
+// the inserted text adopts the style of the surrounding text.
+func (t *TextInput) SetRichTextEditable(richTextEditable bool) {
+	t.textInput.SetRichTextEditable(richTextEditable)
+}
+
 // IsError reports whether the text input is in the error state.
 func (t *TextInput) IsError() bool {
 	return t.hasError
@@ -300,6 +307,13 @@ func (t *TextInput) Copy() bool {
 
 func (t *TextInput) Paste() bool {
 	return t.textInput.Paste()
+}
+
+// PasteWithoutStyles pastes the clipboard text without the ranged styles
+// copied along with it, even when the widget is rich text editable. The
+// inserted text adopts the style of the surrounding text.
+func (t *TextInput) PasteWithoutStyles() bool {
+	return t.textInput.PasteWithoutStyles()
 }
 
 func (t *TextInput) Undo() bool {
@@ -556,6 +570,10 @@ func (t *textInput) SetEditable(editable bool) {
 	t.text.Text().SetEditable(editable)
 }
 
+func (t *textInput) SetRichTextEditable(richTextEditable bool) {
+	t.text.Text().SetRichTextEditable(richTextEditable)
+}
+
 func (t *textInput) setSelection(start, end int) {
 	t.text.Text().core.SetSelectionWithSide(start, end, -1, false)
 }
@@ -711,6 +729,10 @@ func (t *textInput) Copy() bool {
 
 func (t *textInput) Paste() bool {
 	return t.text.Text().Paste()
+}
+
+func (t *textInput) PasteWithoutStyles() bool {
+	return t.text.Text().PasteWithoutStyles()
 }
 
 func (t *textInput) Undo() bool {
