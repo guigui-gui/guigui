@@ -626,3 +626,131 @@ func TestRunsReplace(t *testing.T) {
 		})
 	}
 }
+
+func TestRunsCopyRangeFrom(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var src textstyle.Runs
+	src.SetColor(2, 6, red)
+	src.SetUnderline(8, 12, true)
+	src.SetColor(12, 14, blue)
+
+	tests := []struct {
+		name       string
+		start, end int
+		want       []textstyle.Run
+	}{
+		{
+			name:  "whole coverage rebases to 0",
+			start: 2,
+			end:   14,
+			want: []textstyle.Run{
+				{Start: 0, End: 4, Style: textstyle.Style{}.WithColor(red)},
+				{Start: 6, End: 10, Style: textstyle.Style{}.WithUnderline(true)},
+				{Start: 10, End: 12, Style: textstyle.Style{}.WithColor(blue)},
+			},
+		},
+		{
+			name:  "clipping keeps the overlapping parts",
+			start: 4,
+			end:   10,
+			want: []textstyle.Run{
+				{Start: 0, End: 2, Style: textstyle.Style{}.WithColor(red)},
+				{Start: 4, End: 6, Style: textstyle.Style{}.WithUnderline(true)},
+			},
+		},
+		{
+			name:  "range without overrides is empty",
+			start: 6,
+			end:   8,
+			want:  nil,
+		},
+		{
+			name:  "empty range is empty",
+			start: 5,
+			end:   5,
+			want:  nil,
+		},
+		{
+			name:  "negative start is clamped",
+			start: -3,
+			end:   4,
+			want: []textstyle.Run{
+				{Start: 2, End: 4, Style: textstyle.Style{}.WithColor(red)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var runs textstyle.Runs
+			// Preload runs to verify the copy replaces existing overrides.
+			runs.SetColor(0, 100, blue)
+			runs.CopyRangeFrom(&src, tt.start, tt.end)
+			if got := slices.Collect(runs.All()); !equalRuns(got, tt.want) {
+				t.Errorf("got: %+v, want: %+v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunsApplyAt(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var src textstyle.Runs
+	src.SetColor(0, 3, red)
+	src.SetUnderline(5, 8, true)
+
+	t.Run("shifted apply on empty runs", func(t *testing.T) {
+		var runs textstyle.Runs
+		runs.ApplyAt(&src, 10)
+		want := []textstyle.Run{
+			{Start: 10, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			{Start: 15, End: 18, Style: textstyle.Style{}.WithUnderline(true)},
+		}
+		if got := slices.Collect(runs.All()); !equalRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("applies on top of existing overrides", func(t *testing.T) {
+		var runs textstyle.Runs
+		runs.SetColor(0, 20, blue)
+		runs.ApplyAt(&src, 10)
+		want := []textstyle.Run{
+			{Start: 0, End: 10, Style: textstyle.Style{}.WithColor(blue)},
+			{Start: 10, End: 13, Style: textstyle.Style{}.WithColor(red)},
+			{Start: 13, End: 15, Style: textstyle.Style{}.WithColor(blue)},
+			{Start: 15, End: 18, Style: textstyle.Style{}.WithColor(blue).WithUnderline(true)},
+			{Start: 18, End: 20, Style: textstyle.Style{}.WithColor(blue)},
+		}
+		if got := slices.Collect(runs.All()); !equalRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+
+	t.Run("zero offset round-trips a copied range", func(t *testing.T) {
+		var runs textstyle.Runs
+		runs.ApplyAt(&src, 0)
+		if got, want := slices.Collect(runs.All()), slices.Collect(src.All()); !equalRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+	})
+}
+
+func TestRunsIsEmpty(t *testing.T) {
+	var runs textstyle.Runs
+	if !runs.IsEmpty() {
+		t.Errorf("IsEmpty() = false, want true")
+	}
+	runs.SetUnderline(0, 5, true)
+	if runs.IsEmpty() {
+		t.Errorf("IsEmpty() = true, want false")
+	}
+	runs.Clear()
+	if !runs.IsEmpty() {
+		t.Errorf("IsEmpty() = false, want true")
+	}
+}

@@ -247,6 +247,41 @@ func (r *Runs) CopyFrom(src *Runs) {
 	r.runs = append(r.runs, src.runs...)
 }
 
+// CopyRangeFrom replaces the run list with a copy of src's overrides in
+// [start, end), rebased so that start maps to 0.
+func (r *Runs) CopyRangeFrom(src *Runs, start, end int) {
+	start = max(start, 0)
+
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
+	for _, run := range src.runs {
+		if run.End <= start || run.Start >= end {
+			continue
+		}
+		r.buf = appendRun(r.buf, Run{
+			Start: max(run.Start, start) - start,
+			End:   min(run.End, end) - start,
+			Style: run.Style,
+		})
+	}
+	r.setRuns()
+}
+
+// ApplyAt applies src's overrides on top of the existing overrides, with
+// src's byte ranges shifted by offset. src must not be r.
+func (r *Runs) ApplyAt(src *Runs, offset int) {
+	for _, run := range src.runs {
+		r.apply(run.Start+offset, run.End+offset, run.Style)
+	}
+}
+
+// IsEmpty reports whether the run list holds no overrides.
+func (r *Runs) IsEmpty() bool {
+	return len(r.runs) == 0
+}
+
 // apply overrides [start, end) with style's set properties, on top of any
 // styles applied earlier. A zero style is a no-op.
 func (r *Runs) apply(start, end int, style Style) {
