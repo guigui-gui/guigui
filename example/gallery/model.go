@@ -278,6 +278,11 @@ func (t *TextsModel) SetEllipsis(ellipsis bool) {
 type RichTextsModel struct {
 	selectable bool
 	editable   bool
+
+	// richTextEditingDisabled is inverted so that rich text editing
+	// defaults to enabled.
+	richTextEditingDisabled bool
+
 	clickCount int
 
 	sampleText         string
@@ -379,6 +384,14 @@ func (r *RichTextsModel) SetEditable(editable bool) {
 	if editable {
 		r.selectable = true
 	}
+}
+
+func (r *RichTextsModel) RichTextEditable() bool {
+	return !r.richTextEditingDisabled
+}
+
+func (r *RichTextsModel) SetRichTextEditable(richTextEditable bool) {
+	r.richTextEditingDisabled = !richTextEditable
 }
 
 func (r *RichTextsModel) ClickCount() int {

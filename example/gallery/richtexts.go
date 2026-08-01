@@ -15,17 +15,19 @@ import (
 type RichTexts struct {
 	guigui.DefaultWidget
 
-	form                basicwidget.Form
-	selectableText      basicwidget.Text
-	selectableToggle    basicwidget.Toggle
-	editableText        basicwidget.Text
-	editableToggle      basicwidget.Toggle
-	resetText           basicwidget.Text
-	resetButton         basicwidget.Button
-	clickCountText      basicwidget.Text
-	clickCountValueText basicwidget.Text
-	sampleText          basicwidget.Text
-	hotspotTooltipArea  basicwidget.TooltipArea
+	form                   basicwidget.Form
+	selectableText         basicwidget.Text
+	selectableToggle       basicwidget.Toggle
+	editableText           basicwidget.Text
+	editableToggle         basicwidget.Toggle
+	richTextEditableText   basicwidget.Text
+	richTextEditableToggle basicwidget.Toggle
+	resetText              basicwidget.Text
+	resetButton            basicwidget.Button
+	clickCountText         basicwidget.Text
+	clickCountValueText    basicwidget.Text
+	sampleText             basicwidget.Text
+	hotspotTooltipArea     basicwidget.TooltipArea
 
 	hotspotRanges    []basicwidget.TextRange
 	layoutItems      []guigui.LinearLayoutItem
@@ -54,6 +56,12 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		model.RichTexts().SetEditable(value)
 	})
 	r.editableToggle.SetValue(model.RichTexts().Editable())
+
+	r.richTextEditableText.SetValue("Rich text editable")
+	r.richTextEditableToggle.OnValueChanged(func(context *guigui.Context, value bool) {
+		model.RichTexts().SetRichTextEditable(value)
+	})
+	r.richTextEditableToggle.SetValue(model.RichTexts().RichTextEditable())
 
 	r.resetText.SetValue("Reset the sample text")
 	r.resetButton.SetText("Reset")
@@ -86,6 +94,10 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 			SecondaryWidget: &r.editableToggle,
 		},
 		{
+			PrimaryWidget:   &r.richTextEditableText,
+			SecondaryWidget: &r.richTextEditableToggle,
+		},
+		{
 			PrimaryWidget:   &r.resetText,
 			SecondaryWidget: &r.resetButton,
 		},
@@ -100,6 +112,7 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	t.SetWrapMode(basicwidget.WrapModeNormal)
 	t.SetSelectable(model.RichTexts().Selectable())
 	t.SetEditable(model.RichTexts().Editable())
+	t.SetRichTextEditable(model.RichTexts().RichTextEditable())
 
 	// The model owns the sample value, its ranged styles, and its hotspot
 	// ranges. Each build restores them into the widget — SetValue comes
