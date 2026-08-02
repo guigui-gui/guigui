@@ -9,6 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hajimehoshi/ebiten/v2/text/v2"
+
+	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
@@ -145,6 +148,293 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 	})
 }
 
+func TestTextIsBoldInRange(t *testing.T) {
+	bold := float32(text.WeightBold)
+
+	t.Run("default base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		if txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return false without a bold weight")
+		}
+		txt.SetVariationInRange(0, 5, font.TagWght, bold)
+		if !txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return true for a fully overridden range")
+		}
+		if txt.IsBoldInRange(0, 8) {
+			t.Error("IsBoldInRange must return false for a partially bold range")
+		}
+	})
+
+	t.Run("bold base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		txt.SetVariation(font.TagWght, bold)
+		if !txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return true with a bold base style")
+		}
+		// A partial bold override on a bold base style keeps the range
+		// uniformly bold.
+		txt.SetVariationInRange(0, 3, font.TagWght, bold)
+		if !txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must fold the base style into uncovered bytes")
+		}
+		txt.SetVariationInRange(0, 3, font.TagWght, float32(text.WeightLight))
+		if txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return false for a non-bold override")
+		}
+	})
+}
+
+func TestTextApplyBoldInRange(t *testing.T) {
+	bold := float32(text.WeightBold)
+
+	t.Run("default base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		txt.ApplyBoldInRange(0, 5, true)
+		var wantRuns textstyle.Runs
+		wantRuns.SetVariation(0, 5, font.TagWght, bold)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+
+		// Applying bold is idempotent.
+		txt.ApplyBoldInRange(0, 5, true)
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+
+		// Applying bold over a partially bold range makes it all bold.
+		txt.ApplyBoldInRange(0, 8, true)
+		wantRuns.SetVariation(0, 8, font.TagWght, bold)
+		want = slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+
+		// Applying not bold removes the overrides.
+		txt.ApplyBoldInRange(0, 8, false)
+		if got := txt.StyleRuns(); got != nil {
+			t.Errorf("got: %+v, want: nil", got)
+		}
+	})
+
+	t.Run("bold base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		txt.SetVariation(font.TagWght, bold)
+
+		// Applying not bold on a bold base style needs an explicit override.
+		txt.ApplyBoldInRange(0, 5, false)
+		if txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return false after applying not bold")
+		}
+		var wantRuns textstyle.Runs
+		wantRuns.SetVariation(0, 5, font.TagWght, float32(text.WeightMedium))
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+
+		// Applying bold again removes the override so the base style shows.
+		txt.ApplyBoldInRange(0, 5, true)
+		if !txt.IsBoldInRange(0, 5) {
+			t.Error("IsBoldInRange must return true after applying bold")
+		}
+		if got := txt.StyleRuns(); got != nil {
+			t.Errorf("got: %+v, want: nil", got)
+		}
+	})
+
+	t.Run("empty range is a no-op", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		txt.ApplyBoldInRange(3, 3, true)
+		txt.ApplyBoldInRange(3, 3, false)
+		if got := txt.StyleRuns(); got != nil {
+			t.Errorf("got: %+v, want: nil", got)
+		}
+	})
+}
+
+func TestTextApplyItalicInRange(t *testing.T) {
+	t.Run("default base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		if txt.IsItalicInRange(0, 5) {
+			t.Error("IsItalicInRange must return false without an italic style")
+		}
+		txt.ApplyItalicInRange(0, 5, true)
+		if !txt.IsItalicInRange(0, 5) {
+			t.Error("IsItalicInRange must return true after applying italic")
+		}
+		var wantRuns textstyle.Runs
+		wantRuns.SetItalic(0, 5, true)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+		txt.ApplyItalicInRange(0, 5, false)
+		if got := txt.StyleRuns(); got != nil {
+			t.Errorf("got: %+v, want: nil", got)
+		}
+	})
+
+	t.Run("italic base style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetValue("hello world")
+		txt.SetItalic(true)
+		if !txt.IsItalicInRange(0, 5) {
+			t.Error("IsItalicInRange must return true with an italic base style")
+		}
+
+		// Applying not italic on an italic base style needs an explicit
+		// override.
+		txt.ApplyItalicInRange(0, 5, false)
+		if txt.IsItalicInRange(0, 5) {
+			t.Error("IsItalicInRange must return false after applying not italic")
+		}
+		var wantRuns textstyle.Runs
+		wantRuns.SetItalic(0, 5, false)
+		want := slices.Collect(wantRuns.All())
+		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+			t.Errorf("got: %+v, want: %+v", got, want)
+		}
+
+		// Applying italic again removes the override so the base style shows.
+		txt.ApplyItalicInRange(0, 5, true)
+		if !txt.IsItalicInRange(0, 5) {
+			t.Error("IsItalicInRange must return true after applying italic")
+		}
+		if got := txt.StyleRuns(); got != nil {
+			t.Errorf("got: %+v, want: nil", got)
+		}
+	})
+}
+
+func TestTextApplyUnderlineInRange(t *testing.T) {
+	var txt textwidget.Text
+	txt.SetValue("hello world")
+
+	txt.SetUnderlineInRange(0, 3, true)
+	if txt.IsUnderlineInRange(0, 5) {
+		t.Error("IsUnderlineInRange must return false for a partially underlined range")
+	}
+
+	// Applying an underline to a partially underlined range underlines it
+	// all.
+	txt.ApplyUnderlineInRange(0, 5, true)
+	if !txt.IsUnderlineInRange(0, 5) {
+		t.Error("IsUnderlineInRange must return true after applying an underline")
+	}
+	var wantRuns textstyle.Runs
+	wantRuns.SetUnderline(0, 5, true)
+	want := slices.Collect(wantRuns.All())
+	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+
+	// Applying no underline removes the overrides instead of setting false
+	// overrides.
+	txt.ApplyUnderlineInRange(0, 5, false)
+	if txt.IsUnderlineInRange(0, 5) {
+		t.Error("IsUnderlineInRange must return false after removing the underline")
+	}
+	if got := txt.StyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+}
+
+func TestTextApplyStrikethroughInRange(t *testing.T) {
+	var txt textwidget.Text
+	txt.SetValue("hello world")
+
+	txt.ApplyStrikethroughInRange(0, 5, true)
+	if !txt.IsStrikethroughInRange(0, 5) {
+		t.Error("IsStrikethroughInRange must return true after applying a strikethrough")
+	}
+	txt.ApplyStrikethroughInRange(0, 5, false)
+	if txt.IsStrikethroughInRange(0, 5) {
+		t.Error("IsStrikethroughInRange must return false after removing the strikethrough")
+	}
+	if got := txt.StyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+}
+
+func TestTextStyleQueriesAtCaret(t *testing.T) {
+	var txt textwidget.Text
+	txt.SetValue("hello")
+	txt.SetUnderlineInRange(1, 4, true)
+
+	// An empty range reports the style that text typed at the caret adopts:
+	// the style of the byte right before the caret.
+	tests := []struct {
+		caret int
+		want  bool
+	}{
+		{caret: 0, want: false},
+		{caret: 1, want: false},
+		{caret: 2, want: true},
+		{caret: 4, want: true},
+		{caret: 5, want: false},
+	}
+	for _, tt := range tests {
+		if got := txt.IsUnderlineInRange(tt.caret, tt.caret); got != tt.want {
+			t.Errorf("IsUnderlineInRange(%d, %d): got: %t, want: %t", tt.caret, tt.caret, got, tt.want)
+		}
+	}
+
+	var boldText textwidget.Text
+	boldText.SetValue("hello")
+	boldText.SetVariation(font.TagWght, float32(text.WeightBold))
+	if !boldText.IsBoldInRange(0, 0) {
+		t.Error("IsBoldInRange must report the base style at the start of the value")
+	}
+}
+
+func TestTextColorInRange(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetValue("hello world")
+	if clr, uniform := txt.ColorInRange(0, 5); !uniform || clr != nil {
+		t.Errorf("got: %v, %t, want: nil, true", clr, uniform)
+	}
+
+	txt.SetColorInRange(0, 5, red)
+	if clr, uniform := txt.ColorInRange(0, 5); !uniform || clr != color.Color(red) {
+		t.Errorf("got: %v, %t, want: %v, true", clr, uniform, red)
+	}
+	if _, uniform := txt.ColorInRange(0, 8); uniform {
+		t.Error("a partially colored range must not be uniform")
+	}
+	if clr, uniform := txt.ColorInRange(2, 2); !uniform || clr != color.Color(red) {
+		t.Errorf("got: %v, %t, want: %v, true", clr, uniform, red)
+	}
+}
+
+func TestTextScaleInRange(t *testing.T) {
+	var txt textwidget.Text
+	txt.SetValue("hello world")
+	if scale, uniform := txt.ScaleInRange(0, 5); !uniform || scale != 1 {
+		t.Errorf("got: %v, %t, want: 1, true", scale, uniform)
+	}
+
+	txt.SetScaleInRange(0, 5, 2)
+	if scale, uniform := txt.ScaleInRange(0, 5); !uniform || scale != 2 {
+		t.Errorf("got: %v, %t, want: 2, true", scale, uniform)
+	}
+	if _, uniform := txt.ScaleInRange(0, 8); uniform {
+		t.Error("a partially scaled range must not be uniform")
+	}
+	if scale, uniform := txt.ScaleInRange(2, 2); !uniform || scale != 2 {
+		t.Errorf("got: %v, %t, want: 2, true", scale, uniform)
+	}
+}
+
 func TestAppendFaceRunsThroughComposition(t *testing.T) {
 	src := []textutil.FaceRun{
 		{Start: 5, End: 10},
@@ -220,7 +510,7 @@ func TestStyleRunsRoundTrip(t *testing.T) {
 	// The copied-out runs reflect the edit; installing them into another
 	// text reproduces the same overrides.
 	var runs textstyle.Runs
-	txt.CopyStyleRunsTo(&runs)
+	txt.ReadStyleRuns(&runs)
 	var txt2 textwidget.Text
 	txt2.SetValue("hello!! world")
 	txt2.CopyStyleRunsFrom(&runs)

@@ -247,6 +247,12 @@ func (t *TextInput) SetRichTextEditable(richTextEditable bool) {
 	t.textInput.SetRichTextEditable(richTextEditable)
 }
 
+// StyleEditor returns a [TextStyleEditor] reading and writing the ranged
+// style overrides of the text input's value.
+func (t *TextInput) StyleEditor() TextStyleEditor {
+	return t.textInput.StyleEditor()
+}
+
 // IsError reports whether the text input is in the error state.
 func (t *TextInput) IsError() bool {
 	return t.hasError
@@ -572,6 +578,10 @@ func (t *textInput) SetEditable(editable bool) {
 
 func (t *textInput) SetRichTextEditable(richTextEditable bool) {
 	t.text.Text().SetRichTextEditable(richTextEditable)
+}
+
+func (t *textInput) StyleEditor() TextStyleEditor {
+	return t.text.Text().StyleEditor()
 }
 
 func (t *textInput) setSelection(start, end int) {

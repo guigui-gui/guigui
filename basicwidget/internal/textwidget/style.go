@@ -239,10 +239,10 @@ func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().Reset(startInBytes, endInBytes)
 }
 
-// CopyStyleRunsTo replaces dst's runs with a copy of the ranged style
+// ReadStyleRuns replaces dst's runs with a copy of the ranged style
 // overrides, reflecting the adjustments made for edits since the overrides
 // were set.
-func (t *Text) CopyStyleRunsTo(dst *textstyle.Runs) {
+func (t *Text) ReadStyleRuns(dst *textstyle.Runs) {
 	dst.CopyFrom(t.ensureStyleRuns())
 }
 
@@ -329,6 +329,182 @@ func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
 // [startInBytes, endInBytes).
 func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().UnsetItalic(startInBytes, endInBytes)
+}
+
+// variation returns the value of the OpenType variation axis tag and
+// whether it is set.
+func (s *textStyle) variation(tag text.Tag) (float32, bool) {
+	i, ok := slices.BinarySearchFunc(s.variations, tag, func(v font.Variation, tag text.Tag) int {
+		return cmp.Compare(v.Tag, tag)
+	})
+	if !ok {
+		return 0, false
+	}
+	return s.variations[i].Value, true
+}
+
+// baseWeight returns the font weight of the base style: the wght variation
+// axis value, or the default medium weight when unset.
+func (t *Text) baseWeight() float32 {
+	if v, ok := t.baseStyle.variation(font.TagWght); ok {
+		return v
+	}
+	return float32(text.WeightMedium)
+}
+
+// styleAtCaret returns the ranged override style that text typed at
+// textIndexInBytes adopts: the style overriding the byte right before the
+// index, or a zero style at the start of the value.
+func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
+	if textIndexInBytes <= 0 {
+		return textstyle.Style{}
+	}
+	return t.ensureStyleRuns().StyleAt(textIndexInBytes - 1)
+}
+
+// IsBoldInRange reports whether the effective font weight, the ranged wght
+// variation overrides applied over the base style, is the bold weight over
+// every byte of [startInBytes, endInBytes). For an empty range, it reports
+// the state that text typed at startInBytes would adopt.
+func (t *Text) IsBoldInRange(startInBytes, endInBytes int) bool {
+	if startInBytes >= endInBytes {
+		v, ok := t.styleAtCaret(startInBytes).Variation(font.TagWght)
+		if !ok {
+			v = t.baseWeight()
+		}
+		return v == float32(text.WeightBold)
+	}
+	v, uniform := t.ensureStyleRuns().UniformVariation(startInBytes, endInBytes, font.TagWght, t.baseWeight())
+	return uniform && v == float32(text.WeightBold)
+}
+
+// IsItalicInRange reports whether the effective italic state, the ranged
+// italic overrides applied over the base style, selects an italic face over
+// every byte of [startInBytes, endInBytes). For an empty range, it reports
+// the state that text typed at startInBytes would adopt.
+func (t *Text) IsItalicInRange(startInBytes, endInBytes int) bool {
+	if startInBytes >= endInBytes {
+		if italic, ok := t.styleAtCaret(startInBytes).Italic(); ok {
+			return italic
+		}
+		return t.baseStyle.italic
+	}
+	italic, uniform := t.ensureStyleRuns().UniformItalic(startInBytes, endInBytes, t.baseStyle.italic)
+	return uniform && italic
+}
+
+// IsUnderlineInRange reports whether an underline is drawn over every byte
+// of [startInBytes, endInBytes). For an empty range, it reports the state
+// that text typed at startInBytes would adopt.
+func (t *Text) IsUnderlineInRange(startInBytes, endInBytes int) bool {
+	if startInBytes >= endInBytes {
+		underline, _ := t.styleAtCaret(startInBytes).Underline()
+		return underline
+	}
+	underline, uniform := t.ensureStyleRuns().UniformUnderline(startInBytes, endInBytes, false)
+	return uniform && underline
+}
+
+// IsStrikethroughInRange reports whether a strikethrough is drawn over
+// every byte of [startInBytes, endInBytes). For an empty range, it reports
+// the state that text typed at startInBytes would adopt.
+func (t *Text) IsStrikethroughInRange(startInBytes, endInBytes int) bool {
+	if startInBytes >= endInBytes {
+		strikethrough, _ := t.styleAtCaret(startInBytes).Strikethrough()
+		return strikethrough
+	}
+	strikethrough, uniform := t.ensureStyleRuns().UniformStrikethrough(startInBytes, endInBytes, false)
+	return uniform && strikethrough
+}
+
+// ColorInRange returns the text color override shared by every byte of
+// [startInBytes, endInBytes) and whether the range is uniform. A nil color
+// with uniform true means no byte has a color override, so the range
+// renders in the base text color. For an empty range, it returns the
+// override that text typed at startInBytes would adopt.
+func (t *Text) ColorInRange(startInBytes, endInBytes int) (clr color.Color, uniform bool) {
+	if startInBytes >= endInBytes {
+		c, _ := t.styleAtCaret(startInBytes).Color()
+		return c, true
+	}
+	return t.ensureStyleRuns().UniformColor(startInBytes, endInBytes, nil)
+}
+
+// ScaleInRange returns the font size multiplier shared by every byte of
+// [startInBytes, endInBytes) and whether the range is uniform. A byte
+// without a scale override takes the multiplier 1. For an empty range, it
+// returns the multiplier that text typed at startInBytes would adopt.
+func (t *Text) ScaleInRange(startInBytes, endInBytes int) (scale float64, uniform bool) {
+	if startInBytes >= endInBytes {
+		if s, ok := t.styleAtCaret(startInBytes).Scale(); ok {
+			return s, true
+		}
+		return 1, true
+	}
+	return t.ensureStyleRuns().UniformScale(startInBytes, endInBytes, 1)
+}
+
+// ApplyBoldInRange makes every byte of [startInBytes, endInBytes) bold or
+// not bold by adjusting the ranged wght variation overrides over the base
+// style. Overrides that would restate the base style are removed instead
+// of set; making a range of a bold base style not bold overrides it with
+// the default weight. An empty range is a no-op.
+func (t *Text) ApplyBoldInRange(startInBytes, endInBytes int, bold bool) {
+	if startInBytes >= endInBytes {
+		return
+	}
+	if bold == (t.baseWeight() == float32(text.WeightBold)) {
+		t.UnsetVariationInRange(startInBytes, endInBytes, font.TagWght)
+		return
+	}
+	if bold {
+		t.SetVariationInRange(startInBytes, endInBytes, font.TagWght, float32(text.WeightBold))
+		return
+	}
+	t.SetVariationInRange(startInBytes, endInBytes, font.TagWght, float32(text.WeightMedium))
+}
+
+// ApplyItalicInRange makes every byte of [startInBytes, endInBytes) render
+// with an italic face or a regular face by adjusting the ranged italic
+// overrides over the base style. Overrides that would restate the base
+// style are removed instead of set. An empty range is a no-op.
+func (t *Text) ApplyItalicInRange(startInBytes, endInBytes int, italic bool) {
+	if startInBytes >= endInBytes {
+		return
+	}
+	if italic == t.baseStyle.italic {
+		t.UnsetItalicInRange(startInBytes, endInBytes)
+		return
+	}
+	t.SetItalicInRange(startInBytes, endInBytes, italic)
+}
+
+// ApplyUnderlineInRange sets whether an underline is drawn over every byte
+// of [startInBytes, endInBytes). Underline false removes the underline
+// overrides in the range. An empty range is a no-op.
+func (t *Text) ApplyUnderlineInRange(startInBytes, endInBytes int, underline bool) {
+	if startInBytes >= endInBytes {
+		return
+	}
+	if !underline {
+		t.UnsetUnderlineInRange(startInBytes, endInBytes)
+		return
+	}
+	t.SetUnderlineInRange(startInBytes, endInBytes, true)
+}
+
+// ApplyStrikethroughInRange sets whether a strikethrough is drawn over
+// every byte of [startInBytes, endInBytes). Strikethrough false removes
+// the strikethrough overrides in the range. An empty range is a no-op.
+func (t *Text) ApplyStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
+	if startInBytes >= endInBytes {
+		return
+	}
+	if !strikethrough {
+		t.UnsetStrikethroughInRange(startInBytes, endInBytes)
+		return
+	}
+	t.SetStrikethroughInRange(startInBytes, endInBytes, true)
 }
 
 // metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for

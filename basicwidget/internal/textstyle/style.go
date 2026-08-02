@@ -102,6 +102,18 @@ func (s Style) Features() []font.Feature {
 	return s.features
 }
 
+// Variation returns the override value of the OpenType variation axis tag
+// and whether it is set.
+func (s Style) Variation(tag text.Tag) (float32, bool) {
+	i, ok := slices.BinarySearchFunc(s.variations, tag, func(v font.Variation, tag text.Tag) int {
+		return cmp.Compare(v.Tag, tag)
+	})
+	if !ok {
+		return 0, false
+	}
+	return s.variations[i].Value, true
+}
+
 // Variations returns the OpenType variation axis overrides, sorted by tag.
 func (s Style) Variations() []font.Variation {
 	return s.variations

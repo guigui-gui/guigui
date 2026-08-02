@@ -15,8 +15,8 @@ import (
 
 // TextStyles is a set of ranged style overrides for a [Text] value. The
 // zero value is an empty set ready for use. A set built with the Set*
-// methods is applied to a widget with [Text.SetStyles]; [Text.Styles]
-// reads a widget's current overrides back.
+// methods is applied to a widget with [TextStyleEditor.SetStyles];
+// [TextStyleEditor.ReadStyles] reads a widget's current overrides back.
 type TextStyles struct {
 	runs textstyle.Runs
 }
@@ -161,18 +161,4 @@ func (s *TextStyles) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
 // [startInBytes, endInBytes).
 func (s *TextStyles) ResetStylesInRange(startInBytes, endInBytes int) {
 	s.runs.Reset(startInBytes, endInBytes)
-}
-
-// Styles returns the ranged style overrides set with the *InRange methods,
-// reflecting the adjustments made for edits since the overrides were set.
-// Base styles are not included.
-func (t *Text) Styles() TextStyles {
-	var styles TextStyles
-	t.core.CopyStyleRunsTo(&styles.runs)
-	return styles
-}
-
-// SetStyles replaces the ranged style overrides with styles.
-func (t *Text) SetStyles(styles TextStyles) {
-	t.core.CopyStyleRunsFrom(&styles.runs)
 }
