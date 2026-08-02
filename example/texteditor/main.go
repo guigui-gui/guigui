@@ -415,6 +415,11 @@ func (r *Root) actionSaveAs() {
 }
 
 func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	// Tab is not delivered as an input character, so insert it explicitly.
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		r.editor.ReplaceValueAtSelection("\t")
+		return guigui.HandleInputByWidget(&r.editor)
+	}
 	if !texteditor.CmdPressed() {
 		return guigui.HandleInputResult{}
 	}
