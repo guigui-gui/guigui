@@ -2072,10 +2072,10 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			}
 
 			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() {
-				if ebiten.IsKeyPressed(ebiten.KeyShift) {
+				if isModifierPressed(ebiten.KeyShift) {
 					l.extendItemSelectionByIndex(index, false)
-				} else if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
-					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+				} else if !isDarwin() && isModifierPressed(ebiten.KeyControl) ||
+					isDarwin() && isModifierPressed(ebiten.KeyMeta) {
 					l.toggleItemSelectionByIndex(index, false)
 				} else if !l.abstractList.IsSelectedItemIndex(index) {
 					l.selectItemByIndex(index, false)
@@ -2099,11 +2099,11 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			return guigui.HandleInputResult{}
 
 		case ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft):
-			if ebiten.IsKeyPressed(ebiten.KeyShift) {
+			if isModifierPressed(ebiten.KeyShift) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
-			if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
-				isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+			if !isDarwin() && isModifierPressed(ebiten.KeyControl) ||
+				isDarwin() && isModifierPressed(ebiten.KeyMeta) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 			if l.startPressingIndexPlus1 == 0 {
@@ -2147,9 +2147,9 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		case inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft):
 			// For the multi selection, the index is updated when the user releases the mouse button.
 			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 {
-				if !ebiten.IsKeyPressed(ebiten.KeyShift) &&
-					!(!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) &&
-					!(isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta)) {
+				if !isModifierPressed(ebiten.KeyShift) &&
+					!(!isDarwin() && isModifierPressed(ebiten.KeyControl)) &&
+					!(isDarwin() && isModifierPressed(ebiten.KeyMeta)) {
 					l.selectItemByIndex(l.startPressingIndexPlus1-1, false)
 					l.pressStartPlus1 = image.Point{}
 					l.startPressingIndexPlus1 = 0

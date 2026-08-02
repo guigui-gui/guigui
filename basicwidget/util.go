@@ -56,6 +56,10 @@ func isKeyRepeating(key ebiten.Key) bool {
 	return textwidget.IsKeyRepeating(key)
 }
 
+func isModifierPressed(key ebiten.Key) bool {
+	return textwidget.IsModifierPressed(key)
+}
+
 func isMouseButtonRepeating(button ebiten.MouseButton) bool {
 	return textwidget.IsMouseButtonRepeating(button)
 }
