@@ -31,9 +31,9 @@ var (
 )
 
 var (
-	white = iro.ColorFromOKLch(1, 0, 0, 1)
-	black = iro.ColorFromOKLch(0.2, 0, 0, 1)
-	gray  = iro.ColorFromOKLch(0.6, 0, 0, 1)
+	white = iro.ColorFromOklch(1, 0, 0, 1)
+	black = iro.ColorFromOklch(0.2, 0, 0, 1)
+	gray  = iro.ColorFromOklch(0.6, 0, 0, 1)
 )
 
 type SemanticColor int
@@ -80,9 +80,9 @@ func Color2(colorMode ebiten.ColorMode, semanticColor SemanticColor, lightnessIn
 }
 
 func getColor(base iro.Color, lightness float64, black, white iro.Color) color.Color {
-	c0l, _, _, _ := black.OKLch()
-	c1l, _, _, _ := white.OKLch()
-	l, _, _, _ := base.OKLch()
+	c0l, _, _, _ := black.Oklch()
+	c1l, _, _, _ := white.Oklch()
+	l, _, _, _ := base.Oklch()
 	l = max(min(l, c1l), c0l)
 	l2 := c0l*(1-lightness) + c1l*lightness
 	if l2 < l {
@@ -104,10 +104,10 @@ func mixColors(clr0, clr1 iro.Color, rate float64) color.Color {
 	if rate == 1 {
 		return clr1.SRGBColor()
 	}
-	l0, a0, b0, alpha0 := clr0.OKLab()
-	l1, a1, b1, alpha1 := clr1.OKLab()
+	l0, a0, b0, alpha0 := clr0.Oklab()
+	l1, a1, b1, alpha1 := clr1.Oklab()
 
-	return iro.ColorFromOKLab(
+	return iro.ColorFromOklab(
 		l0*(1-rate)+l1*rate,
 		a0*(1-rate)+a1*rate,
 		b0*(1-rate)+b1*rate,
