@@ -107,8 +107,8 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		r.findDialog.UpdateCount(&r.editor)
 	})
 	r.findDialog.OnClose(func(context *guigui.Context) {
-		// Hand focus back to the editor so Cmd+F (and other editor hotkeys)
-		// continue to work after the popup closes.
+		// Hand focus back to the editor so Cmd/Ctrl+F (and other editor
+		// hotkeys) continue to work after the popup closes.
 		context.SetFocused(&r.editor, true)
 	})
 
@@ -431,8 +431,8 @@ func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.Widge
 	case inpututil.IsKeyJustPressed(ebiten.KeyS):
 		r.actionSave()
 	case inpututil.IsKeyJustPressed(ebiten.KeyF):
-		// Toggle: Cmd+F can fire on the editor side even when the popup is
-		// already shown (the popup doesn't auto-grab focus on Open).
+		// Toggle: Cmd/Ctrl+F can fire on the editor side even when the popup
+		// is already shown (the popup doesn't auto-grab focus on Open).
 		r.findDialog.SetOpen(!r.findDialog.IsOpen())
 	default:
 		return guigui.HandleInputResult{}
