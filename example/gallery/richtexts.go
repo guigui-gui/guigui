@@ -71,7 +71,8 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		// model, so the model is reset afterwards and then reinstalled.
 		r.sampleText.ForceSetValue(richTextsSampleText)
 		model.RichTexts().ResetSampleText()
-		r.sampleText.StyleEditor().SetStyles(model.RichTexts().SampleTextStyles())
+		styles := model.RichTexts().SampleTextStyles()
+		r.sampleText.SetOverrideStyles(&styles)
 		r.sampleText.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	})
 
@@ -120,12 +121,13 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	// hotspots before the model's are installed — and each change writes
 	// the widget's followed state back to the model.
 	t.SetValue(model.RichTexts().SampleText())
-	t.StyleEditor().SetStyles(model.RichTexts().SampleTextStyles())
+	styles := model.RichTexts().SampleTextStyles()
+	t.SetOverrideStyles(&styles)
 	t.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	t.OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		model.RichTexts().SetSampleText(text)
 		var styles basicwidget.TextStyles
-		r.sampleText.StyleEditor().ReadStyles(&styles)
+		r.sampleText.ReadOverrideStyles(&styles)
 		model.RichTexts().SetSampleTextStyles(styles)
 		model.RichTexts().SetSampleTextHotspots(r.sampleText.AppendHotspotRanges(nil))
 	})

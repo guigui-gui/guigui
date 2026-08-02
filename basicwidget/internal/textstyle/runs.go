@@ -277,6 +277,59 @@ func (r *Runs) ApplyAt(src *Runs, offset int) {
 	}
 }
 
+// ReplaceRange replaces the overrides in [start, end) with src's overrides
+// in [0, end-start), shifted so that 0 maps to start. src overrides outside
+// [0, end-start) are ignored. src must not be r.
+func (r *Runs) ReplaceRange(src *Runs, start, end int) {
+	start = max(start, 0)
+	if start >= end {
+		return
+	}
+	r.Reset(start, end)
+	for _, run := range src.runs {
+		s := max(run.Start, 0)
+		e := min(run.End, end-start)
+		if e <= s {
+			continue
+		}
+		r.apply(s+start, e+start, run.Style)
+	}
+}
+
+// CopyMergedFrom replaces the run list with runs covering every byte of
+// [0, end-start), each holding base merged with src's override of the
+// corresponding byte of [start, end). Bytes whose merged style overrides
+// nothing are left uncovered. An empty range clears the run list.
+func (r *Runs) CopyMergedFrom(src *Runs, base Style, start, end int) {
+	start = max(start, 0)
+
+	r.buf = r.buf[:0]
+	defer func() {
+		r.buf = slices.Delete(r.buf, 0, len(r.buf))
+	}()
+	// pos is the start of the part of [start, end) not yet appended.
+	pos := start
+	for _, run := range src.runs {
+		if run.End <= start {
+			continue
+		}
+		if run.Start >= end {
+			break
+		}
+		if run.Start > pos {
+			r.buf = appendRun(r.buf, Run{Start: pos - start, End: run.Start - start, Style: base})
+		}
+		overlapStart := max(run.Start, start)
+		overlapEnd := min(run.End, end)
+		r.buf = appendRun(r.buf, Run{Start: overlapStart - start, End: overlapEnd - start, Style: base.Merge(run.Style)})
+		pos = overlapEnd
+	}
+	if pos < end {
+		r.buf = appendRun(r.buf, Run{Start: pos - start, End: end - start, Style: base})
+	}
+	r.setRuns()
+}
+
 // IsEmpty reports whether the run list holds no overrides.
 func (r *Runs) IsEmpty() bool {
 	return len(r.runs) == 0

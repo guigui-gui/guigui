@@ -18,6 +18,7 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
@@ -497,10 +498,104 @@ func (t *Text) SetOpacity(opacity float64) {
 	t.transparent = 1 - opacity
 }
 
-// StyleEditor returns a [TextStyleEditor] reading and writing the ranged
-// style overrides of the text value.
-func (t *Text) StyleEditor() TextStyleEditor {
-	return TextStyleEditor{text: t}
+// ReadBaseStyle replaces style with the base style: the style properties
+// applied to the whole value, underneath the ranged style overrides. A
+// property is unset when the theme default applies.
+func (t *Text) ReadBaseStyle(style *TextStyle) {
+	var s textstyle.Style
+	t.core.ReadBaseStyle(&s)
+	s = s.WithoutFamily().WithoutColor().WithoutLang()
+	if t.fontFamily != nil {
+		s = s.WithFamily(t.fontFamily.f)
+	}
+	if t.color != nil {
+		s = s.WithColor(t.color)
+	}
+	style.s = s
+}
+
+// SetBaseStyle replaces the base style with style. Unset properties restore
+// the theme defaults. The base style holds the font family, the italic face
+// selection, OpenType variations and features (including the weight), and
+// the text color; other properties are ignored. The language derives from
+// the locales set with [Text.SetLocales].
+func (t *Text) SetBaseStyle(style *TextStyle) {
+	family, _ := style.FontFamily()
+	t.fontFamily = family
+	clr, _ := style.s.Color()
+	t.color = clr
+	italic, _ := style.s.Italic()
+	t.core.SetItalic(italic)
+
+	var cur textstyle.Style
+	t.core.ReadBaseStyle(&cur)
+	for _, v := range cur.Variations() {
+		if _, ok := style.s.Variation(v.Tag); !ok {
+			t.core.UnsetVariation(v.Tag)
+		}
+	}
+	for _, v := range style.s.Variations() {
+		t.core.SetVariation(v.Tag, v.Value)
+	}
+	for _, f := range cur.Features() {
+		if _, ok := style.s.Feature(f.Tag); !ok {
+			t.core.UnsetFeature(f.Tag)
+		}
+	}
+	for _, f := range style.s.Features() {
+		t.core.SetFeature(f.Tag, f.Value)
+	}
+}
+
+// ReadOverrideStyles replaces styles with a copy of the ranged style
+// overrides, reflecting the adjustments made for edits since the overrides
+// were set.
+func (t *Text) ReadOverrideStyles(styles *TextStyles) {
+	t.core.ReadStyleRuns(&styles.runs)
+}
+
+// SetOverrideStyles replaces the ranged style overrides with styles.
+func (t *Text) SetOverrideStyles(styles *TextStyles) {
+	t.core.CopyStyleRunsFrom(&styles.runs)
+}
+
+// ReadOverrideStylesInRange replaces styles with a copy of the ranged style
+// overrides in [startInBytes, endInBytes), rebased so that startInBytes maps
+// to 0.
+func (t *Text) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.core.ReadStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+}
+
+// SetOverrideStylesInRange replaces the ranged style overrides in
+// [startInBytes, endInBytes) with styles' overrides in
+// [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
+// styles' overrides outside [0, endInBytes-startInBytes) are ignored.
+func (t *Text) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.core.ReplaceStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+}
+
+// ReadEffectiveStyles replaces styles with the effective styles of the whole
+// value. The effective style of a byte is the base style and the rendering
+// defaults with the byte's ranged overrides merged on top, so every property
+// is set.
+func (t *Text) ReadEffectiveStyles(styles *TextStyles) {
+	t.core.ReadEffectiveStyleRuns(&styles.runs)
+}
+
+// ReadEffectiveStylesInRange replaces styles with the effective styles of
+// [startInBytes, endInBytes), rebased so that startInBytes maps to 0. The
+// effective style of a byte is the base style and the rendering defaults
+// with the byte's ranged overrides merged on top, so every property is set.
+func (t *Text) ReadEffectiveStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.core.ReadEffectiveStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+}
+
+// ReadEffectiveStyleAt replaces style with the effective style that text
+// typed at textIndexInBytes adopts: the base style and the rendering
+// defaults with the overrides adopted from the byte right before the index
+// merged on top, so every property is set.
+func (t *Text) ReadEffectiveStyleAt(style *TextStyle, textIndexInBytes int) {
+	style.s = t.core.EffectiveStyleAt(textIndexInBytes)
 }
 
 // AppendBoundsOfTextRange appends the bounding rectangles covering the text

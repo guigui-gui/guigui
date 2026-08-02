@@ -754,3 +754,92 @@ func TestRunsIsEmpty(t *testing.T) {
 		t.Errorf("IsEmpty() = false, want true")
 	}
 }
+
+func TestRunsReplaceRange(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var r textstyle.Runs
+	r.SetColor(0, 10, red)
+	r.SetUnderline(2, 4, true)
+
+	var src textstyle.Runs
+	src.SetColor(0, 3, blue)
+
+	// [2, 6) is replaced: the underline override is dropped, blue covers
+	// [2, 5), and red keeps covering the outside of the range.
+	r.ReplaceRange(&src, 2, 6)
+
+	if got, want := styleAtColor(&r, 1), color.Color(red); got != want {
+		t.Errorf("color at 1 = %v; want %v", got, want)
+	}
+	for i := 2; i < 5; i++ {
+		if got, want := styleAtColor(&r, i), color.Color(blue); got != want {
+			t.Errorf("color at %d = %v; want %v", i, got, want)
+		}
+	}
+	if got := r.StyleAt(5); !got.IsZero() {
+		t.Errorf("style at 5 = %+v; want zero", got)
+	}
+	if got, want := styleAtColor(&r, 6), color.Color(red); got != want {
+		t.Errorf("color at 6 = %v; want %v", got, want)
+	}
+	if underline, _ := r.StyleAt(2).Underline(); underline {
+		t.Errorf("underline at 2 survived the replacement")
+	}
+
+	// Src overrides beyond the range length are ignored.
+	var r2 textstyle.Runs
+	var src2 textstyle.Runs
+	src2.SetColor(0, 10, blue)
+	r2.ReplaceRange(&src2, 0, 3)
+	if got := r2.StyleAt(3); !got.IsZero() {
+		t.Errorf("style at 3 = %+v; want zero", got)
+	}
+}
+
+func TestRunsCopyMergedFrom(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	base := textstyle.Style{}.WithColor(red).WithItalic(false)
+
+	var src textstyle.Runs
+	src.SetColor(3, 5, blue)
+	src.SetItalic(4, 6, true)
+
+	var dst textstyle.Runs
+	dst.CopyMergedFrom(&src, base, 2, 8)
+
+	// [2, 3) has no override: base only, rebased to 0.
+	s := dst.StyleAt(0)
+	if clr, _ := s.Color(); clr != color.Color(red) {
+		t.Errorf("color at 0 = %v; want %v", clr, red)
+	}
+	// [3, 5) has the blue override; [4, 6) is also italic.
+	if clr, _ := dst.StyleAt(1).Color(); clr != color.Color(blue) {
+		t.Errorf("color at 1 = %v; want %v", clr, blue)
+	}
+	if italic, _ := dst.StyleAt(1).Italic(); italic {
+		t.Errorf("italic at 1 = true; want false")
+	}
+	if italic, _ := dst.StyleAt(2).Italic(); !italic {
+		t.Errorf("italic at 2 = false; want true")
+	}
+	// [5, 6): italic override only, base color shows through the merge.
+	if clr, _ := dst.StyleAt(3).Color(); clr != color.Color(red) {
+		t.Errorf("color at 3 = %v; want %v", clr, red)
+	}
+	// [6, 8): base only.
+	if clr, _ := dst.StyleAt(5).Color(); clr != color.Color(red) {
+		t.Errorf("color at 5 = %v; want %v", clr, red)
+	}
+	if got := dst.StyleAt(6); !got.IsZero() {
+		t.Errorf("style at 6 = %+v; want zero (past the range)", got)
+	}
+}
+
+func styleAtColor(r *textstyle.Runs, i int) color.Color {
+	clr, _ := r.StyleAt(i).Color()
+	return clr
+}

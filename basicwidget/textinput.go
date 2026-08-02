@@ -247,10 +247,70 @@ func (t *TextInput) SetRichTextEditable(richTextEditable bool) {
 	t.textInput.SetRichTextEditable(richTextEditable)
 }
 
-// StyleEditor returns a [TextStyleEditor] reading and writing the ranged
-// style overrides of the text input's value.
-func (t *TextInput) StyleEditor() TextStyleEditor {
-	return t.textInput.StyleEditor()
+// ReadBaseStyle replaces style with the base style: the style properties
+// applied to the whole value, underneath the ranged style overrides. A
+// property is unset when the theme default applies.
+func (t *TextInput) ReadBaseStyle(style *TextStyle) {
+	t.textInput.text.Text().ReadBaseStyle(style)
+}
+
+// SetBaseStyle replaces the base style with style. Unset properties restore
+// the theme defaults. The base style holds the font family, the italic face
+// selection, OpenType variations and features (including the weight), and
+// the text color; other properties are ignored.
+func (t *TextInput) SetBaseStyle(style *TextStyle) {
+	t.textInput.text.Text().SetBaseStyle(style)
+}
+
+// ReadOverrideStyles replaces styles with a copy of the ranged style
+// overrides, reflecting the adjustments made for edits since the overrides
+// were set.
+func (t *TextInput) ReadOverrideStyles(styles *TextStyles) {
+	t.textInput.text.Text().ReadOverrideStyles(styles)
+}
+
+// SetOverrideStyles replaces the ranged style overrides with styles.
+func (t *TextInput) SetOverrideStyles(styles *TextStyles) {
+	t.textInput.text.Text().SetOverrideStyles(styles)
+}
+
+// ReadOverrideStylesInRange replaces styles with a copy of the ranged style
+// overrides in [startInBytes, endInBytes), rebased so that startInBytes maps
+// to 0.
+func (t *TextInput) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.textInput.text.Text().ReadOverrideStylesInRange(styles, startInBytes, endInBytes)
+}
+
+// SetOverrideStylesInRange replaces the ranged style overrides in
+// [startInBytes, endInBytes) with styles' overrides in
+// [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
+// styles' overrides outside [0, endInBytes-startInBytes) are ignored.
+func (t *TextInput) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.textInput.text.Text().SetOverrideStylesInRange(styles, startInBytes, endInBytes)
+}
+
+// ReadEffectiveStyles replaces styles with the effective styles of the whole
+// value. The effective style of a byte is the base style and the rendering
+// defaults with the byte's ranged overrides merged on top, so every property
+// is set.
+func (t *TextInput) ReadEffectiveStyles(styles *TextStyles) {
+	t.textInput.text.Text().ReadEffectiveStyles(styles)
+}
+
+// ReadEffectiveStylesInRange replaces styles with the effective styles of
+// [startInBytes, endInBytes), rebased so that startInBytes maps to 0. The
+// effective style of a byte is the base style and the rendering defaults
+// with the byte's ranged overrides merged on top, so every property is set.
+func (t *TextInput) ReadEffectiveStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
+	t.textInput.text.Text().ReadEffectiveStylesInRange(styles, startInBytes, endInBytes)
+}
+
+// ReadEffectiveStyleAt replaces style with the effective style that text
+// typed at textIndexInBytes adopts: the base style and the rendering
+// defaults with the overrides adopted from the byte right before the index
+// merged on top, so every property is set.
+func (t *TextInput) ReadEffectiveStyleAt(style *TextStyle, textIndexInBytes int) {
+	t.textInput.text.Text().ReadEffectiveStyleAt(style, textIndexInBytes)
 }
 
 // IsError reports whether the text input is in the error state.
@@ -578,10 +638,6 @@ func (t *textInput) SetEditable(editable bool) {
 
 func (t *textInput) SetRichTextEditable(richTextEditable bool) {
 	t.text.Text().SetRichTextEditable(richTextEditable)
-}
-
-func (t *textInput) StyleEditor() TextStyleEditor {
-	return t.text.Text().StyleEditor()
 }
 
 func (t *textInput) setSelection(start, end int) {

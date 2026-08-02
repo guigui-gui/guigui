@@ -157,60 +157,6 @@ func (t *Text) ensureStyleRuns() *textstyle.Runs {
 	return &t.styleRuns
 }
 
-// SetColorInRange overrides the text color in [startInBytes, endInBytes).
-// The override follows the text through edits.
-func (t *Text) SetColorInRange(startInBytes, endInBytes int, clr color.Color) {
-	t.ensureStyleRuns().SetColor(startInBytes, endInBytes, clr)
-}
-
-// UnsetColorInRange removes the text color override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetColorInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetColor(startInBytes, endInBytes)
-}
-
-// SetBackgroundColorInRange overrides the background color in
-// [startInBytes, endInBytes). The override follows the text through edits.
-func (t *Text) SetBackgroundColorInRange(startInBytes, endInBytes int, clr color.Color) {
-	t.ensureStyleRuns().SetBackgroundColor(startInBytes, endInBytes, clr)
-}
-
-// UnsetBackgroundColorInRange removes the background color override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetBackgroundColorInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetBackgroundColor(startInBytes, endInBytes)
-}
-
-// SetUnderlineInRange overrides whether an underline is drawn in
-// [startInBytes, endInBytes). The override follows the text through edits.
-func (t *Text) SetUnderlineInRange(startInBytes, endInBytes int, underline bool) {
-	t.ensureStyleRuns().SetUnderline(startInBytes, endInBytes, underline)
-}
-
-// UnsetUnderlineInRange removes the underline override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetUnderlineInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetUnderline(startInBytes, endInBytes)
-}
-
-// SetStrikethroughInRange overrides whether a strikethrough is drawn in
-// [startInBytes, endInBytes). The override follows the text through edits.
-func (t *Text) SetStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
-	t.ensureStyleRuns().SetStrikethrough(startInBytes, endInBytes, strikethrough)
-}
-
-// UnsetStrikethroughInRange removes the strikethrough override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetStrikethrough(startInBytes, endInBytes)
-}
-
-// ResetStylesInRange removes all style overrides in
-// [startInBytes, endInBytes).
-func (t *Text) ResetStylesInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().Reset(startInBytes, endInBytes)
-}
-
 // ReadStyleRuns replaces dst's runs with a copy of the ranged style
 // overrides, reflecting the adjustments made for edits since the overrides
 // were set.
@@ -225,104 +171,64 @@ func (t *Text) CopyStyleRunsFrom(runs *textstyle.Runs) {
 	t.styleRunsValidGeneration = t.store.Generation()
 }
 
-// SetVariationInRange overrides the OpenType variation axis tag in
-// [startInBytes, endInBytes) with value. The override lasts until the value
-// changes.
-func (t *Text) SetVariationInRange(startInBytes, endInBytes int, tag text.Tag, value float32) {
-	t.ensureStyleRuns().SetVariation(startInBytes, endInBytes, tag, value)
+// ReadBaseStyle writes the base style's overridable properties to dst.
+func (t *Text) ReadBaseStyle(dst *textstyle.Style) {
+	*dst = t.baseStyle.style
 }
 
-// UnsetVariationInRange removes the override of the OpenType variation axis
-// tag in [startInBytes, endInBytes).
-func (t *Text) UnsetVariationInRange(startInBytes, endInBytes int, tag text.Tag) {
-	t.ensureStyleRuns().UnsetVariation(startInBytes, endInBytes, tag)
+// ReadStyleRunsInRange replaces dst's runs with a copy of the ranged style
+// overrides in [startInBytes, endInBytes), rebased so that startInBytes maps
+// to 0.
+func (t *Text) ReadStyleRunsInRange(dst *textstyle.Runs, startInBytes, endInBytes int) {
+	dst.CopyRangeFrom(t.ensureStyleRuns(), startInBytes, endInBytes)
 }
 
-// SetFeatureInRange overrides the OpenType feature tag in
-// [startInBytes, endInBytes) with value. The override lasts until the value
-// changes.
-func (t *Text) SetFeatureInRange(startInBytes, endInBytes int, tag text.Tag, value uint32) {
-	t.ensureStyleRuns().SetFeature(startInBytes, endInBytes, tag, value)
+// ReplaceStyleRunsInRange replaces the ranged style overrides in
+// [startInBytes, endInBytes) with runs' overrides in
+// [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
+func (t *Text) ReplaceStyleRunsInRange(runs *textstyle.Runs, startInBytes, endInBytes int) {
+	t.ensureStyleRuns().ReplaceRange(runs, startInBytes, endInBytes)
 }
 
-// UnsetFeatureInRange removes the override of the OpenType feature tag in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetFeatureInRange(startInBytes, endInBytes int, tag text.Tag) {
-	t.ensureStyleRuns().UnsetFeature(startInBytes, endInBytes, tag)
+// styleDefaults holds the rendering defaults that unset style properties
+// resolve to.
+var styleDefaults = textstyle.Style{}.
+	WithFamily(nil).
+	WithItalic(false).
+	WithScale(1).
+	WithColor(nil).
+	WithBackgroundColor(nil).
+	WithUnderline(false).
+	WithStrikethrough(false).
+	WithLang(language.Tag{}).
+	WithVariation(font.TagWght, float32(text.WeightMedium))
+
+// resolvedBaseStyle returns the base style with the rendering defaults
+// applied to its unset properties, so every overridable property holds a
+// concrete value.
+func (t *Text) resolvedBaseStyle() textstyle.Style {
+	return styleDefaults.Merge(t.baseStyle.style)
 }
 
-// SetFontFamilyInRange overrides the font family in
-// [startInBytes, endInBytes). The override follows the text through edits. A
-// nil family resolves faces with the registered face source stack alone.
-func (t *Text) SetFontFamilyInRange(startInBytes, endInBytes int, family *font.Family) {
-	t.ensureStyleRuns().SetFamily(startInBytes, endInBytes, family)
+// ReadEffectiveStyleRuns replaces dst's runs with the effective styles of
+// the whole value: the resolved base style with the ranged overrides merged
+// on top.
+func (t *Text) ReadEffectiveStyleRuns(dst *textstyle.Runs) {
+	t.ReadEffectiveStyleRunsInRange(dst, 0, t.store.TextLengthInBytes())
 }
 
-// UnsetFontFamilyInRange removes the font family override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetFontFamilyInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetFamily(startInBytes, endInBytes)
+// ReadEffectiveStyleRunsInRange replaces dst's runs with the effective
+// styles of [startInBytes, endInBytes): the resolved base style with the
+// ranged overrides merged on top, rebased so that startInBytes maps to 0.
+func (t *Text) ReadEffectiveStyleRunsInRange(dst *textstyle.Runs, startInBytes, endInBytes int) {
+	dst.CopyMergedFrom(t.ensureStyleRuns(), t.resolvedBaseStyle(), startInBytes, endInBytes)
 }
 
-// SetScaleInRange overrides the font size in [startInBytes, endInBytes) as a
-// multiplier applied to the base font size. The override lasts until the
-// value changes. The line height is unaffected; the range renders on the
-// line's baseline.
-func (t *Text) SetScaleInRange(startInBytes, endInBytes int, scale float64) {
-	t.ensureStyleRuns().SetScale(startInBytes, endInBytes, scale)
-}
-
-// UnsetScaleInRange removes the font size override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetScaleInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetScale(startInBytes, endInBytes)
-}
-
-// SetLangInRange overrides the language used to select the face and its
-// features when shaping [startInBytes, endInBytes). The override lasts until
-// the value changes.
-func (t *Text) SetLangInRange(startInBytes, endInBytes int, lang language.Tag) {
-	t.ensureStyleRuns().SetLang(startInBytes, endInBytes, lang)
-}
-
-// UnsetLangInRange removes the language override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetLangInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetLang(startInBytes, endInBytes)
-}
-
-// SetItalicInRange overrides the italic face selection in
-// [startInBytes, endInBytes). The override follows the text through edits.
-func (t *Text) SetItalicInRange(startInBytes, endInBytes int, italic bool) {
-	t.ensureStyleRuns().SetItalic(startInBytes, endInBytes, italic)
-}
-
-// UnsetItalicInRange removes the italic face selection override in
-// [startInBytes, endInBytes).
-func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
-	t.ensureStyleRuns().UnsetItalic(startInBytes, endInBytes)
-}
-
-// baseWeight returns the font weight of the base style: the wght variation
-// axis value, or the default medium weight when unset.
-func (t *Text) baseWeight() float32 {
-	if v, ok := t.baseStyle.style.Variation(font.TagWght); ok {
-		return v
-	}
-	return float32(text.WeightMedium)
-}
-
-// baseItalic returns the italic face selection of the base style.
-func (t *Text) baseItalic() bool {
-	italic, _ := t.baseStyle.style.Italic()
-	return italic
-}
-
-// effectiveStyleAtCaret returns the effective style that text typed at
-// textIndexInBytes adopts: the base style with the adopted ranged overrides
-// merged on top.
-func (t *Text) effectiveStyleAtCaret(textIndexInBytes int) textstyle.Style {
-	return t.baseStyle.style.Merge(t.styleAtCaret(textIndexInBytes))
+// EffectiveStyleAt returns the effective style that text typed at
+// textIndexInBytes adopts: the resolved base style with the overrides
+// adopted from the byte right before the index merged on top.
+func (t *Text) EffectiveStyleAt(textIndexInBytes int) textstyle.Style {
+	return t.resolvedBaseStyle().Merge(t.styleAtCaret(textIndexInBytes))
 }
 
 // styleAtCaret returns the ranged override style that text typed at
@@ -333,149 +239,6 @@ func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
 		return textstyle.Style{}
 	}
 	return t.ensureStyleRuns().StyleAt(textIndexInBytes - 1)
-}
-
-// IsBoldInRange reports whether the effective font weight, the ranged wght
-// variation overrides applied over the base style, is the bold weight over
-// every byte of [startInBytes, endInBytes). For an empty range, it reports
-// the state that text typed at startInBytes would adopt.
-func (t *Text) IsBoldInRange(startInBytes, endInBytes int) bool {
-	if startInBytes >= endInBytes {
-		v, ok := t.effectiveStyleAtCaret(startInBytes).Variation(font.TagWght)
-		if !ok {
-			v = float32(text.WeightMedium)
-		}
-		return v == float32(text.WeightBold)
-	}
-	v, uniform := t.ensureStyleRuns().UniformVariation(startInBytes, endInBytes, font.TagWght, t.baseWeight())
-	return uniform && v == float32(text.WeightBold)
-}
-
-// IsItalicInRange reports whether the effective italic state, the ranged
-// italic overrides applied over the base style, selects an italic face over
-// every byte of [startInBytes, endInBytes). For an empty range, it reports
-// the state that text typed at startInBytes would adopt.
-func (t *Text) IsItalicInRange(startInBytes, endInBytes int) bool {
-	if startInBytes >= endInBytes {
-		italic, _ := t.effectiveStyleAtCaret(startInBytes).Italic()
-		return italic
-	}
-	italic, uniform := t.ensureStyleRuns().UniformItalic(startInBytes, endInBytes, t.baseItalic())
-	return uniform && italic
-}
-
-// IsUnderlineInRange reports whether an underline is drawn over every byte
-// of [startInBytes, endInBytes). For an empty range, it reports the state
-// that text typed at startInBytes would adopt.
-func (t *Text) IsUnderlineInRange(startInBytes, endInBytes int) bool {
-	if startInBytes >= endInBytes {
-		underline, _ := t.effectiveStyleAtCaret(startInBytes).Underline()
-		return underline
-	}
-	underline, uniform := t.ensureStyleRuns().UniformUnderline(startInBytes, endInBytes, false)
-	return uniform && underline
-}
-
-// IsStrikethroughInRange reports whether a strikethrough is drawn over
-// every byte of [startInBytes, endInBytes). For an empty range, it reports
-// the state that text typed at startInBytes would adopt.
-func (t *Text) IsStrikethroughInRange(startInBytes, endInBytes int) bool {
-	if startInBytes >= endInBytes {
-		strikethrough, _ := t.effectiveStyleAtCaret(startInBytes).Strikethrough()
-		return strikethrough
-	}
-	strikethrough, uniform := t.ensureStyleRuns().UniformStrikethrough(startInBytes, endInBytes, false)
-	return uniform && strikethrough
-}
-
-// ColorInRange returns the text color override shared by every byte of
-// [startInBytes, endInBytes) and whether the range is uniform. A nil color
-// with uniform true means no byte has a color override, so the range
-// renders in the base text color. For an empty range, it returns the
-// override that text typed at startInBytes would adopt.
-func (t *Text) ColorInRange(startInBytes, endInBytes int) (clr color.Color, uniform bool) {
-	if startInBytes >= endInBytes {
-		c, _ := t.styleAtCaret(startInBytes).Color()
-		return c, true
-	}
-	return t.ensureStyleRuns().UniformColor(startInBytes, endInBytes, nil)
-}
-
-// ScaleInRange returns the font size multiplier shared by every byte of
-// [startInBytes, endInBytes) and whether the range is uniform. A byte
-// without a scale override takes the multiplier 1. For an empty range, it
-// returns the multiplier that text typed at startInBytes would adopt.
-func (t *Text) ScaleInRange(startInBytes, endInBytes int) (scale float64, uniform bool) {
-	if startInBytes >= endInBytes {
-		if s, ok := t.styleAtCaret(startInBytes).Scale(); ok {
-			return s, true
-		}
-		return 1, true
-	}
-	return t.ensureStyleRuns().UniformScale(startInBytes, endInBytes, 1)
-}
-
-// ApplyBoldInRange makes every byte of [startInBytes, endInBytes) bold or
-// not bold by adjusting the ranged wght variation overrides over the base
-// style. Overrides that would restate the base style are removed instead
-// of set; making a range of a bold base style not bold overrides it with
-// the default weight. An empty range is a no-op.
-func (t *Text) ApplyBoldInRange(startInBytes, endInBytes int, bold bool) {
-	if startInBytes >= endInBytes {
-		return
-	}
-	if bold == (t.baseWeight() == float32(text.WeightBold)) {
-		t.UnsetVariationInRange(startInBytes, endInBytes, font.TagWght)
-		return
-	}
-	if bold {
-		t.SetVariationInRange(startInBytes, endInBytes, font.TagWght, float32(text.WeightBold))
-		return
-	}
-	t.SetVariationInRange(startInBytes, endInBytes, font.TagWght, float32(text.WeightMedium))
-}
-
-// ApplyItalicInRange makes every byte of [startInBytes, endInBytes) render
-// with an italic face or a regular face by adjusting the ranged italic
-// overrides over the base style. Overrides that would restate the base
-// style are removed instead of set. An empty range is a no-op.
-func (t *Text) ApplyItalicInRange(startInBytes, endInBytes int, italic bool) {
-	if startInBytes >= endInBytes {
-		return
-	}
-	if italic == t.baseItalic() {
-		t.UnsetItalicInRange(startInBytes, endInBytes)
-		return
-	}
-	t.SetItalicInRange(startInBytes, endInBytes, italic)
-}
-
-// ApplyUnderlineInRange sets whether an underline is drawn over every byte
-// of [startInBytes, endInBytes). Underline false removes the underline
-// overrides in the range. An empty range is a no-op.
-func (t *Text) ApplyUnderlineInRange(startInBytes, endInBytes int, underline bool) {
-	if startInBytes >= endInBytes {
-		return
-	}
-	if !underline {
-		t.UnsetUnderlineInRange(startInBytes, endInBytes)
-		return
-	}
-	t.SetUnderlineInRange(startInBytes, endInBytes, true)
-}
-
-// ApplyStrikethroughInRange sets whether a strikethrough is drawn over
-// every byte of [startInBytes, endInBytes). Strikethrough false removes
-// the strikethrough overrides in the range. An empty range is a no-op.
-func (t *Text) ApplyStrikethroughInRange(startInBytes, endInBytes int, strikethrough bool) {
-	if startInBytes >= endInBytes {
-		return
-	}
-	if !strikethrough {
-		t.UnsetStrikethroughInRange(startInBytes, endInBytes)
-		return
-	}
-	t.SetStrikethroughInRange(startInBytes, endInBytes, true)
 }
 
 // metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for

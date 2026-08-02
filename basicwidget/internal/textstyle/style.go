@@ -97,6 +97,18 @@ func (s Style) Lang() (language.Tag, bool) {
 	return s.lang.Value()
 }
 
+// Feature returns the override value of the OpenType feature tag and
+// whether it is set.
+func (s Style) Feature(tag text.Tag) (uint32, bool) {
+	i, ok := slices.BinarySearchFunc(s.features, tag, func(f font.Feature, tag text.Tag) int {
+		return cmp.Compare(f.Tag, tag)
+	})
+	if !ok {
+		return 0, false
+	}
+	return s.features[i].Value, true
+}
+
 // Features returns the OpenType feature overrides, sorted by tag.
 func (s Style) Features() []font.Feature {
 	return s.features
@@ -153,9 +165,33 @@ func (s Style) WithFamily(family *font.Family) Style {
 	return s
 }
 
+// WithoutFamily returns s with the font family unset.
+func (s Style) WithoutFamily() Style {
+	s.family = optional[*font.Family]{}
+	return s
+}
+
 // WithItalic returns s with the italic face selection set to italic.
 func (s Style) WithItalic(italic bool) Style {
 	s.italic = opt(italic)
+	return s
+}
+
+// WithoutItalic returns s with the italic face selection unset.
+func (s Style) WithoutItalic() Style {
+	s.italic = optional[bool]{}
+	return s
+}
+
+// WithScale returns s with the base font size multiplier set to scale.
+func (s Style) WithScale(scale float64) Style {
+	s.scale = opt(scale)
+	return s
+}
+
+// WithoutScale returns s with the base font size multiplier unset.
+func (s Style) WithoutScale() Style {
+	s.scale = optional[float64]{}
 	return s
 }
 
@@ -165,9 +201,58 @@ func (s Style) WithColor(clr color.Color) Style {
 	return s
 }
 
+// WithoutColor returns s with the text color unset.
+func (s Style) WithoutColor() Style {
+	s.color = optional[color.Color]{}
+	return s
+}
+
+// WithBackgroundColor returns s with the background color set to clr.
+func (s Style) WithBackgroundColor(clr color.Color) Style {
+	s.backgroundColor = opt(clr)
+	return s
+}
+
+// WithoutBackgroundColor returns s with the background color unset.
+func (s Style) WithoutBackgroundColor() Style {
+	s.backgroundColor = optional[color.Color]{}
+	return s
+}
+
+// WithUnderline returns s with the underline state set to underline.
+func (s Style) WithUnderline(underline bool) Style {
+	s.underline = opt(underline)
+	return s
+}
+
+// WithoutUnderline returns s with the underline state unset.
+func (s Style) WithoutUnderline() Style {
+	s.underline = optional[bool]{}
+	return s
+}
+
+// WithStrikethrough returns s with the strikethrough state set to
+// strikethrough.
+func (s Style) WithStrikethrough(strikethrough bool) Style {
+	s.strikethrough = opt(strikethrough)
+	return s
+}
+
+// WithoutStrikethrough returns s with the strikethrough state unset.
+func (s Style) WithoutStrikethrough() Style {
+	s.strikethrough = optional[bool]{}
+	return s
+}
+
 // WithLang returns s with the language set to lang.
 func (s Style) WithLang(lang language.Tag) Style {
 	s.lang = opt(lang)
+	return s
+}
+
+// WithoutLang returns s with the language unset.
+func (s Style) WithoutLang() Style {
+	s.lang = optional[language.Tag]{}
 	return s
 }
 

@@ -15,8 +15,9 @@ import (
 
 // TextStyles is a set of ranged style overrides for a [Text] value. The
 // zero value is an empty set ready for use. A set built with the Set*
-// methods is applied to a widget with [TextStyleEditor.SetStyles];
-// [TextStyleEditor.ReadStyles] reads a widget's current overrides back.
+// methods is applied to a widget with [Text.SetOverrideStyles] or
+// [Text.SetOverrideStylesInRange]; [Text.ReadOverrideStyles] and
+// [Text.ReadOverrideStylesInRange] read a widget's current overrides back.
 type TextStyles struct {
 	runs textstyle.Runs
 }
