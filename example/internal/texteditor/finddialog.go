@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Guigui Authors
 
-package main
+package texteditor
 
 import (
 	"fmt"
@@ -22,7 +22,10 @@ var (
 	findDialogEventClose        = guigui.GenerateEventKey()
 )
 
-type findDialog struct {
+// FindDialog is the non-modal find popup docked to the top-end corner, with
+// a query input, a match-count display, previous/next buttons, and a close
+// button.
+type FindDialog struct {
 	guigui.DefaultWidget
 
 	popup   basicwidget.Popup
@@ -31,42 +34,45 @@ type findDialog struct {
 
 // OnFindNext registers the handler for the down-arrow button (and Enter on
 // the query input). The handler receives the current query string.
-func (f *findDialog) OnFindNext(fn func(context *guigui.Context, query string)) {
+func (f *FindDialog) OnFindNext(fn func(context *guigui.Context, query string)) {
 	guigui.SetEventHandler(f, findDialogEventFindNext, fn)
 }
 
 // OnFindPrev registers the handler for the up-arrow button (and Shift+Enter
 // on the query input).
-func (f *findDialog) OnFindPrev(fn func(context *guigui.Context, query string)) {
+func (f *FindDialog) OnFindPrev(fn func(context *guigui.Context, query string)) {
 	guigui.SetEventHandler(f, findDialogEventFindPrev, fn)
 }
 
 // OnQueryChanged registers the handler that fires whenever the query input
 // changes value, even mid-typing.
-func (f *findDialog) OnQueryChanged(fn func(context *guigui.Context, query string)) {
+func (f *FindDialog) OnQueryChanged(fn func(context *guigui.Context, query string)) {
 	guigui.SetEventHandler(f, findDialogEventQueryChanged, fn)
 }
 
 // OnClose registers the handler that fires after the popup closes.
-func (f *findDialog) OnClose(fn func(context *guigui.Context)) {
+func (f *FindDialog) OnClose(fn func(context *guigui.Context)) {
 	guigui.SetEventHandler(f, findDialogEventClose, fn)
 }
 
-func (f *findDialog) SetOpen(open bool) {
+// SetOpen shows or hides the dialog.
+func (f *FindDialog) SetOpen(open bool) {
 	f.popup.SetOpen(open)
 }
 
-func (f *findDialog) IsOpen() bool {
+// IsOpen reports whether the dialog is currently shown.
+func (f *FindDialog) IsOpen() bool {
 	return f.popup.IsOpen()
 }
 
-func (f *findDialog) Query() string {
+// Query returns the current query string.
+func (f *FindDialog) Query() string {
 	return f.content.queryInput.Value()
 }
 
 // SetCount displays the current match index (1-based) and the total number
 // of matches. Pass total = 0 to clear the count display.
-func (f *findDialog) SetCount(current, total int) {
+func (f *FindDialog) SetCount(current, total int) {
 	if total == 0 {
 		f.content.count.SetValue("")
 		return
@@ -74,7 +80,93 @@ func (f *findDialog) SetCount(current, total int) {
 	f.content.count.SetValue(fmt.Sprintf("%d / %d", current, total))
 }
 
-func (f *findDialog) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+// FindNext selects the occurrence of query in e that follows the current
+// selection, wrapping around to the first occurrence, and updates the count
+// display.
+func (f *FindDialog) FindNext(e *Editor, query string) {
+	defer f.UpdateCount(e)
+	if query == "" {
+		return
+	}
+	_, end := e.Selection()
+	first := -1
+	next := -1
+	s := newSubstringSearcher([]byte(query), func(pos int) bool {
+		if first < 0 {
+			first = pos
+		}
+		if pos >= end {
+			next = pos
+			return false
+		}
+		return true
+	})
+	_, _ = e.WriteValueTo(s)
+	target := next
+	if target < 0 {
+		target = first
+	}
+	if target < 0 {
+		return
+	}
+	e.SetSelection(target, target+len(query))
+}
+
+// FindPrev selects the occurrence of query in e that precedes the current
+// selection, wrapping around to the last occurrence, and updates the count
+// display.
+func (f *FindDialog) FindPrev(e *Editor, query string) {
+	defer f.UpdateCount(e)
+	if query == "" {
+		return
+	}
+	start, _ := e.Selection()
+	last := -1
+	prev := -1
+	s := newSubstringSearcher([]byte(query), func(pos int) bool {
+		last = pos
+		if pos < start {
+			prev = pos
+			return true
+		}
+		// pos >= start: prev can no longer grow. If it is already set,
+		// the answer is locked in; otherwise keep scanning to find last.
+		return prev < 0
+	})
+	_, _ = e.WriteValueTo(s)
+	target := prev
+	if target < 0 {
+		target = last
+	}
+	if target < 0 {
+		return
+	}
+	e.SetSelection(target, target+len(query))
+}
+
+// UpdateCount recomputes the "n of total" display from the dialog's current
+// query and e's current selection.
+func (f *FindDialog) UpdateCount(e *Editor) {
+	query := f.Query()
+	if query == "" {
+		f.SetCount(0, 0)
+		return
+	}
+	selStart, _ := e.Selection()
+	var total int
+	var cur int
+	s := newSubstringSearcher([]byte(query), func(pos int) bool {
+		total++
+		if pos == selStart {
+			cur = total
+		}
+		return true
+	})
+	_, _ = e.WriteValueTo(s)
+	f.SetCount(cur, total)
+}
+
+func (f *FindDialog) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&f.popup)
 	f.content.dialog = f
 	f.popup.SetContent(&f.content)
@@ -87,7 +179,7 @@ func (f *findDialog) Build(context *guigui.Context, adder *guigui.ChildAdder) er
 	return nil
 }
 
-func (f *findDialog) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (f *FindDialog) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	size := f.content.Measure(context, guigui.Constraints{})
 	app := context.AppBounds()
 	u := basicwidget.UnitSize(context)
@@ -98,7 +190,7 @@ func (f *findDialog) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 type findDialogContent struct {
 	guigui.DefaultWidget
 
-	dialog *findDialog
+	dialog *FindDialog
 
 	queryInput  basicwidget.TextInput
 	count       basicwidget.Text
@@ -136,7 +228,7 @@ func (c *findDialogContent) Build(context *guigui.Context, adder *guigui.ChildAd
 		}
 		// Cmd/Ctrl+F toggles: when the popup is already open, treat the same
 		// shortcut as a close.
-		if cmdPressed() && inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		if CmdPressed() && inpututil.IsKeyJustPressed(ebiten.KeyF) {
 			c.dialog.popup.SetOpen(false)
 			return guigui.HandleInputByWidget(&c.queryInput)
 		}

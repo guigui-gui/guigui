@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Guigui Authors
 
-package main
+package texteditor
 
 import (
 	"io"
@@ -9,18 +9,18 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
-// editor wraps [basicwidget.TextInput] so that *editor satisfies
+// Editor wraps [basicwidget.TextInput] so that *Editor satisfies
 // [io.WriterTo] and [io.ReaderFrom]. The document layer can then stream
 // through stdlib interfaces without basicwidget itself having to use those
 // names.
-type editor struct {
+type Editor struct {
 	basicwidget.TextInput
 }
 
-func (e *editor) WriteTo(w io.Writer) (int64, error) {
+func (e *Editor) WriteTo(w io.Writer) (int64, error) {
 	return e.WriteValueTo(w)
 }
 
-func (e *editor) ReadFrom(r io.Reader) (int64, error) {
+func (e *Editor) ReadFrom(r io.Reader) (int64, error) {
 	return e.ReadValueFrom(r)
 }

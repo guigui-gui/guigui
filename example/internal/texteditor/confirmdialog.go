@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Guigui Authors
 
-package main
+package texteditor
 
 import (
 	"image"
@@ -13,22 +13,22 @@ import (
 
 var confirmDialogEventClose = guigui.GenerateEventKey()
 
-// confirmResult identifies how the user dismissed the dialog. The zero value
-// is [confirmResultCancel] so that an outside click or any close path that
-// doesn't go through a button reports as cancellation.
-type confirmResult int
+// ConfirmResult identifies how the user dismissed a [ConfirmDialog]. The
+// zero value is [ConfirmResultCancel] so that an outside click or any close
+// path that doesn't go through a button reports as cancellation.
+type ConfirmResult int
 
 const (
-	confirmResultCancel confirmResult = iota
-	confirmResultSave
-	confirmResultDontSave
+	ConfirmResultCancel ConfirmResult = iota
+	ConfirmResultSave
+	ConfirmResultDontSave
 )
 
-// confirmDialog is the in-app modal "you have unsaved changes" prompt with
+// ConfirmDialog is the in-app modal "you have unsaved changes" prompt with
 // the standard Save / Don't save / Cancel triad. Using Guigui widgets keeps
 // everything on the main goroutine, sidestepping the macOS dispatch-queue
 // timing issue that affects native dialogs called from a non-main goroutine.
-type confirmDialog struct {
+type ConfirmDialog struct {
 	guigui.DefaultWidget
 
 	popup   basicwidget.Popup
@@ -36,34 +36,35 @@ type confirmDialog struct {
 
 	// pendingResult is the result selected by the user, latched in the button
 	// OnDown before SetOpen(false). The popup's OnClose then dispatches it.
-	pendingResult confirmResult
+	pendingResult ConfirmResult
 }
 
 // SetMessage sets the prompt text shown above the buttons.
-func (c *confirmDialog) SetMessage(message string) {
+func (c *ConfirmDialog) SetMessage(message string) {
 	c.content.message.SetValue(message)
 }
 
 // SetOpen shows or hides the dialog. Opening also resets the pending result
 // to Cancel so a previous selection that didn't get dispatched can't leak.
-func (c *confirmDialog) SetOpen(open bool) {
+func (c *ConfirmDialog) SetOpen(open bool) {
 	if open {
-		c.pendingResult = confirmResultCancel
+		c.pendingResult = ConfirmResultCancel
 	}
 	c.popup.SetOpen(open)
 }
 
 // OnClose registers the handler that fires whenever the dialog closes,
 // reporting which button the user picked.
-func (c *confirmDialog) OnClose(fn func(context *guigui.Context, result confirmResult)) {
+func (c *ConfirmDialog) OnClose(fn func(context *guigui.Context, result ConfirmResult)) {
 	guigui.SetEventHandler(c, confirmDialogEventClose, fn)
 }
 
-func (c *confirmDialog) IsOpen() bool {
+// IsOpen reports whether the dialog is currently shown.
+func (c *ConfirmDialog) IsOpen() bool {
 	return c.popup.IsOpen()
 }
 
-func (c *confirmDialog) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (c *ConfirmDialog) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&c.popup)
 	c.content.dialog = c
 	c.popup.SetContent(&c.content)
@@ -73,13 +74,13 @@ func (c *confirmDialog) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	c.popup.SetAnimated(true)
 	c.popup.OnClose(func(context *guigui.Context, reason basicwidget.PopupCloseReason) {
 		result := c.pendingResult
-		c.pendingResult = confirmResultCancel
+		c.pendingResult = ConfirmResultCancel
 		guigui.DispatchEvent(c, confirmDialogEventClose, result)
 	})
 	return nil
 }
 
-func (c *confirmDialog) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+func (c *ConfirmDialog) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	size := c.content.Measure(context, guigui.Constraints{})
 	app := context.AppBounds()
 	pos := image.Pt(
@@ -92,7 +93,7 @@ func (c *confirmDialog) Layout(context *guigui.Context, widgetBounds *guigui.Wid
 type confirmDialogContent struct {
 	guigui.DefaultWidget
 
-	dialog *confirmDialog
+	dialog *ConfirmDialog
 
 	message       basicwidget.Text
 	saveButton    basicwidget.Button
@@ -113,19 +114,19 @@ func (c *confirmDialogContent) Build(context *guigui.Context, adder *guigui.Chil
 
 	c.saveButton.SetText("Save")
 	c.saveButton.OnDown(func(context *guigui.Context) {
-		c.dialog.pendingResult = confirmResultSave
+		c.dialog.pendingResult = ConfirmResultSave
 		c.dialog.popup.SetOpen(false)
 	})
 
 	c.discardButton.SetText("Don't save")
 	c.discardButton.OnDown(func(context *guigui.Context) {
-		c.dialog.pendingResult = confirmResultDontSave
+		c.dialog.pendingResult = ConfirmResultDontSave
 		c.dialog.popup.SetOpen(false)
 	})
 
 	c.cancelButton.SetText("Cancel")
 	c.cancelButton.OnDown(func(context *guigui.Context) {
-		// Leave pending at confirmResultCancel.
+		// Leave pending at ConfirmResultCancel.
 		c.dialog.popup.SetOpen(false)
 	})
 

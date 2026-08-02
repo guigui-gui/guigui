@@ -8,6 +8,7 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
+	"github.com/guigui-gui/guigui/example/internal/texteditor"
 )
 
 var (
@@ -136,23 +137,23 @@ func (m *editorMenubar) Build(context *guigui.Context, adder *guigui.ChildAdder)
 
 	popupItems := [][]basicwidget.PopupMenuItem[string]{
 		{
-			{Text: "New", Value: "new", KeyText: hotkey("N")},
-			{Text: "Open…", Value: "open", KeyText: hotkey("O")},
+			{Text: "New", Value: "new", KeyText: texteditor.Hotkey("N")},
+			{Text: "Open…", Value: "open", KeyText: texteditor.Hotkey("O")},
 			{Border: true},
-			{Text: "Save", Value: "save", KeyText: hotkey("S"), Disabled: !m.canSave},
+			{Text: "Save", Value: "save", KeyText: texteditor.Hotkey("S"), Disabled: !m.canSave},
 			{Text: "Save As…", Value: "saveas"},
 		},
 		{
-			{Text: "Undo", Value: "undo", KeyText: hotkey("Z"), Disabled: !m.canUndo},
-			{Text: "Redo", Value: "redo", KeyText: hotkeyShift("Z"), Disabled: !m.canRedo},
+			{Text: "Undo", Value: "undo", KeyText: texteditor.Hotkey("Z"), Disabled: !m.canUndo},
+			{Text: "Redo", Value: "redo", KeyText: texteditor.HotkeyShift("Z"), Disabled: !m.canRedo},
 			{Border: true},
 			{Text: "Cut", Value: "cut", Disabled: !m.canCut},
 			{Text: "Copy", Value: "copy", Disabled: !m.canCopy},
 			{Text: "Paste", Value: "paste", Disabled: !m.canPaste},
 			{Border: true},
-			{Text: "Find…", Value: "find", KeyText: hotkey("F")},
+			{Text: "Find…", Value: "find", KeyText: texteditor.Hotkey("F")},
 			{Border: true},
-			{Text: "Select All", Value: "selectall", KeyText: hotkey("A")},
+			{Text: "Select All", Value: "selectall", KeyText: texteditor.Hotkey("A")},
 		},
 		{
 			{Text: "No Wrap", Value: "wrap-none", Checked: m.wrapMode == basicwidget.WrapModeNone},

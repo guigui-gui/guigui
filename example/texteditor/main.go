@@ -9,10 +9,9 @@ import (
 	"fmt"
 	"image"
 	"log/slog"
-	"math"
 	"os"
-	"runtime"
 	"slices"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -20,6 +19,7 @@ import (
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 	_ "github.com/guigui-gui/guigui/basicwidget/cjkfont"
+	"github.com/guigui-gui/guigui/example/internal/texteditor"
 )
 
 type Root struct {
@@ -27,13 +27,13 @@ type Root struct {
 
 	background    basicwidget.Background
 	menubar       editorMenubar
-	editor        editor
-	statusBar     statusBar
-	findDialog    findDialog
-	confirmDialog confirmDialog
+	editor        texteditor.Editor
+	statusBar     texteditor.StatusBar
+	findDialog    texteditor.FindDialog
+	confirmDialog texteditor.ConfirmDialog
 	infoDialog    infoDialog
 
-	doc           Document
+	doc           texteditor.Document
 	initialPath   string
 	wrapMode      basicwidget.WrapMode
 	inited        bool
@@ -44,8 +44,8 @@ type Root struct {
 
 	confirmKind confirmKind
 
-	pendingOpen <-chan fileResult
-	pendingSave <-chan fileResult
+	pendingOpen <-chan texteditor.FileResult
+	pendingSave <-chan texteditor.FileResult
 
 	layoutItems []guigui.LinearLayoutItem
 
@@ -98,13 +98,13 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.editor.OnHandleButtonInput(r.handleHotkeys)
 
 	r.findDialog.OnFindNext(func(context *guigui.Context, query string) {
-		r.findNext(query)
+		r.findDialog.FindNext(&r.editor, query)
 	})
 	r.findDialog.OnFindPrev(func(context *guigui.Context, query string) {
-		r.findPrev(query)
+		r.findDialog.FindPrev(&r.editor, query)
 	})
 	r.findDialog.OnQueryChanged(func(context *guigui.Context, query string) {
-		r.updateFindCount()
+		r.findDialog.UpdateCount(&r.editor)
 	})
 	r.findDialog.OnClose(func(context *guigui.Context) {
 		// Hand focus back to the editor so Cmd+F (and other editor hotkeys)
@@ -112,13 +112,13 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		context.SetFocused(&r.editor, true)
 	})
 
-	r.confirmDialog.OnClose(func(context *guigui.Context, result confirmResult) {
+	r.confirmDialog.OnClose(func(context *guigui.Context, result texteditor.ConfirmResult) {
 		kind := r.confirmKind
 		r.confirmKind = confirmKindNone
-		if result == confirmResultCancel {
+		if result == texteditor.ConfirmResultCancel {
 			return
 		}
-		save := result == confirmResultSave
+		save := result == texteditor.ConfirmResultSave
 		switch kind {
 		case confirmKindExit:
 			r.handleConfirmExit(save)
@@ -180,18 +180,14 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	start, _ := r.editor.Selection()
 	line := r.editor.LineIndexFromTextIndexInBytes(start)
 	lineStart := r.editor.LineStartInBytes(line)
-	lineEnd := math.MaxInt
-	if line+1 < r.editor.LineCount() {
-		lineEnd = r.editor.LineStartInBytes(line + 1)
-	}
 	r.scratchBuf.Reset()
-	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, lineEnd); err != nil {
+	if _, err := r.editor.WriteValueRangeTo(&r.scratchBuf, lineStart, start); err != nil {
 		return err
 	}
-	r.statusBar.SetStatus(line, r.scratchBuf.Bytes(), start-lineStart)
+	r.statusBar.SetPosition(line+1, utf8.RuneCount(r.scratchBuf.Bytes())+1)
 
 	if r.findDialog.IsOpen() {
-		r.updateFindCount()
+		r.findDialog.UpdateCount(&r.editor)
 	}
 
 	context.SetWindowTitle(r.windowTitle())
@@ -273,13 +269,13 @@ func (r *Root) drainDialogs() error {
 		case res := <-r.pendingOpen:
 			r.pendingOpen = nil
 			switch {
-			case res.cancelled:
-			case res.err != nil:
-				err = errors.Join(err, fmt.Errorf("open: %w", res.err))
+			case res.Cancelled:
+			case res.Err != nil:
+				err = errors.Join(err, fmt.Errorf("open: %w", res.Err))
 			default:
 				// LoadInto re-clears dirty after streaming, overriding the
 				// MarkDirty triggered by OnValueChangedWithoutText during the read.
-				if e := r.doc.LoadInto(res.path, &r.editor); e != nil {
+				if e := r.doc.LoadInto(res.Path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("open: %w", e))
 				}
 			}
@@ -292,11 +288,11 @@ func (r *Root) drainDialogs() error {
 			r.pendingSave = nil
 			saved := false
 			switch {
-			case res.cancelled:
-			case res.err != nil:
-				err = errors.Join(err, fmt.Errorf("save: %w", res.err))
+			case res.Cancelled:
+			case res.Err != nil:
+				err = errors.Join(err, fmt.Errorf("save: %w", res.Err))
 			default:
-				if e := r.doc.SaveAs(res.path, &r.editor); e != nil {
+				if e := r.doc.SaveAs(res.Path, &r.editor); e != nil {
 					err = errors.Join(err, fmt.Errorf("save: %w", e))
 				} else {
 					saved = true
@@ -398,7 +394,7 @@ func (r *Root) handleConfirmExit(save bool) {
 
 func (r *Root) doOpen() {
 	if r.pendingOpen == nil {
-		r.pendingOpen = openFileAsync()
+		r.pendingOpen = texteditor.OpenFileAsync(nil)
 	}
 }
 
@@ -414,12 +410,12 @@ func (r *Root) actionSave() {
 
 func (r *Root) actionSaveAs() {
 	if r.pendingSave == nil {
-		r.pendingSave = saveFileAsync(r.doc.DisplayName())
+		r.pendingSave = texteditor.SaveFileAsync(r.doc.DisplayName())
 	}
 }
 
 func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if !cmdPressed() {
+	if !texteditor.CmdPressed() {
 		return guigui.HandleInputResult{}
 	}
 	switch {
@@ -437,176 +433,6 @@ func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.Widge
 		return guigui.HandleInputResult{}
 	}
 	return guigui.HandleInputByWidget(&r.editor)
-}
-
-func (r *Root) findNext(query string) {
-	defer r.updateFindCount()
-	if query == "" {
-		return
-	}
-	_, end := r.editor.Selection()
-	first := -1
-	next := -1
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
-		if first < 0 {
-			first = pos
-		}
-		if pos >= end {
-			next = pos
-			return false
-		}
-		return true
-	})
-	_, _ = r.editor.WriteValueTo(s)
-	target := next
-	if target < 0 {
-		target = first
-	}
-	if target < 0 {
-		return
-	}
-	r.editor.SetSelection(target, target+len(query))
-}
-
-func (r *Root) findPrev(query string) {
-	defer r.updateFindCount()
-	if query == "" {
-		return
-	}
-	start, _ := r.editor.Selection()
-	last := -1
-	prev := -1
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
-		last = pos
-		if pos < start {
-			prev = pos
-			return true
-		}
-		// pos >= start: prev can no longer grow. If it is already set,
-		// the answer is locked in; otherwise keep scanning to find last.
-		return prev < 0
-	})
-	_, _ = r.editor.WriteValueTo(s)
-	target := prev
-	if target < 0 {
-		target = last
-	}
-	if target < 0 {
-		return
-	}
-	r.editor.SetSelection(target, target+len(query))
-}
-
-// updateFindCount recomputes the "n of total" display from the dialog's
-// current query and the editor's current selection.
-func (r *Root) updateFindCount() {
-	query := r.findDialog.Query()
-	if query == "" {
-		r.findDialog.SetCount(0, 0)
-		return
-	}
-	selStart, _ := r.editor.Selection()
-	var total int
-	var cur int
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
-		total++
-		if pos == selStart {
-			cur = total
-		}
-		return true
-	})
-	_, _ = r.editor.WriteValueTo(s)
-	r.findDialog.SetCount(cur, total)
-}
-
-// substringSearcher is an [io.Writer] that reports the byte offset of every
-// non-overlapping occurrence of query in the bytes written to it via
-// onMatch. onMatch returns false to stop scanning; subsequent writes still
-// consume bytes but do not produce more matches.
-//
-// The matcher is a Knuth–Morris–Pratt state machine.
-type substringSearcher struct {
-	// query is the substring being searched for.
-	query []byte
-	// failure is the KMP failure function over query: failure[i] is the
-	// length of the longest proper prefix of query[:i+1] that is also a
-	// suffix of query[:i+1].
-	failure []int
-	// state is the length of the query prefix currently matched.
-	state int
-	// abs is the number of bytes consumed by Write so far.
-	abs int
-	// onMatch is invoked at each non-overlapping occurrence of query;
-	// returning false stops further matching.
-	onMatch func(absPos int) bool
-	// stopped is true once onMatch has returned false.
-	stopped bool
-}
-
-func newSubstringSearcher(query []byte, onMatch func(absPos int) bool) *substringSearcher {
-	f := make([]int, len(query))
-	for i := 1; i < len(query); i++ {
-		j := f[i-1]
-		for j > 0 && query[i] != query[j] {
-			j = f[j-1]
-		}
-		if query[i] == query[j] {
-			j++
-		}
-		f[i] = j
-	}
-	return &substringSearcher{
-		query:   query,
-		failure: f,
-		onMatch: onMatch,
-	}
-}
-
-func (s *substringSearcher) Write(p []byte) (int, error) {
-	if s.stopped {
-		s.abs += len(p)
-		return len(p), nil
-	}
-	for i, b := range p {
-		for s.state > 0 && b != s.query[s.state] {
-			s.state = s.failure[s.state-1]
-		}
-		if b == s.query[s.state] {
-			s.state++
-		}
-		if s.state == len(s.query) {
-			matchAbs := s.abs + i + 1 - len(s.query)
-			if !s.onMatch(matchAbs) {
-				s.stopped = true
-				s.abs += len(p)
-				return len(p), nil
-			}
-			s.state = 0
-		}
-	}
-	s.abs += len(p)
-	return len(p), nil
-}
-
-func cmdPressed() bool {
-	if runtime.GOOS == "darwin" {
-		return ebiten.IsKeyPressed(ebiten.KeyMeta)
-	}
-	return ebiten.IsKeyPressed(ebiten.KeyControl)
-}
-
-func hotkey(key string) string {
-	if runtime.GOOS == "darwin" {
-		return "⌘" + key
-	}
-	return "Ctrl+" + key
-}
-
-func hotkeyShift(key string) string {
-	if runtime.GOOS == "darwin" {
-		return "⇧⌘" + key
-	}
-	return "Ctrl+Shift+" + key
 }
 
 func main() {

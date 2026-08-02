@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2026 The Guigui Authors
 
-package main
+// Package texteditor provides widgets and helpers shared by the
+// text-editing example applications.
+package texteditor
 
 import (
 	"errors"
@@ -10,27 +12,29 @@ import (
 	"path/filepath"
 )
 
+// Document tracks the file path and the dirty state of an edited file.
 type Document struct {
 	path  string
 	dirty bool
 }
 
+// Path returns the file path, or an empty string for an untitled document.
 func (d *Document) Path() string {
 	return d.path
 }
 
+// IsDirty reports whether the document has unsaved changes.
 func (d *Document) IsDirty() bool {
 	return d.dirty
 }
 
+// MarkDirty marks the document as having unsaved changes.
 func (d *Document) MarkDirty() {
 	d.dirty = true
 }
 
-func (d *Document) MarkClean() {
-	d.dirty = false
-}
-
+// DisplayName returns the file name, or "Untitled" for an untitled
+// document.
 func (d *Document) DisplayName() string {
 	if d.path == "" {
 		return "Untitled"
@@ -38,6 +42,7 @@ func (d *Document) DisplayName() string {
 	return filepath.Base(d.path)
 }
 
+// New resets the document to an untitled clean state.
 func (d *Document) New() {
 	d.path = ""
 	d.dirty = false
