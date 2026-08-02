@@ -30,6 +30,11 @@ type FindDialog struct {
 
 	popup   basicwidget.Popup
 	content findDialogContent
+
+	// focusQueryInputRequested is set by SetOpen and consumed by the
+	// content's Tick, which is the first point at which the query input is
+	// part of the widget tree and can therefore take focus.
+	focusQueryInputRequested bool
 }
 
 // OnFindNext registers the handler for the down-arrow button (and Enter on
@@ -55,8 +60,12 @@ func (f *FindDialog) OnClose(fn func(context *guigui.Context)) {
 	guigui.SetEventHandler(f, findDialogEventClose, fn)
 }
 
-// SetOpen shows or hides the dialog.
+// SetOpen shows or hides the dialog. Showing it also moves the focus to the
+// query input.
 func (f *FindDialog) SetOpen(open bool) {
+	if open {
+		f.focusQueryInputRequested = true
+	}
 	f.popup.SetOpen(open)
 }
 
@@ -89,27 +98,27 @@ func (f *FindDialog) FindNext(e *Editor, query string) {
 		return
 	}
 	_, end := e.Selection()
-	first := -1
-	next := -1
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
-		if first < 0 {
-			first = pos
+	var first matchRange
+	var next matchRange
+	s := newSubstringSearcher(query, func(m matchRange) bool {
+		if !first.found() {
+			first = m
 		}
-		if pos >= end {
-			next = pos
+		if m.start >= end {
+			next = m
 			return false
 		}
 		return true
 	})
 	_, _ = e.WriteValueTo(s)
 	target := next
-	if target < 0 {
+	if !target.found() {
 		target = first
 	}
-	if target < 0 {
+	if !target.found() {
 		return
 	}
-	e.SetSelection(target, target+len(query))
+	e.SetSelection(target.start, target.end)
 }
 
 // FindPrev selects the occurrence of query in e that precedes the current
@@ -121,27 +130,27 @@ func (f *FindDialog) FindPrev(e *Editor, query string) {
 		return
 	}
 	start, _ := e.Selection()
-	last := -1
-	prev := -1
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
-		last = pos
-		if pos < start {
-			prev = pos
+	var last matchRange
+	var prev matchRange
+	s := newSubstringSearcher(query, func(m matchRange) bool {
+		last = m
+		if m.start < start {
+			prev = m
 			return true
 		}
-		// pos >= start: prev can no longer grow. If it is already set,
+		// m.start >= start: prev can no longer grow. If it is already set,
 		// the answer is locked in; otherwise keep scanning to find last.
-		return prev < 0
+		return !prev.found()
 	})
 	_, _ = e.WriteValueTo(s)
 	target := prev
-	if target < 0 {
+	if !target.found() {
 		target = last
 	}
-	if target < 0 {
+	if !target.found() {
 		return
 	}
-	e.SetSelection(target, target+len(query))
+	e.SetSelection(target.start, target.end)
 }
 
 // UpdateCount recomputes the "n of total" display from the dialog's current
@@ -155,9 +164,9 @@ func (f *FindDialog) UpdateCount(e *Editor) {
 	selStart, _ := e.Selection()
 	var total int
 	var cur int
-	s := newSubstringSearcher([]byte(query), func(pos int) bool {
+	s := newSubstringSearcher(query, func(m matchRange) bool {
 		total++
-		if pos == selStart {
+		if m.start == selStart {
 			cur = total
 		}
 		return true
@@ -256,6 +265,14 @@ func (c *findDialogContent) Build(context *guigui.Context, adder *guigui.ChildAd
 		c.dialog.popup.SetOpen(false)
 	})
 
+	return nil
+}
+
+func (c *findDialogContent) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
+	if c.dialog.focusQueryInputRequested {
+		c.dialog.focusQueryInputRequested = false
+		context.SetFocused(&c.queryInput, true)
+	}
 	return nil
 }
 

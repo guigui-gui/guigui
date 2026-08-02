@@ -103,7 +103,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		// buffer. Loads clear dirty afterwards (see Document.LoadInto).
 		r.doc.MarkDirty()
 	})
-	r.editor.OnHandleButtonInput(r.handleHotkeys)
+	r.editor.OnHandleButtonInput(r.handleEditorButtonInput)
 
 	if !r.inited {
 		if r.initialPath != "" {
@@ -185,8 +185,8 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		r.findDialog.UpdateCount(&r.editor)
 	})
 	r.findDialog.OnClose(func(context *guigui.Context) {
-		// Hand focus back to the editor so Cmd/Ctrl+F (and other editor
-		// hotkeys) continue to work after the popup closes.
+		// Hand focus back to the editor so that typing resumes editing the
+		// document after the popup closes.
 		context.SetFocused(&r.editor, true)
 	})
 
@@ -512,12 +512,10 @@ func (r *Root) actionSaveAs() {
 	}
 }
 
-func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	// Tab is not delivered as an input character, so insert it explicitly.
-	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
-		r.editor.ReplaceValueAtSelection("\t")
-		return guigui.HandleInputByWidget(&r.editor)
-	}
+// HandleButtonInput handles the application-wide shortcuts. They live on the
+// root rather than on the editor so that they keep working while the focus is
+// on another widget, such as the find dialog's query input.
+func (r *Root) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
 	if !texteditor.CmdPressed() {
 		return guigui.HandleInputResult{}
 	}
@@ -529,13 +527,22 @@ func (r *Root) handleHotkeys(context *guigui.Context, widgetBounds *guigui.Widge
 	case inpututil.IsKeyJustPressed(ebiten.KeyS):
 		r.actionSave()
 	case inpututil.IsKeyJustPressed(ebiten.KeyF):
-		// Toggle: Cmd/Ctrl+F can fire on the editor side even when the popup
-		// is already shown (the popup doesn't auto-grab focus on Open).
-		r.findDialog.SetOpen(!r.findDialog.IsOpen())
+		// The find dialog closes itself on Cmd/Ctrl+F, and its query input
+		// gets the key first while it is open, so this only ever opens.
+		r.findDialog.SetOpen(true)
 	default:
 		return guigui.HandleInputResult{}
 	}
-	return guigui.HandleInputByWidget(&r.editor)
+	return guigui.HandleInputByWidget(r)
+}
+
+func (r *Root) handleEditorButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	// Tab is not delivered as an input character, so insert it explicitly.
+	if inpututil.IsKeyJustPressed(ebiten.KeyTab) {
+		r.editor.ReplaceValueAtSelection("\t")
+		return guigui.HandleInputByWidget(&r.editor)
+	}
+	return guigui.HandleInputResult{}
 }
 
 // jetBrainsMonoTTFGz is the gzip-compressed TrueType data of the JetBrains
