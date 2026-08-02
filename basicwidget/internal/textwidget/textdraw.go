@@ -267,7 +267,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	} else {
 		op.Style.EllipsisString = ""
 	}
-	op.TextColor = t.baseStyle.textColor
+	textColor, _ := t.baseStyle.style.Color()
+	op.TextColor = textColor
 	op.VisibleBounds = widgetBounds.VisibleBounds()
 	if start, end, ok := t.selectionToDraw(context); ok {
 		if context.IsFocused(t) || (t.selectionVisibleWhenUnfocus && start != end) {

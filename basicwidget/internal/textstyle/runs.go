@@ -321,7 +321,7 @@ func (r *Runs) apply(start, end int, style Style) {
 			r.buf = appendRun(r.buf, Run{Start: pos, End: overlapStart, Style: style})
 		}
 		overlapEnd := min(run.End, end)
-		r.buf = appendRun(r.buf, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.merge(style)})
+		r.buf = appendRun(r.buf, Run{Start: overlapStart, End: overlapEnd, Style: run.Style.Merge(style)})
 		pos = overlapEnd
 		if run.End > end {
 			r.buf = appendRun(r.buf, Run{Start: end, End: run.End, Style: run.Style})

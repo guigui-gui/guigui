@@ -147,9 +147,85 @@ func (s Style) Equal(other Style) bool {
 		slices.Equal(s.variations, other.variations)
 }
 
-// merge returns s with other's set properties applied on top. Features and
+// WithFamily returns s with the font family set to family.
+func (s Style) WithFamily(family *font.Family) Style {
+	s.family = opt(family)
+	return s
+}
+
+// WithItalic returns s with the italic face selection set to italic.
+func (s Style) WithItalic(italic bool) Style {
+	s.italic = opt(italic)
+	return s
+}
+
+// WithColor returns s with the text color set to clr.
+func (s Style) WithColor(clr color.Color) Style {
+	s.color = opt(clr)
+	return s
+}
+
+// WithLang returns s with the language set to lang.
+func (s Style) WithLang(lang language.Tag) Style {
+	s.lang = opt(lang)
+	return s
+}
+
+// WithVariation returns s with the OpenType variation axis tag set to value.
+func (s Style) WithVariation(tag text.Tag, value float32) Style {
+	s.variations = withTagged(s.variations, font.Variation{Tag: tag, Value: value}, func(v font.Variation) text.Tag {
+		return v.Tag
+	})
+	return s
+}
+
+// WithoutVariation returns s with the OpenType variation axis tag removed.
+func (s Style) WithoutVariation(tag text.Tag) Style {
+	s.variations = removeTagged(s.variations, []text.Tag{tag}, func(v font.Variation) text.Tag {
+		return v.Tag
+	})
+	return s
+}
+
+// WithFeature returns s with the OpenType feature tag set to value.
+func (s Style) WithFeature(tag text.Tag, value uint32) Style {
+	s.features = withTagged(s.features, font.Feature{Tag: tag, Value: value}, func(f font.Feature) text.Tag {
+		return f.Tag
+	})
+	return s
+}
+
+// WithoutFeature returns s with the OpenType feature tag removed.
+func (s Style) WithoutFeature(tag text.Tag) Style {
+	s.features = removeTagged(s.features, []text.Tag{tag}, func(f font.Feature) text.Tag {
+		return f.Tag
+	})
+	return s
+}
+
+// withTagged returns entries with entry set, keeping the tag order and at
+// most one entry per tag. entries is returned as is when it already contains
+// entry; the stored slice is never mutated.
+func withTagged[T comparable](entries []T, entry T, tag func(T) text.Tag) []T {
+	i, ok := slices.BinarySearchFunc(entries, tag(entry), func(e T, t text.Tag) int {
+		return cmp.Compare(tag(e), t)
+	})
+	if ok && entries[i] == entry {
+		return entries
+	}
+	result := make([]T, 0, len(entries)+1)
+	result = append(result, entries[:i]...)
+	result = append(result, entry)
+	if ok {
+		i++
+	}
+	result = append(result, entries[i:]...)
+	return result
+}
+
+// Merge returns s with other's set properties applied on top. Features and
 // variations are merged by tag, with other winning on a shared tag.
-func (s Style) merge(other Style) Style {
+func (s Style) Merge(other Style) Style {
 	if other.family.set {
 		s.family = other.family
 	}

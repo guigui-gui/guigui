@@ -4,7 +4,6 @@
 package textwidget
 
 import (
-	"cmp"
 	"encoding/binary"
 	"hash"
 	"hash/fnv"
@@ -38,21 +37,17 @@ type textStyle struct {
 	// scale 1.
 	scaleMinus1 float64
 
-	// variations and features are the base OpenType settings, sorted by tag
-	// with at most one entry per tag. Ranged style overrides apply on top.
-	variations []font.Variation
-	features   []font.Feature
-
-	// italic selects an italic face from the font family.
-	italic bool
+	// style holds the base values of the properties that ranged style
+	// overrides can override: the font family, italic face selection,
+	// OpenType variations and features, language, and text color. The
+	// effective style of a byte is style with its overrides merged on top.
+	// The scale property stays unset here; ranged scale overrides multiply
+	// the base font size instead of replacing a base value.
+	style textstyle.Style
 
 	// tabWidth is the tab width in pixels. A non-positive value selects the
 	// default width.
 	tabWidth float64
-
-	// fontFamily is the resolved font family used to render the value, or nil
-	// to render with the registered face source stack alone.
-	fontFamily *font.Family
 
 	// fontSize is the font size at scale 1; the rendered size is fontSize
 	// multiplied by the widget scale.
@@ -62,15 +57,9 @@ type textStyle struct {
 	// lineHeight multiplied by the widget scale.
 	lineHeight float64
 
-	// lang is the language used to select the face and its features when
-	// shaping the value.
-	lang language.Tag
-
-	// langString is lang's string form, cached for [Text.WriteStateKey].
+	// langString is the base language's string form, cached for
+	// [Text.WriteStateKey].
 	langString string
-
-	// textColor is the concrete color the value is drawn in.
-	textColor color.Color
 
 	// selectionColor is the concrete color of the selection highlight.
 	selectionColor color.Color
@@ -98,64 +87,47 @@ func (s *textStyle) scaledLineHeight() float64 {
 	return s.lineHeight * s.scale()
 }
 
-// fontFamilyID returns fontFamily's ID, or 0 for a nil family.
+// fontFamilyID returns the base font family's ID, or 0 for a nil family.
 func (s *textStyle) fontFamilyID() uint64 {
-	if s.fontFamily == nil {
+	family, _ := s.style.Family()
+	if family == nil {
 		return 0
 	}
-	return s.fontFamily.ID()
+	return family.ID()
 }
 
-// faceAttributes returns the font attributes to shape the value with. liga
-// sets whether ligatures are enabled.
-func (s *textStyle) faceAttributes(forceBold bool, liga bool) font.Attributes {
+// faceAttributes returns the font attributes to shape text carrying style,
+// the base style with any ranged overrides merged on top. liga sets whether
+// ligatures are enabled.
+func (s *textStyle) faceAttributes(style textstyle.Style, liga bool) font.Attributes {
+	size := s.fontSize * s.scale()
+	if scale, ok := style.Scale(); ok {
+		size *= scale
+	}
 	a := font.Attributes{
-		Size:   s.fontSize * s.scale(),
-		Lang:   s.lang,
-		Italic: s.italic,
+		Size: size,
+	}
+	if lang, ok := style.Lang(); ok {
+		a.Lang = lang
+	}
+	if italic, ok := style.Italic(); ok {
+		a.Italic = italic
 	}
 	a = a.WithVariation(font.TagWght, float32(text.WeightMedium))
-	for _, v := range s.variations {
+	for _, v := range style.Variations() {
 		a = a.WithVariation(v.Tag, v.Value)
 	}
-	if forceBold {
-		a = a.WithVariation(font.TagWght, float32(text.WeightBold))
-	}
-	for _, f := range s.features {
+	for _, f := range style.Features() {
 		a = a.WithFeature(f.Tag, f.Value)
 	}
 	// A false liga disables ligatures so caret positions land on byte
-	// boundaries; that constraint outranks a base liga feature setting.
+	// boundaries; that constraint outranks a liga feature setting.
 	if !liga {
 		a = a.WithFeature(font.TagLiga, 0)
-	} else if !slices.ContainsFunc(s.features, func(f font.Feature) bool { return f.Tag == font.TagLiga }) {
+	} else if !slices.ContainsFunc(style.Features(), func(f font.Feature) bool { return f.Tag == font.TagLiga }) {
 		a = a.WithFeature(font.TagLiga, 1)
 	}
 	return a
-}
-
-// setTagged sets entry in the tag-sorted settings, keeping at most one entry
-// per tag.
-func setTagged[T any](settings []T, entry T, tagOf func(T) text.Tag) []T {
-	i, ok := slices.BinarySearchFunc(settings, tagOf(entry), func(s T, tag text.Tag) int {
-		return cmp.Compare(tagOf(s), tag)
-	})
-	if ok {
-		settings[i] = entry
-		return settings
-	}
-	return slices.Insert(settings, i, entry)
-}
-
-// removeTagged removes tag's entry from the tag-sorted settings.
-func removeTagged[T any](settings []T, tag text.Tag, tagOf func(T) text.Tag) []T {
-	i, ok := slices.BinarySearchFunc(settings, tag, func(s T, tag text.Tag) int {
-		return cmp.Compare(tagOf(s), tag)
-	})
-	if !ok {
-		return settings
-	}
-	return slices.Delete(settings, i, i+1)
 }
 
 // ensureStyleRuns brings the ranged style overrides up to date with the
@@ -331,25 +303,26 @@ func (t *Text) UnsetItalicInRange(startInBytes, endInBytes int) {
 	t.ensureStyleRuns().UnsetItalic(startInBytes, endInBytes)
 }
 
-// variation returns the value of the OpenType variation axis tag and
-// whether it is set.
-func (s *textStyle) variation(tag text.Tag) (float32, bool) {
-	i, ok := slices.BinarySearchFunc(s.variations, tag, func(v font.Variation, tag text.Tag) int {
-		return cmp.Compare(v.Tag, tag)
-	})
-	if !ok {
-		return 0, false
-	}
-	return s.variations[i].Value, true
-}
-
 // baseWeight returns the font weight of the base style: the wght variation
 // axis value, or the default medium weight when unset.
 func (t *Text) baseWeight() float32 {
-	if v, ok := t.baseStyle.variation(font.TagWght); ok {
+	if v, ok := t.baseStyle.style.Variation(font.TagWght); ok {
 		return v
 	}
 	return float32(text.WeightMedium)
+}
+
+// baseItalic returns the italic face selection of the base style.
+func (t *Text) baseItalic() bool {
+	italic, _ := t.baseStyle.style.Italic()
+	return italic
+}
+
+// effectiveStyleAtCaret returns the effective style that text typed at
+// textIndexInBytes adopts: the base style with the adopted ranged overrides
+// merged on top.
+func (t *Text) effectiveStyleAtCaret(textIndexInBytes int) textstyle.Style {
+	return t.baseStyle.style.Merge(t.styleAtCaret(textIndexInBytes))
 }
 
 // styleAtCaret returns the ranged override style that text typed at
@@ -368,9 +341,9 @@ func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
 // the state that text typed at startInBytes would adopt.
 func (t *Text) IsBoldInRange(startInBytes, endInBytes int) bool {
 	if startInBytes >= endInBytes {
-		v, ok := t.styleAtCaret(startInBytes).Variation(font.TagWght)
+		v, ok := t.effectiveStyleAtCaret(startInBytes).Variation(font.TagWght)
 		if !ok {
-			v = t.baseWeight()
+			v = float32(text.WeightMedium)
 		}
 		return v == float32(text.WeightBold)
 	}
@@ -384,12 +357,10 @@ func (t *Text) IsBoldInRange(startInBytes, endInBytes int) bool {
 // the state that text typed at startInBytes would adopt.
 func (t *Text) IsItalicInRange(startInBytes, endInBytes int) bool {
 	if startInBytes >= endInBytes {
-		if italic, ok := t.styleAtCaret(startInBytes).Italic(); ok {
-			return italic
-		}
-		return t.baseStyle.italic
+		italic, _ := t.effectiveStyleAtCaret(startInBytes).Italic()
+		return italic
 	}
-	italic, uniform := t.ensureStyleRuns().UniformItalic(startInBytes, endInBytes, t.baseStyle.italic)
+	italic, uniform := t.ensureStyleRuns().UniformItalic(startInBytes, endInBytes, t.baseItalic())
 	return uniform && italic
 }
 
@@ -398,7 +369,7 @@ func (t *Text) IsItalicInRange(startInBytes, endInBytes int) bool {
 // that text typed at startInBytes would adopt.
 func (t *Text) IsUnderlineInRange(startInBytes, endInBytes int) bool {
 	if startInBytes >= endInBytes {
-		underline, _ := t.styleAtCaret(startInBytes).Underline()
+		underline, _ := t.effectiveStyleAtCaret(startInBytes).Underline()
 		return underline
 	}
 	underline, uniform := t.ensureStyleRuns().UniformUnderline(startInBytes, endInBytes, false)
@@ -410,7 +381,7 @@ func (t *Text) IsUnderlineInRange(startInBytes, endInBytes int) bool {
 // the state that text typed at startInBytes would adopt.
 func (t *Text) IsStrikethroughInRange(startInBytes, endInBytes int) bool {
 	if startInBytes >= endInBytes {
-		strikethrough, _ := t.styleAtCaret(startInBytes).Strikethrough()
+		strikethrough, _ := t.effectiveStyleAtCaret(startInBytes).Strikethrough()
 		return strikethrough
 	}
 	strikethrough, uniform := t.ensureStyleRuns().UniformStrikethrough(startInBytes, endInBytes, false)
@@ -472,7 +443,7 @@ func (t *Text) ApplyItalicInRange(startInBytes, endInBytes int, italic bool) {
 	if startInBytes >= endInBytes {
 		return
 	}
-	if italic == t.baseStyle.italic {
+	if italic == t.baseItalic() {
 		t.UnsetItalicInRange(startInBytes, endInBytes)
 		return
 	}
@@ -579,34 +550,18 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 	if t.masking() {
 		return runs
 	}
+	base := t.forceBoldedBaseStyle(forceBold)
+	liga := t.ligaturesEnabled()
 	for run := range t.ensureStyleRuns().All() {
 		if !run.Style.AffectsFaceSelection() {
 			continue
 		}
-		attrs := t.faceAttributes(forceBold)
-		if italic, ok := run.Style.Italic(); ok {
-			attrs.Italic = italic
-		}
-		if scale, ok := run.Style.Scale(); ok {
-			attrs.Size *= scale
-		}
-		if lang, ok := run.Style.Lang(); ok {
-			attrs.Lang = lang
-		}
-		for _, v := range run.Style.Variations() {
-			attrs = attrs.WithVariation(v.Tag, v.Value)
-		}
-		for _, f := range run.Style.Features() {
-			attrs = attrs.WithFeature(f.Tag, f.Value)
-		}
-		family := t.baseStyle.fontFamily
-		if f, ok := run.Style.Family(); ok {
-			family = f
-		}
+		style := base.Merge(run.Style)
+		family, _ := style.Family()
 		runs = append(runs, textutil.FaceRun{
 			Start: run.Start,
 			End:   run.End,
-			Face:  font.NewFace(context, family, attrs),
+			Face:  font.NewFace(context, family, t.baseStyle.faceAttributes(style, liga)),
 		})
 	}
 	return runs
