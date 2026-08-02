@@ -269,6 +269,12 @@ func (r *Runs) CopyRangeFrom(src *Runs, start, end int) {
 	r.setRuns()
 }
 
+// ApplyStyle applies style's set properties over [start, end) on top of the
+// existing overrides.
+func (r *Runs) ApplyStyle(start, end int, style Style) {
+	r.apply(start, end, style)
+}
+
 // ApplyAt applies src's overrides on top of the existing overrides, with
 // src's byte ranges shifted by offset. src must not be r.
 func (r *Runs) ApplyAt(src *Runs, offset int) {

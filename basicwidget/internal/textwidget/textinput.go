@@ -372,7 +372,7 @@ func (t *Text) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 // composition or commit into the cached text size and the value-changed
 // listeners. It reports whether the IME consumed input this tick.
 func (t *Text) updateIMEComposer(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	t.ensureRangedStateReadFunc()
+	t.ensureStoreCallbacks()
 	start, _ := t.store.Selection()
 	if pos, ok := t.textPosition(context, widgetBounds.Bounds(), start, false); ok {
 		t.store.SetBounds(image.Rect(int(pos.X), int(pos.Top), int(pos.X+1), int(pos.Bottom)))

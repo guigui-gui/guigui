@@ -598,6 +598,27 @@ func (t *Text) ReadEffectiveStyleAt(style *TextStyle, textIndexInBytes int) {
 	style.s = t.core.EffectiveStyleAt(textIndexInBytes)
 }
 
+// SetInsertionStyle replaces the insertion style with style. Its set
+// properties are applied as ranged style overrides over the next text
+// inserted at the caret, on top of the adopted overrides, and the style is
+// then reset. The widget also resets it without applying on other
+// interactions, such as a selection change, a deletion, or an undo; neither
+// setting nor resetting is recorded in the undo history. SetInsertionStyle
+// is typically called on every build with application-owned state, updated
+// in the [Text.OnInsertionStyleReset] handler so the next build sets the
+// cleared style.
+func (t *Text) SetInsertionStyle(style *TextStyle) {
+	t.core.SetInsertionStyle(style.s)
+}
+
+// OnInsertionStyleReset sets an event handler invoked when the widget resets
+// the insertion style: after applying it to inserted text, or when
+// discarding it without applying, such as on a selection change. The handler
+// is not invoked for [Text.SetInsertionStyle].
+func (t *Text) OnInsertionStyleReset(f func(context *guigui.Context)) {
+	t.core.OnInsertionStyleReset(f)
+}
+
 // AppendBoundsOfTextRange appends the bounding rectangles covering the text
 // range [startInBytes, endInBytes) to dst and returns the extended slice,
 // one rectangle per crossed visual line, in order. bounds is the widget's

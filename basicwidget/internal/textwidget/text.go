@@ -26,6 +26,7 @@ var (
 	textEventValueChangedWithoutText guigui.EventKey = guigui.GenerateEventKey()
 	textEventScrollDelta             guigui.EventKey = guigui.GenerateEventKey()
 	textEventScrollIntoView          guigui.EventKey = guigui.GenerateEventKey()
+	textEventInsertionStyleReset     guigui.EventKey = guigui.GenerateEventKey()
 )
 
 // Text is a theme-free text widget: it owns the value, selection, caret, IME
@@ -58,9 +59,13 @@ type Text struct {
 	// [Text.ensureStyleRuns].
 	textEditsBuf []textEdit
 
-	// rangedStateReadFuncSet reports whether the ranged state read callback
-	// has been registered on the store.
-	rangedStateReadFuncSet bool
+	// insertionStyle holds the style overrides applied to the next text
+	// inserted at the caret. See [Text.SetInsertionStyle].
+	insertionStyle textstyle.Style
+
+	// storeCallbacksSet reports whether the widget's callbacks have been
+	// registered on the store.
+	storeCallbacksSet bool
 
 	// faceRunsBuf is the reusable buffer for [Text.appendFaceRunsForStyle]
 	// results, with byte offsets into the committed text. Each user records
@@ -367,6 +372,7 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 				// discarded when focus moves away.
 				t.store.Blur()
 				t.commit(false)
+				t.resetInsertionStyle()
 			}
 		}
 	}
@@ -518,6 +524,7 @@ func (t *Text) WriteValueRangeTo(w io.Writer, startInBytes, endInBytes int) (int
 func (t *Text) ReadValueFrom(r io.Reader) (int64, error) {
 	n, err := t.store.ReadTextFrom(r)
 	t.shiftSelectionSide = SelectionSideNone
+	t.resetInsertionStyle()
 	t.prevStart = 0
 	t.prevEnd = 0
 	t.nextText = ""
@@ -581,7 +588,11 @@ func (t *Text) setSelection(start, end int, shiftSide SelectionSide, adjustScrol
 	if s, e := t.store.Selection(); s == start && e == end {
 		return false
 	}
+	// The store commits any active IME composition before moving the
+	// selection, which may materialize the insertion style over the committed
+	// text; clear the insertion style only afterwards.
 	t.store.SetSelection(start, end)
+	t.resetInsertionStyle()
 
 	if !adjustScroll {
 		t.prevStart = start
@@ -601,7 +612,7 @@ func (t *Text) replaceTextAtSelection(text string) {
 // offsets rebased to 0, applied at the insertion point) in place of the
 // styles it would adopt from the surrounding text.
 func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.Runs) {
-	t.ensureRangedStateReadFunc()
+	t.ensureStoreCallbacks()
 	if !t.IsMultiline() {
 		text, start, end = replaceNewLinesWithSpace(text, start, end)
 	}
@@ -625,6 +636,9 @@ func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.R
 		runs := t.ensureStyleRuns()
 		runs.Reset(start, start+len(text))
 		runs.ApplyAt(styleRuns, start)
+		t.resetInsertionStyle()
+	} else {
+		t.materializeInsertionStyle(start, len(text))
 	}
 
 	t.resetCachedTextSize()
@@ -635,7 +649,7 @@ func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.R
 }
 
 func (t *Text) setText(text string, selectAll bool) bool {
-	t.ensureRangedStateReadFunc()
+	t.ensureStoreCallbacks()
 	if !t.IsMultiline() {
 		text, _, _ = replaceNewLinesWithSpace(text, 0, 0)
 	}
@@ -646,6 +660,7 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	if s, e := t.store.Selection(); !textChanged && (!selectAll || s == 0 && e == len(text)) {
 		return false
 	}
+	t.resetInsertionStyle()
 
 	var start, end int
 	if selectAll {
@@ -1043,12 +1058,13 @@ func (t *Text) Undo() bool {
 	if !t.store.CanUndo() {
 		return false
 	}
-	t.ensureRangedStateReadFunc()
+	t.ensureStoreCallbacks()
 	state, ok := t.store.Undo()
 	if !ok {
 		return false
 	}
 	t.restoreRangedState(state)
+	t.resetInsertionStyle()
 	t.resetCachedTextSize()
 	t.dispatchValueChanged(false, false)
 	t.nextText = ""
@@ -1065,6 +1081,7 @@ func (t *Text) Redo() bool {
 		return false
 	}
 	t.restoreRangedState(state)
+	t.resetInsertionStyle()
 	t.resetCachedTextSize()
 	t.dispatchValueChanged(false, false)
 	t.nextText = ""
@@ -1072,14 +1089,14 @@ func (t *Text) Redo() bool {
 	return true
 }
 
-// ensureRangedStateReadFunc registers the ranged state read callback on the
-// store once.
-func (t *Text) ensureRangedStateReadFunc() {
-	if t.rangedStateReadFuncSet {
+// ensureStoreCallbacks registers the widget's callbacks on the store once.
+func (t *Text) ensureStoreCallbacks() {
+	if t.storeCallbacksSet {
 		return
 	}
 	t.store.setRangedStateReadFunc(t.readRangedState)
-	t.rangedStateReadFuncSet = true
+	t.store.setTextCommittedFunc(t.materializeInsertionStyle)
+	t.storeCallbacksSet = true
 }
 
 // readRangedState reads the current ranged style overrides and hotspot

@@ -190,6 +190,48 @@ func (t *Text) ReplaceStyleRunsInRange(runs *textstyle.Runs, startInBytes, endIn
 	t.ensureStyleRuns().ReplaceRange(runs, startInBytes, endInBytes)
 }
 
+// SetInsertionStyle replaces the insertion style with style. Its set
+// properties are applied as ranged style overrides over the next text
+// inserted at the caret, on top of the adopted overrides, and the style is
+// then reset. The widget also resets it without applying on other
+// interactions, such as a selection change, a deletion, or an undo; neither
+// setting nor resetting is recorded in the undo history.
+func (t *Text) SetInsertionStyle(style textstyle.Style) {
+	t.insertionStyle = style
+}
+
+// OnInsertionStyleReset sets an event handler invoked when the widget resets
+// the insertion style: after applying it to inserted text, or when
+// discarding it without applying, such as on a selection change. The handler
+// is not invoked for [Text.SetInsertionStyle].
+func (t *Text) OnInsertionStyleReset(f func(context *guigui.Context)) {
+	guigui.SetEventHandler(t, textEventInsertionStyleReset, f)
+}
+
+// materializeInsertionStyle applies the insertion style as ranged overrides over
+// the inserted byte span [startInBytes, startInBytes+newLenInBytes) and
+// resets it. A mutation that inserts nothing resets the insertion style
+// without applying it.
+func (t *Text) materializeInsertionStyle(startInBytes, newLenInBytes int) {
+	if t.insertionStyle.IsZero() {
+		return
+	}
+	if newLenInBytes > 0 {
+		t.ensureStyleRuns().ApplyStyle(startInBytes, startInBytes+newLenInBytes, t.insertionStyle)
+	}
+	t.resetInsertionStyle()
+}
+
+// resetInsertionStyle clears the insertion style and dispatches the reset
+// event. Clearing an already zero insertion style dispatches nothing.
+func (t *Text) resetInsertionStyle() {
+	if t.insertionStyle.IsZero() {
+		return
+	}
+	t.insertionStyle = textstyle.Style{}
+	guigui.DispatchEvent(t, textEventInsertionStyleReset)
+}
+
 // styleDefaults holds the rendering defaults that unset style properties
 // resolve to.
 var styleDefaults = textstyle.Style{}.

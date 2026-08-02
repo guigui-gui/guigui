@@ -313,6 +313,27 @@ func (t *TextInput) ReadEffectiveStyleAt(style *TextStyle, textIndexInBytes int)
 	t.textInput.text.Text().ReadEffectiveStyleAt(style, textIndexInBytes)
 }
 
+// SetInsertionStyle replaces the insertion style with style. Its set
+// properties are applied as ranged style overrides over the next text
+// inserted at the caret, on top of the adopted overrides, and the style is
+// then reset. The widget also resets it without applying on other
+// interactions, such as a selection change, a deletion, or an undo; neither
+// setting nor resetting is recorded in the undo history. SetInsertionStyle
+// is typically called on every build with application-owned state, updated
+// in the [TextInput.OnInsertionStyleReset] handler so the next build sets
+// the cleared style.
+func (t *TextInput) SetInsertionStyle(style *TextStyle) {
+	t.textInput.text.Text().SetInsertionStyle(style)
+}
+
+// OnInsertionStyleReset sets an event handler invoked when the widget resets
+// the insertion style: after applying it to inserted text, or when
+// discarding it without applying, such as on a selection change. The handler
+// is not invoked for [TextInput.SetInsertionStyle].
+func (t *TextInput) OnInsertionStyleReset(f func(context *guigui.Context)) {
+	t.textInput.text.Text().OnInsertionStyleReset(f)
+}
+
 // IsError reports whether the text input is in the error state.
 func (t *TextInput) IsError() bool {
 	return t.hasError

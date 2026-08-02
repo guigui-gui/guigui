@@ -18,7 +18,7 @@ func TestTextHotspotRangesFollowEdits(t *testing.T) {
 		{
 			name: "insertion inside the range extends it",
 			edit: func(txt *textwidget.Text) {
-				txt.ReplaceTextAt("x", 8, 8)
+				txt.ReplaceTextAt("x", 8, 8, nil)
 			},
 			want: []textwidget.TextRange{
 				{StartInBytes: 6, EndInBytes: 12},
@@ -27,7 +27,7 @@ func TestTextHotspotRangesFollowEdits(t *testing.T) {
 		{
 			name: "insertion before the range shifts it",
 			edit: func(txt *textwidget.Text) {
-				txt.ReplaceTextAt("xy", 0, 0)
+				txt.ReplaceTextAt("xy", 0, 0, nil)
 			},
 			want: []textwidget.TextRange{
 				{StartInBytes: 8, EndInBytes: 13},
@@ -36,7 +36,7 @@ func TestTextHotspotRangesFollowEdits(t *testing.T) {
 		{
 			name: "deletion overlapping the range's head truncates it",
 			edit: func(txt *textwidget.Text) {
-				txt.ReplaceTextAt("", 5, 8)
+				txt.ReplaceTextAt("", 5, 8, nil)
 			},
 			want: []textwidget.TextRange{
 				{StartInBytes: 5, EndInBytes: 8},
@@ -89,7 +89,7 @@ func TestTextUndoRedoRestoresHotspotRanges(t *testing.T) {
 	want := txt.AppendHotspotRanges(nil)
 
 	// Deleting the hotspot's span removes the range entirely.
-	txt.ReplaceTextAt("", 5, 11)
+	txt.ReplaceTextAt("", 5, 11, nil)
 	if got := txt.AppendHotspotRanges(nil); got != nil {
 		t.Fatalf("got: %+v, want: nil", got)
 	}

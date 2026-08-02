@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 
+	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
@@ -213,5 +214,37 @@ func TestTextBaseStyleRoundTrip(t *testing.T) {
 	}
 	if _, ok := got.Color(); ok {
 		t.Error("Color() must be unset after setting a base style without it")
+	}
+}
+
+func TestTextInsertionStyle(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt basicwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+	txt.SetSelection(5, 5)
+
+	var insertion basicwidget.TextStyle
+	insertion.SetColor(red)
+	txt.SetInsertionStyle(&insertion)
+
+	// Inserting at the caret materializes the insertion style over the
+	// inserted span and resets it, dispatching the reset event.
+	var resets int
+	txt.OnInsertionStyleReset(func(context *guigui.Context) {
+		resets++
+	})
+	txt.ReplaceValueAtSelection("ab")
+	var styles basicwidget.TextStyles
+	txt.ReadOverrideStyles(&styles)
+	if clr, uniform := styles.ColorInRange(5, 7, nil); !uniform || clr != color.Color(red) {
+		t.Errorf("ColorInRange(5, 7) = %v, %t; want %v, true", clr, uniform, red)
+	}
+	if clr, uniform := styles.ColorInRange(0, 5, nil); !uniform || clr != nil {
+		t.Errorf("ColorInRange(0, 5) = %v, %t; want nil, true", clr, uniform)
+	}
+	if resets != 1 {
+		t.Errorf("resets: got: %d, want: 1", resets)
 	}
 }

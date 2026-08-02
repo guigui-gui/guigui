@@ -66,6 +66,13 @@ type textStore struct {
 	// particular inside the composer callbacks, whose IME commits are not
 	// observable from outside the store.
 	readRangedState func(state *piecetable.RangedState)
+
+	// textCommittedFunc, when non-nil, is invoked right after an IME commit
+	// mutates the committed text, with the start of the replaced range and
+	// the length of the replacing text in bytes. Like readRangedState, it is
+	// registered once via setTextCommittedFunc and shares the owning
+	// widget's lifetime.
+	textCommittedFunc func(startInBytes, newLenInBytes int)
 }
 
 // textEdit is a positional mutation of the committed text: a replacement of
@@ -124,18 +131,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	beforeRepl, afterRepl := c.IsSurroundingTextReplaced()
 	if !beforeRepl && !afterRepl {
 		// Typical case: insert Text at the current selection.
-		start, end := s.selectionStartInBytes, s.selectionEndInBytes
-		if start > end {
-			start, end = end, start
-		}
-		s.recordCurrentRangedState()
-		s.pieceTable.UpdateByIME(text, start, end)
-		s.selectionStartInBytes = start + len(text)
-		s.selectionEndInBytes = s.selectionStartInBytes
-		s.composition = ""
-		s.compositionSelStart = 0
-		s.compositionSelEnd = 0
-		s.bumpGenerationForEdit(start, end, len(text))
+		s.commitText(text)
 		return
 	}
 
@@ -175,6 +171,29 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	s.compositionSelStart = 0
 	s.compositionSelEnd = 0
 	s.bumpGenerationForEdit(insStart, insEnd, len(insText))
+	if s.textCommittedFunc != nil {
+		s.textCommittedFunc(insStart, len(insText))
+	}
+}
+
+// commitText inserts text at the current selection as an IME commit, placing
+// the caret after the inserted text.
+func (s *textStore) commitText(text string) {
+	start, end := s.selectionStartInBytes, s.selectionEndInBytes
+	if start > end {
+		start, end = end, start
+	}
+	s.recordCurrentRangedState()
+	s.pieceTable.UpdateByIME(text, start, end)
+	s.selectionStartInBytes = start + len(text)
+	s.selectionEndInBytes = s.selectionStartInBytes
+	s.composition = ""
+	s.compositionSelStart = 0
+	s.compositionSelEnd = 0
+	s.bumpGenerationForEdit(start, end, len(text))
+	if s.textCommittedFunc != nil {
+		s.textCommittedFunc(start, len(text))
+	}
 }
 
 // commonPrefixLen returns the length in bytes of the longest common prefix
@@ -464,6 +483,12 @@ func (s *textStore) ReplaceText(text string, startInBytes, endInBytes int) {
 // text state for the undo history.
 func (s *textStore) setRangedStateReadFunc(f func(state *piecetable.RangedState)) {
 	s.readRangedState = f
+}
+
+// setTextCommittedFunc registers f to be invoked right after an IME commit
+// mutates the committed text.
+func (s *textStore) setTextCommittedFunc(f func(startInBytes, newLenInBytes int)) {
+	s.textCommittedFunc = f
 }
 
 // recordCurrentRangedState records a snapshot of the caller's current ranged

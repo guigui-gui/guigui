@@ -120,7 +120,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		txt.ForceSetValue("hello world")
 		txt.SetColorInRange(0, 3, red)
 		txt.SetColorInRange(5, 8, red)
-		txt.ReplaceTextAt("", 3, 5)
+		txt.ReplaceTextAt("", 3, 5, nil)
 		var wantRuns textstyle.Runs
 		wantRuns.SetColor(0, 6, red)
 		want := slices.Collect(wantRuns.All())
@@ -359,7 +359,7 @@ func TestStyleRunsRoundTrip(t *testing.T) {
 	var txt textwidget.Text
 	txt.SetValue("hello world")
 	txt.SetColorInRange(0, 5, red)
-	txt.ReplaceTextAt("!!", 5, 5)
+	txt.ReplaceTextAt("!!", 5, 5, nil)
 
 	// The copied-out runs reflect the edit; installing them into another
 	// text reproduces the same overrides.
@@ -409,7 +409,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 
 		// Deleting the styled span removes its run entirely; positional
 		// adjustment alone cannot bring it back.
-		txt.ReplaceTextAt("", 5, 11)
+		txt.ReplaceTextAt("", 5, 11, nil)
 		if got := txt.StyleRuns(); got != nil {
 			t.Fatalf("got: %+v, want: nil", got)
 		}
@@ -432,7 +432,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		txt.SetColorInRange(0, 5, red)
 
 		// Deleting the head truncates the run to [0, 3).
-		txt.ReplaceTextAt("", 0, 2)
+		txt.ReplaceTextAt("", 0, 2, nil)
 		afterEdit := txt.StyleRuns()
 
 		if !txt.Undo() {
@@ -460,9 +460,9 @@ func TestTextUndoCoalescedEditsRestoresStyleRuns(t *testing.T) {
 	want := txt.StyleRuns()
 
 	// Backspace-like consecutive deletes coalesce into one undo entry.
-	txt.ReplaceTextAt("", 4, 5)
-	txt.ReplaceTextAt("", 3, 4)
-	txt.ReplaceTextAt("", 2, 3)
+	txt.ReplaceTextAt("", 4, 5, nil)
+	txt.ReplaceTextAt("", 3, 4, nil)
+	txt.ReplaceTextAt("", 2, 3, nil)
 	if got, wantValue := txt.Value(), "he"; got != wantValue {
 		t.Fatalf("got: %q, want: %q", got, wantValue)
 	}
@@ -516,7 +516,7 @@ func TestTextResetClearsHistoryAndStyles(t *testing.T) {
 	txt.SetEditable(true)
 	txt.ForceSetValue("hello")
 	txt.SetColorInRange(0, 5, red)
-	txt.ReplaceTextAt("x", 0, 0)
+	txt.ReplaceTextAt("x", 0, 0, nil)
 
 	// Resetting the value clears the undo history and the styles.
 	if _, err := txt.ReadValueFrom(strings.NewReader("goodbye")); err != nil {

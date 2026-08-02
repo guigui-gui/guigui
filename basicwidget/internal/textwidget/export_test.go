@@ -60,8 +60,20 @@ func (t *Text) ResetStylesInRange(start, end int) {
 	t.ensureStyleRuns().Reset(start, end)
 }
 
-func (t *Text) ReplaceTextAt(text string, start, end int) {
-	t.replaceTextAt(text, start, end, nil)
+func (t *Text) ReplaceTextAt(text string, start, end int, styleRuns *textstyle.Runs) {
+	t.replaceTextAt(text, start, end, styleRuns)
+}
+
+// CommitTextByIME inserts text at the current selection through the store's
+// IME commit path.
+func (t *Text) CommitTextByIME(text string) {
+	t.ensureStoreCallbacks()
+	t.store.commitText(text)
+}
+
+// InsertionStyle returns the current insertion style.
+func (t *Text) InsertionStyle() textstyle.Style {
+	return t.insertionStyle
 }
 
 func AppendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
