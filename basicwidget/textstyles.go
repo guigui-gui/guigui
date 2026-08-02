@@ -162,3 +162,60 @@ func (s *TextStyles) UnsetStrikethroughInRange(startInBytes, endInBytes int) {
 func (s *TextStyles) ResetStylesInRange(startInBytes, endInBytes int) {
 	s.runs.Reset(startInBytes, endInBytes)
 }
+
+// VariationInRange returns the value of the OpenType variation axis tag
+// every byte of [startInBytes, endInBytes) takes and whether the value is
+// uniform. A byte with an override of the axis takes the override's value;
+// every other byte takes fallback. An empty range is uniform with fallback.
+func (s *TextStyles) VariationInRange(startInBytes, endInBytes int, tag text.Tag, fallback float32) (value float32, uniform bool) {
+	return s.runs.UniformVariation(startInBytes, endInBytes, tag, fallback)
+}
+
+// WeightInRange returns the font weight every byte of
+// [startInBytes, endInBytes) takes and whether the weight is uniform. A byte
+// with a wght variation override takes the override's value; every other
+// byte takes fallback. An empty range is uniform with fallback.
+func (s *TextStyles) WeightInRange(startInBytes, endInBytes int, fallback text.Weight) (weight text.Weight, uniform bool) {
+	v, uniform := s.runs.UniformVariation(startInBytes, endInBytes, font.TagWght, float32(fallback))
+	return text.Weight(v), uniform
+}
+
+// ItalicInRange returns the italic state every byte of
+// [startInBytes, endInBytes) takes and whether the state is uniform. A byte
+// with an italic override takes the override's value; every other byte takes
+// fallback. An empty range is uniform with fallback.
+func (s *TextStyles) ItalicInRange(startInBytes, endInBytes int, fallback bool) (italic, uniform bool) {
+	return s.runs.UniformItalic(startInBytes, endInBytes, fallback)
+}
+
+// ScaleInRange returns the font size multiplier every byte of
+// [startInBytes, endInBytes) takes and whether the multiplier is uniform. A
+// byte with a scale override takes the override's value; every other byte
+// takes fallback. An empty range is uniform with fallback.
+func (s *TextStyles) ScaleInRange(startInBytes, endInBytes int, fallback float64) (scale float64, uniform bool) {
+	return s.runs.UniformScale(startInBytes, endInBytes, fallback)
+}
+
+// ColorInRange returns the text color every byte of
+// [startInBytes, endInBytes) takes and whether the color is uniform. A byte
+// with a color override takes the override's value; every other byte takes
+// fallback. An empty range is uniform with fallback.
+func (s *TextStyles) ColorInRange(startInBytes, endInBytes int, fallback color.Color) (clr color.Color, uniform bool) {
+	return s.runs.UniformColor(startInBytes, endInBytes, fallback)
+}
+
+// UnderlineInRange returns the underline state every byte of
+// [startInBytes, endInBytes) takes and whether the state is uniform. A byte
+// with an underline override takes the override's value; every other byte
+// takes fallback. An empty range is uniform with fallback.
+func (s *TextStyles) UnderlineInRange(startInBytes, endInBytes int, fallback bool) (underline, uniform bool) {
+	return s.runs.UniformUnderline(startInBytes, endInBytes, fallback)
+}
+
+// StrikethroughInRange returns the strikethrough state every byte of
+// [startInBytes, endInBytes) takes and whether the state is uniform. A byte
+// with a strikethrough override takes the override's value; every other byte
+// takes fallback. An empty range is uniform with fallback.
+func (s *TextStyles) StrikethroughInRange(startInBytes, endInBytes int, fallback bool) (strikethrough, uniform bool) {
+	return s.runs.UniformStrikethrough(startInBytes, endInBytes, fallback)
+}
