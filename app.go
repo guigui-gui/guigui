@@ -11,47 +11,15 @@ import (
 	"log/slog"
 	"maps"
 	"math"
-	"os"
 	"runtime"
 	"slices"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/vector"
+
+	"github.com/guigui-gui/guigui/internal/debugmode"
 )
-
-type debugMode struct {
-	showRenderingRegions bool
-	showBuildLogs        bool
-	showInputLogs        bool
-	deviceScale          float64
-}
-
-var theDebugMode debugMode
-
-func init() {
-	for token := range strings.SplitSeq(os.Getenv("GUIGUI_DEBUG"), ",") {
-		switch {
-		case token == "showrenderingregions":
-			theDebugMode.showRenderingRegions = true
-		case token == "showbuildlogs":
-			theDebugMode.showBuildLogs = true
-		case token == "showinputlogs":
-			theDebugMode.showInputLogs = true
-		case strings.HasPrefix(token, "devicescale="):
-			f, err := strconv.ParseFloat(token[len("devicescale="):], 64)
-			if err != nil {
-				slog.Error(err.Error())
-			}
-			theDebugMode.deviceScale = f
-		case token == "":
-		default:
-			slog.Warn("unknown debug option", "option", token)
-		}
-	}
-}
 
 type invalidatedRegionsForDebugItem struct {
 	region image.Rectangle
@@ -271,8 +239,8 @@ func RunWithCustomFunc(root Widget, options *RunOptions, f func(game ebiten.Game
 }
 
 func deviceScaleFactor() float64 {
-	if theDebugMode.deviceScale != 0 {
-		return theDebugMode.deviceScale
+	if s := debugmode.DeviceScale(); s != 0 {
+		return s
 	}
 	// Calling ebiten.Monitor() seems pretty expensive. Do not call this often.
 	// TODO: Ebitengine should be fixed.
@@ -365,26 +333,26 @@ func (a *app) settleRebuildAndRedrawState(inputHandledWidget Widget) {
 	a.requiredPhases = requiredPhasesNone
 	if dispatchedWidget != nil {
 		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
+		if debugmode.ShowBuildLogs() {
 			slog.Info("rebuilding tree next time: event dispatched", "widget", fmt.Sprintf("%T", dispatchedWidget))
 		}
 	}
 	if inputHandledWidget != nil {
 		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
+		if debugmode.ShowBuildLogs() {
 			slog.Info("rebuilding tree next time: input handled", "widget", fmt.Sprintf("%T", inputHandledWidget))
 		}
 	}
 	if !a.rebuildAndRedrawRequestedRegions.empty() {
 		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
+		if debugmode.ShowBuildLogs() {
 			slog.Info("rebuilding tree next time: region redraw requested", "region", a.rebuildAndRedrawRequestedRegions)
 		}
 	}
 	if a.treeRebuildRequested {
 		a.treeRebuildRequested = false
 		a.requiredPhases = a.requiredPhases.addBuild()
-		if theDebugMode.showBuildLogs {
+		if debugmode.ShowBuildLogs() {
 			slog.Info("rebuilding tree next time: rebuild requested")
 		}
 	}
@@ -460,7 +428,7 @@ func (a *app) Update() error {
 			if !r.aborted {
 				inputHandledWidget = r.widget
 			}
-			if theDebugMode.showInputLogs {
+			if debugmode.ShowInputLogs() {
 				slog.Info("pointing input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
 			}
 		}
@@ -479,7 +447,7 @@ func (a *app) Update() error {
 			if !r.aborted {
 				inputHandledWidget = r.widget
 			}
-			if theDebugMode.showInputLogs {
+			if debugmode.ShowInputLogs() {
 				slog.Info("keyboard input handled", "widget", fmt.Sprintf("%T", r.widget), "aborted", r.aborted)
 			}
 		}
@@ -511,7 +479,7 @@ func (a *app) Update() error {
 
 	a.settleRebuildAndRedrawState(nil)
 
-	if theDebugMode.showRenderingRegions {
+	if debugmode.ShowRenderingRegions() {
 		// Update the regions in the reversed order to remove items.
 		for idx := len(a.invalidatedRegionsForDebug) - 1; idx >= 0; idx-- {
 			if a.invalidatedRegionsForDebug[idx].time > 0 {
@@ -541,7 +509,7 @@ func (a *app) Update() error {
 
 func (a *app) Draw(screen *ebiten.Image) {
 	origScreen := screen
-	if theDebugMode.showRenderingRegions {
+	if debugmode.ShowRenderingRegions() {
 		// As the screen is not cleered every frame, create offscreen here to keep the previous contents.
 		if a.offscreen != nil {
 			if a.offscreen.Bounds().Dx() != screen.Bounds().Dx() || a.offscreen.Bounds().Dy() != screen.Bounds().Dy() {
@@ -1043,7 +1011,7 @@ func (a *app) doDrawWidget(dst *ebiten.Image, widget Widget, layerToRender int64
 }
 
 func (a *app) drawDebugIfNeeded(screen *ebiten.Image) {
-	if !theDebugMode.showRenderingRegions {
+	if !debugmode.ShowRenderingRegions() {
 		return
 	}
 
@@ -1162,7 +1130,7 @@ func (a *app) appendWidgetsAt(widgets []widgetAndLayer, point image.Point, widge
 // A rebuild re-runs [Widget.Build] across the tree but does not by itself repaint anything;
 // to refresh a widget's pixels, call [RequestRedraw].
 func RequestRebuild() {
-	if theDebugMode.showBuildLogs {
+	if debugmode.ShowBuildLogs() {
 		if _, file, line, ok := runtime.Caller(1); ok {
 			slog.Info("rebuild requested", "at", fmt.Sprintf("%s:%d", file, line))
 		}
@@ -1191,7 +1159,7 @@ func (a *app) requestRebuildAndRedrawScreen(redrawReason requestRedrawReason) {
 // If the tree, content, or layout changed, call [RequestRebuild] as well.
 func RequestRedraw(widget Widget) {
 	widgetState := widget.widgetState()
-	if theDebugMode.showRenderingRegions {
+	if debugmode.ShowRenderingRegions() {
 		if _, file, line, ok := runtime.Caller(1); ok {
 			widgetState.redrawRequestedAt = fmt.Sprintf("%s:%d", file, line)
 		}

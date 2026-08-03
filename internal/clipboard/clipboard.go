@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"sync/atomic"
 	"time"
+
+	"github.com/guigui-gui/guigui/internal/debugmode"
 )
 
 // Contents is the clipboard contents: one logical value represented as up to
@@ -41,6 +43,11 @@ var (
 // called only from the goroutine started here, so their implementations can
 // keep unsynchronized state.
 func init() {
+	if debugmode.EmulatesClipboard() {
+		initEmulatedClipboard()
+		return
+	}
+
 	go func() {
 		t := time.NewTicker(time.Second)
 		defer t.Stop()
@@ -54,6 +61,23 @@ func init() {
 					continue
 				}
 			}
+		}
+	}()
+}
+
+// initEmulatedClipboard replaces the system clipboard with an in-process one.
+// cachedClipboardContents is then the clipboard itself: Write already stores
+// the contents there, and there is nothing to poll.
+func initEmulatedClipboard() {
+	if text := debugmode.EmulatedClipboardText(); text != "" {
+		cachedClipboardContents.Store(Contents{
+			Text: []byte(text),
+		})
+	}
+
+	// Drain the writes so that Write never times out on the channel.
+	go func() {
+		for range clipboardWriteCh {
 		}
 	}()
 }

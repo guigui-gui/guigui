@@ -9,6 +9,8 @@ import (
 	"iter"
 	"log/slog"
 	"math/bits"
+
+	"github.com/guigui-gui/guigui/internal/debugmode"
 )
 
 type redrawRequests struct {
@@ -125,7 +127,7 @@ func (r *requestRedrawReasons) clear() {
 
 func (r *redrawRequests) add(region image.Rectangle, reasons requestRedrawReasons, widget Widget) {
 	r.region = r.region.Union(region)
-	if !theDebugMode.showRenderingRegions {
+	if !debugmode.ShowRenderingRegions() {
 		return
 	}
 	for reason := range reasons.all() {

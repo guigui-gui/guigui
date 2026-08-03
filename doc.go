@@ -47,4 +47,28 @@
 //			log.Fatal(err)
 //		}
 //	}
+//
+// # Environment variables
+//
+// The environment variable GUIGUI_COLOR_MODE specifies the preferred color mode. Its value is
+// either light or dark. [Context.SetPreferredColorMode] overrides it.
+//
+// The environment variable GUIGUI_LOCALES specifies the locales. Its value is a comma-separated
+// list of BCP 47 language tags. The effective locales are determined by the app locales,
+// GUIGUI_LOCALES, and the system locales, in that priority order.
+//
+// # Debugging
+//
+// The environment variable GUIGUI_DEBUG enables debugging features. Its value is a
+// comma-separated list of these options:
+//
+//   - showrenderingregions: visualizes the regions that are redrawn.
+//   - showbuildlogs: logs why the widget tree is rebuilt.
+//   - showinputlogs: logs which widget handled an input.
+//   - devicescale=<float>: uses the given device scale factor instead of the monitor's.
+//   - emulateclipboard: replaces the system clipboard with an in-process one, so that copying
+//     and pasting leave the system clipboard untouched. The environment variable
+//     GUIGUI_DEBUG_CLIPBOARD_TEXT gives the emulated clipboard its initial text.
+//
+// These options are for debugging and can change at any time.
 package guigui
