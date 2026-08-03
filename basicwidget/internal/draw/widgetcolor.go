@@ -345,12 +345,12 @@ var (
 		light:         0.475,
 		dark:          0.525,
 	}
-	activeSegmentedControlButtonToken = colorToken{
+	pressedButtonToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.875,
 		dark:          0.5,
 	}
-	activeSegmentedControlButtonHoveredToken = colorToken{
+	pressedButtonHoveredToken = colorToken{
 		semanticColor: SemanticColorAccent,
 		light:         0.85,
 		dark:          0.525,
@@ -632,11 +632,12 @@ func PrimaryButtonBackgroundColor(colorMode ebiten.ColorMode, pressed bool, hove
 	return accentToken.color(colorMode)
 }
 
-func ActiveSegmentedControlButtonBackgroundColor(colorMode ebiten.ColorMode, hovered bool) color.Color {
+// PressedButtonBackgroundColor returns the color for a button that is kept pressed.
+func PressedButtonBackgroundColor(colorMode ebiten.ColorMode, hovered bool) color.Color {
 	if hovered {
-		return activeSegmentedControlButtonHoveredToken.color(colorMode)
+		return pressedButtonHoveredToken.color(colorMode)
 	}
-	return activeSegmentedControlButtonToken.color(colorMode)
+	return pressedButtonToken.color(colorMode)
 }
 
 func HeaderSeparatorColor(colorMode ebiten.ColorMode, enabled bool) color.Color {

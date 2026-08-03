@@ -19,6 +19,8 @@ type Buttons struct {
 	button              basicwidget.Button
 	primaryButtonText   basicwidget.Text
 	primaryButton       basicwidget.Button
+	pressedButtonText   basicwidget.Text
+	pressedButton       basicwidget.Button
 	textIconButton1Text basicwidget.Text
 	textIconButton1     guigui.WidgetWithSize[*basicwidget.Button]
 	textIconButton2Text basicwidget.Text
@@ -55,6 +57,15 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	b.primaryButton.SetText("Primary Button")
 	b.primaryButton.SetType(basicwidget.ButtonTypePrimary)
 	context.SetEnabled(&b.primaryButton, model.Buttons().Enabled())
+
+	b.pressedButtonText.SetValue("Button w/ pressed state")
+	b.pressedButton.SetText("Button")
+	b.pressedButton.SetToggleable(true)
+	b.pressedButton.SetPressed(model.Buttons().Pressed())
+	b.pressedButton.OnDown(func(context *guigui.Context) {
+		model.Buttons().SetPressed(!model.Buttons().Pressed())
+	})
+	context.SetEnabled(&b.pressedButton, model.Buttons().Enabled())
 
 	b.textIconButton1Text.SetValue("Button w/ text and icon (1)")
 	b.textIconButton1.Widget().SetText("Button")
@@ -93,6 +104,10 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		{
 			PrimaryWidget:   &b.primaryButtonText,
 			SecondaryWidget: &b.primaryButton,
+		},
+		{
+			PrimaryWidget:   &b.pressedButtonText,
+			SecondaryWidget: &b.pressedButton,
 		},
 		{
 			PrimaryWidget:   &b.textIconButton1Text,

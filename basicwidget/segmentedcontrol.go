@@ -148,8 +148,6 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 		s.buttons.At(i).SetText(item.Text)
 		s.buttons.At(i).SetIcon(item.Icon)
 		s.buttons.At(i).SetIconAlign(item.IconAlign)
-		s.buttons.At(i).SetTextBold(s.abstractList.IsSelectedItemIndex(i))
-		s.buttons.At(i).SetType(buttonTypeActiveSegmentControlButton)
 		if s.abstractList.ItemCount() > 1 {
 			switch i {
 			case 0:
@@ -188,8 +186,8 @@ func (s *SegmentedControl[T]) Build(context *guigui.Context, adder *guigui.Child
 			}
 		}
 		context.SetEnabled(s.buttons.At(i), !item.Disabled)
-		s.buttons.At(i).setKeepPressed(s.abstractList.IsSelectedItemIndex(i))
-		s.buttons.At(i).setKeepPressedClickable(s.abstractList.MultiSelection())
+		s.buttons.At(i).SetToggleable(s.abstractList.MultiSelection())
+		s.buttons.At(i).SetPressed(s.abstractList.IsSelectedItemIndex(i))
 		if s.onButtonDowns[i] == nil {
 			s.onButtonDowns[i] = func(context *guigui.Context) {
 				if s.abstractList.MultiSelection() {
@@ -245,7 +243,7 @@ func (s *SegmentedControl[T]) Measure(context *guigui.Context, constraints guigu
 
 	var w, h int
 	for i := range s.buttons.Len() {
-		size := s.buttons.At(i).measure(context, buttonConstraints, true)
+		size := s.buttons.At(i).Measure(context, buttonConstraints)
 		w = max(w, size.X)
 		h = max(h, size.Y)
 	}

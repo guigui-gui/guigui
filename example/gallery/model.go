@@ -104,6 +104,7 @@ func (m *Model) Popups() *PopupsModel {
 
 type ButtonsModel struct {
 	disabled bool
+	pressed  bool
 }
 
 func (b *ButtonsModel) Enabled() bool {
@@ -112,6 +113,14 @@ func (b *ButtonsModel) Enabled() bool {
 
 func (b *ButtonsModel) SetEnabled(enabled bool) {
 	b.disabled = !enabled
+}
+
+func (b *ButtonsModel) Pressed() bool {
+	return b.pressed
+}
+
+func (b *ButtonsModel) SetPressed(pressed bool) {
+	b.pressed = pressed
 }
 
 type SegmentedControlsModel struct {

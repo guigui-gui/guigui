@@ -110,7 +110,9 @@ func (s *Select[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		}
 	}
 	s.button.OnDown(s.onDown)
-	s.button.setKeepPressed(s.popupMenu.IsOpen())
+	// The button is not toggleable, and thus ignores clicks while the popup menu is open.
+	// This is required not to reopen the menu right after the menu is closed by a click.
+	s.button.SetPressed(s.popupMenu.IsOpen())
 	context.SetEnabled(&s.button, context.IsEnabled(s) && len(s.items) > 0)
 
 	if s.onPopupMenuItemSelected == nil {

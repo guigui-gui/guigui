@@ -40,7 +40,6 @@ type ButtonType int
 const (
 	ButtonTypeNormal ButtonType = iota
 	ButtonTypePrimary
-	buttonTypeActiveSegmentControlButton
 )
 
 type Button struct {
@@ -59,14 +58,14 @@ type Button struct {
 	iconLayout      guigui.LinearLayout
 	iconLayoutItems []guigui.LinearLayoutItem
 
-	pressed              bool
-	keepPressed          bool
-	keepPressedClickable bool
-	borderInvisible      bool
-	prevPressed          bool
-	sharpCorners         Corners
-	pairedButton         *Button
-	prevCanPress         bool
+	pressedByInput  bool
+	pressedByMethod bool
+	toggleable      bool
+	borderInvisible bool
+	prevPressed     bool
+	sharpCorners    Corners
+	pairedButton    *Button
+	prevCanPress    bool
 }
 
 func (b *Button) OnDown(f func(context *guigui.Context)) {
@@ -86,8 +85,9 @@ func (b *Button) setPairedButton(pair *Button) {
 }
 
 func (b *Button) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
-	w.WriteBool(b.pressed)
-	w.WriteBool(b.keepPressed)
+	w.WriteBool(b.pressedByInput)
+	w.WriteBool(b.pressedByMethod)
+	w.WriteBool(b.toggleable)
 	w.WriteBool(b.prevPressed)
 	w.WriteBool(b.textBold)
 	w.WriteUint64(uint64(b.iconAlign))
@@ -97,10 +97,6 @@ func (b *Button) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter
 	w.WriteBool(b.sharpCorners.TopEnd)
 	w.WriteBool(b.sharpCorners.BottomStart)
 	w.WriteBool(b.sharpCorners.BottomEnd)
-}
-
-func (b *Button) setPressed(pressed bool) {
-	b.pressed = pressed
 }
 
 func (b *Button) SetContent(content guigui.Widget) {
@@ -131,20 +127,18 @@ func (b *Button) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 	b.semanticColor = draw.SemanticColor(semanticColor)
 }
 
-func (b *Button) setKeepPressed(keep bool) {
-	if b.keepPressed == keep {
-		return
-	}
-	b.keepPressed = keep
-	// When a clickable keep-pressed button is deselected, clear the physical pressed state
-	// so the button doesn't remain visually pressed while the mouse is still held down.
-	if !keep && b.keepPressedClickable {
-		b.pressed = false
-	}
+// SetPressed sets whether the button stays pressed.
+//
+// A pressed button ignores clicks unless the button is toggleable.
+func (b *Button) SetPressed(pressed bool) {
+	b.pressedByMethod = pressed
 }
 
-func (b *Button) setKeepPressedClickable(clickable bool) {
-	b.keepPressedClickable = clickable
+// SetToggleable sets whether the button works as a toggle button.
+//
+// A toggleable button accepts clicks even while it is pressed.
+func (b *Button) SetToggleable(toggleable bool) {
+	b.toggleable = toggleable
 }
 
 func (b *Button) SetSharpCorners(sharpCorners Corners) {
@@ -170,13 +164,7 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 			b.text.SetColor(draw.TextColor(context.ColorMode(), true))
 		}
 	}
-	if b.textBold {
-		b.text.SetBold(true)
-	} else if b.typ == ButtonTypePrimary {
-		b.text.SetBold(true)
-	} else {
-		b.text.SetBold(false)
-	}
+	b.text.SetBold(b.textBold || b.typ == ButtonTypePrimary || b.showsPressedState())
 	b.text.SetHorizontalAlign(HorizontalAlignCenter)
 	b.text.SetVerticalAlign(VerticalAlignMiddle)
 	return nil
@@ -184,9 +172,12 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	var yOffset int
-	if b.isPressed(context, widgetBounds) {
+	switch {
+	case b.isDeeplyPressed(context, widgetBounds):
+		yOffset = int(1 * context.Scale())
+	case b.isPressed(context, widgetBounds):
 		yOffset = int(0.5 * context.Scale())
-	} else {
+	default:
 		yOffset = -int(0.5 * context.Scale())
 	}
 
@@ -279,19 +270,12 @@ func (b *Button) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 }
 
 func (b *Button) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
-	return b.measure(context, constraints, false)
-}
-
-func (b *Button) measure(context *guigui.Context, constraints guigui.Constraints, forceBold bool) image.Point {
 	h := defaultButtonSize(context).Y
 	var w int
 	if b.text.Value() != "" {
+		// Measure the text as bold so that the size doesn't depend on whether the button is pressed.
 		w += buttonEdgeAndTextPadding(context)
-		if forceBold {
-			w += b.text.boldTextSize(context, guigui.Constraints{}).X
-		} else {
-			w += b.text.Measure(context, guigui.Constraints{}).X
-		}
+		w += b.text.boldTextSize(context, guigui.Constraints{}).X
 	}
 	if b.icon.HasImage() {
 		if w == 0 {
@@ -334,35 +318,35 @@ func (b *Button) HandlePointingInput(context *guigui.Context, widgetBounds *guig
 		// Check both.
 		var justPressedOrReleased bool
 		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
-			if b.keepPressed && !b.keepPressedClickable {
+			if b.pressedByMethod && !b.toggleable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
 			context.SetFocused(b, true)
-			b.setPressed(true)
+			b.pressedByInput = true
 			guigui.DispatchEvent(b, buttonEventDown)
 			if isMouseButtonRepeating(ebiten.MouseButtonLeft) {
 				guigui.DispatchEvent(b, buttonEventRepeat)
 			}
 			justPressedOrReleased = true
 		}
-		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && b.pressed {
-			if b.keepPressed && !b.keepPressedClickable {
+		if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) && b.pressedByInput {
+			b.pressedByInput = false
+			if b.pressedByMethod && !b.toggleable {
 				return guigui.AbortHandlingInputByWidget(b)
 			}
-			b.setPressed(false)
 			guigui.DispatchEvent(b, buttonEventUp)
 			justPressedOrReleased = true
 		}
 		if justPressedOrReleased {
 			return guigui.HandleInputByWidget(b)
 		}
-		if (b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && isMouseButtonRepeating(ebiten.MouseButtonLeft) {
+		if (b.pressedByInput || b.pairedButton != nil && b.pairedButton.pressedByInput) && isMouseButtonRepeating(ebiten.MouseButtonLeft) {
 			guigui.DispatchEvent(b, buttonEventRepeat)
 			return guigui.HandleInputByWidget(b)
 		}
 	}
 	if !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		b.setPressed(false)
+		b.pressedByInput = false
 	}
 	return guigui.HandleInputResult{}
 }
@@ -377,10 +361,10 @@ func (b *Button) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 }
 
 func (b *Button) CursorShape(context *guigui.Context, widgetBounds *guigui.WidgetBounds) (ebiten.CursorShapeType, bool) {
-	if b.keepPressedClickable && context.IsEnabled(b) && widgetBounds.IsHitAtCursor() {
+	if b.toggleable && context.IsEnabled(b) && widgetBounds.IsHitAtCursor() {
 		return ebiten.CursorShapePointer, true
 	}
-	if (b.canPress(context, widgetBounds) || b.pressed || b.pairedButton != nil && b.pairedButton.pressed) && (!b.keepPressed || b.keepPressedClickable) {
+	if (b.canPress(context, widgetBounds) || b.pressedByInput || b.pairedButton != nil && b.pairedButton.pressedByInput) && (!b.pressedByMethod || b.toggleable) {
 		return ebiten.CursorShapePointer, true
 	}
 	return 0, true
@@ -395,16 +379,13 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	cm := context.ColorMode()
 	backgroundColor := draw.ControlColor(context.ColorMode(), context.IsEnabled(b))
 	if context.IsEnabled(b) {
-		switch b.typ {
-		case ButtonTypePrimary:
+		switch {
+		case b.typ == ButtonTypePrimary:
 			backgroundColor = draw.PrimaryButtonBackgroundColor(cm, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
-		case buttonTypeActiveSegmentControlButton:
-			if b.isPressed(context, widgetBounds) {
-				hovered := b.keepPressedClickable && widgetBounds.IsHitAtCursor()
-				backgroundColor = draw.ActiveSegmentedControlButtonBackgroundColor(cm, hovered)
-			} else if b.canPress(context, widgetBounds) {
-				backgroundColor = draw.ButtonBackgroundColorFromSemanticColor(cm, draw.SemanticColorBase, false, true)
-			}
+		case b.showsPressedState():
+			// Keep the hovered color while the button is being pressed, so that pressing it never lightens it.
+			hovered := b.canPress(context, widgetBounds) || b.isBeingPressed(context, widgetBounds)
+			backgroundColor = draw.PressedButtonBackgroundColor(cm, hovered)
 		default:
 			backgroundColor = draw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		}
@@ -412,7 +393,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	r := b.radius(context, widgetBounds)
 	border := !b.borderInvisible
-	if context.IsEnabled(b) && (widgetBounds.IsHitAtCursor() || b.keepPressed) {
+	if context.IsEnabled(b) && (widgetBounds.IsHitAtCursor() || b.pressedByMethod) {
 		border = true
 	}
 	bounds := widgetBounds.Bounds()
@@ -427,32 +408,44 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		}
 		clr1, clr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 		if context.IsEnabled(b) {
-			switch b.typ {
-			case ButtonTypePrimary:
+			switch {
+			case b.typ == ButtonTypePrimary:
 				clr1, clr2 = draw.BorderAccentColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
-			case buttonTypeActiveSegmentControlButton:
-				if b.isPressed(context, widgetBounds) {
-					clr1, clr2 = draw.BorderAccentSecondaryColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
-				} else {
-					clr1, clr2 = draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
-				}
+			case b.showsPressedState():
+				clr1, clr2 = draw.BorderAccentSecondaryColors(context.ColorMode(), draw.RoundedRectBorderType(borderType))
 			}
 		}
 
-		draw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, float32(1*context.Scale()), borderType, draw.Corners(b.sharpCorners))
+		borderWidth := float32(1 * context.Scale())
+		if b.isDeeplyPressed(context, widgetBounds) {
+			borderWidth = float32(1.5 * context.Scale())
+		}
+		draw.DrawRoundedRectBorderWithSharpCorners(context, dst, bounds, clr1, clr2, r, borderWidth, borderType, draw.Corners(b.sharpCorners))
 	}
 }
 
 func (b *Button) canPress(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	return context.IsEnabled(b) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && (!b.keepPressed || b.keepPressedClickable)
+	return context.IsEnabled(b) && widgetBounds.IsHitAtCursor() && !ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && (!b.pressedByMethod || b.toggleable)
 }
 
-func (b *Button) isActive(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	return context.IsEnabled(b) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && widgetBounds.IsHitAtCursor() && (b.pressed || b.pairedButton != nil && b.pairedButton.pressed)
+// isDeeplyPressed reports whether the button should look deeper pressed than its pressed state alone.
+func (b *Button) isDeeplyPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return b.showsPressedState() && b.isBeingPressed(context, widgetBounds)
+}
+
+// showsPressedState reports whether the button shows its pressed state rather than a transient press.
+// A toggleable button shows it while it is being clicked,
+// so that unpressing it by a click doesn't change the appearance until the release.
+func (b *Button) showsPressedState() bool {
+	return b.pressedByMethod || b.toggleable && b.pressedByInput
+}
+
+func (b *Button) isBeingPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
+	return context.IsEnabled(b) && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) && widgetBounds.IsHitAtCursor() && (b.pressedByInput || b.pairedButton != nil && b.pairedButton.pressedByInput)
 }
 
 func (b *Button) isPressed(context *guigui.Context, widgetBounds *guigui.WidgetBounds) bool {
-	return context.IsEnabled(b) && b.isActive(context, widgetBounds) || b.keepPressed
+	return context.IsEnabled(b) && b.isBeingPressed(context, widgetBounds) || b.pressedByMethod
 }
 
 func defaultButtonSize(context *guigui.Context) image.Point {
