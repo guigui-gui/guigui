@@ -76,6 +76,11 @@ func (t *Text) InsertionStyle() textstyle.Style {
 	return t.insertionStyle
 }
 
+// HandleFocusChanged invokes the widget's focus-changed handler.
+func (t *Text) HandleFocusChanged(focused bool) {
+	t.handleFocusChanged(nil, focused)
+}
+
 func AppendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
 	return appendFaceRunsThroughComposition(dst, src, selStart, selEnd, compLen)
 }

@@ -118,6 +118,36 @@ func TestTextInsertionStyleClearedOnSelectionChange(t *testing.T) {
 	}
 }
 
+func TestTextInsertionStyleSurvivesBlur(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+	txt.SetSelection(5, 5)
+	txt.SetInsertionStyle(textstyle.Style{}.WithColor(red))
+
+	// A blur/refocus round-trip with an unchanged caret keeps the pending
+	// insertion style.
+	txt.HandleFocusChanged(false)
+	txt.HandleFocusChanged(true)
+
+	if got := txt.InsertionStyle(); got.IsZero() {
+		t.Fatal("InsertionStyle() after blur and refocus: got: zero, want: set")
+	}
+	if start, end := txt.Selection(); start != 5 || end != 5 {
+		t.Fatalf("Selection() after blur and refocus: got: (%d, %d), want: (5, 5)", start, end)
+	}
+
+	txt.ReplaceValueAtSelection("ab")
+
+	var wantRuns textstyle.Runs
+	wantRuns.SetColor(5, 7, red)
+	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+	}
+}
+
 func TestTextInsertionStyleClearedOnDeletion(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 

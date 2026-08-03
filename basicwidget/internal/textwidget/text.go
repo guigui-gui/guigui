@@ -355,30 +355,32 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	}
 
 	if t.onFocusChanged == nil {
-		t.onFocusChanged = func(context *guigui.Context, focused bool) {
-			if !t.editable {
-				return
-			}
-			if focused {
-				t.store.Focus()
-				t.caret.resetCounter()
-				start, end := t.store.Selection()
-				if start < 0 || end < 0 {
-					t.doSelectAll()
-				}
-			} else {
-				// End the IME session, committing any in-progress composition
-				// so typed-but-uncommitted text is preserved rather than
-				// discarded when focus moves away.
-				t.store.Blur()
-				t.commit(false)
-				t.resetInsertionStyle()
-			}
-		}
+		t.onFocusChanged = t.handleFocusChanged
 	}
 	guigui.OnFocusChanged(t, t.onFocusChanged)
 
 	return nil
+}
+
+func (t *Text) handleFocusChanged(context *guigui.Context, focused bool) {
+	if !t.editable {
+		return
+	}
+	if focused {
+		t.store.Focus()
+		t.caret.resetCounter()
+		start, end := t.store.Selection()
+		if start < 0 || end < 0 {
+			t.doSelectAll()
+		}
+	} else {
+		// End the IME session, committing any in-progress composition
+		// so typed-but-uncommitted text is preserved rather than
+		// discarded when focus moves away. The insertion style is kept:
+		// it follows the caret, not the focus.
+		t.store.Blur()
+		t.commit(false)
+	}
 }
 
 func (t *Text) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
