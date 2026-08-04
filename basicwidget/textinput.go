@@ -422,6 +422,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		t.supportText.SetValue(t.supportTextValue)
 		t.supportText.SetScale(0.85)
 		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
+		t.supportText.SetWrapMode(WrapModeNormal)
 		if t.hasError {
 			t.supportText.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
 		} else {
@@ -436,9 +437,14 @@ func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	bounds := widgetBounds.Bounds()
 
 	inputBounds := bounds
+	var supportTextSize image.Point
 	if t.supportTextValue != "" {
-		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(bounds.Dx()))
-		inputBounds.Max.Y = bounds.Max.Y - supportTextSize.Y - int(2*context.Scale())
+		supportTextSize = t.supportText.Measure(context, guigui.FixedWidthConstraints(bounds.Dx()))
+		// The bounds can be shorter than the input box and the support text
+		// need. Keep the input box at its own height in that case and let the
+		// support text overflow instead of collapsing the box.
+		inputHeight := t.measureTextInput(context, guigui.FixedWidthConstraints(bounds.Dx())).Y
+		inputBounds.Max.Y = max(bounds.Max.Y-supportTextSize.Y-supportTextGap(context), bounds.Min.Y+inputHeight)
 	}
 
 	layouter.LayoutWidget(&t.textInput, inputBounds)
@@ -453,9 +459,9 @@ func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 
 	if t.supportTextValue != "" {
 		supportTextBounds := image.Rectangle{
-			Min: image.Pt(inputBounds.Min.X, inputBounds.Max.Y+int(2*context.Scale())),
-			Max: image.Pt(inputBounds.Max.X, bounds.Max.Y),
+			Min: image.Pt(inputBounds.Min.X, inputBounds.Max.Y+supportTextGap(context)),
 		}
+		supportTextBounds.Max = supportTextBounds.Min.Add(image.Pt(inputBounds.Dx(), supportTextSize.Y))
 		layouter.LayoutWidget(&t.supportText, supportTextBounds)
 	}
 }
@@ -465,11 +471,31 @@ func (t *TextInput) measureTextInput(context *guigui.Context, constraints guigui
 	return t.textInput.Measure(context, constraints)
 }
 
+// supportTextGap returns the vertical gap between the text input area and the
+// support text below it.
+func supportTextGap(context *guigui.Context) int {
+	return int(2 * context.Scale())
+}
+
+// supportTextWidth returns the width to measure a support text at for the
+// given constraints, falling back to defaultWidth when the constraints do not
+// fix the width.
+func supportTextWidth(constraints guigui.Constraints, defaultWidth int) int {
+	if fixedWidth, ok := constraints.FixedWidth(); ok {
+		return fixedWidth
+	}
+	return defaultWidth
+}
+
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	s := t.measureTextInput(context, constraints)
 	if t.supportTextValue != "" {
-		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(s.X))
-		s.Y += supportTextSize.Y + int(2*context.Scale())
+		// The support text spans the whole widget width, which is not
+		// necessarily the width the text input area measures to. Use the width
+		// the widget is going to get so that this matches Layout.
+		w := supportTextWidth(constraints, s.X)
+		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(w))
+		s.Y += supportTextSize.Y + supportTextGap(context)
 	}
 	return s
 }

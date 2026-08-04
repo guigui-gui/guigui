@@ -3,7 +3,11 @@
 
 package basicwidget
 
-import "image"
+import (
+	"image"
+
+	"github.com/guigui-gui/guigui"
+)
 
 func TopItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (int, int) {
 	return topItemAfterPixelScroll(measure, totalCount, startIndex, startOffset, deltaPx)
@@ -69,6 +73,13 @@ func (t *TextInputText) ContentWidth() int {
 
 func (t *TextInputText) LayoutWidth(bounds image.Rectangle) int {
 	return t.text.Widget().core.LayoutWidth(bounds)
+}
+
+// SupportTextWidth exposes supportTextWidth so tests can verify that
+// [TextInput.Measure] measures the support text at the width
+// [TextInput.Layout] lays it out at.
+func SupportTextWidth(constraints guigui.Constraints, defaultWidth int) int {
+	return supportTextWidth(constraints, defaultWidth)
 }
 
 type AbstractListValuer[T comparable] interface {
