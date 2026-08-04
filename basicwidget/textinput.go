@@ -356,6 +356,7 @@ func (t *TextInput) SupportText() string {
 
 // SetSupportText sets the support text displayed below the text input.
 // The support text is shown in a subdued color, or in a danger color when the error state is true.
+// A line break starts a new line.
 func (t *TextInput) SetSupportText(text string) {
 	t.supportTextValue = text
 }
@@ -421,8 +422,8 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		adder.AddWidget(&t.supportText)
 		t.supportText.SetValue(t.supportTextValue)
 		t.supportText.SetScale(0.85)
+		t.supportText.SetMultiline(true)
 		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
-		t.supportText.SetWrapMode(WrapModeNormal)
 		if t.hasError {
 			t.supportText.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
 		} else {
@@ -439,7 +440,7 @@ func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	inputBounds := bounds
 	var supportTextSize image.Point
 	if t.supportTextValue != "" {
-		supportTextSize = t.supportText.Measure(context, guigui.FixedWidthConstraints(bounds.Dx()))
+		supportTextSize = t.supportText.Measure(context, guigui.Constraints{})
 		// The bounds can be shorter than the input box and the support text
 		// need. Keep the input box at its own height in that case and let the
 		// support text overflow instead of collapsing the box.
@@ -458,11 +459,16 @@ func (t *TextInput) Layout(context *guigui.Context, widgetBounds *guigui.WidgetB
 	})
 
 	if t.supportTextValue != "" {
-		supportTextBounds := image.Rectangle{
-			Min: image.Pt(inputBounds.Min.X, inputBounds.Max.Y+supportTextGap(context)),
-		}
-		supportTextBounds.Max = supportTextBounds.Min.Add(image.Pt(inputBounds.Dx(), supportTextSize.Y))
-		layouter.LayoutWidget(&t.supportText, supportTextBounds)
+		// The support text is not wrapped: one wider than the text input area
+		// extends past the widget's bounds instead of narrowing the area or
+		// growing the widget.
+		sw := max(supportTextSize.X, inputBounds.Dx())
+		x := supportTextMinX(t.textInput.text.Text().HorizontalAlign(), inputBounds, sw)
+		y := inputBounds.Max.Y + supportTextGap(context)
+		layouter.LayoutWidget(&t.supportText, image.Rectangle{
+			Min: image.Pt(x, y),
+			Max: image.Pt(x+sw, y+supportTextSize.Y),
+		})
 	}
 }
 
@@ -477,24 +483,25 @@ func supportTextGap(context *guigui.Context) int {
 	return int(2 * context.Scale())
 }
 
-// supportTextWidth returns the width to measure a support text at for the
-// given constraints, falling back to defaultWidth when the constraints do not
-// fix the width.
-func supportTextWidth(constraints guigui.Constraints, defaultWidth int) int {
-	if fixedWidth, ok := constraints.FixedWidth(); ok {
-		return fixedWidth
+// supportTextMinX returns the left edge of a support text of the given width
+// placed under a text input area occupying inputBounds and aligned as halign.
+func supportTextMinX(halign HorizontalAlign, inputBounds image.Rectangle, width int) int {
+	switch halign {
+	case HorizontalAlignCenter:
+		return inputBounds.Min.X - (width-inputBounds.Dx())/2
+	case HorizontalAlignEnd:
+		return inputBounds.Max.X - width
+	default:
+		return inputBounds.Min.X
 	}
-	return defaultWidth
 }
 
 func (t *TextInput) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	s := t.measureTextInput(context, constraints)
 	if t.supportTextValue != "" {
-		// The support text spans the whole widget width, which is not
-		// necessarily the width the text input area measures to. Use the width
-		// the widget is going to get so that this matches Layout.
-		w := supportTextWidth(constraints, s.X)
-		supportTextSize := t.supportText.Measure(context, guigui.FixedWidthConstraints(w))
+		// The support text is not wrapped, so its height does not depend on the
+		// width the widget is given.
+		supportTextSize := t.supportText.Measure(context, guigui.Constraints{})
 		s.Y += supportTextSize.Y + supportTextGap(context)
 	}
 	return s

@@ -87,6 +87,7 @@ func (c *Combobox) SupportText() string {
 
 // SetSupportText sets the support text displayed below the combobox.
 // The support text is shown in a subdued color, or in a danger color when the error state is true.
+// A line break starts a new line.
 func (c *Combobox) SetSupportText(text string) {
 	c.textInput.SetSupportText(text)
 }

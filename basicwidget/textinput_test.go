@@ -4,43 +4,65 @@
 package basicwidget_test
 
 import (
+	"image"
 	"testing"
 
-	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
 )
 
-func TestSupportTextWidth(t *testing.T) {
-	const defaultWidth = 240
+func TestSupportTextMinX(t *testing.T) {
+	inputBounds := image.Rect(100, 0, 300, 20)
 
 	testCases := []struct {
-		name        string
-		constraints guigui.Constraints
-		want        int
+		name   string
+		halign basicwidget.HorizontalAlign
+		width  int
+		want   int
 	}{
 		{
-			// The support text spans the whole widget width, which is the
-			// fixed width and not what the text input area measures to.
-			name:        "fixed width",
-			constraints: guigui.FixedWidthConstraints(120),
-			want:        120,
+			name:   "start",
+			halign: basicwidget.HorizontalAlignStart,
+			width:  500,
+			want:   100,
 		},
 		{
-			name:        "no constraints",
-			constraints: guigui.Constraints{},
-			want:        defaultWidth,
+			name:   "center",
+			halign: basicwidget.HorizontalAlignCenter,
+			width:  500,
+			want:   -50,
 		},
 		{
-			name:        "fixed height",
-			constraints: guigui.FixedHeightConstraints(80),
-			want:        defaultWidth,
+			name:   "end",
+			halign: basicwidget.HorizontalAlignEnd,
+			width:  500,
+			want:   -200,
+		},
+		{
+			// A support text no wider than the text input area keeps the
+			// area's bounds whatever the alignment is.
+			name:   "start, fits",
+			halign: basicwidget.HorizontalAlignStart,
+			width:  200,
+			want:   100,
+		},
+		{
+			name:   "center, fits",
+			halign: basicwidget.HorizontalAlignCenter,
+			width:  200,
+			want:   100,
+		},
+		{
+			name:   "end, fits",
+			halign: basicwidget.HorizontalAlignEnd,
+			width:  200,
+			want:   100,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := basicwidget.SupportTextWidth(tc.constraints, defaultWidth); got != tc.want {
-				t.Errorf("SupportTextWidth() = %d, want %d", got, tc.want)
+			if got := basicwidget.SupportTextMinX(tc.halign, inputBounds, tc.width); got != tc.want {
+				t.Errorf("SupportTextMinX() = %d, want %d", got, tc.want)
 			}
 		})
 	}

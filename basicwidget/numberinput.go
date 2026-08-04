@@ -82,6 +82,7 @@ func (n *NumberInput) SupportText() string {
 
 // SetSupportText sets the support text displayed below the number input.
 // The support text is shown in a subdued color, or in a danger color when the error state is true.
+// A line break starts a new line.
 func (n *NumberInput) SetSupportText(text string) {
 	n.textInput.SetSupportText(text)
 }
