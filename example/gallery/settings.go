@@ -33,11 +33,11 @@ var hongKongChinese = language.MustParse("zh-HK")
 func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&s.form)
 
-	lightModeImg, err := theImageCache.GetMonochrome("light_mode", context.ColorMode())
+	lightModeImg, err := theImageLoader.MonochromeImage("light_mode", context.ColorMode())
 	if err != nil {
 		return err
 	}
-	darkModeImg, err := theImageCache.GetMonochrome("dark_mode", context.ColorMode())
+	darkModeImg, err := theImageLoader.MonochromeImage("dark_mode", context.ColorMode())
 	if err != nil {
 		return err
 	}

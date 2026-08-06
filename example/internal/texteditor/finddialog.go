@@ -248,19 +248,32 @@ func (c *findDialogContent) Build(context *guigui.Context, adder *guigui.ChildAd
 	c.count.SetHorizontalAlign(basicwidget.HorizontalAlignEnd)
 
 	cm := context.ColorMode()
-	c.prevButton.SetIcon(loadImage("keyboard_arrow_up", cm))
+	prevImg, err := theImageLoader.MonochromeImage("keyboard_arrow_up", cm)
+	if err != nil {
+		return err
+	}
+	nextImg, err := theImageLoader.MonochromeImage("keyboard_arrow_down", cm)
+	if err != nil {
+		return err
+	}
+	closeImg, err := theImageLoader.MonochromeImage("close_small", cm)
+	if err != nil {
+		return err
+	}
+
+	c.prevButton.SetIcon(prevImg)
 	c.prevButton.SetSharpCorners(basicwidget.Corners{TopEnd: true, BottomEnd: true})
 	c.prevButton.OnDown(func(context *guigui.Context) {
 		guigui.DispatchEvent(c.dialog, findDialogEventFindPrev, c.queryInput.Value())
 	})
 
-	c.nextButton.SetIcon(loadImage("keyboard_arrow_down", cm))
+	c.nextButton.SetIcon(nextImg)
 	c.nextButton.SetSharpCorners(basicwidget.Corners{TopStart: true, BottomStart: true})
 	c.nextButton.OnDown(func(context *guigui.Context) {
 		guigui.DispatchEvent(c.dialog, findDialogEventFindNext, c.queryInput.Value())
 	})
 
-	c.closeButton.SetIcon(loadImage("close_small", cm))
+	c.closeButton.SetIcon(closeImg)
 	c.closeButton.OnDown(func(context *guigui.Context) {
 		c.dialog.popup.SetOpen(false)
 	})

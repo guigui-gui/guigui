@@ -61,19 +61,19 @@ func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	} else if len(s.select2ItemWidgets) > 3 {
 		s.select2ItemWidgets = slices.Delete(s.select2ItemWidgets, 3, len(s.select2ItemWidgets))
 	}
-	img, err := theImageCache.Get("gopher_left")
+	img, err := theImageLoader.Image("gopher_left")
 	if err != nil {
 		return err
 	}
 	s.select2ItemWidgets[0].SetImage(img)
 	s.select2ItemWidgets[0].SetText("Left")
-	img, err = theImageCache.Get("gopher_center")
+	img, err = theImageLoader.Image("gopher_center")
 	if err != nil {
 		return err
 	}
 	s.select2ItemWidgets[1].SetImage(img)
 	s.select2ItemWidgets[1].SetText("Center")
-	img, err = theImageCache.Get("gopher_right")
+	img, err = theImageLoader.Image("gopher_right")
 	if err != nil {
 		return err
 	}

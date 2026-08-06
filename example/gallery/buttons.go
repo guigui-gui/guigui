@@ -69,7 +69,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 
 	b.textIconButton1Text.SetValue("Button w/ text and icon (1)")
 	b.textIconButton1.Widget().SetText("Button")
-	img, err := theImageCache.GetMonochrome("check", context.ColorMode())
+	img, err := theImageLoader.MonochromeImage("check", context.ColorMode())
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,7 @@ func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 	b.textIconButton2.SetFixedWidth(6 * u)
 
 	b.imageButtonText.SetValue("Image button")
-	img, err = theImageCache.Get("gopher_center")
+	img, err = theImageLoader.Image("gopher_center")
 	if err != nil {
 		return err
 	}
