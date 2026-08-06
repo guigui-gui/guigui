@@ -18,8 +18,8 @@ github.com/hajimehoshi/bitmapfont/v4 v4.1.1 h1:5FNENqs0QbURnFG8HeDJuPl/FIjU4tNes
 github.com/hajimehoshi/bitmapfont/v4 v4.1.1/go.mod h1:/PD+aLjAJ0F2UoQx6hkOfXqWN7BkroDUMr5W+IT1dpE=
 github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198 h1:fcJFQ8HjauZXxEag8ePAvxbknarEEwQGP4OwQC4P/gY=
 github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198/go.mod h1:bwEZvNLSrtl7bOSAvWaoixpIjmTFBjNIgfDiEN9wsYc=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.13.0.20260805195247-a0f037b41eaa h1:h8yhxIyiRX7j5sny2u/W6QvE/IK4++XMjw8SR/Ykugg=
-github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.13.0.20260805195247-a0f037b41eaa/go.mod h1:xEILmvbL2Kk6ZVn+I8idQvpoOCxTWFkBB6mTamTbefE=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.13.0.20260806031607-98caf34cf462 h1:GjguB1v6rAvjuTTzXWRRPLHalZaX1clb+lfr/2Rsjn4=
+github.com/hajimehoshi/ebiten/v2 v2.10.0-alpha.13.0.20260806031607-98caf34cf462/go.mod h1:xEILmvbL2Kk6ZVn+I8idQvpoOCxTWFkBB6mTamTbefE=
 github.com/hajimehoshi/iro v0.4.0-alpha.0.20260802170616-edef5c559e51 h1:G4AcePGNn0Y1M/UTEKEr9+rlD/mABmNcfDc7vm1D/Ec=
 github.com/hajimehoshi/iro v0.4.0-alpha.0.20260802170616-edef5c559e51/go.mod h1:gfbDojwwKcq04DipcwqdW35ooEStXByUF3JanzJG5Ks=
 github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade h1:FmusiCI1wHw+XQbvL9M+1r/C3SPqKrmBaIOYwVfQoDE=
