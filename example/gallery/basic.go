@@ -29,6 +29,8 @@ type Basic struct {
 	numberInput      basicwidget.NumberInput
 	sliderText       basicwidget.Text
 	slider           basicwidget.Slider
+	progressBarText  basicwidget.Text
+	progressBar      basicwidget.ProgressBar
 	listText         basicwidget.Text
 	list             basicwidget.List[int]
 
@@ -49,6 +51,10 @@ func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	b.sliderText.SetValue("Slider")
 	b.slider.SetMinimumValueInt64(0)
 	b.slider.SetMaximumValueInt64(100)
+	b.progressBarText.SetValue("Progress bar")
+	b.progressBar.SetMinimumValue(0)
+	b.progressBar.SetMaximumValue(100)
+	b.progressBar.SetValue(50)
 	b.listText.SetValue("Text list")
 	b.list.SetItemsByStrings([]string{"Item 1", "Item 2", "Item 3"})
 
@@ -80,6 +86,10 @@ func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		{
 			PrimaryWidget:   &b.sliderText,
 			SecondaryWidget: &b.slider,
+		},
+		{
+			PrimaryWidget:   &b.progressBarText,
+			SecondaryWidget: &b.progressBar,
 		},
 		{
 			PrimaryWidget:   &b.listText,

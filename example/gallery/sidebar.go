@@ -101,6 +101,10 @@ func (s *sidebarContent) Build(context *guigui.Context, adder *guigui.ChildAdder
 			Value: "sliders",
 		},
 		{
+			Text:  "Progress Bars",
+			Value: "progressbars",
+		},
+		{
 			Text:  "Lists",
 			Value: "lists",
 		},

@@ -370,6 +370,11 @@ var (
 		light:         0.7,
 		dark:          0.3,
 	}
+	trackOnDisabledToken = colorToken{
+		semanticColor: SemanticColorBase,
+		light:         0.6,
+		dark:          0.4,
+	}
 	popupDarkBackgroundToken = colorToken{
 		semanticColor: SemanticColorBase,
 		light:         0.1,
@@ -649,6 +654,14 @@ func HeaderSeparatorColor(colorMode ebiten.ColorMode, enabled bool) color.Color 
 
 func SliderTickColor(colorMode ebiten.ColorMode) color.Color {
 	return sliderTickToken.color(colorMode)
+}
+
+// TrackFillColor returns the color for the filled part of a track.
+func TrackFillColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
+	if enabled {
+		return TrackColor(colorMode, true, false)
+	}
+	return trackOnDisabledToken.color(colorMode)
 }
 
 func PopupDarkBackgroundColor(colorMode ebiten.ColorMode, openingRate float64) color.Color {

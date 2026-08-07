@@ -28,6 +28,7 @@ type Model struct {
 	textInputs        TextInputsModel
 	numberInputs      NumberInputsModel
 	sliders           SlidersModel
+	progressBars      ProgressBarsModel
 	lists             ListsModel
 	selects           SelectsModel
 	comboboxes        ComboboxesModel
@@ -80,6 +81,10 @@ func (m *Model) NumberInputs() *NumberInputsModel {
 
 func (m *Model) Sliders() *SlidersModel {
 	return &m.sliders
+}
+
+func (m *Model) ProgressBars() *ProgressBarsModel {
+	return &m.progressBars
 }
 
 func (m *Model) Lists() *ListsModel {
@@ -652,6 +657,33 @@ func (s *SlidersModel) SliderValue() int {
 
 func (s *SlidersModel) SetSliderValue(value int) {
 	s.sliderValue = value
+}
+
+type ProgressBarsModel struct {
+	value    int
+	valueSet bool
+	disabled bool
+}
+
+func (p *ProgressBarsModel) Enabled() bool {
+	return !p.disabled
+}
+
+func (p *ProgressBarsModel) SetEnabled(enabled bool) {
+	p.disabled = !enabled
+}
+
+// Value returns the progress in percent.
+func (p *ProgressBarsModel) Value() int {
+	if !p.valueSet {
+		return 50
+	}
+	return p.value
+}
+
+func (p *ProgressBarsModel) SetValue(value int) {
+	p.value = value
+	p.valueSet = true
 }
 
 type ListsModel struct {

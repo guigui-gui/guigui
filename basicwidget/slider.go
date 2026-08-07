@@ -373,25 +373,17 @@ func (s *Slider) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 	}
 	barX2 := b.Max.X - sliderThumbRadius(context)*3/4
 
-	bgColorOn := draw.TrackColor(context.ColorMode(), true, false)
-	bgColorOff := draw.TrackColor(context.ColorMode(), false, false)
-	if !context.IsEnabled(s) {
-		bgColorOn = bgColorOff
-	}
+	fillColor := draw.TrackFillColor(context.ColorMode(), context.IsEnabled(s))
+	trackColor := draw.TrackColor(context.ColorMode(), false, false)
 
 	if barX0 < barX1 {
 		b := image.Rect(barX0, barY0, barX1, barY1)
-		draw.DrawRoundedRect(context, dst, b, bgColorOn, r)
-
-		if !context.IsEnabled(s) {
-			borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
-			draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
-		}
+		draw.DrawRoundedRect(context, dst, b, fillColor, r)
 	}
 
 	if barX1 < barX2 {
 		b := image.Rect(barX1, barY0, barX2, barY1)
-		draw.DrawRoundedRect(context, dst, b, bgColorOff, r)
+		draw.DrawRoundedRect(context, dst, b, trackColor, r)
 
 		borderClr1, borderClr2 := draw.BorderColors(context.ColorMode(), draw.RoundedRectBorderTypeInset)
 		draw.DrawRoundedRectBorder(context, dst, b, borderClr1, borderClr2, r, float32(1*context.Scale()), draw.RoundedRectBorderTypeInset)
