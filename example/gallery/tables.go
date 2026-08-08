@@ -86,18 +86,18 @@ func (t *Tables) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 
 		t.tableRows[i].Cells[0].Text = strconv.Itoa(item.ID)
 		t.tableRows[i].Cells[0].TextStyle.HorizontalAlign = basicwidget.HorizontalAlignRight
-		t.tableRows[i].Cells[0].TextStyle.Tabular = true
+		t.tableRows[i].Cells[0].TextStyle.Style.SetTabular(true)
 
 		t.tableRows[i].Cells[1].Text = item.Name
 		t.tableRows[i].Cells[1].TextStyle.WrapMode = basicwidget.WrapModeNormal
 
 		t.tableRows[i].Cells[2].Text = strconv.Itoa(item.Amount)
 		t.tableRows[i].Cells[2].TextStyle.HorizontalAlign = basicwidget.HorizontalAlignRight
-		t.tableRows[i].Cells[2].TextStyle.Tabular = true
+		t.tableRows[i].Cells[2].TextStyle.Style.SetTabular(true)
 
 		t.tableRows[i].Cells[3].Text = fmt.Sprintf("%d.%02d", item.Cost/100, item.Cost%100)
 		t.tableRows[i].Cells[3].TextStyle.HorizontalAlign = basicwidget.HorizontalAlignRight
-		t.tableRows[i].Cells[3].TextStyle.Tabular = true
+		t.tableRows[i].Cells[3].TextStyle.Style.SetTabular(true)
 	}
 	t.table.SetItems(t.tableRows)
 	if model.Tables().IsFooterVisible() {

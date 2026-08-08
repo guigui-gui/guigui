@@ -61,6 +61,12 @@ func (s *TextStyle) writeStateKey(w *guigui.StateKeyWriter) {
 	}
 }
 
+// equals reports whether s and other have the same properties set to the
+// same values.
+func (s *TextStyle) equals(other *TextStyle) bool {
+	return s.s.Equal(other.s)
+}
+
 // SetFontFamily sets the font family. A nil family renders with the
 // registered face source stack alone.
 func (s *TextStyle) SetFontFamily(family *FontFamily) {

@@ -156,6 +156,24 @@ func (l *ListItem[T]) writeStateKey(w *guigui.StateKeyWriter) {
 	// identifying the item, so it does not affect the widget state.
 }
 
+// equals reports whether l and other have the same content.
+func (l *ListItem[T]) equals(other *ListItem[T]) bool {
+	return l.Text == other.Text &&
+		l.TextStyle.equals(&other.TextStyle) &&
+		l.Header == other.Header &&
+		l.Content == other.Content &&
+		l.KeyText == other.KeyText &&
+		l.Unselectable == other.Unselectable &&
+		l.Border == other.Border &&
+		l.Disabled == other.Disabled &&
+		l.Movable == other.Movable &&
+		l.Value == other.Value &&
+		l.IndentLevel == other.IndentLevel &&
+		l.Padding == other.Padding &&
+		l.Collapsed == other.Collapsed &&
+		l.Checked == other.Checked
+}
+
 type List[T comparable] struct {
 	guigui.DefaultWidget
 
@@ -614,7 +632,7 @@ func (l *listItemWidget[T]) WriteStateKey(context *guigui.Context, w *guigui.Sta
 }
 
 func (l *listItemWidget[T]) setListItem(listItem ListItem[T]) {
-	if l.item == listItem {
+	if l.item.equals(&listItem) {
 		return
 	}
 	l.item = listItem
@@ -646,14 +664,16 @@ func (l *listItemWidget[T]) setText(text string) {
 }
 
 func (l *listItemWidget[T]) textColor() color.Color {
-	return l.item.TextStyle.Color
+	clr, _ := l.item.TextStyle.Style.Color()
+	return clr
 }
 
 // setTextBaseStyles sets the base styles of the item's texts.
 func (l *listItemWidget[T]) setTextBaseStyles() {
-	var style TextStyle
-	style.SetBold(l.item.TextStyle.Bold || l.item.Header || l.boldSelected && l.selected)
-	style.SetTabular(l.item.TextStyle.Tabular)
+	style := l.item.TextStyle.Style
+	if l.item.Header || l.boldSelected && l.selected {
+		style.SetBold(true)
+	}
 	if l.resolvedTextColor != nil {
 		style.SetColor(l.resolvedTextColor)
 	}

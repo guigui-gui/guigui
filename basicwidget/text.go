@@ -60,21 +60,28 @@ const (
 // ItemTextStyle bundles the styling attributes applied to the fallback text
 // rendered when a widget's Content is nil.
 type ItemTextStyle struct {
-	Color           color.Color
+	// Style is the base style of the text. A widget can override the
+	// properties it owns, such as the text color of a selected item.
+	Style TextStyle
+
 	HorizontalAlign HorizontalAlign
 	VerticalAlign   VerticalAlign
-	Bold            bool
-	Tabular         bool
 	WrapMode        WrapMode
 }
 
-func (s ItemTextStyle) writeStateKey(w *guigui.StateKeyWriter) {
-	writeColor(w, s.Color)
+func (s *ItemTextStyle) writeStateKey(w *guigui.StateKeyWriter) {
+	s.Style.writeStateKey(w)
 	w.WriteUint64(uint64(s.HorizontalAlign))
 	w.WriteUint64(uint64(s.VerticalAlign))
-	w.WriteBool(s.Bold)
-	w.WriteBool(s.Tabular)
 	w.WriteUint64(uint64(s.WrapMode))
+}
+
+// equals reports whether s and other have the same styling attributes.
+func (s *ItemTextStyle) equals(other *ItemTextStyle) bool {
+	return s.Style.equals(&other.Style) &&
+		s.HorizontalAlign == other.HorizontalAlign &&
+		s.VerticalAlign == other.VerticalAlign &&
+		s.WrapMode == other.WrapMode
 }
 
 // Text is a widget that shows or edits a text value. It wraps the theme-free

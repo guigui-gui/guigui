@@ -360,15 +360,9 @@ func (t *tableRowWidget[T]) ensureTexts() {
 // setCellTextBaseStyle sets the base style of the text of the cell at index.
 func (t *tableRowWidget[T]) setCellTextBaseStyle(index int) {
 	cell := t.row.Cells[index]
-	var style TextStyle
-	style.SetBold(cell.TextStyle.Bold)
-	style.SetTabular(cell.TextStyle.Tabular)
-	clr := cell.TextStyle.Color
-	if clr == nil {
-		clr = t.resolvedTextColor
-	}
-	if clr != nil {
-		style.SetColor(clr)
+	style := cell.TextStyle.Style
+	if clr, _ := style.Color(); clr == nil && t.resolvedTextColor != nil {
+		style.SetColor(t.resolvedTextColor)
 	}
 	t.texts.At(index).SetBaseStyle(&style)
 }
