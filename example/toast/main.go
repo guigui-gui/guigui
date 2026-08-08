@@ -192,12 +192,10 @@ type Root struct {
 	tintControl     basicwidget.SegmentedControl[color.Color]
 	showToastButton basicwidget.Button
 
-	toasts        guigui.WidgetSlice[*Toast]
-	bottomOffsets []int
+	toasts guigui.WidgetSlice[*Toast]
 
-	toastCounter     int
-	nextBottomOffset int
-	tint             color.Color
+	toastCounter int
+	tint         color.Color
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -225,48 +223,24 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.showToastButton.SetText("Show Toast")
 	r.showToastButton.OnDown(func(context *guigui.Context) {
-		r.showToast(context)
+		r.showToast()
 	})
 
 	return nil
 }
 
-func (r *Root) showToast(context *guigui.Context) {
+func (r *Root) showToast() {
 	r.toastCounter++
-	hasCloseButton := r.toastCounter%2 == 0
 
-	// Find a free slot.
-	idx := -1
-	for i := range r.toasts.Len() {
-		if !r.toasts.At(i).IsOpen() {
-			idx = i
-			break
-		}
-	}
-
-	// If no free slot, add a new one.
-	if idx == -1 {
-		idx = r.toasts.Len()
-		r.toasts.SetLen(idx + 1)
-	}
+	// Append a new toast so that the slot order matches the order the toasts were shown in.
+	idx := r.toasts.Len()
+	r.toasts.SetLen(idx + 1)
 
 	t := r.toasts.At(idx)
 	t.SetMessage(fmt.Sprintf("Toast #%d", r.toastCounter))
-	t.SetHasCloseButton(hasCloseButton)
+	t.SetHasCloseButton(r.toastCounter%2 == 0)
 	t.SetDurationInTicks(3 * ebiten.TPS())
 	t.SetTintColor(r.tint)
-
-	// Grow the offsets slice if needed.
-	if len(r.bottomOffsets) <= idx {
-		r.bottomOffsets = slices.Grow(r.bottomOffsets, idx+1-len(r.bottomOffsets))[:idx+1]
-	}
-	r.bottomOffsets[idx] = r.nextBottomOffset
-
-	u := basicwidget.UnitSize(context)
-	gap := u / 4
-	contentHeight := t.Measure(context, guigui.Constraints{}).Y
-	r.nextBottomOffset += contentHeight + gap
-
 	t.SetOpen(true)
 }
 
@@ -291,33 +265,32 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 		Max: image.Pt(topLeft.X+buttonSize.X, buttonTop+buttonSize.Y),
 	})
 
-	// Position each toast based on its assigned bottom offset.
-	// Toasts stay at their assigned position even when others close.
+	// Stack the toasts upwards from the bottom in the order they were shown.
+	// A closed toast keeps reserving its space so that the others stay at their position.
 	margin := u / 2
+	gap := u / 4
 	baseY := appBounds.Max.Y - margin
 
+	var bottomOffset int
 	allClosed := true
 	for i := range r.toasts.Len() {
 		t := r.toasts.At(i)
-		if !t.IsOpen() {
-			continue
-		}
-		allClosed = false
-
 		contentSize := t.Measure(context, guigui.Constraints{})
-		bottomY := baseY - r.bottomOffsets[i]
-		toastBounds := image.Rectangle{
-			Min: image.Pt(appBounds.Max.X-margin-contentSize.X, bottomY-contentSize.Y),
-			Max: image.Pt(appBounds.Max.X-margin, bottomY),
+		if t.IsOpen() {
+			allClosed = false
+			bottomY := baseY - bottomOffset
+			toastBounds := image.Rectangle{
+				Min: image.Pt(appBounds.Max.X-margin-contentSize.X, bottomY-contentSize.Y),
+				Max: image.Pt(appBounds.Max.X-margin, bottomY),
+			}
+			layouter.LayoutWidget(t, toastBounds)
 		}
-		layouter.LayoutWidget(t, toastBounds)
+		bottomOffset += contentSize.Y + gap
 	}
 
 	// Reset when all toasts are closed.
 	if allClosed {
 		r.toasts.SetLen(0)
-		r.bottomOffsets = r.bottomOffsets[:0]
-		r.nextBottomOffset = 0
 	}
 }
 
