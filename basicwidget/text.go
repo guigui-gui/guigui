@@ -177,13 +177,32 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.core)
 	context.DelegateFocus(t, &t.core)
 
+	t.applyFontProperties(context)
+
+	t.core.SetTextColor(t.resolveTextColor(context))
+	t.core.SetSelectionColor(draw.TextSelectionColor(context.ColorMode()))
+	t.core.SetCompositionColors(
+		draw.TextInactiveCompositionColor(context.ColorMode()),
+		draw.TextActiveCompositionColor(context.ColorMode()),
+	)
+	t.core.SetCaretColor(draw.TextCaretColor(context.ColorMode()))
+
+	return nil
+}
+
+// applyFontProperties resolves the font properties the value's size depends on
+// and pushes them into the core, so that measuring is independent of whether
+// [Text.Build] has run.
+func (t *Text) applyFontProperties(context *guigui.Context) {
 	family, _ := t.baseStyle.Family()
 	t.core.SetFontFamily(family)
+
 	fontSize := FontSize(context)
 	if t.fontSize > 0 {
 		fontSize = t.fontSize
 	}
 	t.core.SetFontSize(fontSize)
+
 	lineHeight := float64(LineHeight(context))
 	if t.lineHeight > 0 {
 		lineHeight = t.lineHeight
@@ -197,16 +216,6 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		lang = context.FirstLocale()
 	}
 	t.core.SetLang(lang)
-
-	t.core.SetTextColor(t.resolveTextColor(context))
-	t.core.SetSelectionColor(draw.TextSelectionColor(context.ColorMode()))
-	t.core.SetCompositionColors(
-		draw.TextInactiveCompositionColor(context.ColorMode()),
-		draw.TextActiveCompositionColor(context.ColorMode()),
-	)
-	t.core.SetCaretColor(draw.TextCaretColor(context.ColorMode()))
-
-	return nil
 }
 
 // resolveTextColor returns the concrete color the value is drawn in: the
@@ -241,10 +250,12 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 }
 
 func (t *Text) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	t.applyFontProperties(context)
 	return t.core.Measure(context, constraints)
 }
 
 func (t *Text) boldTextSize(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	t.applyFontProperties(context)
 	return t.core.MeasureBold(context, constraints)
 }
 
