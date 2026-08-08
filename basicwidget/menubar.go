@@ -243,11 +243,11 @@ func (t *menubarTitle[T]) Build(context *guigui.Context, adder *guigui.ChildAdde
 	t.text.SetHorizontalAlign(HorizontalAlignCenter)
 	t.text.SetVerticalAlign(VerticalAlignMiddle)
 
+	var style TextStyle
 	if t.isOpen() && context.IsEnabled(t) {
-		t.text.SetColor(ListItemColorTypeHighlighted.TextColor(context))
-	} else {
-		t.text.SetColor(nil)
+		style.SetColor(ListItemColorTypeHighlighted.TextColor(context))
 	}
+	t.text.SetBaseStyle(&style)
 	return nil
 }
 

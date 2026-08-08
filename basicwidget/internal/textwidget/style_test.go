@@ -150,8 +150,9 @@ func TestTextOverrideStyleRunsLifetime(t *testing.T) {
 
 func TestTextReadBaseStyle(t *testing.T) {
 	var txt textwidget.Text
-	txt.SetItalic(true)
-	txt.SetVariation(font.TagWght, float32(text.WeightBold))
+	var base textstyle.Style
+	base = base.WithItalic(true).WithVariation(font.TagWght, float32(text.WeightBold))
+	txt.SetBaseStyle(base)
 
 	var s textstyle.Style
 	txt.ReadBaseStyle(&s)
@@ -212,7 +213,8 @@ func TestTextReadEffectiveStyleRunsInRange(t *testing.T) {
 
 	var txt textwidget.Text
 	txt.SetValue("hello world")
-	txt.SetItalic(true)
+	var base textstyle.Style
+	txt.SetBaseStyle(base.WithItalic(true))
 	txt.SetColorInRange(3, 5, red)
 
 	var runs textstyle.Runs
@@ -280,7 +282,8 @@ func TestTextEffectiveStyleAt(t *testing.T) {
 	// resolve to the default medium weight.
 	var boldText textwidget.Text
 	boldText.SetValue("hello")
-	boldText.SetVariation(font.TagWght, float32(text.WeightBold))
+	var boldBase textstyle.Style
+	boldText.SetBaseStyle(boldBase.WithVariation(font.TagWght, float32(text.WeightBold)))
 	if v, ok := boldText.EffectiveStyleAt(0).Variation(font.TagWght); !ok || v != float32(text.WeightBold) {
 		t.Errorf("Variation(wght): got: %v, %t, want: %v, true", v, ok, float32(text.WeightBold))
 	}

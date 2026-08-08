@@ -92,7 +92,9 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.editor.SetMultiline(true)
 	r.editor.SetWrapMode(basicwidget.WrapModeNone)
-	r.editor.SetFontFamily(r.codeFontFamily)
+	var style basicwidget.TextStyle
+	style.SetFontFamily(r.codeFontFamily)
+	r.editor.SetBaseStyle(&style)
 	r.editor.SetSelectionVisibleWhenUnfocused(true)
 	r.editor.SetFocusBorderVisible(false)
 

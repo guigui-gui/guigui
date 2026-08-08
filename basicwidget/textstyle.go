@@ -9,6 +9,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
+	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 )
@@ -20,6 +21,44 @@ import (
 // [Text.ReadEffectiveStyleAt].
 type TextStyle struct {
 	s textstyle.Style
+}
+
+// writeStateKey writes the style's properties into w.
+func (s *TextStyle) writeStateKey(w *guigui.StateKeyWriter) {
+	var familyID uint64
+	if family, ok := s.s.Family(); ok && family != nil {
+		familyID = family.ID()
+	}
+	w.WriteUint64(familyID)
+
+	italic, _ := s.s.Italic()
+	w.WriteBool(italic)
+	scale, _ := s.s.Scale()
+	w.WriteFloat64(scale)
+	lang, _ := s.s.Lang()
+	w.WriteString(lang.String())
+	underline, _ := s.s.Underline()
+	w.WriteBool(underline)
+	strikethrough, _ := s.s.Strikethrough()
+	w.WriteBool(strikethrough)
+
+	clr, _ := s.s.Color()
+	writeColor(w, clr)
+	backgroundColor, _ := s.s.BackgroundColor()
+	writeColor(w, backgroundColor)
+
+	variations := s.s.Variations()
+	w.WriteInt(len(variations))
+	for _, v := range variations {
+		w.WriteUint32(uint32(v.Tag))
+		w.WriteFloat64(float64(v.Value))
+	}
+	features := s.s.Features()
+	w.WriteInt(len(features))
+	for _, f := range features {
+		w.WriteUint32(uint32(f.Tag))
+		w.WriteUint32(f.Value)
+	}
 }
 
 // SetFontFamily sets the font family. A nil family renders with the
@@ -78,6 +117,16 @@ func (s *TextStyle) Weight() (text.Weight, bool) {
 	return text.Weight(v), ok
 }
 
+// SetBold sets the font weight to the bold or the medium weight by setting
+// the wght variation axis. Use [TextStyle.UnsetWeight] to unset the weight.
+func (s *TextStyle) SetBold(bold bool) {
+	weight := text.WeightMedium
+	if bold {
+		weight = text.WeightBold
+	}
+	s.s = s.s.WithVariation(font.TagWght, float32(weight))
+}
+
 // SetVariation sets the OpenType variation axis tag to value.
 func (s *TextStyle) SetVariation(tag text.Tag, value float32) {
 	s.s = s.s.WithVariation(tag, value)
@@ -108,6 +157,29 @@ func (s *TextStyle) UnsetFeature(tag text.Tag) {
 // set.
 func (s *TextStyle) Feature(tag text.Tag) (uint32, bool) {
 	return s.s.Feature(tag)
+}
+
+// SetTabular sets whether the digits are rendered with a uniform advance by
+// setting the tnum OpenType feature.
+func (s *TextStyle) SetTabular(tabular bool) {
+	var value uint32
+	if tabular {
+		value = 1
+	}
+	s.s = s.s.WithFeature(font.TagTnum, value)
+}
+
+// UnsetTabular unsets whether the digits are rendered with a uniform advance
+// by unsetting the tnum OpenType feature.
+func (s *TextStyle) UnsetTabular() {
+	s.s = s.s.WithoutFeature(font.TagTnum)
+}
+
+// Tabular returns whether the digits are rendered with a uniform advance, the
+// value of the tnum OpenType feature, and whether it is set.
+func (s *TextStyle) Tabular() (tabular, ok bool) {
+	v, ok := s.s.Feature(font.TagTnum)
+	return v != 0, ok
 }
 
 // SetScale sets the multiplier of the font size. scale must be positive.

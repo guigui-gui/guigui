@@ -193,17 +193,6 @@ func (t *TextInput) SetSelection(start, end int) {
 	t.textInput.SetSelection(start, end)
 }
 
-func (t *TextInput) SetTabular(tabular bool) {
-	t.textInput.SetTabular(tabular)
-}
-
-// SetFontFamily sets the [FontFamily] used to render the text. Passing nil
-// restores the default behavior of rendering with the registered face source
-// stack.
-func (t *TextInput) SetFontFamily(fontFamily *FontFamily) {
-	t.textInput.SetFontFamily(fontFamily)
-}
-
 func (t *TextInput) IsEditable() bool {
 	return t.textInput.IsEditable()
 }
@@ -430,11 +419,13 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		t.supportText.SetScale(0.85)
 		t.supportText.SetMultiline(true)
 		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
+		var style TextStyle
 		if t.hasError {
-			t.supportText.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
+			style.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
 		} else {
-			t.supportText.SetColor(draw.TextColor(context.ColorMode(), false))
+			style.SetColor(draw.TextColor(context.ColorMode(), false))
 		}
+		t.supportText.SetBaseStyle(&style)
 	}
 
 	return nil
@@ -658,14 +649,6 @@ func (t *textInput) Selection() (start, end int) {
 
 func (t *textInput) SetSelection(start, end int) {
 	t.text.Text().SetSelection(start, end)
-}
-
-func (t *textInput) SetTabular(tabular bool) {
-	t.text.Text().SetTabular(tabular)
-}
-
-func (t *textInput) SetFontFamily(fontFamily *FontFamily) {
-	t.text.Text().SetFontFamily(fontFamily)
 }
 
 func (t *textInput) IsEditable() bool {
@@ -1032,7 +1015,12 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	adder.AddWidget(&t.text)
 
 	t.text.Widget().SetSelectable(true)
-	t.text.Widget().SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
+	// The theme color wins over a color in the base style set by the
+	// application.
+	var style TextStyle
+	t.text.Widget().ReadBaseStyle(&style)
+	style.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
+	t.text.Widget().SetBaseStyle(&style)
 	t.text.Widget().core.SetKeepTailingSpace(t.text.Widget().WrapMode() == WrapModeNone)
 
 	context.DelegateFocus(t, t.text.Widget())

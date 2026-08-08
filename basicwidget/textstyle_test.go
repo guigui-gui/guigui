@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
+	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
@@ -66,6 +67,77 @@ func TestTextStyleWeight(t *testing.T) {
 	s.UnsetWeight()
 	if _, ok := s.Weight(); ok {
 		t.Error("Weight() must be unset after UnsetWeight")
+	}
+}
+
+func TestTextStyleBold(t *testing.T) {
+	var s basicwidget.TextStyle
+	s.SetBold(true)
+	if w, ok := s.Weight(); !ok || w != text.WeightBold {
+		t.Errorf("Weight() = %v, %t; want %v, true", w, ok, text.WeightBold)
+	}
+	// SetBold(false) sets the medium weight rather than unsetting it, so an
+	// override can turn a bold base style off.
+	s.SetBold(false)
+	if w, ok := s.Weight(); !ok || w != text.WeightMedium {
+		t.Errorf("Weight() = %v, %t; want %v, true", w, ok, text.WeightMedium)
+	}
+	s.UnsetWeight()
+	if _, ok := s.Weight(); ok {
+		t.Error("Weight() must be unset after UnsetWeight")
+	}
+}
+
+func TestTextStyleTabular(t *testing.T) {
+	tagTnum := text.MustParseTag("tnum")
+
+	var s basicwidget.TextStyle
+	if _, ok := s.Tabular(); ok {
+		t.Error("Tabular() must be unset on the zero value")
+	}
+
+	s.SetTabular(true)
+	if tabular, ok := s.Tabular(); !ok || !tabular {
+		t.Errorf("Tabular() = %t, %t; want true, true", tabular, ok)
+	}
+	// SetTabular sets the tnum OpenType feature.
+	if v, ok := s.Feature(tagTnum); !ok || v != 1 {
+		t.Errorf("Feature(tnum) = %d, %t; want 1, true", v, ok)
+	}
+
+	s.SetTabular(false)
+	if tabular, ok := s.Tabular(); !ok || tabular {
+		t.Errorf("Tabular() = %t, %t; want false, true", tabular, ok)
+	}
+	if v, ok := s.Feature(tagTnum); !ok || v != 0 {
+		t.Errorf("Feature(tnum) = %d, %t; want 0, true", v, ok)
+	}
+
+	s.UnsetTabular()
+	if _, ok := s.Tabular(); ok {
+		t.Error("Tabular() must be unset after UnsetTabular")
+	}
+}
+
+func TestTextSetBaseStyleIgnoresScaleAndLang(t *testing.T) {
+	var base basicwidget.TextStyle
+	base.SetBold(true)
+	base.SetScale(1.5)
+	base.SetLang(language.Japanese)
+
+	var txt basicwidget.Text
+	txt.SetBaseStyle(&base)
+
+	var got basicwidget.TextStyle
+	txt.ReadBaseStyle(&got)
+	if _, ok := got.Weight(); !ok {
+		t.Error("Weight() must be set")
+	}
+	if _, ok := got.Scale(); ok {
+		t.Error("Scale() must be unset: the base style scale comes from Text.SetScale")
+	}
+	if _, ok := got.Lang(); ok {
+		t.Error("Lang() must be unset: the base style language comes from Text.SetLocales")
 	}
 }
 

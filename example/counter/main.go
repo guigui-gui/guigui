@@ -37,7 +37,9 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.incButton)
 
 	r.counterText.SetSelectable(true)
-	r.counterText.SetBold(true)
+	var style basicwidget.TextStyle
+	style.SetBold(true)
+	r.counterText.SetBaseStyle(&style)
 	r.counterText.SetHorizontalAlign(basicwidget.HorizontalAlignCenter)
 	r.counterText.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	r.counterText.SetScale(4)

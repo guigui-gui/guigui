@@ -11,13 +11,11 @@ import (
 	"strings"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/hajimehoshi/ebiten/v2/text/v2"
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
-	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
@@ -87,11 +85,14 @@ type Text struct {
 
 	core textwidget.Text
 
-	color         color.Color
+	// baseStyle holds the base style set with [Text.SetBaseStyle]. The font
+	// family and the text color are resolved against the theme at
+	// [Text.Build] and handed to the core widget there.
+	baseStyle textstyle.Style
+
 	semanticColor draw.SemanticColor
 	transparent   float64
 	locales       []language.Tag
-	fontFamily    *FontFamily
 
 	// hotspotRangesBuf is scratch for converting the hotspot ranges handed
 	// to the core widget.
@@ -157,12 +158,13 @@ func (t *Text) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds 
 }
 
 func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) {
-	writeColor(w, t.color)
+	var style TextStyle
+	t.ReadBaseStyle(&style)
+	style.writeStateKey(w)
 	w.WriteUint64(uint64(t.semanticColor))
 	w.WriteFloat64(t.transparent)
 	w.WriteString(t.placeholder)
 	w.WriteString(t.cachedLocalesString)
-	w.WriteUint64(t.fontFamilyID())
 	w.WriteFloat64(t.fontSize)
 	w.WriteFloat64(t.lineHeight)
 }
@@ -171,11 +173,8 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.core)
 	context.DelegateFocus(t, &t.core)
 
-	var fnt *font.Family
-	if t.fontFamily != nil {
-		fnt = t.fontFamily.f
-	}
-	t.core.SetFontFamily(fnt)
+	family, _ := t.baseStyle.Family()
+	t.core.SetFontFamily(family)
 	fontSize := FontSize(context)
 	if t.fontSize > 0 {
 		fontSize = t.fontSize
@@ -211,9 +210,9 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 // enabled state, with the opacity applied.
 func (t *Text) resolveTextColor(context *guigui.Context) color.Color {
 	var clr color.Color
-	switch {
-	case t.color != nil:
-		clr = t.color
+	switch baseColor, _ := t.baseStyle.Color(); {
+	case baseColor != nil:
+		clr = baseColor
 	case t.semanticColor != draw.SemanticColorBase:
 		clr = draw.TextColorFromSemanticColor(context.ColorMode(), t.semanticColor)
 	default:
@@ -372,58 +371,6 @@ func (t *Text) SetLocales(locales []language.Tag) {
 	t.cachedLocalesString = sb.String()
 }
 
-// SetBold renders the value in a bold weight by setting the wght variation
-// axis of the base style.
-func (t *Text) SetBold(bold bool) {
-	if bold {
-		t.SetWeight(text.WeightBold)
-		return
-	}
-	t.UnsetWeight()
-}
-
-// SetWeight sets the font weight of the base style by setting the wght
-// variation axis. Ranged weight overrides apply on top.
-func (t *Text) SetWeight(weight text.Weight) {
-	t.core.SetVariation(font.TagWght, float32(weight))
-}
-
-// UnsetWeight removes the font weight of the base style, restoring the
-// default weight.
-func (t *Text) UnsetWeight() {
-	t.core.UnsetVariation(font.TagWght)
-}
-
-// SetItalic sets the italic face selection of the base style. Ranged italic
-// overrides apply on top. When the font family has no italic face, the value
-// renders with a regular face.
-func (t *Text) SetItalic(italic bool) {
-	t.core.SetItalic(italic)
-}
-
-// SetVariation sets the OpenType variation axis tag of the base style to
-// value. Ranged variation overrides apply on top.
-func (t *Text) SetVariation(tag text.Tag, value float32) {
-	t.core.SetVariation(tag, value)
-}
-
-// UnsetVariation removes the OpenType variation axis tag from the base
-// style.
-func (t *Text) UnsetVariation(tag text.Tag) {
-	t.core.UnsetVariation(tag)
-}
-
-// SetFeature sets the OpenType feature tag of the base style to value.
-// Ranged feature overrides apply on top.
-func (t *Text) SetFeature(tag text.Tag, value uint32) {
-	t.core.SetFeature(tag, value)
-}
-
-// UnsetFeature removes the OpenType feature tag from the base style.
-func (t *Text) UnsetFeature(tag text.Tag) {
-	t.core.UnsetFeature(tag)
-}
-
 // SetFontSize sets the font size at scale 1. A non-positive size selects the
 // default font size ([FontSize]). Unlike the default, the specified size is
 // not multiplied by [guigui.Context.Scale], so it can express a size
@@ -440,30 +387,6 @@ func (t *Text) SetFontSize(size float64) {
 // it should follow the app scale.
 func (t *Text) SetLineHeight(lineHeight float64) {
 	t.lineHeight = lineHeight
-}
-
-// SetFontFamily sets the [FontFamily] used to render the Text. Passing nil
-// restores the default behavior of rendering with the registered face source
-// stack.
-func (t *Text) SetFontFamily(fontFamily *FontFamily) {
-	t.fontFamily = fontFamily
-}
-
-func (t *Text) fontFamilyID() uint64 {
-	if t.fontFamily == nil {
-		return 0
-	}
-	return t.fontFamily.f.ID()
-}
-
-// SetTabular enables tabular figures by setting the tnum feature of the base
-// style.
-func (t *Text) SetTabular(tabular bool) {
-	if tabular {
-		t.core.SetFeature(font.TagTnum, 1)
-		return
-	}
-	t.core.UnsetFeature(font.TagTnum)
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {
@@ -490,10 +413,6 @@ func (t *Text) SetVerticalAlign(align VerticalAlign) {
 	t.core.SetVerticalAlign(textutil.VerticalAlign(align))
 }
 
-func (t *Text) SetColor(color color.Color) {
-	t.color = color
-}
-
 func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
 	t.semanticColor = draw.SemanticColor(semanticColor)
 }
@@ -506,49 +425,17 @@ func (t *Text) SetOpacity(opacity float64) {
 // applied to the whole value, underneath the ranged style overrides. A
 // property is unset when the theme default applies.
 func (t *Text) ReadBaseStyle(style *TextStyle) {
-	var s textstyle.Style
-	t.core.ReadBaseStyle(&s)
-	s = s.WithoutFamily().WithoutColor().WithoutLang()
-	if t.fontFamily != nil {
-		s = s.WithFamily(t.fontFamily.f)
-	}
-	if t.color != nil {
-		s = s.WithColor(t.color)
-	}
-	style.s = s
+	style.s = t.baseStyle
 }
 
 // SetBaseStyle replaces the base style with style. Unset properties restore
 // the theme defaults. The base style holds the font family, the italic face
 // selection, OpenType variations and features (including the weight), and
-// the text color; other properties are ignored. The language derives from
-// the locales set with [Text.SetLocales].
+// the text color; the scale and the language are ignored, as they come from
+// [Text.SetScale] and [Text.SetLocales].
 func (t *Text) SetBaseStyle(style *TextStyle) {
-	family, _ := style.FontFamily()
-	t.fontFamily = family
-	clr, _ := style.s.Color()
-	t.color = clr
-	italic, _ := style.s.Italic()
-	t.core.SetItalic(italic)
-
-	var cur textstyle.Style
-	t.core.ReadBaseStyle(&cur)
-	for _, v := range cur.Variations() {
-		if _, ok := style.s.Variation(v.Tag); !ok {
-			t.core.UnsetVariation(v.Tag)
-		}
-	}
-	for _, v := range style.s.Variations() {
-		t.core.SetVariation(v.Tag, v.Value)
-	}
-	for _, f := range cur.Features() {
-		if _, ok := style.s.Feature(f.Tag); !ok {
-			t.core.UnsetFeature(f.Tag)
-		}
-	}
-	for _, f := range style.s.Features() {
-		t.core.SetFeature(f.Tag, f.Value)
-	}
+	t.baseStyle = style.s.WithoutScale().WithoutLang()
+	t.core.SetBaseStyle(t.baseStyle)
 }
 
 // ReadOverrideStyles replaces styles with a copy of the ranged style

@@ -273,7 +273,9 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 
 	n.textInput.SetValue(n.abstractNumberInput.ValueString())
 	n.textInput.SetHorizontalAlign(HorizontalAlignRight)
-	n.textInput.SetTabular(true)
+	var style TextStyle
+	style.SetTabular(true)
+	n.textInput.SetBaseStyle(&style)
 	n.textInput.setPaddingEnd(UnitSize(context) / 2)
 	if n.onTextInputValueChanged == nil {
 		n.onTextInputValueChanged = func(context *guigui.Context, text string, committed bool) {

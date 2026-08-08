@@ -593,6 +593,11 @@ type listItemWidget[T comparable] struct {
 	boldSelected bool
 	selected     bool
 
+	// resolvedTextColor is the color the item's texts are drawn in, resolved
+	// from the color type the parent list provides at [listItemWidget.Layout].
+	// A nil color leaves the color to the theme.
+	resolvedTextColor color.Color
+
 	layout             guigui.LinearLayout
 	layoutItems        []guigui.LinearLayoutItem
 	wrapperLayoutItems []guigui.LinearLayoutItem
@@ -644,6 +649,23 @@ func (l *listItemWidget[T]) textColor() color.Color {
 	return l.item.TextStyle.Color
 }
 
+// setTextBaseStyles sets the base styles of the item's texts.
+func (l *listItemWidget[T]) setTextBaseStyles() {
+	var style TextStyle
+	style.SetBold(l.item.TextStyle.Bold || l.item.Header || l.boldSelected && l.selected)
+	style.SetTabular(l.item.TextStyle.Tabular)
+	if l.resolvedTextColor != nil {
+		style.SetColor(l.resolvedTextColor)
+	}
+	l.text.SetBaseStyle(&style)
+
+	var keyStyle TextStyle
+	if l.resolvedTextColor != nil {
+		keyStyle.SetColor(l.resolvedTextColor)
+	}
+	l.keyText.SetBaseStyle(&keyStyle)
+}
+
 func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	if l.item.Content != nil {
 		adder.AddWidget(l.item.Content)
@@ -655,8 +677,7 @@ func (l *listItemWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAd
 	l.text.SetValue(l.item.Text)
 	l.text.SetHorizontalAlign(l.item.TextStyle.HorizontalAlign)
 	l.text.SetVerticalAlign(l.item.TextStyle.VerticalAlign)
-	l.text.SetBold(l.item.TextStyle.Bold || l.item.Header || l.boldSelected && l.selected)
-	l.text.SetTabular(l.item.TextStyle.Tabular)
+	l.setTextBaseStyles()
 	l.text.SetWrapMode(l.item.TextStyle.WrapMode)
 	l.keyText.SetOpacity(0.5)
 	l.keyText.SetValue(l.item.KeyText)
@@ -766,8 +787,8 @@ func (l *listItemWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 			}
 		}
 	}
-	l.text.SetColor(clr)
-	l.keyText.SetColor(clr)
+	l.resolvedTextColor = clr
+	l.setTextBaseStyles()
 }
 
 func (l *listItemWidget[T]) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

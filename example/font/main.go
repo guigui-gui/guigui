@@ -47,25 +47,32 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.goStrictLabel)
 	adder.AddWidget(&r.goStrictText)
 
+	var labelStyle basicwidget.TextStyle
+	labelStyle.SetBold(true)
+
 	r.defaultLabel.SetValue("Default font:")
-	r.defaultLabel.SetBold(true)
+	r.defaultLabel.SetBaseStyle(&labelStyle)
 	r.defaultLabel.SetScale(1.2)
 	r.defaultText.SetValue(sampleText)
 	r.defaultText.SetScale(1.5)
 
 	r.goLabel.SetValue("Go Regular with fallback:")
-	r.goLabel.SetBold(true)
+	r.goLabel.SetBaseStyle(&labelStyle)
 	r.goLabel.SetScale(1.2)
 	r.goText.SetValue(sampleText)
 	r.goText.SetScale(1.5)
-	r.goText.SetFontFamily(r.goFont)
+	var goStyle basicwidget.TextStyle
+	goStyle.SetFontFamily(r.goFont)
+	r.goText.SetBaseStyle(&goStyle)
 
 	r.goStrictLabel.SetValue("Go Regular without fallback:")
-	r.goStrictLabel.SetBold(true)
+	r.goStrictLabel.SetBaseStyle(&labelStyle)
 	r.goStrictLabel.SetScale(1.2)
 	r.goStrictText.SetValue(sampleText)
 	r.goStrictText.SetScale(1.5)
-	r.goStrictText.SetFontFamily(r.goStrictFont)
+	var goStrictStyle basicwidget.TextStyle
+	goStrictStyle.SetFontFamily(r.goStrictFont)
+	r.goStrictText.SetBaseStyle(&goStrictStyle)
 
 	return nil
 }

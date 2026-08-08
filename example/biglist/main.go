@@ -51,7 +51,11 @@ func (w *itemWidget) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 			clr = ct.TextColor(context)
 		}
 	}
-	w.text.SetColor(clr)
+	var style basicwidget.TextStyle
+	if clr != nil {
+		style.SetColor(clr)
+	}
+	w.text.SetBaseStyle(&style)
 	w.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 }
 

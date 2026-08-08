@@ -5,6 +5,7 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -325,6 +326,12 @@ type tableRowWidget[T comparable] struct {
 	table *Table[T]
 	texts guigui.WidgetSlice[*Text]
 
+	// resolvedTextColor is the color the cells' texts are drawn in, resolved
+	// from the color type the parent list provides at
+	// [tableRowWidget.Layout]. A cell's own color takes precedence, and a nil
+	// color leaves the color to the theme.
+	resolvedTextColor color.Color
+
 	linearLayoutItems     []guigui.LinearLayoutItem
 	textColumnLayouts     []guigui.LinearLayout
 	textColumnLayoutItems []guigui.LinearLayoutItem
@@ -345,10 +352,25 @@ func (t *tableRowWidget[T]) ensureTexts() {
 		// Color is adjusted at Layout.
 		txt.SetHorizontalAlign(cell.TextStyle.HorizontalAlign)
 		txt.SetVerticalAlign(cell.TextStyle.VerticalAlign)
-		txt.SetBold(cell.TextStyle.Bold)
-		txt.SetTabular(cell.TextStyle.Tabular)
+		t.setCellTextBaseStyle(i)
 		txt.SetWrapMode(cell.TextStyle.WrapMode)
 	}
+}
+
+// setCellTextBaseStyle sets the base style of the text of the cell at index.
+func (t *tableRowWidget[T]) setCellTextBaseStyle(index int) {
+	cell := t.row.Cells[index]
+	var style TextStyle
+	style.SetBold(cell.TextStyle.Bold)
+	style.SetTabular(cell.TextStyle.Tabular)
+	clr := cell.TextStyle.Color
+	if clr == nil {
+		clr = t.resolvedTextColor
+	}
+	if clr != nil {
+		style.SetColor(clr)
+	}
+	t.texts.At(index).SetBaseStyle(&style)
 }
 
 func (t *tableRowWidget[T]) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -401,16 +423,12 @@ func (t *tableRowWidget[T]) Layout(context *guigui.Context, widgetBounds *guigui
 	// Set text colors based on the list item color type provided by the parent list widget.
 	if v, ok := context.Env(t, EnvKeyListItemColorType); ok {
 		ct := v.(ListItemColorType)
-		clr := ct.TextColor(context)
-		for i, cell := range t.row.Cells {
+		t.resolvedTextColor = ct.TextColor(context)
+		for i := range t.row.Cells {
 			if i >= t.texts.Len() {
 				break
 			}
-			if cell.TextStyle.Color != nil {
-				t.texts.At(i).SetColor(cell.TextStyle.Color)
-			} else {
-				t.texts.At(i).SetColor(clr)
-			}
+			t.setCellTextBaseStyle(i)
 		}
 	}
 }

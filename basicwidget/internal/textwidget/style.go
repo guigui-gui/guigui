@@ -184,6 +184,23 @@ func (t *Text) ReadBaseStyle(dst *textstyle.Style) {
 	*dst = t.baseStyle.style
 }
 
+// SetBaseStyle replaces the base style's overridable properties with style,
+// except the font family, the text color and the language, which
+// [Text.SetFontFamily], [Text.SetTextColor] and [Text.SetLang] keep owning.
+func (t *Text) SetBaseStyle(style textstyle.Style) {
+	style = style.WithoutFamily().WithoutColor().WithoutLang()
+	if family, ok := t.baseStyle.style.Family(); ok {
+		style = style.WithFamily(family)
+	}
+	if clr, ok := t.baseStyle.style.Color(); ok {
+		style = style.WithColor(clr)
+	}
+	if lang, ok := t.baseStyle.style.Lang(); ok {
+		style = style.WithLang(lang)
+	}
+	t.baseStyle.style = style
+}
+
 // ReadOverrideStyleRunsInRange replaces dst's runs with a copy of the
 // ranged style overrides in [startInBytes, endInBytes), rebased so that
 // startInBytes maps to 0.

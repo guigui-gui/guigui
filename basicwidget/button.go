@@ -152,19 +152,21 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddWidget(&b.text)
 	adder.AddWidget(&b.icon)
 
+	var style TextStyle
 	if !context.IsEnabled(b) {
-		b.text.SetColor(draw.TextColor(context.ColorMode(), false))
+		style.SetColor(draw.TextColor(context.ColorMode(), false))
 	} else if b.semanticColor != draw.SemanticColorBase {
-		b.text.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
+		style.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
 	} else {
 		switch b.typ {
 		case ButtonTypePrimary:
-			b.text.SetColor(draw.TextOnAccentColor(context.ColorMode()))
+			style.SetColor(draw.TextOnAccentColor(context.ColorMode()))
 		default:
-			b.text.SetColor(draw.TextColor(context.ColorMode(), true))
+			style.SetColor(draw.TextColor(context.ColorMode(), true))
 		}
 	}
-	b.text.SetBold(b.textBold || b.typ == ButtonTypePrimary || b.showsPressedState())
+	style.SetBold(b.textBold || b.typ == ButtonTypePrimary || b.showsPressedState())
+	b.text.SetBaseStyle(&style)
 	b.text.SetHorizontalAlign(HorizontalAlignCenter)
 	b.text.SetVerticalAlign(VerticalAlignMiddle)
 	return nil

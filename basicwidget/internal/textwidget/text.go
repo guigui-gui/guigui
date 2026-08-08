@@ -704,35 +704,6 @@ func (t *Text) setText(text string, selectAll bool) bool {
 	return true
 }
 
-// SetItalic sets the italic face selection of the base style. Ranged italic
-// overrides apply on top.
-func (t *Text) SetItalic(italic bool) {
-	t.baseStyle.style = t.baseStyle.style.WithItalic(italic)
-}
-
-// SetVariation sets the OpenType variation axis tag of the base style to
-// value. Ranged variation overrides apply on top.
-func (t *Text) SetVariation(tag text.Tag, value float32) {
-	t.baseStyle.style = t.baseStyle.style.WithVariation(tag, value)
-}
-
-// UnsetVariation removes the OpenType variation axis tag from the base
-// style.
-func (t *Text) UnsetVariation(tag text.Tag) {
-	t.baseStyle.style = t.baseStyle.style.WithoutVariation(tag)
-}
-
-// SetFeature sets the OpenType feature tag of the base style to value.
-// Ranged feature overrides apply on top.
-func (t *Text) SetFeature(tag text.Tag, value uint32) {
-	t.baseStyle.style = t.baseStyle.style.WithFeature(tag, value)
-}
-
-// UnsetFeature removes the OpenType feature tag from the base style.
-func (t *Text) UnsetFeature(tag text.Tag) {
-	t.baseStyle.style = t.baseStyle.style.WithoutFeature(tag)
-}
-
 func (t *Text) SetTabWidth(tabWidth float64) {
 	if t.baseStyle.tabWidth == tabWidth {
 		return

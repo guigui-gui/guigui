@@ -205,7 +205,9 @@ func (t *Texts) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	t.sampleText.SetHorizontalAlign(model.Texts().HorizontalAlign())
 	t.sampleText.SetVerticalAlign(model.Texts().VerticalAlign())
 	t.sampleText.SetWrapMode(model.Texts().WrapMode())
-	t.sampleText.SetBold(model.Texts().Bold())
+	var style basicwidget.TextStyle
+	style.SetBold(model.Texts().Bold())
+	t.sampleText.SetBaseStyle(&style)
 	t.sampleText.SetSelectable(model.Texts().Selectable())
 	t.sampleText.SetEditable(model.Texts().Editable())
 	if model.Texts().Ellipsis() {

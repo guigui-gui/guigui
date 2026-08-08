@@ -201,7 +201,11 @@ func (s *selectItem) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 			clr = ct.TextColor(context)
 		}
 	}
-	s.text.SetColor(clr)
+	var style basicwidget.TextStyle
+	if clr != nil {
+		style.SetColor(clr)
+	}
+	s.text.SetBaseStyle(&style)
 }
 
 func (s *selectItem) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {

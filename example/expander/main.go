@@ -44,8 +44,11 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.divider2)
 	adder.AddWidget(&r.expander3)
 
+	var boldStyle basicwidget.TextStyle
+	boldStyle.SetBold(true)
+
 	r.headerText1.SetValue("Expander 1")
-	r.headerText1.SetBold(true)
+	r.headerText1.SetBaseStyle(&boldStyle)
 	r.headerText1.SetScale(1)
 	r.contentText1.SetValue("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 	r.contentText1.SetWrapMode(basicwidget.WrapModeNormal)
@@ -56,7 +59,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.expander1.SetContentWidget(&r.contentText1)
 
 	r.headerText2.SetValue("Expander 2")
-	r.headerText2.SetBold(true)
+	r.headerText2.SetBaseStyle(&boldStyle)
 	r.headerText2.SetScale(1)
 	r.contentText2.SetValue("Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.")
 	r.contentText2.SetWrapMode(basicwidget.WrapModeNormal)
@@ -67,7 +70,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.expander2.SetContentWidget(&r.contentText2)
 
 	r.headerText3.SetValue("Expander 3")
-	r.headerText3.SetBold(true)
+	r.headerText3.SetBaseStyle(&boldStyle)
 	r.headerText3.SetScale(1)
 	r.contentText3.SetValue("Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt.")
 	r.contentText3.SetWrapMode(basicwidget.WrapModeNormal)

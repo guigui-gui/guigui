@@ -73,8 +73,10 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.displayText)
 
 	r.displayText.SetSelectable(true)
-	r.displayText.SetBold(true)
-	r.displayText.SetTabular(true)
+	var style basicwidget.TextStyle
+	style.SetBold(true)
+	style.SetTabular(true)
+	r.displayText.SetBaseStyle(&style)
 	r.displayText.SetHorizontalAlign(basicwidget.HorizontalAlignEnd)
 	r.displayText.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	r.displayText.SetScale(3)

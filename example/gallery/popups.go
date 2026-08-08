@@ -223,7 +223,9 @@ func (s *simplePopupContent) Build(context *guigui.Context, adder *guigui.ChildA
 	adder.AddWidget(&s.titleText)
 	adder.AddWidget(&s.closeButton)
 	s.titleText.SetValue("Hello!")
-	s.titleText.SetBold(true)
+	var style basicwidget.TextStyle
+	style.SetBold(true)
+	s.titleText.SetBaseStyle(&style)
 
 	s.closeButton.SetText("Close")
 	s.closeButton.OnUp(func(context *guigui.Context) {
