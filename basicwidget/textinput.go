@@ -246,7 +246,7 @@ func (t *TextInput) ReadBaseStyle(style *TextStyle) {
 // SetBaseStyle replaces the base style with style. Unset properties restore
 // the theme defaults. The base style holds the font family, the italic face
 // selection, OpenType variations and features (including the weight), and
-// the text color; other properties are ignored.
+// the text color; the scale and the language are ignored.
 func (t *TextInput) SetBaseStyle(style *TextStyle) {
 	t.textInput.text.Text().SetBaseStyle(style)
 }
@@ -1015,12 +1015,6 @@ func (t *textInputText) Build(context *guigui.Context, adder *guigui.ChildAdder)
 	adder.AddWidget(&t.text)
 
 	t.text.Widget().SetSelectable(true)
-	// The theme color wins over a color in the base style set by the
-	// application.
-	var style TextStyle
-	t.text.Widget().ReadBaseStyle(&style)
-	style.SetColor(draw.TextColor(context.ColorMode(), context.IsEnabled(t)))
-	t.text.Widget().SetBaseStyle(&style)
 	t.text.Widget().core.SetKeepTailingSpace(t.text.Widget().WrapMode() == WrapModeNone)
 
 	context.DelegateFocus(t, t.text.Widget())
