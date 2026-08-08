@@ -165,8 +165,16 @@ func (t *Text) ReadOverrideStyleRuns(dst *textstyle.Runs) {
 }
 
 // CopyOverrideStyleRunsFrom replaces the ranged style overrides with a
-// copy of runs.
-func (t *Text) CopyOverrideStyleRunsFrom(runs *textstyle.Runs) {
+// copy of runs. record sets whether the replacement is recorded in the undo
+// history; a recorded replacement leaving the overrides unchanged records
+// nothing.
+func (t *Text) CopyOverrideStyleRunsFrom(runs *textstyle.Runs, record bool) {
+	if record {
+		if !runs.Equal(t.ensureOverrideStyleRuns()) {
+			t.ensureStoreCallbacks()
+			t.store.recordRangedStateChange(0, t.store.TextLengthInBytes())
+		}
+	}
 	t.overrideStyleRuns.CopyFrom(runs)
 	t.overrideStyleRunsValidGeneration = t.store.Generation()
 }
@@ -186,8 +194,24 @@ func (t *Text) ReadOverrideStyleRunsInRange(dst *textstyle.Runs, startInBytes, e
 // ReplaceOverrideStyleRunsInRange replaces the ranged style overrides in
 // [startInBytes, endInBytes) with runs' overrides in
 // [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
-func (t *Text) ReplaceOverrideStyleRunsInRange(runs *textstyle.Runs, startInBytes, endInBytes int) {
-	t.ensureOverrideStyleRuns().ReplaceRange(runs, startInBytes, endInBytes)
+// record sets whether the replacement is recorded in the undo history; a
+// recorded replacement leaving the overrides unchanged records nothing.
+func (t *Text) ReplaceOverrideStyleRunsInRange(runs *textstyle.Runs, startInBytes, endInBytes int, record bool) {
+	current := t.ensureOverrideStyleRuns()
+	if record {
+		defer func() {
+			t.newOverrideStyleRunsBuf.Clear()
+			t.oldOverrideStyleRunsBuf.Clear()
+		}()
+		t.newOverrideStyleRunsBuf.CopyRangeFrom(runs, 0, endInBytes-startInBytes)
+		t.oldOverrideStyleRunsBuf.CopyRangeFrom(current, startInBytes, endInBytes)
+		if t.newOverrideStyleRunsBuf.Equal(&t.oldOverrideStyleRunsBuf) {
+			return
+		}
+		t.ensureStoreCallbacks()
+		t.store.recordRangedStateChange(startInBytes, endInBytes)
+	}
+	current.ReplaceRange(runs, startInBytes, endInBytes)
 }
 
 // SetInsertionStyle replaces the insertion style with style. Its set

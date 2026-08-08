@@ -1959,3 +1959,133 @@ func TestPieceTableWithoutRangedState(t *testing.T) {
 		t.Errorf("got: %v, want: nil", state)
 	}
 }
+
+func TestPieceTableAppendHistoryEntry(t *testing.T) {
+	var p piecetable.PieceTable
+	p.Reset("hello")
+
+	check := func(want string) {
+		t.Helper()
+		var b strings.Builder
+		if _, err := p.WriteRangeTo(&b, 0, math.MaxInt); err != nil {
+			t.Fatalf("WriteRangeTo failed: %v", err)
+		}
+		if got := b.String(); got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	}
+
+	states := []*piecetable.RangedState{
+		{},
+		{},
+	}
+
+	if p.CanUndo() {
+		t.Fatal("CanUndo must return false before recording")
+	}
+	p.SetCurrentRangedState(states[0])
+	p.AppendHistoryEntry(1, 3)
+	if !p.CanUndo() {
+		t.Fatal("CanUndo must return true after recording")
+	}
+	check("hello")
+
+	// Undo leaves the text unchanged, restores the recorded selection, and
+	// returns the state of the position being returned to.
+	p.SetCurrentRangedState(states[1])
+	start, end, state, ok := p.Undo()
+	if !ok {
+		t.Fatal("Undo must return true")
+	}
+	if start != 1 || end != 3 {
+		t.Errorf("Undo: got (%d, %d), want (1, 3)", start, end)
+	}
+	if got, want := state, states[0]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+	check("hello")
+	if p.CanUndo() {
+		t.Error("CanUndo must return false after undoing the entry")
+	}
+
+	start, end, state, ok = p.Redo()
+	if !ok {
+		t.Fatal("Redo must return true")
+	}
+	if start != 1 || end != 3 {
+		t.Errorf("Redo: got (%d, %d), want (1, 3)", start, end)
+	}
+	if got, want := state, states[1]; got != want {
+		t.Errorf("got: %p, want: %p", got, want)
+	}
+	check("hello")
+}
+
+func TestPieceTableAppendHistoryEntryOnZeroValue(t *testing.T) {
+	var p piecetable.PieceTable
+	p.AppendHistoryEntry(0, 0)
+	if !p.CanUndo() {
+		t.Fatal("CanUndo must return true after recording")
+	}
+	if _, _, _, ok := p.Undo(); !ok {
+		t.Fatal("Undo must return true")
+	}
+	if p.CanUndo() {
+		t.Error("CanUndo must return false after undoing the entry")
+	}
+}
+
+func TestPieceTableAppendHistoryEntryTruncatesRedo(t *testing.T) {
+	var p piecetable.PieceTable
+	p.Reset("hello")
+	p.Replace("x", 0, 0)
+	if _, _, _, ok := p.Undo(); !ok {
+		t.Fatal("Undo must return true")
+	}
+	if !p.CanRedo() {
+		t.Fatal("CanRedo must return true after the undo")
+	}
+
+	p.AppendHistoryEntry(0, 0)
+	if p.CanRedo() {
+		t.Error("CanRedo must return false after recording")
+	}
+}
+
+func TestPieceTableAppendHistoryEntrySplitsMerging(t *testing.T) {
+	var p piecetable.PieceTable
+
+	check := func(want string) {
+		t.Helper()
+		var b strings.Builder
+		if _, err := p.WriteRangeTo(&b, 0, math.MaxInt); err != nil {
+			t.Fatalf("WriteRangeTo failed: %v", err)
+		}
+		if got := b.String(); got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	}
+
+	// Consecutive IME edits normally coalesce into one undo entry; an
+	// appended history entry between them keeps them separate.
+	p.UpdateByIME("a", 0, 0)
+	p.AppendHistoryEntry(0, 1)
+	p.UpdateByIME("b", 1, 1)
+	check("ab")
+
+	if _, _, _, ok := p.Undo(); !ok {
+		t.Fatal("Undo must return true")
+	}
+	check("a")
+	if _, _, _, ok := p.Undo(); !ok {
+		t.Fatal("Undo must return true")
+	}
+	check("a")
+	if _, _, _, ok := p.Undo(); !ok {
+		t.Fatal("Undo must return true")
+	}
+	check("")
+	if p.CanUndo() {
+		t.Error("CanUndo must return false after undoing every entry")
+	}
+}

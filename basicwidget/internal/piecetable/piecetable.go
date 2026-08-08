@@ -506,6 +506,18 @@ func (p *PieceTable) UpdateByIME(text string, start, end int) {
 	p.doReplace(text, start, end)
 }
 
+// AppendHistoryEntry appends a new undo history entry with the text
+// unchanged: undo and redo crossing it restore the selection to
+// [selectionStart, selectionEnd]. The ranged states on either side are
+// recorded via [PieceTable.SetCurrentRangedState].
+func (p *PieceTable) AppendHistoryEntry(selectionStart, selectionEnd int) {
+	if p.history == nil {
+		p.history = []historyItem{{}}
+	}
+	p.lastOp = lastOp{}
+	p.appendHistory(selectionStart, selectionEnd, selectionStart, selectionEnd)
+}
+
 // CanUndo reports whether the piece table can undo.
 func (p *PieceTable) CanUndo() bool {
 	return p.historyIndex > 0

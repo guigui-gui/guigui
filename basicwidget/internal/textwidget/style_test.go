@@ -195,7 +195,7 @@ func TestTextReplaceOverrideStyleRunsInRange(t *testing.T) {
 
 	var src textstyle.Runs
 	src.SetColor(0, 3, blue)
-	txt.ReplaceOverrideStyleRunsInRange(&src, 2, 6)
+	txt.ReplaceOverrideStyleRunsInRange(&src, 2, 6, false)
 
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 2, red)
@@ -367,7 +367,7 @@ func TestOverrideStyleRunsRoundTrip(t *testing.T) {
 	txt.ReadOverrideStyleRuns(&runs)
 	var txt2 textwidget.Text
 	txt2.SetValue("hello!! world")
-	txt2.CopyOverrideStyleRunsFrom(&runs)
+	txt2.CopyOverrideStyleRunsFrom(&runs, false)
 
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 7, red)
@@ -530,5 +530,279 @@ func TestTextResetClearsHistoryAndStyles(t *testing.T) {
 	}
 	if txt.Undo() {
 		t.Error("Undo must return false after a reset")
+	}
+}
+
+func TestTextStyleOnlyUndoRedo(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+	if txt.CanUndo() {
+		t.Fatal("CanUndo must return false before the style change")
+	}
+
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+	afterChange := txt.OverrideStyleRuns()
+	if !txt.CanUndo() {
+		t.Fatal("CanUndo must return true after the style change")
+	}
+
+	// Undo leaves the value unchanged, restores the previous styles, and
+	// selects the styled range.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := txt.Value(), "hello world"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	if got := txt.OverrideStyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+	if start, end := txt.Selection(); start != 0 || end != 5 {
+		t.Errorf("Selection: got (%d, %d), want (0, 5)", start, end)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing the style change")
+	}
+
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := txt.Value(), "hello world"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, afterChange) {
+		t.Errorf("got: %+v, want: %+v", got, afterChange)
+	}
+	if start, end := txt.Selection(); start != 0 || end != 5 {
+		t.Errorf("Selection: got (%d, %d), want (0, 5)", start, end)
+	}
+}
+
+func TestTextStyleOnlyUndoUnchangedReplacement(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+
+	// A replacement equal to the current overrides records nothing, so
+	// reinstalling the same styles repeatedly leaves one undo entry.
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got := txt.OverrideStyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing the only style change")
+	}
+
+	// An empty replacement over unstyled text records nothing.
+	var txt2 textwidget.Text
+	txt2.SetEditable(true)
+	txt2.ForceSetValue("hello")
+	var empty textstyle.Runs
+	txt2.ReplaceOverrideStyleRunsInRange(&empty, 0, 5, true)
+	if txt2.CanUndo() {
+		t.Error("CanUndo must return false after an empty replacement of unstyled text")
+	}
+}
+
+func TestTextStyleOnlyUndoInterleavedWithEdits(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+
+	txt.ReplaceTextAt(" world", 5, 5, nil)
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+	styled := txt.OverrideStyleRuns()
+	txt.ReplaceTextAt("!", 11, 11, nil)
+
+	// Undo walks back the text edit, the style change, and the first edit.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := txt.Value(), "hello world"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, styled) {
+		t.Errorf("got: %+v, want: %+v", got, styled)
+	}
+
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := txt.Value(), "hello world"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	if got := txt.OverrideStyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := txt.Value(), "hello"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing every entry")
+	}
+
+	// Redo walks forward through the same entries.
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, styled) {
+		t.Errorf("got: %+v, want: %+v", got, styled)
+	}
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got, want := txt.Value(), "hello world!"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+
+	// A new style change after an undo truncates the redo tail.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	var underline textstyle.Runs
+	underline.SetUnderline(0, 5, true)
+	txt.ReplaceOverrideStyleRunsInRange(&underline, 6, 11, true)
+	if txt.CanRedo() {
+		t.Error("CanRedo must return false after a style change")
+	}
+}
+
+func TestTextCopyOverrideStyleRunsFromRecordsNoHistory(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello")
+
+	// Unrecorded whole-value replacements restore model state on every build
+	// and must not grow the undo history.
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	for range 3 {
+		txt.CopyOverrideStyleRunsFrom(&runs, false)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after whole-value replacements")
+	}
+}
+
+func TestTextStyleOnlyUndoKeepsHotspots(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+	hotspots := []textwidget.TextRange{{StartInBytes: 6, EndInBytes: 11}}
+	txt.SetHotspotRanges(hotspots)
+
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, true)
+
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got := txt.AppendHotspotRanges(nil); !slices.Equal(got, hotspots) {
+		t.Errorf("got: %+v, want: %+v", got, hotspots)
+	}
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got := txt.AppendHotspotRanges(nil); !slices.Equal(got, hotspots) {
+		t.Errorf("got: %+v, want: %+v", got, hotspots)
+	}
+}
+
+func TestTextRecordedWholeValueStyleUndoRedo(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.CopyOverrideStyleRunsFrom(&runs, true)
+	afterChange := txt.OverrideStyleRuns()
+	if !txt.CanUndo() {
+		t.Fatal("CanUndo must return true after the recorded replacement")
+	}
+
+	// A recorded replacement equal to the current overrides records nothing.
+	txt.CopyOverrideStyleRunsFrom(&runs, true)
+
+	// Undo restores the previous overrides and selects the whole value.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got := txt.OverrideStyleRuns(); got != nil {
+		t.Errorf("got: %+v, want: nil", got)
+	}
+	if start, end := txt.Selection(); start != 0 || end != 11 {
+		t.Errorf("Selection: got (%d, %d), want (0, 11)", start, end)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing the only replacement")
+	}
+
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, afterChange) {
+		t.Errorf("got: %+v, want: %+v", got, afterChange)
+	}
+}
+
+func TestTextUnrecordedRangedStyleReplacement(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+
+	// Unrecorded ranged replacements apply without growing the undo history,
+	// even when they change the overrides.
+	var runs textstyle.Runs
+	runs.SetColor(0, 5, red)
+	txt.ReplaceOverrideStyleRunsInRange(&runs, 0, 5, false)
+	var runs2 textstyle.Runs
+	runs2.SetColor(0, 5, blue)
+	txt.ReplaceOverrideStyleRunsInRange(&runs2, 0, 5, false)
+
+	want := slices.Collect(func(yield func(textstyle.Run) bool) {
+		yield(textstyle.Run{Start: 0, End: 5, Style: textstyle.Style{}.WithColor(blue)})
+	})
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after unrecorded replacements")
 	}
 }

@@ -270,8 +270,12 @@ func (t *TextInput) ReadOverrideStyles(styles *TextStyles) {
 }
 
 // SetOverrideStyles replaces the ranged style overrides with styles.
-func (t *TextInput) SetOverrideStyles(styles *TextStyles) {
-	t.textInput.text.Text().SetOverrideStyles(styles)
+// recorded sets whether the replacement is recorded in the undo history; a
+// recorded replacement leaving the overrides unchanged records nothing.
+// Pass false when restoring the overrides from a model, such as on every
+// build.
+func (t *TextInput) SetOverrideStyles(styles *TextStyles, recorded bool) {
+	t.textInput.text.Text().SetOverrideStyles(styles, recorded)
 }
 
 // ReadOverrideStylesInRange replaces styles with a copy of the ranged style
@@ -285,8 +289,10 @@ func (t *TextInput) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, 
 // [startInBytes, endInBytes) with styles' overrides in
 // [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
 // styles' overrides outside [0, endInBytes-startInBytes) are ignored.
-func (t *TextInput) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
-	t.textInput.text.Text().SetOverrideStylesInRange(styles, startInBytes, endInBytes)
+// recorded sets whether the replacement is recorded in the undo history; a
+// recorded replacement leaving the overrides unchanged records nothing.
+func (t *TextInput) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int, recorded bool) {
+	t.textInput.text.Text().SetOverrideStylesInRange(styles, startInBytes, endInBytes, recorded)
 }
 
 // ReadEffectiveStyles replaces styles with the effective styles of the whole

@@ -82,7 +82,7 @@ func TestTextInsertionStyleOverridesAdoptedStyle(t *testing.T) {
 	txt.ForceSetValue("hello")
 	var runs textstyle.Runs
 	runs.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
-	txt.CopyOverrideStyleRunsFrom(&runs)
+	txt.CopyOverrideStyleRunsFrom(&runs, false)
 	txt.SetSelection(5, 5)
 
 	// Typing at the bold run's end with an insertion-style medium weight must
@@ -251,7 +251,7 @@ func TestTextInsertionStyleUndoRedo(t *testing.T) {
 	txt.ForceSetValue("hello")
 	var runs textstyle.Runs
 	runs.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
-	txt.CopyOverrideStyleRunsFrom(&runs)
+	txt.CopyOverrideStyleRunsFrom(&runs, false)
 	txt.SetSelection(5, 5)
 	txt.SetInsertionStyle(textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightMedium)))
 	txt.CommitTextByIME("x")

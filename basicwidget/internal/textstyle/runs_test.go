@@ -843,3 +843,36 @@ func styleAtColor(r *textstyle.Runs, i int) color.Color {
 	clr, _ := r.StyleAt(i).Color()
 	return clr
 }
+
+func TestRunsEqual(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var a, b textstyle.Runs
+	if !a.Equal(&b) {
+		t.Error("empty run sets must be equal")
+	}
+
+	a.SetColor(0, 5, red)
+	if a.Equal(&b) {
+		t.Error("run sets with different overrides must not be equal")
+	}
+
+	b.SetColor(0, 5, red)
+	if !a.Equal(&b) {
+		t.Error("run sets with the same overrides must be equal")
+	}
+
+	// Same range, different style.
+	b.SetColor(0, 5, blue)
+	if a.Equal(&b) {
+		t.Error("run sets with different styles must not be equal")
+	}
+
+	// Same style, different range.
+	b.SetColor(0, 5, red)
+	b.SetColor(5, 6, red)
+	if a.Equal(&b) {
+		t.Error("run sets with different ranges must not be equal")
+	}
+}

@@ -251,7 +251,7 @@ func (r *Root) applyHighlight(context *guigui.Context) {
 			r.styles.SetColorInRange(hr.StartInBytes, hr.EndInBytes, colorForKind(hr.Kind, colorMode))
 		}
 	}
-	r.editor.SetOverrideStyles(&r.styles)
+	r.editor.SetOverrideStyles(&r.styles, false)
 }
 
 // The syntax classes form a uniform palette in Oklch: every class shares

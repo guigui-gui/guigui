@@ -78,7 +78,7 @@ func TestTextOverrideStylesRoundTrip(t *testing.T) {
 	var styles basicwidget.TextStyles
 	styles.SetColorInRange(0, 5, red)
 	styles.SetUnderlineInRange(6, 11, true)
-	txt.SetOverrideStyles(&styles)
+	txt.SetOverrideStyles(&styles, false)
 
 	var got basicwidget.TextStyles
 	txt.ReadOverrideStyles(&got)
@@ -99,12 +99,12 @@ func TestTextOverrideStylesInRange(t *testing.T) {
 
 	var styles basicwidget.TextStyles
 	styles.SetColorInRange(0, 11, red)
-	txt.SetOverrideStyles(&styles)
+	txt.SetOverrideStyles(&styles, false)
 
 	// Replace [2, 6) with a blue override over its first 3 bytes.
 	var repl basicwidget.TextStyles
 	repl.SetColorInRange(0, 3, blue)
-	txt.SetOverrideStylesInRange(&repl, 2, 6)
+	txt.SetOverrideStylesInRange(&repl, 2, 6, false)
 
 	// Read [0, 6) back; the result is rebased to 0.
 	var got basicwidget.TextStyles
@@ -133,7 +133,7 @@ func TestTextReadEffectiveStyles(t *testing.T) {
 
 	var styles basicwidget.TextStyles
 	styles.SetColorInRange(3, 5, red)
-	txt.SetOverrideStyles(&styles)
+	txt.SetOverrideStyles(&styles, false)
 
 	// The effective styles resolve the base style, the rendering defaults,
 	// and the overrides; every property is set.
@@ -246,5 +246,97 @@ func TestTextInsertionStyle(t *testing.T) {
 	}
 	if resets != 1 {
 		t.Errorf("resets: got: %d, want: 1", resets)
+	}
+}
+
+func TestTextOverrideStylesUndoRedo(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt basicwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+
+	var valueChanges int
+	txt.OnValueChangedWithoutText(func(context *guigui.Context, committed bool) {
+		valueChanges++
+	})
+
+	// A ranged replacement records an undo entry; the write itself does not
+	// dispatch a value change.
+	var styles basicwidget.TextStyles
+	styles.SetColorInRange(0, 5, red)
+	txt.SetOverrideStylesInRange(&styles, 0, 5, true)
+	if !txt.CanUndo() {
+		t.Fatal("CanUndo must return true after the style change")
+	}
+	if valueChanges != 0 {
+		t.Errorf("valueChanges: got: %d, want: 0", valueChanges)
+	}
+
+	// Undo restores the previous overrides, keeps the value, and dispatches
+	// a value change so apps can read the overrides back.
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if got, want := txt.Value(), "hello world"; got != want {
+		t.Errorf("got: %q, want: %q", got, want)
+	}
+	var got basicwidget.TextStyles
+	txt.ReadOverrideStyles(&got)
+	if clr, uniform := got.ColorInRange(0, 5, nil); !uniform || clr != nil {
+		t.Errorf("ColorInRange(0, 5) = %v, %t; want nil, true", clr, uniform)
+	}
+	if valueChanges != 1 {
+		t.Errorf("valueChanges: got: %d, want: 1", valueChanges)
+	}
+
+	if !txt.Redo() {
+		t.Fatal("Redo must return true")
+	}
+	txt.ReadOverrideStyles(&got)
+	if clr, uniform := got.ColorInRange(0, 5, nil); !uniform || clr != color.Color(red) {
+		t.Errorf("ColorInRange(0, 5) = %v, %t; want %v, true", clr, uniform, red)
+	}
+	if valueChanges != 2 {
+		t.Errorf("valueChanges: got: %d, want: 2", valueChanges)
+	}
+}
+
+func TestTextSetOverrideStylesRecordsNoHistory(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt basicwidget.Text
+	txt.SetEditable(true)
+	txt.ForceSetValue("hello world")
+
+	// Unrecorded whole-value replacements restore model state on every build
+	// and must not grow the undo history.
+	var styles basicwidget.TextStyles
+	styles.SetColorInRange(0, 5, red)
+	for range 3 {
+		txt.SetOverrideStyles(&styles, false)
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after whole-value replacements")
+	}
+
+	// A ranged replacement equal to the current overrides records nothing
+	// either; only a changing one does.
+	txt.SetOverrideStylesInRange(&styles, 0, 11, true)
+	if txt.CanUndo() {
+		t.Fatal("CanUndo must return false after an unchanged ranged replacement")
+	}
+	var underline basicwidget.TextStyles
+	underline.SetUnderlineInRange(0, 5, true)
+	txt.SetOverrideStylesInRange(&underline, 6, 11, true)
+	if !txt.CanUndo() {
+		t.Fatal("CanUndo must return true after the style change")
+	}
+	txt.SetOverrideStylesInRange(&underline, 6, 11, true)
+	if !txt.Undo() {
+		t.Fatal("Undo must return true")
+	}
+	if txt.CanUndo() {
+		t.Error("CanUndo must return false after undoing the only style change")
 	}
 }

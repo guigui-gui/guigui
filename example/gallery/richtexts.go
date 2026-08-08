@@ -72,7 +72,7 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		r.sampleText.ForceSetValue(richTextsSampleText)
 		model.RichTexts().ResetSampleText()
 		styles := model.RichTexts().SampleTextStyles()
-		r.sampleText.SetOverrideStyles(&styles)
+		r.sampleText.SetOverrideStyles(&styles, false)
 		r.sampleText.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	})
 
@@ -122,7 +122,7 @@ func (r *RichTexts) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 	// the widget's followed state back to the model.
 	t.SetValue(model.RichTexts().SampleText())
 	styles := model.RichTexts().SampleTextStyles()
-	t.SetOverrideStyles(&styles)
+	t.SetOverrideStyles(&styles, false)
 	t.SetHotspotRanges(model.RichTexts().SampleTextHotspots())
 	t.OnValueChanged(func(context *guigui.Context, text string, committed bool) {
 		model.RichTexts().SetSampleText(text)

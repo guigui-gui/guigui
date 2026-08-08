@@ -60,6 +60,14 @@ type Text struct {
 	// [Text.ensureOverrideStyleRuns].
 	textEditsBuf []textEdit
 
+	// newOverrideStyleRunsBuf is scratch for the incoming overrides in
+	// [Text.ReplaceOverrideStyleRunsInRange]'s unchanged-replacement check.
+	newOverrideStyleRunsBuf textstyle.Runs
+
+	// oldOverrideStyleRunsBuf is scratch for the current overrides in
+	// [Text.ReplaceOverrideStyleRunsInRange]'s unchanged-replacement check.
+	oldOverrideStyleRunsBuf textstyle.Runs
+
 	// insertionStyle holds the style overrides applied to the next text
 	// inserted at the caret. See [Text.SetInsertionStyle].
 	insertionStyle textstyle.Style

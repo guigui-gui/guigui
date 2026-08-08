@@ -491,6 +491,18 @@ func (s *textStore) setTextCommittedFunc(f func(startInBytes, newLenInBytes int)
 	s.textCommittedFunc = f
 }
 
+// recordRangedStateChange records the current ranged text state and appends
+// a history entry for a change of that state alone: the text is unchanged,
+// and undo and redo restore the selection to [startInBytes, endInBytes],
+// clamped to the current text length.
+func (s *textStore) recordRangedStateChange(startInBytes, endInBytes int) {
+	s.recordCurrentRangedState()
+	l := s.pieceTable.Len()
+	startInBytes = min(max(startInBytes, 0), l)
+	endInBytes = min(max(endInBytes, startInBytes), l)
+	s.pieceTable.AppendHistoryEntry(startInBytes, endInBytes)
+}
+
 // recordCurrentRangedState records a snapshot of the caller's current ranged
 // text state as the state of the current history position.
 func (s *textStore) recordCurrentRangedState() {

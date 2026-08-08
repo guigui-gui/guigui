@@ -241,6 +241,13 @@ func (r *Runs) All() iter.Seq[Run] {
 	return slices.Values(r.runs)
 }
 
+// Equal reports whether r and other hold the same overrides.
+func (r *Runs) Equal(other *Runs) bool {
+	return slices.EqualFunc(r.runs, other.runs, func(a, b Run) bool {
+		return a.Start == b.Start && a.End == b.End && a.Style.Equal(b.Style)
+	})
+}
+
 // CopyFrom replaces the run list with a copy of src's.
 func (r *Runs) CopyFrom(src *Runs) {
 	r.runs = slices.Delete(r.runs, 0, len(r.runs))

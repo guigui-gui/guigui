@@ -129,6 +129,10 @@ type Text struct {
 // modify the text — caret moves, focus changes, IME state replays, a focus-loss
 // commit on an unchanged buffer — does not trigger the handler.
 //
+// An undo or redo also dispatches an uncommitted change when it restores the
+// ranged style overrides alone, with the text itself unchanged. The handler
+// can read the current overrides back via [Text.ReadOverrideStyles].
+//
 // If the handler does not need the text payload, prefer
 // [Text.OnValueChangedWithoutText] to avoid materializing the value on every
 // change.
@@ -555,8 +559,12 @@ func (t *Text) ReadOverrideStyles(styles *TextStyles) {
 }
 
 // SetOverrideStyles replaces the ranged style overrides with styles.
-func (t *Text) SetOverrideStyles(styles *TextStyles) {
-	t.core.CopyOverrideStyleRunsFrom(&styles.runs)
+// recorded sets whether the replacement is recorded in the undo history; a
+// recorded replacement leaving the overrides unchanged records nothing.
+// Pass false when restoring the overrides from a model, such as on every
+// build.
+func (t *Text) SetOverrideStyles(styles *TextStyles, recorded bool) {
+	t.core.CopyOverrideStyleRunsFrom(&styles.runs, recorded)
 }
 
 // ReadOverrideStylesInRange replaces styles with a copy of the ranged style
@@ -570,8 +578,10 @@ func (t *Text) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, endIn
 // [startInBytes, endInBytes) with styles' overrides in
 // [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
 // styles' overrides outside [0, endInBytes-startInBytes) are ignored.
-func (t *Text) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
-	t.core.ReplaceOverrideStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+// recorded sets whether the replacement is recorded in the undo history; a
+// recorded replacement leaving the overrides unchanged records nothing.
+func (t *Text) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int, recorded bool) {
+	t.core.ReplaceOverrideStyleRunsInRange(&styles.runs, startInBytes, endInBytes, recorded)
 }
 
 // ReadEffectiveStyles replaces styles with the effective styles of the whole
