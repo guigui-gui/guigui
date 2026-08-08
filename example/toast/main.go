@@ -6,6 +6,7 @@ package main
 import (
 	"fmt"
 	"image"
+	"image/color"
 	"os"
 	"slices"
 
@@ -13,7 +14,6 @@ import (
 
 	"github.com/guigui-gui/guigui"
 	"github.com/guigui-gui/guigui/basicwidget"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 type Toast struct {
@@ -25,7 +25,7 @@ type Toast struct {
 	openedTicks   int
 	durationTicks int
 	message       string
-	semanticColor basicwidgetdraw.SemanticColor
+	tint          color.Color
 }
 
 func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -35,11 +35,11 @@ func (t *Toast) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		t.popup.SetOpen(false)
 	})
 	t.content.SetText(t.message)
-	t.content.SetSemanticColor(t.semanticColor)
+	t.content.SetTintColor(t.tint)
 	t.popup.SetContent(&t.content)
 	t.popup.SetModal(false)
 	t.popup.SetCloseByClickingOutside(false)
-	t.popup.SetBackgroundSemanticColor(t.semanticColor)
+	t.popup.SetTintColor(t.tint)
 
 	return nil
 }
@@ -89,8 +89,8 @@ func (t *Toast) SetDurationInTicks(ticks int) {
 	t.durationTicks = ticks
 }
 
-func (t *Toast) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	t.semanticColor = semanticColor
+func (t *Toast) SetTintColor(tint color.Color) {
+	t.tint = tint
 }
 
 func (t *Toast) SetOpen(open bool) {
@@ -108,6 +108,7 @@ type toastContent struct {
 	text        basicwidget.Text
 	closeButton basicwidget.Button
 
+	tint           color.Color
 	hasCloseButton bool
 
 	linearLayout      guigui.LinearLayout
@@ -118,9 +119,9 @@ func (t *toastContent) SetText(text string) {
 	t.text.SetValue(text)
 }
 
-func (t *toastContent) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	t.text.SetSemanticColor(semanticColor)
-	t.closeButton.SetSemanticColor(semanticColor)
+func (t *toastContent) SetTintColor(tint color.Color) {
+	t.tint = tint
+	t.closeButton.SetTintColor(tint)
 }
 
 func (t *toastContent) OnClose(f func(context *guigui.Context)) {
@@ -133,6 +134,11 @@ func (t *toastContent) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 		adder.AddWidget(&t.closeButton)
 	}
 
+	var style basicwidget.TextStyle
+	if t.tint != nil {
+		style.SetColor(basicwidget.TextColorFromTint(context, t.tint))
+	}
+	t.text.SetBaseStyle(&style)
 	t.text.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	t.closeButton.SetText("Close")
 	t.closeButton.OnUp(func(context *guigui.Context) {
@@ -182,38 +188,38 @@ func (t *toastContent) Measure(context *guigui.Context, constraints guigui.Const
 type Root struct {
 	guigui.DefaultWidget
 
-	background           basicwidget.Background
-	semanticColorControl basicwidget.SegmentedControl[basicwidgetdraw.SemanticColor]
-	showToastButton      basicwidget.Button
+	background      basicwidget.Background
+	tintControl     basicwidget.SegmentedControl[color.Color]
+	showToastButton basicwidget.Button
 
 	toasts        guigui.WidgetSlice[*Toast]
 	bottomOffsets []int
 
 	toastCounter     int
 	nextBottomOffset int
-	semanticColor    basicwidgetdraw.SemanticColor
+	tint             color.Color
 }
 
 func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
-	adder.AddWidget(&r.semanticColorControl)
+	adder.AddWidget(&r.tintControl)
 	adder.AddWidget(&r.showToastButton)
 	for i := range r.toasts.Len() {
 		adder.AddWidget(r.toasts.At(i))
 	}
 
-	r.semanticColorControl.SetItems([]basicwidget.SegmentedControlItem[basicwidgetdraw.SemanticColor]{
-		{Text: "Base", Value: basicwidgetdraw.SemanticColorBase},
-		{Text: "Accent", Value: basicwidgetdraw.SemanticColorAccent},
-		{Text: "Info", Value: basicwidgetdraw.SemanticColorInfo},
-		{Text: "Success", Value: basicwidgetdraw.SemanticColorSuccess},
-		{Text: "Warning", Value: basicwidgetdraw.SemanticColorWarning},
-		{Text: "Danger", Value: basicwidgetdraw.SemanticColorDanger},
+	r.tintControl.SetItems([]basicwidget.SegmentedControlItem[color.Color]{
+		{Text: "Default", Value: nil},
+		{Text: "Accent", Value: basicwidget.AccentTintColor()},
+		{Text: "Info", Value: basicwidget.InfoTintColor()},
+		{Text: "Success", Value: basicwidget.SuccessTintColor()},
+		{Text: "Warning", Value: basicwidget.WarningTintColor()},
+		{Text: "Danger", Value: basicwidget.DangerTintColor()},
 	})
-	r.semanticColorControl.SelectItemByValue(r.semanticColor)
-	r.semanticColorControl.OnItemSelected(func(context *guigui.Context, index int) {
-		if item, ok := r.semanticColorControl.ItemByIndex(index); ok {
-			r.semanticColor = item.Value
+	r.tintControl.SelectItemByValue(r.tint)
+	r.tintControl.OnItemSelected(func(context *guigui.Context, index int) {
+		if item, ok := r.tintControl.ItemByIndex(index); ok {
+			r.tint = item.Value
 		}
 	})
 
@@ -248,7 +254,7 @@ func (r *Root) showToast(context *guigui.Context) {
 	t.SetMessage(fmt.Sprintf("Toast #%d", r.toastCounter))
 	t.SetHasCloseButton(hasCloseButton)
 	t.SetDurationInTicks(3 * ebiten.TPS())
-	t.SetSemanticColor(r.semanticColor)
+	t.SetTintColor(r.tint)
 
 	// Grow the offsets slice if needed.
 	if len(r.bottomOffsets) <= idx {
@@ -272,8 +278,8 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	// Position the segmented control and button at the top-left with some padding.
 	topLeft := appBounds.Min.Add(image.Pt(u, u))
-	controlSize := r.semanticColorControl.Measure(context, guigui.Constraints{})
-	layouter.LayoutWidget(&r.semanticColorControl, image.Rectangle{
+	controlSize := r.tintControl.Measure(context, guigui.Constraints{})
+	layouter.LayoutWidget(&r.tintControl, image.Rectangle{
 		Min: topLeft,
 		Max: topLeft.Add(controlSize),
 	})

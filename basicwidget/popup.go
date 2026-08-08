@@ -5,13 +5,13 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -139,8 +139,10 @@ func (p *Popup) SetBackgroundBounds(bounds image.Rectangle) {
 	p.popup.Widget().backgroundBounds = bounds
 }
 
-func (p *Popup) SetBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	p.popup.Widget().setBackgroundSemanticColor(draw.SemanticColor(semanticColor))
+// SetTintColor sets the color the popup derives its background from.
+// A nil tint restores the default background.
+func (p *Popup) SetTintColor(tint color.Color) {
+	p.popup.Widget().setTintColor(tint)
 }
 
 func (p *Popup) setDrawerEdge(edge DrawerEdge) {
@@ -309,8 +311,8 @@ func (p *popup) SetBackgroundBlurred(blurred bool) {
 	p.backgroundBlurred = blurred
 }
 
-func (p *popup) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
-	p.contentAndFrame.Widget().setBackgroundSemanticColor(semanticColor)
+func (p *popup) setTintColor(tint color.Color) {
+	p.contentAndFrame.Widget().setTintColor(tint)
 }
 
 func (p *popup) SetCloseByClickingOutside(closeByClickingOutside bool) {
@@ -638,8 +640,8 @@ func (p *popupContentAndFrame) setStyle(style popupStyle) {
 	p.frame.setStyle(style)
 }
 
-func (p *popupContentAndFrame) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
-	p.content.setBackgroundSemanticColor(semanticColor)
+func (p *popupContentAndFrame) setTintColor(tint color.Color) {
+	p.content.setTintColor(tint)
 }
 
 func (p *popupContentAndFrame) setDrawerEdge(edge DrawerEdge) {
@@ -662,9 +664,9 @@ func (p *popupContentAndFrame) Layout(context *guigui.Context, widgetBounds *gui
 type popupContent struct {
 	guigui.DefaultWidget
 
-	content                 guigui.Widget
-	style                   popupStyle
-	backgroundSemanticColor draw.SemanticColor
+	content guigui.Widget
+	style   popupStyle
+	tint    color.Color
 }
 
 func (p *popupContent) setContent(widget guigui.Widget) {
@@ -675,8 +677,8 @@ func (p *popupContent) setStyle(style popupStyle) {
 	p.style = style
 }
 
-func (p *popupContent) setBackgroundSemanticColor(semanticColor draw.SemanticColor) {
-	p.backgroundSemanticColor = semanticColor
+func (p *popupContent) setTintColor(tint color.Color) {
+	p.tint = tint
 }
 
 func (p *popupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
@@ -701,7 +703,7 @@ func (p *popupContent) HandlePointingInput(context *guigui.Context, widgetBounds
 
 func (p *popupContent) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	bounds := widgetBounds.Bounds()
-	clr := draw.PopupBackgroundColorFromSemanticColor(context.ColorMode(), p.backgroundSemanticColor)
+	clr := draw.PopupBackgroundColorFromTint(context.ColorMode(), p.tint)
 	if p.style != popupStyleDrawer {
 		draw.DrawRoundedRect(context, dst, bounds, clr, RoundedCornerRadius(context))
 	} else {

@@ -36,44 +36,47 @@ var (
 	gray  = iro.ColorFromOklch(0.6, 0, 0, 1)
 )
 
-type SemanticColor int
-
-const (
-	SemanticColorBase SemanticColor = iota
-	SemanticColorAccent
-	SemanticColorInfo
-	SemanticColorSuccess
-	SemanticColorWarning
-	SemanticColorDanger
+var (
+	accentTintColor  = blue.SRGBColor()
+	infoTintColor    = blue.SRGBColor()
+	successTintColor = green.SRGBColor()
+	warningTintColor = orange.SRGBColor()
+	dangerTintColor  = red.SRGBColor()
 )
 
-func Color(colorMode ebiten.ColorMode, semanticColor SemanticColor, lightnessInLightMode float64) color.Color {
-	return Color2(colorMode, semanticColor, lightnessInLightMode, 1-lightnessInLightMode)
+// AccentTintColor returns the tint marking the primary action of the theme.
+func AccentTintColor() color.Color {
+	return accentTintColor
 }
 
-func Color2(colorMode ebiten.ColorMode, semanticColor SemanticColor, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
-	var base iro.Color
-	switch semanticColor {
-	case SemanticColorBase:
-		base = gray
-	case SemanticColorAccent:
-		base = blue
-	case SemanticColorInfo:
-		base = blue
-	case SemanticColorSuccess:
-		base = green
-	case SemanticColorWarning:
-		base = orange
-	case SemanticColorDanger:
-		base = red
-	default:
-		panic(fmt.Sprintf("draw: invalid color type: %d", semanticColor))
-	}
+// InfoTintColor returns the tint marking neutral information.
+func InfoTintColor() color.Color {
+	return infoTintColor
+}
+
+// SuccessTintColor returns the tint marking a successful result.
+func SuccessTintColor() color.Color {
+	return successTintColor
+}
+
+// WarningTintColor returns the tint marking a condition that needs attention.
+func WarningTintColor() color.Color {
+	return warningTintColor
+}
+
+// DangerTintColor returns the tint marking a destructive action or an error.
+func DangerTintColor() color.Color {
+	return dangerTintColor
+}
+
+// tintColor derives a color from tint at the given lightness for each color
+// mode. lightnessInLightMode and lightnessInDarkMode are in the range [0, 1].
+func tintColor(colorMode ebiten.ColorMode, tint iro.Color, lightnessInLightMode, lightnessInDarkMode float64) color.Color {
 	switch colorMode {
 	case ebiten.ColorModeLight:
-		return getColor(base, lightnessInLightMode, black, white)
+		return getColor(tint, lightnessInLightMode, black, white)
 	case ebiten.ColorModeDark:
-		return getColor(base, lightnessInDarkMode, black, white)
+		return getColor(tint, lightnessInDarkMode, black, white)
 	default:
 		panic(fmt.Sprintf("draw: invalid color mode: %d", colorMode))
 	}

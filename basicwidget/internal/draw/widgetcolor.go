@@ -8,12 +8,13 @@ import (
 	"image/color"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/iro"
 )
 
-// colorToken represents a themable color as a semantic hue and a lightness for each color mode.
+// colorToken represents a themable color as a tint and a lightness for each color mode.
 type colorToken struct {
-	// semanticColor is the hue the color is derived from.
-	semanticColor SemanticColor
+	// tint is the color the token is derived from.
+	tint iro.Color
 
 	// light is the lightness in the light color mode, in the range [0, 1].
 	light float64
@@ -23,7 +24,23 @@ type colorToken struct {
 }
 
 func (c colorToken) color(colorMode ebiten.ColorMode) color.Color {
-	return Color2(colorMode, c.semanticColor, c.light, c.dark)
+	return tintColor(colorMode, c.tint, c.light, c.dark)
+}
+
+// tokenFromTint returns a token deriving from tint, or fallback when tint is nil.
+func tokenFromTint(tint color.Color, light, dark float64) colorToken {
+	if tint == nil {
+		return colorToken{
+			tint:  gray,
+			light: light,
+			dark:  dark,
+		}
+	}
+	return colorToken{
+		tint:  iro.ColorFromSRGBColor(tint),
+		light: light,
+		dark:  dark,
+	}
 }
 
 // borderColorTokens is a set of color tokens for a rounded-rect border, one pair per border type.
@@ -61,89 +78,89 @@ func (b borderColorTokens) colors(colorMode ebiten.ColorMode, borderType Rounded
 var (
 	borderTokens = borderColorTokens{
 		regular: colorToken{
-			semanticColor: SemanticColorBase,
-			light:         0.8,
-			dark:          0.1,
+			tint:  gray,
+			light: 0.8,
+			dark:  0.1,
 		},
 		inset1: colorToken{
-			semanticColor: SemanticColorBase,
-			light:         0.7,
-			dark:          0,
+			tint:  gray,
+			light: 0.7,
+			dark:  0,
 		},
 		inset2: colorToken{
-			semanticColor: SemanticColorBase,
-			light:         0.85,
-			dark:          0.15,
+			tint:  gray,
+			light: 0.85,
+			dark:  0.15,
 		},
 		outset1: colorToken{
-			semanticColor: SemanticColorBase,
-			light:         0.85,
-			dark:          0.5,
+			tint:  gray,
+			light: 0.85,
+			dark:  0.5,
 		},
 		outset2: colorToken{
-			semanticColor: SemanticColorBase,
-			light:         0.7,
-			dark:          0.2,
+			tint:  gray,
+			light: 0.7,
+			dark:  0.2,
 		},
 	}
 	borderAccentTokens = borderColorTokens{
 		regular: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.35,
-			dark:          0.35,
+			tint:  blue,
+			light: 0.35,
+			dark:  0.35,
 		},
 		inset1: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.325,
-			dark:          0.2,
+			tint:  blue,
+			light: 0.325,
+			dark:  0.2,
 		},
 		inset2: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.35,
-			dark:          0.35,
+			tint:  blue,
+			light: 0.35,
+			dark:  0.35,
 		},
 		outset1: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.6,
-			dark:          0.8,
+			tint:  blue,
+			light: 0.6,
+			dark:  0.8,
 		},
 		outset2: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.35,
-			dark:          0.35,
+			tint:  blue,
+			light: 0.35,
+			dark:  0.35,
 		},
 	}
 	borderAccentSecondaryTokens = borderColorTokens{
 		regular: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.8,
-			dark:          0.1,
+			tint:  blue,
+			light: 0.8,
+			dark:  0.1,
 		},
 		inset1: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.7,
-			dark:          0.2,
+			tint:  blue,
+			light: 0.7,
+			dark:  0.2,
 		},
 		inset2: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.85,
-			dark:          0.05,
+			tint:  blue,
+			light: 0.85,
+			dark:  0.05,
 		},
 		outset1: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.85,
-			dark:          0.05,
+			tint:  blue,
+			light: 0.85,
+			dark:  0.05,
 		},
 		outset2: colorToken{
-			semanticColor: SemanticColorAccent,
-			light:         0.7,
-			dark:          0.2,
+			tint:  blue,
+			light: 0.7,
+			dark:  0.2,
 		},
 	}
 	borderDangerToken = colorToken{
-		semanticColor: SemanticColorDanger,
-		light:         0.4,
-		dark:          0.7,
+		tint:  red,
+		light: 0.4,
+		dark:  0.7,
 	}
 )
 
@@ -166,234 +183,234 @@ func BorderDangerColors(colorMode ebiten.ColorMode) (color.Color, color.Color) {
 
 var (
 	textEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.1,
-		dark:          0.9,
+		tint:  gray,
+		light: 0.1,
+		dark:  0.9,
 	}
 	textDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.5,
-		dark:          0.5,
+		tint:  gray,
+		light: 0.5,
+		dark:  0.5,
 	}
 	textSelectionToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.8,
-		dark:          0.35,
+		tint:  blue,
+		light: 0.8,
+		dark:  0.35,
 	}
 	textActiveCompositionToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.4,
-		dark:          0.6,
+		tint:  blue,
+		light: 0.4,
+		dark:  0.6,
 	}
 	textInactiveCompositionToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.8,
-		dark:          0.2,
+		tint:  blue,
+		light: 0.8,
+		dark:  0.2,
 	}
 	controlEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          0.25,
+		tint:  gray,
+		light: 1,
+		dark:  0.25,
 	}
 	controlDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.15,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.15,
 	}
 	contentBackgroundEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          0.15,
+		tint:  gray,
+		light: 1,
+		dark:  0.15,
 	}
 	contentBackgroundDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.1,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.1,
 	}
 	menuBackgroundEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.95,
-		dark:          0.3,
+		tint:  gray,
+		light: 0.95,
+		dark:  0.3,
 	}
 	menuBackgroundDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.85,
-		dark:          0.25,
+		tint:  gray,
+		light: 0.85,
+		dark:  0.25,
 	}
 	controlSecondaryEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.95,
-		dark:          0.3,
+		tint:  gray,
+		light: 0.95,
+		dark:  0.3,
 	}
 	controlSecondaryDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.85,
-		dark:          0.25,
+		tint:  gray,
+		light: 0.85,
+		dark:  0.25,
 	}
 	buttonPressedToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.95,
-		dark:          0.3,
+		tint:  gray,
+		light: 0.95,
+		dark:  0.3,
 	}
 	buttonHoveredToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.975,
-		dark:          0.275,
+		tint:  gray,
+		light: 0.975,
+		dark:  0.275,
 	}
 	thumbEnabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          0.6,
+		tint:  gray,
+		light: 1,
+		dark:  0.6,
 	}
 	thumbDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.55,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.55,
 	}
 	backgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.95,
-		dark:          0.05,
+		tint:  gray,
+		light: 0.95,
+		dark:  0.05,
 	}
 	backgroundSecondaryToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.1,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.1,
 	}
 	popupBackgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          0.05,
+		tint:  gray,
+		light: 1,
+		dark:  0.05,
 	}
 	accentToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.5,
-		dark:          0.5,
+		tint:  blue,
+		light: 0.5,
+		dark:  0.5,
 	}
 	textOnAccentToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.9,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.9,
 	}
 	itemHighlightedTextToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          1,
+		tint:  gray,
+		light: 1,
+		dark:  1,
 	}
 	itemHighlightedBackgroundToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.6,
-		dark:          0.35,
+		tint:  blue,
+		light: 0.6,
+		dark:  0.35,
 	}
 	itemSelectedUnfocusedBackgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.85,
-		dark:          0.35,
+		tint:  gray,
+		light: 0.85,
+		dark:  0.35,
 	}
 	itemSelectedDisabledBackgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.8,
-		dark:          0.35,
+		tint:  gray,
+		light: 0.8,
+		dark:  0.35,
 	}
 	itemHoveredBackgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.35,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.35,
 	}
 	dividerToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.8,
-		dark:          0.2,
+		tint:  gray,
+		light: 0.8,
+		dark:  0.2,
 	}
 	focusBorderToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.8,
-		dark:          0.2,
+		tint:  blue,
+		light: 0.8,
+		dark:  0.2,
 	}
 	textCaretToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.5,
-		dark:          0.6,
+		tint:  blue,
+		light: 0.5,
+		dark:  0.6,
 	}
 	trackOffToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.8,
-		dark:          0.2,
+		tint:  gray,
+		light: 0.8,
+		dark:  0.2,
 	}
 	trackOffPressedToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.75,
-		dark:          0.25,
+		tint:  gray,
+		light: 0.75,
+		dark:  0.25,
 	}
 	thumbHoveredToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.975,
-		dark:          0.575,
+		tint:  gray,
+		light: 0.975,
+		dark:  0.575,
 	}
 	thumbPressedToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.95,
-		dark:          0.55,
+		tint:  gray,
+		light: 0.95,
+		dark:  0.55,
 	}
 	accentPressedToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.45,
-		dark:          0.55,
+		tint:  blue,
+		light: 0.45,
+		dark:  0.55,
 	}
 	accentHoveredToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.475,
-		dark:          0.525,
+		tint:  blue,
+		light: 0.475,
+		dark:  0.525,
 	}
 	pressedButtonToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.875,
-		dark:          0.5,
+		tint:  blue,
+		light: 0.875,
+		dark:  0.5,
 	}
 	pressedButtonHoveredToken = colorToken{
-		semanticColor: SemanticColorAccent,
-		light:         0.85,
-		dark:          0.525,
+		tint:  blue,
+		light: 0.85,
+		dark:  0.525,
 	}
 	headerSeparatorToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.9,
-		dark:          0.4,
+		tint:  gray,
+		light: 0.9,
+		dark:  0.4,
 	}
 	headerSeparatorDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.8,
-		dark:          0.3,
+		tint:  gray,
+		light: 0.8,
+		dark:  0.3,
 	}
 	sliderTickToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.7,
-		dark:          0.3,
+		tint:  gray,
+		light: 0.7,
+		dark:  0.3,
 	}
 	trackOnDisabledToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.6,
-		dark:          0.4,
+		tint:  gray,
+		light: 0.6,
+		dark:  0.4,
 	}
 	popupDarkBackgroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0.1,
-		dark:          0,
+		tint:  gray,
+		light: 0.1,
+		dark:  0,
 	}
 	shadowToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0,
-		dark:          0,
+		tint:  gray,
+		light: 0,
+		dark:  0,
 	}
 	foregroundToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         0,
-		dark:          1,
+		tint:  gray,
+		light: 0,
+		dark:  1,
 	}
 	radioButtonMarkToken = colorToken{
-		semanticColor: SemanticColorBase,
-		light:         1,
-		dark:          1,
+		tint:  gray,
+		light: 1,
+		dark:  1,
 	}
 )
 
@@ -404,16 +421,13 @@ func TextColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
 	return textDisabledToken.color(colorMode)
 }
 
-func TextColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
-	if semanticColor == SemanticColorBase {
+// TextColorFromTint returns the color for text tinted with tint.
+// A nil tint returns the color for enabled text.
+func TextColorFromTint(colorMode ebiten.ColorMode, tint color.Color) color.Color {
+	if tint == nil {
 		return TextColor(colorMode, true)
 	}
-	c := colorToken{
-		semanticColor: semanticColor,
-		light:         0.3,
-		dark:          0.8,
-	}
-	return c.color(colorMode)
+	return tokenFromTint(tint, 0.3, 0.8).color(colorMode)
 }
 
 func TextSelectionColor(colorMode ebiten.ColorMode) color.Color {
@@ -458,8 +472,10 @@ func ControlSecondaryColor(colorMode ebiten.ColorMode, enabled bool) color.Color
 	return controlSecondaryDisabledToken.color(colorMode)
 }
 
-func ButtonBackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor, pressed bool, hovered bool) color.Color {
-	if semanticColor == SemanticColorBase {
+// ButtonBackgroundColorFromTint returns the background color for a button
+// tinted with tint. A nil tint returns the color for an untinted button.
+func ButtonBackgroundColorFromTint(colorMode ebiten.ColorMode, tint color.Color, pressed bool, hovered bool) color.Color {
+	if tint == nil {
 		if pressed {
 			return buttonPressedToken.color(colorMode)
 		}
@@ -469,27 +485,12 @@ func ButtonBackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semantic
 		return ControlColor(colorMode, true)
 	}
 	if pressed {
-		c := colorToken{
-			semanticColor: semanticColor,
-			light:         0.85,
-			dark:          0.4,
-		}
-		return c.color(colorMode)
+		return tokenFromTint(tint, 0.85, 0.4).color(colorMode)
 	}
 	if hovered {
-		c := colorToken{
-			semanticColor: semanticColor,
-			light:         0.875,
-			dark:          0.375,
-		}
-		return c.color(colorMode)
+		return tokenFromTint(tint, 0.875, 0.375).color(colorMode)
 	}
-	c := colorToken{
-		semanticColor: semanticColor,
-		light:         0.9,
-		dark:          0.35,
-	}
-	return c.color(colorMode)
+	return tokenFromTint(tint, 0.9, 0.35).color(colorMode)
 }
 
 func ThumbColor(colorMode ebiten.ColorMode, enabled bool) color.Color {
@@ -511,28 +512,22 @@ func PopupBackgroundColor(colorMode ebiten.ColorMode) color.Color {
 	return popupBackgroundToken.color(colorMode)
 }
 
-func PopupBackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
-	if semanticColor == SemanticColorBase {
+// PopupBackgroundColorFromTint returns the background color for a popup tinted
+// with tint. A nil tint returns the color for an untinted popup.
+func PopupBackgroundColorFromTint(colorMode ebiten.ColorMode, tint color.Color) color.Color {
+	if tint == nil {
 		return PopupBackgroundColor(colorMode)
 	}
-	c := colorToken{
-		semanticColor: semanticColor,
-		light:         0.95,
-		dark:          0.1,
-	}
-	return c.color(colorMode)
+	return tokenFromTint(tint, 0.95, 0.1).color(colorMode)
 }
 
-func BackgroundColorFromSemanticColor(colorMode ebiten.ColorMode, semanticColor SemanticColor) color.Color {
-	if semanticColor == SemanticColorBase {
+// BackgroundColorFromTint returns the background color tinted with tint.
+// A nil tint returns the color for an untinted background.
+func BackgroundColorFromTint(colorMode ebiten.ColorMode, tint color.Color) color.Color {
+	if tint == nil {
 		return BackgroundColor(colorMode)
 	}
-	c := colorToken{
-		semanticColor: semanticColor,
-		light:         0.95,
-		dark:          0.15,
-	}
-	return c.color(colorMode)
+	return tokenFromTint(tint, 0.95, 0.15).color(colorMode)
 }
 
 func AccentColor(colorMode ebiten.ColorMode) color.Color {

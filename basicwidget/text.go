@@ -14,7 +14,6 @@ import (
 	"golang.org/x/text/language"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
@@ -85,8 +84,8 @@ func (s *ItemTextStyle) equals(other *ItemTextStyle) bool {
 }
 
 // Text is a widget that shows or edits a text value. It wraps the theme-free
-// [textwidget.Text] core with theme policy: semantic colors, font family
-// resolution, locales, and the placeholder.
+// [textwidget.Text] core with theme policy: the default text colors, font
+// family resolution, locales, and the placeholder.
 type Text struct {
 	guigui.DefaultWidget
 
@@ -97,9 +96,8 @@ type Text struct {
 	// [Text.Build] and handed to the core widget there.
 	baseStyle textstyle.Style
 
-	semanticColor draw.SemanticColor
-	transparent   float64
-	locales       []language.Tag
+	transparent float64
+	locales     []language.Tag
 
 	// hotspotRangesBuf is scratch for converting the hotspot ranges handed
 	// to the core widget.
@@ -168,7 +166,6 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	var style TextStyle
 	t.ReadBaseStyle(&style)
 	style.writeStateKey(w)
-	w.WriteUint64(uint64(t.semanticColor))
 	w.WriteFloat64(t.transparent)
 	w.WriteString(t.placeholder)
 	w.WriteString(t.cachedLocalesString)
@@ -213,16 +210,11 @@ func (t *Text) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 }
 
 // resolveTextColor returns the concrete color the value is drawn in: the
-// explicitly set color, or the theme color for the semantic color and the
-// enabled state, with the opacity applied.
+// color of the base style, or the theme color for the enabled state, with the
+// opacity applied.
 func (t *Text) resolveTextColor(context *guigui.Context) color.Color {
-	var clr color.Color
-	switch baseColor, _ := t.baseStyle.Color(); {
-	case baseColor != nil:
-		clr = baseColor
-	case t.semanticColor != draw.SemanticColorBase:
-		clr = draw.TextColorFromSemanticColor(context.ColorMode(), t.semanticColor)
-	default:
+	clr, _ := t.baseStyle.Color()
+	if clr == nil {
 		clr = draw.TextColor(context.ColorMode(), context.IsEnabled(t))
 	}
 	if t.transparent > 0 {
@@ -418,10 +410,6 @@ func (t *Text) VerticalAlign() VerticalAlign {
 
 func (t *Text) SetVerticalAlign(align VerticalAlign) {
 	t.core.SetVerticalAlign(textutil.VerticalAlign(align))
-}
-
-func (t *Text) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	t.semanticColor = draw.SemanticColor(semanticColor)
 }
 
 func (t *Text) SetOpacity(opacity float64) {

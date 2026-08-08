@@ -5,9 +5,9 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 )
 
 type DrawerEdge int
@@ -61,8 +61,10 @@ func (d *Drawer) SetBackgroundBounds(bounds image.Rectangle) {
 	d.popup.SetBackgroundBounds(bounds)
 }
 
-func (d *Drawer) SetBackgroundSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	d.popup.SetBackgroundSemanticColor(semanticColor)
+// SetTintColor sets the color the drawer derives its background from.
+// A nil tint restores the default background.
+func (d *Drawer) SetTintColor(tint color.Color) {
+	d.popup.SetTintColor(tint)
 }
 
 func (d *Drawer) SetDrawerEdge(edge DrawerEdge) {

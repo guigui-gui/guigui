@@ -5,13 +5,13 @@ package basicwidget
 
 import (
 	"image"
+	"image/color"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
-	"github.com/guigui-gui/guigui/basicwidget/basicwidgetdraw"
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
@@ -50,9 +50,9 @@ type Button struct {
 	icon      Image
 	iconAlign IconAlign
 
-	typ           ButtonType
-	semanticColor draw.SemanticColor
-	textBold      bool
+	typ      ButtonType
+	tint     color.Color
+	textBold bool
 
 	layoutItems     []guigui.LinearLayoutItem
 	iconLayout      guigui.LinearLayout
@@ -92,7 +92,7 @@ func (b *Button) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter
 	w.WriteBool(b.textBold)
 	w.WriteUint64(uint64(b.iconAlign))
 	w.WriteUint64(uint64(b.typ))
-	w.WriteUint64(uint64(b.semanticColor))
+	writeColor(w, b.tint)
 	w.WriteBool(b.sharpCorners.TopStart)
 	w.WriteBool(b.sharpCorners.TopEnd)
 	w.WriteBool(b.sharpCorners.BottomStart)
@@ -123,8 +123,11 @@ func (b *Button) SetType(typ ButtonType) {
 	b.typ = typ
 }
 
-func (b *Button) SetSemanticColor(semanticColor basicwidgetdraw.SemanticColor) {
-	b.semanticColor = draw.SemanticColor(semanticColor)
+// SetTintColor sets the color the button derives its appearance from.
+// A nil tint restores the default appearance. A primary button ignores the
+// tint.
+func (b *Button) SetTintColor(tint color.Color) {
+	b.tint = tint
 }
 
 // SetPressed sets whether the button stays pressed.
@@ -153,17 +156,15 @@ func (b *Button) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	adder.AddWidget(&b.icon)
 
 	var style TextStyle
-	if !context.IsEnabled(b) {
+	switch {
+	case !context.IsEnabled(b):
 		style.SetColor(draw.TextColor(context.ColorMode(), false))
-	} else if b.semanticColor != draw.SemanticColorBase {
-		style.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), b.semanticColor))
-	} else {
-		switch b.typ {
-		case ButtonTypePrimary:
-			style.SetColor(draw.TextOnAccentColor(context.ColorMode()))
-		default:
-			style.SetColor(draw.TextColor(context.ColorMode(), true))
-		}
+	case b.typ == ButtonTypePrimary:
+		style.SetColor(draw.TextOnAccentColor(context.ColorMode()))
+	case b.tint != nil:
+		style.SetColor(draw.TextColorFromTint(context.ColorMode(), b.tint))
+	default:
+		style.SetColor(draw.TextColor(context.ColorMode(), true))
 	}
 	style.SetBold(b.textBold || b.typ == ButtonTypePrimary || b.showsPressedState())
 	b.text.SetBaseStyle(&style)
@@ -389,7 +390,7 @@ func (b *Button) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 			hovered := b.canPress(context, widgetBounds) || b.isBeingPressed(context, widgetBounds)
 			backgroundColor = draw.PressedButtonBackgroundColor(cm, hovered)
 		default:
-			backgroundColor = draw.ButtonBackgroundColorFromSemanticColor(cm, b.semanticColor, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
+			backgroundColor = draw.ButtonBackgroundColorFromTint(cm, b.tint, b.isPressed(context, widgetBounds), b.canPress(context, widgetBounds))
 		}
 	}
 

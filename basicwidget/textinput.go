@@ -421,7 +421,7 @@ func (t *TextInput) Build(context *guigui.Context, adder *guigui.ChildAdder) err
 		t.supportText.SetHorizontalAlign(t.textInput.text.Text().HorizontalAlign())
 		var style TextStyle
 		if t.hasError {
-			style.SetColor(draw.TextColorFromSemanticColor(context.ColorMode(), draw.SemanticColorDanger))
+			style.SetColor(draw.TextColorFromTint(context.ColorMode(), draw.DangerTintColor()))
 		} else {
 			style.SetColor(draw.TextColor(context.ColorMode(), false))
 		}
