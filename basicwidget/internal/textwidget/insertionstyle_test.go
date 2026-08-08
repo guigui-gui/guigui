@@ -36,7 +36,7 @@ func TestTextInsertionStyleMaterializesOnInsertion(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(5, 7, red)
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 	if got := txt.InsertionStyle(); !got.IsZero() {
@@ -47,7 +47,7 @@ func TestTextInsertionStyleMaterializesOnInsertion(t *testing.T) {
 	txt.ReplaceValueAtSelection("c")
 	wantRuns.Clear()
 	wantRuns.SetColor(5, 8, red)
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 }
@@ -68,7 +68,7 @@ func TestTextInsertionStyleMaterializesOnIMECommit(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(5, 7, red)
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 	if got := txt.InsertionStyle(); !got.IsZero() {
@@ -82,7 +82,7 @@ func TestTextInsertionStyleOverridesAdoptedStyle(t *testing.T) {
 	txt.ForceSetValue("hello")
 	var runs textstyle.Runs
 	runs.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
-	txt.CopyStyleRunsFrom(&runs)
+	txt.CopyOverrideStyleRunsFrom(&runs)
 	txt.SetSelection(5, 5)
 
 	// Typing at the bold run's end with an insertion-style medium weight must
@@ -93,7 +93,7 @@ func TestTextInsertionStyleOverridesAdoptedStyle(t *testing.T) {
 	var wantRuns textstyle.Runs
 	wantRuns.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
 	wantRuns.SetVariation(5, 6, font.TagWght, float32(text.WeightMedium))
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 }
@@ -113,7 +113,7 @@ func TestTextInsertionStyleClearedOnSelectionChange(t *testing.T) {
 		t.Fatalf("InsertionStyle() after selection change: got: %+v, want: zero", got)
 	}
 	txt.ReplaceValueAtSelection("x")
-	if got := txt.StyleRuns(); got != nil {
+	if got := txt.OverrideStyleRuns(); got != nil {
 		t.Errorf("got: %+v, want: nil", got)
 	}
 }
@@ -143,7 +143,7 @@ func TestTextInsertionStyleSurvivesBlur(t *testing.T) {
 
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(5, 7, red)
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 }
@@ -199,7 +199,7 @@ func TestTextInsertionStyleClearedByRichPaste(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(5, 7, blue)
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 }
@@ -251,7 +251,7 @@ func TestTextInsertionStyleUndoRedo(t *testing.T) {
 	txt.ForceSetValue("hello")
 	var runs textstyle.Runs
 	runs.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
-	txt.CopyStyleRunsFrom(&runs)
+	txt.CopyOverrideStyleRunsFrom(&runs)
 	txt.SetSelection(5, 5)
 	txt.SetInsertionStyle(textstyle.Style{}.WithVariation(font.TagWght, float32(text.WeightMedium)))
 	txt.CommitTextByIME("x")
@@ -264,7 +264,7 @@ func TestTextInsertionStyleUndoRedo(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("after undo: got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 
@@ -277,7 +277,7 @@ func TestTextInsertionStyleUndoRedo(t *testing.T) {
 	wantRuns.Clear()
 	wantRuns.SetVariation(0, 5, font.TagWght, float32(text.WeightBold))
 	wantRuns.SetVariation(5, 6, font.TagWght, float32(text.WeightMedium))
-	if got := txt.StyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("after redo: got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
 }

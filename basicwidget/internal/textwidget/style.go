@@ -23,9 +23,9 @@ import (
 // textStyle holds a [Text]'s base render-style configuration: alignment,
 // scale, font selection, and the concrete colors set by a wrapping widget.
 // The base style applies to the whole value and persists across value
-// changes; the ranged style overrides in [Text.ensureStyleRuns] apply on
-// top, follow the text through edits and undo and redo, and are cleared when
-// the value is replaced wholesale.
+// changes; the ranged style overrides in [Text.ensureOverrideStyleRuns]
+// apply on top, follow the text through edits and undo and redo, and are
+// cleared when the value is replaced wholesale.
 type textStyle struct {
 	// hAlign is the horizontal alignment of the value.
 	hAlign textutil.HorizontalAlign
@@ -130,45 +130,45 @@ func (s *textStyle) faceAttributes(style textstyle.Style, liga bool) font.Attrib
 	return a
 }
 
-// ensureStyleRuns brings the ranged style overrides up to date with the
-// store's content and returns the runs. Positional edits since the last call
-// are replayed so the overrides keep covering the same text; mutations
-// without a positional record (whole-value replacements) clear the
-// overrides. Undo and redo reinstall the overrides from their history
+// ensureOverrideStyleRuns brings the ranged style overrides up to date
+// with the store's content and returns the runs. Positional edits since the
+// last call are replayed so the overrides keep covering the same text;
+// mutations without a positional record (whole-value replacements) clear
+// the overrides. Undo and redo reinstall the overrides from their history
 // snapshots via [Text.restoreRangedState] instead.
-func (t *Text) ensureStyleRuns() *textstyle.Runs {
+func (t *Text) ensureOverrideStyleRuns() *textstyle.Runs {
 	gen := t.store.Generation()
-	if t.styleRunsValidGeneration == gen {
-		return &t.styleRuns
+	if t.overrideStyleRunsValidGeneration == gen {
+		return &t.overrideStyleRuns
 	}
 	defer func() {
 		t.textEditsBuf = slices.Delete(t.textEditsBuf, 0, len(t.textEditsBuf))
 	}()
 	var covered bool
-	t.textEditsBuf, covered = t.store.appendEditsSince(t.textEditsBuf, t.styleRunsValidGeneration)
+	t.textEditsBuf, covered = t.store.appendEditsSince(t.textEditsBuf, t.overrideStyleRunsValidGeneration)
 	if covered {
 		for _, e := range t.textEditsBuf {
-			t.styleRuns.Replace(e.start, e.end, e.newLen)
+			t.overrideStyleRuns.Replace(e.start, e.end, e.newLen)
 		}
 	} else {
-		t.styleRuns.Clear()
+		t.overrideStyleRuns.Clear()
 	}
-	t.styleRunsValidGeneration = gen
-	return &t.styleRuns
+	t.overrideStyleRunsValidGeneration = gen
+	return &t.overrideStyleRuns
 }
 
-// ReadStyleRuns replaces dst's runs with a copy of the ranged style
+// ReadOverrideStyleRuns replaces dst's runs with a copy of the ranged style
 // overrides, reflecting the adjustments made for edits since the overrides
 // were set.
-func (t *Text) ReadStyleRuns(dst *textstyle.Runs) {
-	dst.CopyFrom(t.ensureStyleRuns())
+func (t *Text) ReadOverrideStyleRuns(dst *textstyle.Runs) {
+	dst.CopyFrom(t.ensureOverrideStyleRuns())
 }
 
-// CopyStyleRunsFrom replaces the ranged style overrides with a copy of
-// runs.
-func (t *Text) CopyStyleRunsFrom(runs *textstyle.Runs) {
-	t.styleRuns.CopyFrom(runs)
-	t.styleRunsValidGeneration = t.store.Generation()
+// CopyOverrideStyleRunsFrom replaces the ranged style overrides with a
+// copy of runs.
+func (t *Text) CopyOverrideStyleRunsFrom(runs *textstyle.Runs) {
+	t.overrideStyleRuns.CopyFrom(runs)
+	t.overrideStyleRunsValidGeneration = t.store.Generation()
 }
 
 // ReadBaseStyle writes the base style's overridable properties to dst.
@@ -176,18 +176,18 @@ func (t *Text) ReadBaseStyle(dst *textstyle.Style) {
 	*dst = t.baseStyle.style
 }
 
-// ReadStyleRunsInRange replaces dst's runs with a copy of the ranged style
-// overrides in [startInBytes, endInBytes), rebased so that startInBytes maps
-// to 0.
-func (t *Text) ReadStyleRunsInRange(dst *textstyle.Runs, startInBytes, endInBytes int) {
-	dst.CopyRangeFrom(t.ensureStyleRuns(), startInBytes, endInBytes)
+// ReadOverrideStyleRunsInRange replaces dst's runs with a copy of the
+// ranged style overrides in [startInBytes, endInBytes), rebased so that
+// startInBytes maps to 0.
+func (t *Text) ReadOverrideStyleRunsInRange(dst *textstyle.Runs, startInBytes, endInBytes int) {
+	dst.CopyRangeFrom(t.ensureOverrideStyleRuns(), startInBytes, endInBytes)
 }
 
-// ReplaceStyleRunsInRange replaces the ranged style overrides in
+// ReplaceOverrideStyleRunsInRange replaces the ranged style overrides in
 // [startInBytes, endInBytes) with runs' overrides in
 // [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
-func (t *Text) ReplaceStyleRunsInRange(runs *textstyle.Runs, startInBytes, endInBytes int) {
-	t.ensureStyleRuns().ReplaceRange(runs, startInBytes, endInBytes)
+func (t *Text) ReplaceOverrideStyleRunsInRange(runs *textstyle.Runs, startInBytes, endInBytes int) {
+	t.ensureOverrideStyleRuns().ReplaceRange(runs, startInBytes, endInBytes)
 }
 
 // SetInsertionStyle replaces the insertion style with style. Its set
@@ -217,7 +217,7 @@ func (t *Text) materializeInsertionStyle(startInBytes, newLenInBytes int) {
 		return
 	}
 	if newLenInBytes > 0 {
-		t.ensureStyleRuns().ApplyStyle(startInBytes, startInBytes+newLenInBytes, t.insertionStyle)
+		t.ensureOverrideStyleRuns().ApplyStyle(startInBytes, startInBytes+newLenInBytes, t.insertionStyle)
 	}
 	t.resetInsertionStyle()
 }
@@ -263,7 +263,7 @@ func (t *Text) ReadEffectiveStyleRuns(dst *textstyle.Runs) {
 // styles of [startInBytes, endInBytes): the resolved base style with the
 // ranged overrides merged on top, rebased so that startInBytes maps to 0.
 func (t *Text) ReadEffectiveStyleRunsInRange(dst *textstyle.Runs, startInBytes, endInBytes int) {
-	dst.CopyMergedFrom(t.ensureStyleRuns(), t.resolvedBaseStyle(), startInBytes, endInBytes)
+	dst.CopyMergedFrom(t.ensureOverrideStyleRuns(), t.resolvedBaseStyle(), startInBytes, endInBytes)
 }
 
 // EffectiveStyleAt returns the effective style that text typed at
@@ -280,7 +280,7 @@ func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
 	if textIndexInBytes <= 0 {
 		return textstyle.Style{}
 	}
-	return t.ensureStyleRuns().StyleAt(textIndexInBytes - 1)
+	return t.ensureOverrideStyleRuns().StyleAt(textIndexInBytes - 1)
 }
 
 // metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for
@@ -330,20 +330,21 @@ func (w *metricHashWriter) WriteString(v string) {
 	_, _ = w.h.Write(w.strbuf)
 }
 
-// metricStyleRunsFingerprint fingerprints the metric properties of the
-// ranged style overrides.
-func (t *Text) metricStyleRunsFingerprint() uint64 {
+// metricOverrideStyleRunsFingerprint fingerprints the metric properties of
+// the ranged style overrides.
+func (t *Text) metricOverrideStyleRunsFingerprint() uint64 {
 	h := fnv.New64a()
 	w := metricHashWriter{h: h}
-	t.ensureStyleRuns().WriteMetricStateKey(&w)
+	t.ensureOverrideStyleRuns().WriteMetricStateKey(&w)
 	return h.Sum64()
 }
 
-// invalidateSizeCacheForMetricStyleRuns resets the cached text sizes when
-// the metric style overrides have changed since the last measurement.
-func (t *Text) invalidateSizeCacheForMetricStyleRuns() {
-	if fp := t.metricStyleRunsFingerprint(); fp != t.lastMetricStyleRunsFingerprint {
-		t.lastMetricStyleRunsFingerprint = fp
+// invalidateSizeCacheForMetricOverrideStyleRuns resets the cached text
+// sizes when the metric style overrides have changed since the last
+// measurement.
+func (t *Text) invalidateSizeCacheForMetricOverrideStyleRuns() {
+	if fp := t.metricOverrideStyleRunsFingerprint(); fp != t.lastMetricOverrideStyleRunsFingerprint {
+		t.lastMetricOverrideStyleRunsFingerprint = fp
 		t.resetCachedTextSize()
 	}
 }
@@ -357,7 +358,7 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 	}
 	base := t.forceBoldedBaseStyle(forceBold)
 	liga := t.ligaturesEnabled()
-	for run := range t.ensureStyleRuns().All() {
+	for run := range t.ensureOverrideStyleRuns().All() {
 		if !run.Style.AffectsFaceSelection() {
 			continue
 		}

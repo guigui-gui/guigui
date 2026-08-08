@@ -31,7 +31,7 @@ func TestTextSetStyleInRange(t *testing.T) {
 	txt.SetColorInRange(0, 5, red)
 	txt.SetUnderlineInRange(6, 11, true)
 
-	got := txt.StyleRuns()
+	got := txt.OverrideStyleRuns()
 	if len(got) != 2 {
 		t.Fatalf("got %d runs, want 2: %+v", len(got), got)
 	}
@@ -46,7 +46,7 @@ func TestTextSetStyleInRange(t *testing.T) {
 	}
 }
 
-func TestTextStyleRunsLifetime(t *testing.T) {
+func TestTextOverrideStyleRunsLifetime(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	t.Run("equal SetValue keeps styles", func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		txt.SetValue("hello")
 		txt.SetColorInRange(0, 5, red)
 		txt.SetValue("hello")
-		if got := txt.StyleRuns(); len(got) != 1 {
+		if got := txt.OverrideStyleRuns(); len(got) != 1 {
 			t.Errorf("got %d runs, want 1: %+v", len(got), got)
 		}
 	})
@@ -64,7 +64,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		txt.SetValue("hello")
 		txt.SetColorInRange(0, 5, red)
 		txt.SetValue("goodbye")
-		if got := txt.StyleRuns(); got != nil {
+		if got := txt.OverrideStyleRuns(); got != nil {
 			t.Errorf("got: %+v, want: nil", got)
 		}
 	})
@@ -79,7 +79,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		var wantRuns textstyle.Runs
 		wantRuns.SetColor(0, 5, red)
 		want := slices.Collect(wantRuns.All())
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -94,7 +94,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		var wantRuns textstyle.Runs
 		wantRuns.SetColor(4, 6, red)
 		want := slices.Collect(wantRuns.All())
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -109,7 +109,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		var wantRuns textstyle.Runs
 		wantRuns.SetColor(1, 6, red)
 		want := slices.Collect(wantRuns.All())
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -124,7 +124,7 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		var wantRuns textstyle.Runs
 		wantRuns.SetColor(0, 6, red)
 		want := slices.Collect(wantRuns.All())
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -138,11 +138,11 @@ func TestTextStyleRunsLifetime(t *testing.T) {
 		var wantRuns textstyle.Runs
 		wantRuns.SetUnderline(0, 5, true)
 		want := slices.Collect(wantRuns.All())
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 		txt.ResetStylesInRange(0, 5)
-		if got := txt.StyleRuns(); got != nil {
+		if got := txt.OverrideStyleRuns(); got != nil {
 			t.Errorf("got: %+v, want: nil", got)
 		}
 	})
@@ -166,7 +166,7 @@ func TestTextReadBaseStyle(t *testing.T) {
 	}
 }
 
-func TestTextReadStyleRunsInRange(t *testing.T) {
+func TestTextReadOverrideStyleRunsInRange(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	var txt textwidget.Text
@@ -174,7 +174,7 @@ func TestTextReadStyleRunsInRange(t *testing.T) {
 	txt.SetColorInRange(3, 8, red)
 
 	var runs textstyle.Runs
-	txt.ReadStyleRunsInRange(&runs, 5, 11)
+	txt.ReadOverrideStyleRunsInRange(&runs, 5, 11)
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 3, red)
 	got := slices.Collect(runs.All())
@@ -184,7 +184,7 @@ func TestTextReadStyleRunsInRange(t *testing.T) {
 	}
 }
 
-func TestTextReplaceStyleRunsInRange(t *testing.T) {
+func TestTextReplaceOverrideStyleRunsInRange(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 	blue := color.RGBA{B: 0xff, A: 0xff}
 
@@ -195,14 +195,14 @@ func TestTextReplaceStyleRunsInRange(t *testing.T) {
 
 	var src textstyle.Runs
 	src.SetColor(0, 3, blue)
-	txt.ReplaceStyleRunsInRange(&src, 2, 6)
+	txt.ReplaceOverrideStyleRunsInRange(&src, 2, 6)
 
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 2, red)
 	wantRuns.SetColor(2, 5, blue)
 	wantRuns.SetColor(6, 11, red)
 	want := slices.Collect(wantRuns.All())
-	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 		t.Errorf("got: %+v, want: %+v", got, want)
 	}
 }
@@ -353,7 +353,7 @@ func TestAppendFaceRunsThroughComposition(t *testing.T) {
 	}
 }
 
-func TestStyleRunsRoundTrip(t *testing.T) {
+func TestOverrideStyleRunsRoundTrip(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	var txt textwidget.Text
@@ -364,20 +364,20 @@ func TestStyleRunsRoundTrip(t *testing.T) {
 	// The copied-out runs reflect the edit; installing them into another
 	// text reproduces the same overrides.
 	var runs textstyle.Runs
-	txt.ReadStyleRuns(&runs)
+	txt.ReadOverrideStyleRuns(&runs)
 	var txt2 textwidget.Text
 	txt2.SetValue("hello!! world")
-	txt2.CopyStyleRunsFrom(&runs)
+	txt2.CopyOverrideStyleRunsFrom(&runs)
 
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 7, red)
 	want := slices.Collect(wantRuns.All())
-	if got := txt2.StyleRuns(); !equalStyleRuns(got, want) {
+	if got := txt2.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 		t.Errorf("got: %+v, want: %+v", got, want)
 	}
 }
 
-func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
+func TestTextUndoRedoRestoresOverrideStyleRuns(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	t.Run("undo of an insertion", func(t *testing.T) {
@@ -385,7 +385,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		txt.SetEditable(true)
 		txt.ForceSetValue("hello")
 		txt.SetColorInRange(1, 4, red)
-		want := txt.StyleRuns()
+		want := txt.OverrideStyleRuns()
 
 		txt.SetSelection(2, 2)
 		txt.ReplaceValueAtSelection("ab")
@@ -395,7 +395,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		if got, wantValue := txt.Value(), "hello"; got != wantValue {
 			t.Errorf("got: %q, want: %q", got, wantValue)
 		}
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -405,12 +405,12 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		txt.SetEditable(true)
 		txt.ForceSetValue("hello world")
 		txt.SetColorInRange(6, 11, red)
-		want := txt.StyleRuns()
+		want := txt.OverrideStyleRuns()
 
 		// Deleting the styled span removes its run entirely; positional
 		// adjustment alone cannot bring it back.
 		txt.ReplaceTextAt("", 5, 11, nil)
-		if got := txt.StyleRuns(); got != nil {
+		if got := txt.OverrideStyleRuns(); got != nil {
 			t.Fatalf("got: %+v, want: nil", got)
 		}
 
@@ -420,7 +420,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		if got, wantValue := txt.Value(), "hello world"; got != wantValue {
 			t.Errorf("got: %q, want: %q", got, wantValue)
 		}
-		if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 			t.Errorf("got: %+v, want: %+v", got, want)
 		}
 	})
@@ -433,7 +433,7 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 
 		// Deleting the head truncates the run to [0, 3).
 		txt.ReplaceTextAt("", 0, 2, nil)
-		afterEdit := txt.StyleRuns()
+		afterEdit := txt.OverrideStyleRuns()
 
 		if !txt.Undo() {
 			t.Fatal("Undo must return true")
@@ -444,20 +444,20 @@ func TestTextUndoRedoRestoresStyleRuns(t *testing.T) {
 		if got, wantValue := txt.Value(), "llo"; got != wantValue {
 			t.Errorf("got: %q, want: %q", got, wantValue)
 		}
-		if got := txt.StyleRuns(); !equalStyleRuns(got, afterEdit) {
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, afterEdit) {
 			t.Errorf("got: %+v, want: %+v", got, afterEdit)
 		}
 	})
 }
 
-func TestTextUndoCoalescedEditsRestoresStyleRuns(t *testing.T) {
+func TestTextUndoCoalescedEditsRestoresOverrideStyleRuns(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	var txt textwidget.Text
 	txt.SetEditable(true)
 	txt.ForceSetValue("hello")
 	txt.SetColorInRange(0, 5, red)
-	want := txt.StyleRuns()
+	want := txt.OverrideStyleRuns()
 
 	// Backspace-like consecutive deletes coalesce into one undo entry.
 	txt.ReplaceTextAt("", 4, 5, nil)
@@ -474,7 +474,7 @@ func TestTextUndoCoalescedEditsRestoresStyleRuns(t *testing.T) {
 	if got, wantValue := txt.Value(), "hello"; got != wantValue {
 		t.Errorf("got: %q, want: %q", got, wantValue)
 	}
-	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 		t.Errorf("got: %+v, want: %+v", got, want)
 	}
 	if txt.CanUndo() {
@@ -489,11 +489,11 @@ func TestTextUndoAfterWholeValueReplacement(t *testing.T) {
 	txt.SetEditable(true)
 	txt.ForceSetValue("hello")
 	txt.SetColorInRange(0, 5, red)
-	want := txt.StyleRuns()
+	want := txt.OverrideStyleRuns()
 
 	// A whole-value replacement clears the styles.
 	txt.ForceSetValue("goodbye")
-	if got := txt.StyleRuns(); got != nil {
+	if got := txt.OverrideStyleRuns(); got != nil {
 		t.Fatalf("got: %+v, want: nil", got)
 	}
 
@@ -504,7 +504,7 @@ func TestTextUndoAfterWholeValueReplacement(t *testing.T) {
 	if got, wantValue := txt.Value(), "hello"; got != wantValue {
 		t.Errorf("got: %q, want: %q", got, wantValue)
 	}
-	if got := txt.StyleRuns(); !equalStyleRuns(got, want) {
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, want) {
 		t.Errorf("got: %+v, want: %+v", got, want)
 	}
 }
@@ -522,7 +522,7 @@ func TestTextResetClearsHistoryAndStyles(t *testing.T) {
 	if _, err := txt.ReadValueFrom(strings.NewReader("goodbye")); err != nil {
 		t.Fatal(err)
 	}
-	if got := txt.StyleRuns(); got != nil {
+	if got := txt.OverrideStyleRuns(); got != nil {
 		t.Errorf("got: %+v, want: nil", got)
 	}
 	if txt.CanUndo() {

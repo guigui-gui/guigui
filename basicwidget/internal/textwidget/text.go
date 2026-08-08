@@ -49,14 +49,15 @@ type Text struct {
 
 	baseStyle textStyle
 
-	// styleRuns holds the ranged style overrides, with byte offsets into the
-	// committed text. Brought up to date lazily by [Text.ensureStyleRuns]
-	// when [textStore.Generation] advances past styleRunsValidGeneration.
-	styleRuns                textstyle.Runs
-	styleRunsValidGeneration int64
+	// overrideStyleRuns holds the ranged style overrides, with byte offsets
+	// into the committed text. Brought up to date lazily by
+	// [Text.ensureOverrideStyleRuns] when [textStore.Generation] advances
+	// past overrideStyleRunsValidGeneration.
+	overrideStyleRuns                textstyle.Runs
+	overrideStyleRunsValidGeneration int64
 
 	// textEditsBuf is scratch for replaying the store's positional edits in
-	// [Text.ensureStyleRuns].
+	// [Text.ensureOverrideStyleRuns].
 	textEditsBuf []textEdit
 
 	// insertionStyle holds the style overrides applied to the next text
@@ -81,10 +82,10 @@ type Text struct {
 	// [Text.faceRunsBuf].
 	renderingFaceRunsBuf []textutil.FaceRun
 
-	// lastMetricStyleRunsFingerprint is the metric style overrides'
+	// lastMetricOverrideStyleRunsFingerprint is the metric style overrides'
 	// fingerprint at the last size measurement, so cached sizes reset when
 	// a metric override changes.
-	lastMetricStyleRunsFingerprint uint64
+	lastMetricOverrideStyleRunsFingerprint uint64
 
 	selectable bool
 	editable   bool
@@ -304,7 +305,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteUint64(t.fontFamilyID())
 	ch := t.contentHashForStateKey()
 	_, _ = w.Write(ch[:])
-	t.ensureStyleRuns().WriteStateKey(w)
+	t.ensureOverrideStyleRuns().WriteStateKey(w)
 }
 
 func (t *Text) resetCachedTextSize() {
@@ -635,7 +636,7 @@ func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.R
 	if styleRuns != nil {
 		// The edit-follow machinery bleeds the neighboring styles into the
 		// inserted span; reset the span before installing the pasted styles.
-		runs := t.ensureStyleRuns()
+		runs := t.ensureOverrideStyleRuns()
 		runs.Reset(start, start+len(text))
 		runs.ApplyAt(styleRuns, start)
 		t.resetInsertionStyle()
@@ -1104,7 +1105,7 @@ func (t *Text) ensureStoreCallbacks() {
 // readRangedState reads the current ranged style overrides and hotspot
 // ranges into state.
 func (t *Text) readRangedState(state *piecetable.RangedState) {
-	state.StyleRuns.CopyFrom(t.ensureStyleRuns())
+	state.OverrideStyleRuns.CopyFrom(t.ensureOverrideStyleRuns())
 	state.HotspotRanges = append(state.HotspotRanges[:0], t.ensureHotspotRanges()...)
 }
 
@@ -1116,8 +1117,8 @@ func (t *Text) restoreRangedState(state *piecetable.RangedState) {
 		return
 	}
 	gen := t.store.Generation()
-	t.styleRuns.CopyFrom(&state.StyleRuns)
-	t.styleRunsValidGeneration = gen
+	t.overrideStyleRuns.CopyFrom(&state.OverrideStyleRuns)
+	t.overrideStyleRunsValidGeneration = gen
 	t.hotspotRanges = append(t.hotspotRanges[:0], state.HotspotRanges...)
 	t.hotspotRangesValidGeneration = gen
 }

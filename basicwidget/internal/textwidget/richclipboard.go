@@ -38,7 +38,7 @@ var theRichClipboard struct {
 func (t *Text) copyRangeToClipboard(start, end int) bool {
 	text := t.stringValueWithRange(start, end)
 	theRichClipboard.text = text
-	theRichClipboard.styleRuns.CopyRangeFrom(t.ensureStyleRuns(), start, end)
+	theRichClipboard.styleRuns.CopyRangeFrom(t.ensureOverrideStyleRuns(), start, end)
 
 	contents := clipboard.Contents{
 		Text: []byte(text),

@@ -551,19 +551,19 @@ func (t *Text) SetBaseStyle(style *TextStyle) {
 // overrides, reflecting the adjustments made for edits since the overrides
 // were set.
 func (t *Text) ReadOverrideStyles(styles *TextStyles) {
-	t.core.ReadStyleRuns(&styles.runs)
+	t.core.ReadOverrideStyleRuns(&styles.runs)
 }
 
 // SetOverrideStyles replaces the ranged style overrides with styles.
 func (t *Text) SetOverrideStyles(styles *TextStyles) {
-	t.core.CopyStyleRunsFrom(&styles.runs)
+	t.core.CopyOverrideStyleRunsFrom(&styles.runs)
 }
 
 // ReadOverrideStylesInRange replaces styles with a copy of the ranged style
 // overrides in [startInBytes, endInBytes), rebased so that startInBytes maps
 // to 0.
 func (t *Text) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
-	t.core.ReadStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+	t.core.ReadOverrideStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
 }
 
 // SetOverrideStylesInRange replaces the ranged style overrides in
@@ -571,7 +571,7 @@ func (t *Text) ReadOverrideStylesInRange(styles *TextStyles, startInBytes, endIn
 // [0, endInBytes-startInBytes), shifted so that 0 maps to startInBytes.
 // styles' overrides outside [0, endInBytes-startInBytes) are ignored.
 func (t *Text) SetOverrideStylesInRange(styles *TextStyles, startInBytes, endInBytes int) {
-	t.core.ReplaceStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
+	t.core.ReplaceOverrideStyleRunsInRange(&styles.runs, startInBytes, endInBytes)
 }
 
 // ReadEffectiveStyles replaces styles with the effective styles of the whole

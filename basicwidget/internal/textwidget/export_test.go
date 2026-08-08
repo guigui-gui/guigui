@@ -40,24 +40,24 @@ func (t *Text) ParagraphEnd(position int) int {
 	return t.paragraphEnd(position)
 }
 
-func (t *Text) StyleRuns() []textstyle.Run {
-	return slices.Collect(t.ensureStyleRuns().All())
+func (t *Text) OverrideStyleRuns() []textstyle.Run {
+	return slices.Collect(t.ensureOverrideStyleRuns().All())
 }
 
 func (t *Text) SetColorInRange(start, end int, clr color.Color) {
-	t.ensureStyleRuns().SetColor(start, end, clr)
+	t.ensureOverrideStyleRuns().SetColor(start, end, clr)
 }
 
 func (t *Text) SetUnderlineInRange(start, end int, underline bool) {
-	t.ensureStyleRuns().SetUnderline(start, end, underline)
+	t.ensureOverrideStyleRuns().SetUnderline(start, end, underline)
 }
 
 func (t *Text) UnsetColorInRange(start, end int) {
-	t.ensureStyleRuns().UnsetColor(start, end)
+	t.ensureOverrideStyleRuns().UnsetColor(start, end)
 }
 
 func (t *Text) ResetStylesInRange(start, end int) {
-	t.ensureStyleRuns().Reset(start, end)
+	t.ensureOverrideStyleRuns().Reset(start, end)
 }
 
 func (t *Text) ReplaceTextAt(text string, start, end int, styleRuns *textstyle.Runs) {

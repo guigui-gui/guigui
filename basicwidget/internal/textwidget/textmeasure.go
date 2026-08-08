@@ -68,7 +68,7 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 	}
 
 	const bold = false
-	t.invalidateSizeCacheForMetricStyleRuns()
+	t.invalidateSizeCacheForMetricOverrideStyleRuns()
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
 	if h, ok := t.sizeCache.height(key, constraintWidth); ok {
@@ -260,7 +260,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		constraintWidth = 1
 	}
 
-	t.invalidateSizeCacheForMetricStyleRuns()
+	t.invalidateSizeCacheForMetricOverrideStyleRuns()
 	key := newTextSizeCacheKey(t.wrapMode, bold)
 
 	width, hasWidth := t.sizeCache.width(key, constraintWidth)

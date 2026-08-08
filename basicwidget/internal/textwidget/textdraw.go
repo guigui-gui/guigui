@@ -373,7 +373,7 @@ func (t *Text) appendStyleRunsToDraw(op *textutil.DrawOptions, byteStart, txtLen
 			selStart, selEnd = selEnd, selStart
 		}
 	}
-	for run := range t.ensureStyleRuns().All() {
+	for run := range t.ensureOverrideStyleRuns().All() {
 		r := TextRange{StartInBytes: run.Start, EndInBytes: run.End}
 		if compLen > 0 {
 			var ok bool

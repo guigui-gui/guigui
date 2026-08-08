@@ -76,7 +76,7 @@ func TestRichClipboardCopyPasteRoundTrip(t *testing.T) {
 	wantRuns.SetColor(0, 5, red)
 	wantRuns.SetUnderline(6, 11, true)
 	wantRuns.SetColor(11, 16, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs: got %+v, want %+v", got, want)
 	}
 }
@@ -109,7 +109,7 @@ func TestRichClipboardPasteReplacesAdoptedStyles(t *testing.T) {
 	wantRuns.SetColor(0, 3, red)
 	wantRuns.SetColor(4, 9, blue)
 	wantRuns.SetColor(9, 10, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs: got %+v, want %+v", got, want)
 	}
 }
@@ -141,7 +141,7 @@ func TestRichClipboardCutKeepsStyles(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(2, 4, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs: got %+v, want %+v", got, want)
 	}
 }
@@ -167,7 +167,7 @@ func TestRichClipboardCrossWidgetPaste(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(8, 14, red)
-	if got, want := dst.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := dst.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs: got %+v, want %+v", got, want)
 	}
 }
@@ -194,7 +194,7 @@ func TestRichClipboardExternalOverwriteFallsBackToPlain(t *testing.T) {
 	if got, want := dst.Value(), "other"; got != want {
 		t.Errorf("value: got %q, want %q", got, want)
 	}
-	if got := dst.StyleRuns(); len(got) != 0 {
+	if got := dst.OverrideStyleRuns(); len(got) != 0 {
 		t.Errorf("style runs: got %+v, want none", got)
 	}
 }
@@ -221,7 +221,7 @@ func TestRichClipboardPasteDisabledByDefault(t *testing.T) {
 	if got, want := dst.Value(), "styled"; got != want {
 		t.Errorf("value: got %q, want %q", got, want)
 	}
-	if got := dst.StyleRuns(); len(got) != 0 {
+	if got := dst.OverrideStyleRuns(); len(got) != 0 {
 		t.Errorf("style runs: got %+v, want none", got)
 	}
 }
@@ -247,7 +247,7 @@ func TestRichClipboardPasteWithoutStyles(t *testing.T) {
 	if got, want := dst.Value(), "styled"; got != want {
 		t.Errorf("value: got %q, want %q", got, want)
 	}
-	if got := dst.StyleRuns(); len(got) != 0 {
+	if got := dst.OverrideStyleRuns(); len(got) != 0 {
 		t.Errorf("style runs: got %+v, want none", got)
 	}
 }
@@ -279,7 +279,7 @@ func TestRichClipboardUnstyledCopyClearsSlot(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 3, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs: got %+v, want %+v", got, want)
 	}
 }
@@ -306,7 +306,7 @@ func TestRichClipboardSingleLinePasteOfMultiLineCopyFallsBackToPlain(t *testing.
 	if got, want := dst.Value(), "one two"; got != want {
 		t.Errorf("value: got %q, want %q", got, want)
 	}
-	if got := dst.StyleRuns(); len(got) != 0 {
+	if got := dst.OverrideStyleRuns(); len(got) != 0 {
 		t.Errorf("style runs: got %+v, want none", got)
 	}
 }
@@ -354,7 +354,7 @@ func TestRichClipboardUndoRestoresPrePasteStyles(t *testing.T) {
 	}
 	var wantRuns textstyle.Runs
 	wantRuns.SetColor(0, 6, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs after undo: got %+v, want %+v", got, want)
 	}
 
@@ -365,7 +365,7 @@ func TestRichClipboardUndoRestoresPrePasteStyles(t *testing.T) {
 		t.Errorf("value after redo: got %q, want %q", got, want)
 	}
 	wantRuns.SetColor(12, 18, red)
-	if got, want := txt.StyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
+	if got, want := txt.OverrideStyleRuns(), slices.Collect(wantRuns.All()); !equalStyleRuns(got, want) {
 		t.Errorf("style runs after redo: got %+v, want %+v", got, want)
 	}
 }

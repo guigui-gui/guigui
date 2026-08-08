@@ -23,8 +23,8 @@ type TextRange struct {
 // RangedState is the ranged text state at a history position: the ranged
 // style overrides and the hotspot ranges of the text.
 type RangedState struct {
-	// StyleRuns is the ranged style overrides of the text.
-	StyleRuns textstyle.Runs
+	// OverrideStyleRuns is the ranged style overrides of the text.
+	OverrideStyleRuns textstyle.Runs
 
 	// HotspotRanges is the hotspot ranges of the text.
 	HotspotRanges []TextRange
