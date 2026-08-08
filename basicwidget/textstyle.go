@@ -118,7 +118,8 @@ func (s *TextStyle) Weight() (text.Weight, bool) {
 }
 
 // SetBold sets the font weight to the bold or the medium weight by setting
-// the wght variation axis. Use [TextStyle.UnsetWeight] to unset the weight.
+// the wght variation axis. Use [TextStyle.UnsetWeight] to unset the weight
+// and [TextStyle.Weight] to read it back.
 func (s *TextStyle) SetBold(bold bool) {
 	weight := text.WeightMedium
 	if bold {
