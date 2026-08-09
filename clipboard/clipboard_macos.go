@@ -110,9 +110,9 @@ func readContents() (Contents, error) {
 
 	types := pasteboard.Send(sel_types)
 	contents := Contents{
-		Text: readPasteboardData(pasteboard, types, nsPasteboardTypeText),
-		HTML: readPasteboardData(pasteboard, types, nsPasteboardTypeHTML),
-		PNG:  readPasteboardData(pasteboard, types, nsPasteboardTypePNG),
+		Text:  readPasteboardData(pasteboard, types, nsPasteboardTypeText),
+		HTML:  readPasteboardData(pasteboard, types, nsPasteboardTypeHTML),
+		Image: readPasteboardData(pasteboard, types, nsPasteboardTypePNG),
 	}
 
 	lastChangeCount = changeCount
@@ -153,7 +153,7 @@ func writeContents(contents Contents) error {
 	if err := writePasteboardData(pasteboard, nsPasteboardTypeHTML, contents.HTML); err != nil {
 		return err
 	}
-	if err := writePasteboardData(pasteboard, nsPasteboardTypePNG, contents.PNG); err != nil {
+	if err := writePasteboardData(pasteboard, nsPasteboardTypePNG, contents.Image); err != nil {
 		return err
 	}
 	return nil

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 // SPDX-FileCopyrightText: 2024 The Guigui Authors
 
+// Package clipboard provides access to the system clipboard.
+//
+// The clipboard holds one logical value that can have several format
+// representations at the same time, such as plain text and HTML. [Read]
+// returns all of them, and [Write] replaces all of them at once.
 package clipboard
 
 import (
@@ -14,7 +19,7 @@ import (
 )
 
 // Contents is the clipboard contents: one logical value represented as up to
-// one data payload per format. A nil field means its format is absent.
+// one data payload per format. A nil payload means its format is absent.
 type Contents struct {
 	// Text is the UTF-8 plain text representation.
 	Text []byte
@@ -22,15 +27,16 @@ type Contents struct {
 	// HTML is the UTF-8 HTML markup representation.
 	HTML []byte
 
-	// PNG is the encoded PNG stream representation.
-	PNG []byte
+	// Image is the image representation, an encoded PNG stream. An image on
+	// the system clipboard in another encoding is not reported.
+	Image []byte
 }
 
 func (c Contents) clone() Contents {
 	return Contents{
-		Text: bytes.Clone(c.Text),
-		HTML: bytes.Clone(c.HTML),
-		PNG:  bytes.Clone(c.PNG),
+		Text:  bytes.Clone(c.Text),
+		HTML:  bytes.Clone(c.HTML),
+		Image: bytes.Clone(c.Image),
 	}
 }
 
@@ -92,13 +98,19 @@ func readToCache() {
 }
 
 // Read returns the current clipboard contents.
+//
+// Read does not block: it returns the contents observed last, which can lag
+// the system clipboard slightly.
 func Read() (Contents, error) {
 	contents, _ := cachedClipboardContents.Load().(Contents)
-	return contents, nil
+	return contents.clone(), nil
 }
 
 // Write atomically replaces the entire clipboard contents with contents:
-// every format is replaced at once. A nil field leaves its format absent.
+// every format is replaced at once. A nil payload leaves its format absent.
+//
+// Write does not wait for the system clipboard to be updated. A failure of
+// the underlying system operation is logged instead of being returned.
 func Write(contents Contents) error {
 	contentsCopy := contents.clone()
 	select {

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/guigui-gui/guigui/internal/clipboard"
+	"github.com/guigui-gui/guigui/clipboard"
 )
 
 func cfHTMLHeaderOffset(t *testing.T, payload []byte, key string) int {

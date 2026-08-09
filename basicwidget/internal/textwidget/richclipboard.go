@@ -7,7 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
-	"github.com/guigui-gui/guigui/internal/clipboard"
+	"github.com/guigui-gui/guigui/clipboard"
 )
 
 // clipboardRead and clipboardWrite access the OS clipboard. They are

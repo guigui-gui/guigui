@@ -9,7 +9,7 @@ import (
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
-	"github.com/guigui-gui/guigui/internal/clipboard"
+	"github.com/guigui-gui/guigui/clipboard"
 )
 
 func ReplaceNewLinesWithSpace(text string, start, end int) (string, int, int) {

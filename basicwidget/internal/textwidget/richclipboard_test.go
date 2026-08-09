@@ -11,7 +11,7 @@ import (
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
-	"github.com/guigui-gui/guigui/internal/clipboard"
+	"github.com/guigui-gui/guigui/clipboard"
 )
 
 // setUpFakeClipboard substitutes the OS clipboard with an in-process fake

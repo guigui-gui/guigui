@@ -240,7 +240,7 @@ func (c *x11Clipboard) handleSelectionRequest(e xSelectionRequestEvent) {
 		if contents.HTML != nil {
 			targets = append(targets, uint(c.atomHTML))
 		}
-		if contents.PNG != nil {
+		if contents.Image != nil {
 			targets = append(targets, uint(c.atomPNG))
 		}
 		xChangeProperty(c.display, e.requestor, prop, xaAtom, 32, xPropModeReplace,
@@ -259,7 +259,7 @@ func (c *x11Clipboard) handleSelectionRequest(e xSelectionRequestEvent) {
 		case c.atomHTML:
 			data = contents.HTML
 		case c.atomPNG:
-			data = contents.PNG
+			data = contents.Image
 		}
 		switch {
 		case data == nil:
@@ -495,7 +495,7 @@ func (c *x11Clipboard) read() (Contents, error) {
 	}{
 		{c.atomUTF8, &contents.Text},
 		{c.atomHTML, &contents.HTML},
-		{c.atomPNG, &contents.PNG},
+		{c.atomPNG, &contents.Image},
 	} {
 		if !slices.Contains(targets, uint(ft.target)) {
 			continue

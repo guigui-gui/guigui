@@ -1,2 +1,2 @@
-github.com/guigui-gui/guigui/internal/clipboard
+github.com/guigui-gui/guigui/clipboard
 github.com/guigui-gui/guigui/internal/colormode
