@@ -5,6 +5,7 @@ package textwidget
 
 import (
 	"image"
+	"math"
 
 	"github.com/hajimehoshi/ebiten/v2"
 
@@ -487,6 +488,24 @@ func (t *Text) VisualLineCountOfLogicalLine(context *guigui.Context, lineIndex, 
 	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
 	defer t.releaseFaceRuns(mark)
 	return textutil.CachedVisualLineCount(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, start, t.actualTabWidth(context), t.keepTailingSpace)
+}
+
+// adjacentLineYs returns Y coordinates that [Text.textIndexFromPosition]
+// resolves to the visual lines directly above and below the one holding the
+// caret at pos.
+func (t *Text) adjacentLineYs(context *guigui.Context, pos textutil.TextPosition) (above, below float64) {
+	lh := t.LineHeight()
+	m := t.face(context, false).TextFace().Metrics()
+	contentHeight := m.HAscent + m.HDescent
+	if contentHeight <= 0 {
+		return pos.Top - lh, pos.Bottom + lh
+	}
+	// The Y at which a line's box starts resolving sits one padding above
+	// the box itself.
+	padding := (lh - contentHeight) / 2
+	above = math.Floor(pos.Top-2*padding) - 1
+	below = math.Ceil(pos.Bottom) + 1
+	return above, below
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the

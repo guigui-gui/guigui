@@ -604,7 +604,6 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyUp) ||
 		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyP):
-		lh := t.LineHeight()
 		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
 		var moveEnd bool
 		start, end := t.store.Selection()
@@ -614,7 +613,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			moveEnd = true
 		}
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
-			y := (pos.Top+pos.Bottom)/2 - lh
+			y, _ := t.adjacentLineYs(context, pos)
 			nextIdx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			// A genuine move to the previous line lands on an earlier byte
 			// offset. When the caret is already on the first line, the move is
@@ -636,7 +635,6 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyDown) ||
 		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyN):
-		lh := t.LineHeight()
 		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
 		var moveStart bool
 		start, end := t.store.Selection()
@@ -646,7 +644,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			moveStart = true
 		}
 		if pos, ok := t.textPosition(context, widgetBounds.Bounds(), idx, false); ok {
-			y := (pos.Top+pos.Bottom)/2 + lh
+			_, y := t.adjacentLineYs(context, pos)
 			nextIdx := t.textIndexFromPosition(context, widgetBounds.Bounds(), image.Pt(int(pos.X), int(y)), false)
 			// A genuine move to the next line lands on a later byte offset. When
 			// the caret is already on the last line, the move is clamped and
