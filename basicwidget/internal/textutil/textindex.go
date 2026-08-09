@@ -6,7 +6,6 @@ package textutil
 import (
 	"image"
 	"iter"
-	"math"
 )
 
 // TextIndexFromPosition returns the byte offset in the rendering text
@@ -37,13 +36,13 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	}
 
 	// Resolve composition shifts so the precomputed logical-line offsets are
-	// usable as-is. selectionLineVisualCountDelta carries the wrap-
-	// count difference between the rendering and committed selection
+	// usable as-is. selectionLineHeightDelta carries the height
+	// difference between the rendering and committed selection
 	// lines (0 for [WrapModeNone] or compositions that don't change the
 	// wrap).
 	var compInfo CompositionInfo
 	var hasComp bool
-	var selectionLineVisualCountDelta int
+	var selectionLineHeightDelta float64
 	if p.CompositionLen > 0 {
 		selectionLineIdx := p.PrecomputedLineByteOffsets.LineIndexForByteOffset(p.SelectionStart)
 		cs := p.PrecomputedLineByteOffsets.ByteOffsetByLineIndex(selectionLineIdx)
@@ -88,20 +87,16 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedCount := VisualLineCountForLogicalLine(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			renderingCount := VisualLineCountForLogicalLine(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			selectionLineVisualCountDelta = renderingCount - committedCount
+			committedH := MeasureLogicalLineHeight(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.LineHeight, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingH := MeasureLogicalLineHeight(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.LineHeight, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			selectionLineHeightDelta = renderingH - committedH
 		}
 	}
 
-	// Target visual-line index from position.Y. Use floor so a Y just
-	// above the hint's first visual line maps to a negative target and
-	// drives the backward walk — int() truncation rounds toward zero
-	// and would clamp such Ys onto the hint line, causing arrow-up at
-	// the viewport top to stand still instead of crossing into the
-	// previous logical line.
+	// Target Y in line-box space: a Y just above the hint's first visual
+	// line stays below the hint's own Y and drives the backward walk.
 	padding := textPadding(p.Style.Face.TextFace(), p.Style.LineHeight)
-	target := int(math.Floor((float64(position.Y) + padding) / p.Style.LineHeight))
+	targetY := float64(position.Y) + padding
 
 	committedTextLen := p.RenderingTextLength
 	if hasComp {
@@ -119,58 +114,58 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		keepTailingSpace:   p.Style.KeepTailingSpace,
 		wrapMode:           p.Style.WrapMode,
 		faceRuns:           p.Style.FaceRuns,
+		lineHeight:         p.Style.LineHeight,
 		composition:        compInfo,
 	}
 
 	// Locate the committed logical line whose visual range covers
-	// target by walking forward (or backward) from the caller-supplied
-	// hint, measuring each logical line's wrap count until the running
-	// visual offset crosses target. The hint lets the caller scope work
+	// targetY by walking forward (or backward) from the caller-supplied
+	// hint, measuring each logical line's height until the running
+	// offset crosses targetY. The hint lets the caller scope work
 	// to the viewport — without it (zero values) the walk starts from
 	// line 0 and degrades to O(documentLen). For [WrapModeNone] each
 	// logical line is exactly one visual line so the walk is a simple
-	// add/subtract, but it still needs to step from (hintLL, hintVL)
-	// rather than treating target as an absolute line index — the
-	// caller's coordinate system is whatever the hint says it is.
+	// add/subtract, but it still needs to step from the hint rather
+	// than treating targetY as an absolute offset — the caller's
+	// coordinate system is whatever the hint says it is.
 	hintLL := min(max(p.LogicalLineIndexHint, 0), n-1)
-	hintVL := max(p.VisualLineIndexHint, 0)
+	hintY := p.Style.LineHeight * float64(max(p.VisualLineIndexHint, 0))
 	// Translate the committed-text hint into a rendering-text
-	// visual offset by applying the composition delta when the
-	// hint sits past the composition's line.
+	// offset by applying the composition delta when the hint sits
+	// past the composition's line.
 	if hasComp && hintLL > compInfo.LineIndex {
-		hintVL += selectionLineVisualCountDelta
+		hintY += selectionLineHeightDelta
 	}
 
 	curLL := hintLL
-	curVL := hintVL
-	if target >= hintVL {
+	curY := hintY
+	if targetY >= hintY {
 		for curLL < n-1 {
-			c := m.visualLineCount(curLL)
-			if curVL+c > target {
+			h := m.logicalLineHeight(curLL)
+			if curY+h > targetY {
 				break
 			}
-			curVL += c
+			curY += h
 			curLL++
 		}
 	} else {
 		for curLL > 0 {
 			curLL--
-			c := m.visualLineCount(curLL)
-			curVL -= c
-			if curVL <= target {
+			curY -= m.logicalLineHeight(curLL)
+			if curY <= targetY {
 				break
 			}
 		}
 	}
 	logicalLineIndex := curLL
-	logicalLineVisualOriginIndex := curVL
+	logicalLineOriginY := curY
 
 	renderingLineStart, renderingLineEnd := m.renderingRange(logicalLineIndex)
 	line := p.RenderingTextRange(renderingLineStart, renderingLineEnd)
 
 	// Translate the position into the logical line's local Y so the per-line
 	// resolution picks the right visual subline.
-	localY := position.Y - int(float64(logicalLineVisualOriginIndex)*p.Style.LineHeight)
+	localY := position.Y - int(logicalLineOriginY)
 	localPos := image.Pt(position.X, localY)
 	var pos int
 	if p.Style.WrapMode != WrapModeNone && !faceRunsIntersect(p.Style.FaceRuns, renderingLineStart, renderingLineStart+len(line)) {
@@ -191,18 +186,18 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], vlsStartInBytes int, style *Style) int {
 	// Determine the visual line first.
 	padding := textPadding(style.Face.TextFace(), style.LineHeight)
-	n := int((float64(position.Y) + padding) / style.LineHeight)
+	targetY := float64(position.Y) + padding
 
 	var pos int
 	var vlStr string
-	var vlIndex int
+	var y float64
 	for l := range vls {
 		vlStr = l.str
 		pos = l.pos
-		if vlIndex >= n {
+		if y+style.LineHeight > targetY {
 			break
 		}
-		vlIndex++
+		y += style.LineHeight
 	}
 
 	// Determine the index within the visual line.
@@ -219,20 +214,20 @@ func textIndexFromPositionInVisualLines(width int, position image.Point, vls ite
 func textIndexFromPosition(width int, position image.Point, str string, style *Style) int {
 	// Determine the visual line first.
 	padding := textPadding(style.Face.TextFace(), style.LineHeight)
-	n := int((float64(position.Y) + padding) / style.LineHeight)
+	targetY := float64(position.Y) + padding
 
 	var pos int
 	var vlStr string
-	var vlIndex int
+	var y float64
 	for l := range visualLines(width, str, style.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
 		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
 	}) {
 		vlStr = l.str
 		pos = l.pos
-		if vlIndex >= n {
+		if y+style.LineHeight > targetY {
 			break
 		}
-		vlIndex++
+		y += style.LineHeight
 	}
 
 	// Determine the index within the visual line.

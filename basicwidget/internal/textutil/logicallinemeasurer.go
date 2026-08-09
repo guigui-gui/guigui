@@ -23,6 +23,7 @@ type logicalLineMeasurer struct {
 	keepTailingSpace   bool
 	wrapMode           WrapMode
 	faceRuns           []FaceRun
+	lineHeight         float64
 	composition        CompositionInfo
 
 	// compositionRenderingStartPlus1 is one plus the rendering-text byte
@@ -108,6 +109,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		keepTailingSpace:               p.Style.KeepTailingSpace,
 		wrapMode:                       p.Style.WrapMode,
 		faceRuns:                       p.Style.FaceRuns,
+		lineHeight:                     p.Style.LineHeight,
 		composition:                    compInfo,
 		compositionRenderingStartPlus1: compRenderingStartPlus1,
 		compositionRenderingEndPlus1:   compRenderingEndPlus1,
@@ -153,6 +155,11 @@ func (m *logicalLineMeasurer) logicalLineIndexForRenderingIndex(renderingIndex i
 	default:
 		return m.offsets.LineIndexForByteOffset(renderingIndex - m.composition.RenderingByteShift)
 	}
+}
+
+// logicalLineHeight returns the rendered height of the logical line at idx.
+func (m *logicalLineMeasurer) logicalLineHeight(idx int) float64 {
+	return m.lineHeight * float64(m.visualLineCount(idx))
 }
 
 // visualLineCount returns the rendering-plane visual-line count of the

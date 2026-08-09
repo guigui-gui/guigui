@@ -85,29 +85,27 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		return TextPosition{}, TextPosition{}, 0
 	}
 
-	// visualLineIndexAt walks from the caller-supplied hint to
-	// targetLine, accumulating per-line wrap counts so the result
-	// is the visual-line index where targetLine starts in the
-	// caller's coordinate system.
+	// yAt walks from the caller-supplied hint to targetLine,
+	// accumulating per-line heights so the result is the Y where
+	// targetLine starts in the caller's coordinate system.
 	hintLine := min(max(p.LogicalLineIndexHint, 0), m.logicalLineCount-1)
-	visualLineIndexAt := func(targetLine int) int {
-		v := p.VisualLineIndexHint
+	yAt := func(targetLine int) float64 {
+		y := p.Style.LineHeight * float64(p.VisualLineIndexHint)
 		if targetLine == hintLine {
-			return v
+			return y
 		}
 		if targetLine > hintLine {
 			for i := hintLine; i < targetLine; i++ {
-				v += m.visualLineCount(i)
+				y += m.logicalLineHeight(i)
 			}
-			return v
+			return y
 		}
 		for i := hintLine - 1; i >= targetLine; i-- {
-			v -= m.visualLineCount(i)
+			y -= m.logicalLineHeight(i)
 		}
-		return v
+		return y
 	}
-	precedingVisualLines := visualLineIndexAt(logicalLineIdx)
-	yOffset := p.Style.LineHeight * float64(precedingVisualLines)
+	yOffset := yAt(logicalLineIdx)
 
 	pos0.Top += yOffset
 	pos0.Bottom += yOffset
@@ -130,7 +128,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		prevLine := p.RenderingTextRange(prevRenderingLineStart, prevRenderingLineEnd)
 		prevPos0, _, prevCount := TextPositionFromIndexInLogicalLine(p.Width, prevLine, prevRenderingLineStart, len(prevLine), &p.Style)
 		if prevCount > 0 {
-			prevYOffset := p.Style.LineHeight * float64(visualLineIndexAt(prevLogicalLineIdx))
+			prevYOffset := yAt(prevLogicalLineIdx)
 			prevPos0.Top += prevYOffset
 			prevPos0.Bottom += prevYOffset
 			pos1 = pos0
@@ -253,7 +251,7 @@ func AppendBoundsOfTextRange(dst []image.Rectangle, p *TextLayoutParams, start, 
 	firstLogicalLineIdx := m.logicalLineIndexForRenderingIndex(start)
 	var yOrigin float64
 	for i := range firstLogicalLineIdx {
-		yOrigin += p.Style.LineHeight * float64(m.visualLineCount(i))
+		yOrigin += m.logicalLineHeight(i)
 	}
 	var vls []visualLine
 	for i := firstLogicalLineIdx; i < m.logicalLineCount; i++ {

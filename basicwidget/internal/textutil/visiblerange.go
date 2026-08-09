@@ -238,6 +238,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		keepTailingSpace:   p.KeepTailingSpace,
 		wrapMode:           p.WrapMode,
 		faceRuns:           p.FaceRuns,
+		lineHeight:         p.LineHeight,
 		composition:        p.Composition,
 	}
 
@@ -255,8 +256,7 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		cur := first
 		accY := 0
 		for cur < n-1 && accY <= p.ViewportSize.Y {
-			c := m.visualLineCount(cur)
-			accY += int(math.Ceil(p.LineHeight * float64(c)))
+			accY += int(math.Ceil(m.logicalLineHeight(cur)))
 			cur++
 		}
 		lastLine = cur
