@@ -56,6 +56,21 @@ const (
 	WrapModeAnywhere WrapMode = WrapMode(textutil.WrapModeAnywhere)
 )
 
+// LineHeightMode selects how a visual line's height responds to the font
+// sizes on it.
+type LineHeightMode int
+
+const (
+	// LineHeightModeFixed gives every visual line the same height. Text
+	// larger than the line height overflows into the adjacent lines.
+	LineHeightModeFixed LineHeightMode = LineHeightMode(textutil.LineHeightModeFixed)
+
+	// LineHeightModeFlexible sizes each visual line to fit the largest font
+	// on it: the line height and the baseline scale by the ratio of that
+	// font's size to the base font size.
+	LineHeightModeFlexible LineHeightMode = LineHeightMode(textutil.LineHeightModeFlexible)
+)
+
 // ItemTextStyle bundles the styling attributes applied to the fallback text
 // rendered when a widget's Content is nil.
 type ItemTextStyle struct {
@@ -404,6 +419,12 @@ func (t *Text) SetFontSize(size float64) {
 // it should follow the app scale.
 func (t *Text) SetLineHeight(lineHeight float64) {
 	t.lineHeight = lineHeight
+}
+
+// SetLineHeightMode sets how a visual line's height responds to the font
+// sizes on it. The default is [LineHeightModeFixed].
+func (t *Text) SetLineHeightMode(lineHeightMode LineHeightMode) {
+	t.core.SetLineHeightMode(textutil.LineHeightMode(lineHeightMode))
 }
 
 func (t *Text) SetTabWidth(tabWidth float64) {

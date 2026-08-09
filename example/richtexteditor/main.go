@@ -100,6 +100,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 
 	r.editor.SetMultiline(true)
 	r.editor.SetWrapMode(basicwidget.WrapModeNormal)
+	r.editor.SetLineHeightMode(basicwidget.LineHeightModeFlexible)
 	var baseStyle basicwidget.TextStyle
 	baseStyle.SetFontFamily(r.proseFontFamily)
 	r.editor.SetBaseStyle(&baseStyle)

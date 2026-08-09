@@ -174,6 +174,12 @@ func (t *TextInput) SetLineHeight(lineHeight float64) {
 	t.textInput.SetLineHeight(lineHeight)
 }
 
+// SetLineHeightMode sets how a visual line's height responds to the font
+// sizes on it. The default is [LineHeightModeFixed].
+func (t *TextInput) SetLineHeightMode(lineHeightMode LineHeightMode) {
+	t.textInput.SetLineHeightMode(lineHeightMode)
+}
+
 // SetCaretBlinking sets whether the caret blinks.
 // The default value is true.
 func (t *TextInput) SetCaretBlinking(caretBlinking bool) {
@@ -641,6 +647,10 @@ func (t *textInput) SetLineHeight(lineHeight float64) {
 	t.text.Text().SetLineHeight(lineHeight)
 }
 
+func (t *textInput) SetLineHeightMode(lineHeightMode LineHeightMode) {
+	t.text.Text().SetLineHeightMode(lineHeightMode)
+}
+
 func (t *textInput) SetCaretBlinking(caretBlinking bool) {
 	t.text.Text().SetCaretBlinking(caretBlinking)
 }
@@ -1101,23 +1111,17 @@ func (t *textInputText) measureItemHeight(context *guigui.Context, lineIndex int
 		return -1
 	}
 
-	var height int
-	if txt.WrapMode() == WrapModeNone {
-		height = int(math.Ceil(txt.core.LineHeight()))
-	} else {
-		width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
-		if width <= 0 {
-			width = math.MaxInt
-		}
-
-		// Only the height is needed here; the viewport lines' widths are
-		// measured afterwards in a separate pass
-		// ([textInputText.measureMaxWidthForViewport]) that hits the same
-		// cache entry. Take the visual-line count from the content-keyed
-		// layout cache rather than re-packing every Layout.
-		count := txt.core.VisualLineCountOfLogicalLine(context, lineIndex, width)
-		height = int(math.Ceil(txt.core.LineHeight() * float64(count)))
+	width := t.containerBounds.Dx() - t.padding.Start - t.padding.End
+	if width <= 0 {
+		width = math.MaxInt
 	}
+
+	// Only the height is needed here; the viewport lines' widths are
+	// measured afterwards in a separate pass
+	// ([textInputText.measureMaxWidthForViewport]) that hits the same
+	// cache entry. The height comes from the content-keyed layout cache
+	// rather than from re-packing every Layout.
+	height := int(math.Ceil(txt.core.LogicalLineHeight(context, lineIndex, width)))
 
 	if t.measuredLineHeights == nil {
 		t.measuredLineHeights = map[int]int{}
