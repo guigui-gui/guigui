@@ -57,6 +57,10 @@ type textStyle struct {
 	// lineHeight multiplied by the widget scale.
 	lineHeight float64
 
+	// lineHeightMode selects how lineHeight responds to the font sizes on a
+	// visual line.
+	lineHeightMode textutil.LineHeightMode
+
 	// langString is the base language's string form, cached for
 	// [Text.WriteStateKey].
 	langString string

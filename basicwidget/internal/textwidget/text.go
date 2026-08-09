@@ -294,6 +294,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteFloat64(t.baseStyle.tabWidth)
 	w.WriteFloat64(t.baseStyle.fontSize)
 	w.WriteFloat64(t.baseStyle.lineHeight)
+	w.WriteInt(int(t.baseStyle.lineHeightMode))
 	w.WriteString(t.baseStyle.langString)
 	w.WriteBool(t.selectable)
 	w.WriteBool(t.editable)
@@ -1122,6 +1123,16 @@ func (t *Text) SetLineHeight(lineHeight float64) {
 		return
 	}
 	t.baseStyle.lineHeight = lineHeight
+	t.resetCachedTextSize()
+}
+
+// SetLineHeightMode sets how a visual line's height responds to the font
+// sizes on it.
+func (t *Text) SetLineHeightMode(lineHeightMode textutil.LineHeightMode) {
+	if t.baseStyle.lineHeightMode == lineHeightMode {
+		return
+	}
+	t.baseStyle.lineHeightMode = lineHeightMode
 	t.resetCachedTextSize()
 }
 

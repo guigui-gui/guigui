@@ -95,6 +95,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			RenderingSelectionLine:    renderingSelectionLine,
 			Face:                      t.face(context, false),
 			LineHeight:                t.LineHeight(),
+			LineHeightMode:            t.baseStyle.lineHeightMode,
 			TabWidth:                  t.actualTabWidth(context),
 			KeepTailingSpace:          t.keepTailingSpace,
 			CommittedFaceRuns:         committedFaceRuns,
@@ -140,6 +141,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			),
 			Face:             t.face(context, false),
 			LineHeight:       t.LineHeight(),
+			LineHeightMode:   t.baseStyle.lineHeightMode,
 			TabWidth:         t.actualTabWidth(context),
 			KeepTailingSpace: t.keepTailingSpace,
 			FaceRuns:         renderingFaceRuns,
@@ -183,6 +185,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		),
 		Face:             t.face(context, false),
 		LineHeight:       t.LineHeight(),
+		LineHeightMode:   t.baseStyle.lineHeightMode,
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 		FaceRuns:         renderingFaceRuns,
@@ -257,6 +260,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		t.releaseFaceRuns(mark)
 	}()
 	op.Style.LineHeight = t.LineHeight()
+	op.Style.LineHeightMode = t.baseStyle.lineHeightMode
 	op.Style.HorizontalAlign = t.baseStyle.hAlign
 	op.Style.VerticalAlign = t.baseStyle.vAlign
 	op.Style.TabWidth = t.actualTabWidth(context)
@@ -419,6 +423,7 @@ func (t *Text) DrawPlainString(context *guigui.Context, widgetBounds *guigui.Wid
 	op.Style.WrapMode = t.wrapMode
 	op.Style.Face = t.face(context, false)
 	op.Style.LineHeight = t.LineHeight()
+	op.Style.LineHeightMode = t.baseStyle.lineHeightMode
 	op.Style.HorizontalAlign = t.baseStyle.hAlign
 	op.Style.VerticalAlign = t.baseStyle.vAlign
 	op.Style.TabWidth = t.actualTabWidth(context)

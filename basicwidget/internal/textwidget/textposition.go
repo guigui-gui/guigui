@@ -162,6 +162,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
+		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
@@ -234,6 +235,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
+		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
@@ -349,6 +351,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
 		LineHeight:       t.LineHeight(),
+		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
@@ -500,12 +503,38 @@ func (t *Text) adjacentLineYs(context *guigui.Context, pos textutil.TextPosition
 	if contentHeight <= 0 {
 		return pos.Top - lh, pos.Bottom + lh
 	}
-	// The Y at which a line's box starts resolving sits one padding above
-	// the box itself.
+	// The caret spans its line's content area, so the caret's height gives
+	// the line's height scale. The Y at which a line's box starts resolving
+	// sits one unscaled padding above the box itself.
+	scale := (pos.Bottom - pos.Top) / contentHeight
 	padding := (lh - contentHeight) / 2
-	above = math.Floor(pos.Top-2*padding) - 1
-	below = math.Ceil(pos.Bottom) + 1
+	above = math.Floor(pos.Top-padding*scale-padding) - 1
+	below = math.Ceil(pos.Bottom+padding*scale-padding) + 1
 	return above, below
+}
+
+// LogicalLineHeight returns the rendered height of the lineIndex-th logical
+// line when wrapped at wrapWidth. lineIndex must be in [0, [Text.LineCount]).
+func (t *Text) LogicalLineHeight(context *guigui.Context, lineIndex, wrapWidth int) float64 {
+	// Unwrapped lines of a uniform height need no measurement at all, which
+	// keeps a walk over a multi-million-line value trivial.
+	if t.wrapMode == textutil.WrapModeNone && t.baseStyle.lineHeightMode != textutil.LineHeightModeFlexible {
+		return t.LineHeight()
+	}
+	if t.baseStyle.lineHeightMode != textutil.LineHeightModeFlexible {
+		return t.LineHeight() * float64(t.VisualLineCountOfLogicalLine(context, lineIndex, wrapWidth))
+	}
+	t.ensureLineByteOffsets()
+	n := t.contentCache.lineByteOffsets.LineCount()
+	start := t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex)
+	end := t.store.TextLengthInBytes()
+	if lineIndex+1 < n {
+		end = t.contentCache.lineByteOffsets.ByteOffsetByLineIndex(lineIndex + 1)
+	}
+	line := t.stringValueWithRange(start, end)
+	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
+	defer t.releaseFaceRuns(mark)
+	return textutil.MeasureLogicalLineHeight(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, start, t.LineHeight(), t.baseStyle.lineHeightMode, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the
@@ -543,6 +572,7 @@ func (t *Text) AppendBoundsOfTextRange(dst []image.Rectangle, context *guigui.Co
 		Face:             t.face(context, false),
 		FaceRuns:         committedFaceRuns,
 		LineHeight:       t.LineHeight(),
+		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
 		VerticalAlign:    t.baseStyle.vAlign,
 		TabWidth:         t.actualTabWidth(context),
