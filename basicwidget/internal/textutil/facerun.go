@@ -50,6 +50,26 @@ func faceAt(faceRuns []FaceRun, def font.Face, offset int) (font.Face, int) {
 	return def, math.MaxInt
 }
 
+// smallestFaceInRange returns the face with the smallest line height
+// (ascent+descent) among the faces drawing [start, end), which must not be
+// empty. def draws the bytes no face run covers, so it takes part only when
+// the range has such bytes. faceRuns must be sorted by Start and disjoint.
+func smallestFaceInRange(faceRuns []FaceRun, def font.Face, start, end int) font.Face {
+	smallest, next := faceAt(faceRuns, def, start)
+	m := smallest.TextFace().Metrics()
+	smallestHeight := m.HAscent + m.HDescent
+	for offset := next; offset < end; {
+		face, faceEnd := faceAt(faceRuns, def, offset)
+		m := face.TextFace().Metrics()
+		if height := m.HAscent + m.HDescent; height < smallestHeight {
+			smallest = face
+			smallestHeight = height
+		}
+		offset = faceEnd
+	}
+	return smallest
+}
+
 // advanceWithFaces is [advance] with per-range face overrides: it returns the
 // advance of str[:endIndexInBytes], splitting the prefix at tab positions
 // and face boundaries and measuring each segment standalone with its face,

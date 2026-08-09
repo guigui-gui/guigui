@@ -6,6 +6,7 @@ package textutil
 import (
 	"image"
 	"image/color"
+	"iter"
 	"math"
 	"slices"
 	"strings"
@@ -159,6 +160,22 @@ func appendVisualLinesFromCachedStarts(dst []visualLine, str string, width int, 
 	return dst, true
 }
 
+// appendDrawnVisualLines appends the visual lines str is drawn as, laid out at
+// layoutWidth with options, to dst.
+func appendDrawnVisualLines(dst []visualLine, str string, layoutWidth int, options *DrawOptions) []visualLine {
+	if options.WrapMode != WrapModeNone {
+		if vls, ok := appendVisualLinesFromCachedStarts(dst, str, layoutWidth, options.WrapMode, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace); ok {
+			return vls
+		}
+	}
+	for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace)
+	}) {
+		dst = append(dst, vl)
+	}
+	return dst
+}
+
 func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOptions) {
 	clip := bounds.Intersect(options.VisibleBounds)
 	if clip.Empty() {
@@ -185,20 +202,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	defer func() {
 		theVisualLinesBuffer = slices.Delete(theVisualLinesBuffer, 0, len(theVisualLinesBuffer))
 	}()
-	var built bool
-	if options.WrapMode != WrapModeNone {
-		if vls, ok := appendVisualLinesFromCachedStarts(theVisualLinesBuffer, str, layoutWidth, options.WrapMode, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace); ok {
-			theVisualLinesBuffer = vls
-			built = true
-		}
-	}
-	if !built {
-		for vl := range visualLines(layoutWidth, str, options.WrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
-			return advanceWithFaces(str, strStartInBytes, endIndexInBytes, options.Face, options.FaceRuns, options.TabWidth, options.KeepTailingSpace)
-		}) {
-			theVisualLinesBuffer = append(theVisualLinesBuffer, vl)
-		}
-	}
+	theVisualLinesBuffer = appendDrawnVisualLines(theVisualLinesBuffer, str, layoutWidth, options)
 
 	for _, vl := range theVisualLinesBuffer {
 		y := op.GeoM.Element(1, 2)
@@ -350,68 +354,149 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		op.GeoM = origGeoM
 
 		if len(lineRuns) > 0 {
-			// The ratios approximate the underline and strikeout metrics
-			// that the default face Inter declares in its post and OS/2
-			// tables: thickness/(ascender+descender) = 0.067, underline
-			// center below the baseline / descender = 0.46, and strikeout
-			// center above the baseline / ascender = 0.32. The rendering
-			// face's own table values are not available through
-			// [text.Metrics].
-			//
-			// TODO: Use the rendering font's own underline and strikeout
-			// metrics once the text API exposes them, and decide how to
-			// resolve them when a run is rendered with multiple fonts.
-			const (
-				// decorationThicknessRatio is the thickness of underline and
-				// strikethrough lines as a ratio of the face's ascent+descent
-				// height.
-				decorationThicknessRatio = 1.0 / 14
-
-				// underlineOffsetRatio is the offset of the underline's
-				// center below the baseline as a ratio of the face's descent.
-				underlineOffsetRatio = 0.4
-
-				// strikethroughOffsetRatio is the offset of the
-				// strikethrough's center above the baseline as a ratio of the
-				// face's ascent, putting the line roughly at the middle of
-				// lowercase letters.
-				strikethroughOffsetRatio = 0.3
-			)
-			m := options.Face.TextFace().Metrics()
-			baseline := textPadding(options.Face.TextFace(), options.LineHeight) + m.HAscent
-			thickness := max(1, (m.HAscent+m.HDescent)*decorationThicknessRatio)
-			for _, run := range lineRuns {
-				if !run.Underline && !run.Strikethrough {
-					continue
-				}
-				runStart := max(start, run.Start)
-				runEnd := min(start+contentLen, run.End)
-				if runStart >= runEnd {
-					continue
-				}
-				posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, runStart, runEnd, &options.Style)
-				if !ok {
-					continue
-				}
-				clr := run.Color
-				if clr == nil {
-					clr = options.TextColor
-				}
-				x := float32(posStart.X) + float32(bounds.Min.X)
-				w := float32(posEnd.X - posStart.X)
-				lineTop := posStart.Top + float64(bounds.Min.Y)
-				if run.Underline {
-					y := lineTop + baseline + underlineOffsetRatio*m.HDescent - thickness/2
-					vector.FillRect(dst, x, float32(y), w, float32(thickness), clr, false)
-				}
-				if run.Strikethrough {
-					y := lineTop + baseline - strikethroughOffsetRatio*m.HAscent - thickness/2
-					vector.FillRect(dst, x, float32(y), w, float32(thickness), clr, false)
-				}
+			for d := range visualLineDecorations(layoutWidth, theVisualLinesBuffer, start, start+contentLen, lineRuns, options) {
+				x := float32(d.X) + float32(bounds.Min.X)
+				y := float32(d.Y) + float32(bounds.Min.Y)
+				vector.FillRect(dst, x, y, float32(d.Width), float32(d.Thickness), d.Color, false)
 			}
 		}
 
 		op.GeoM.Translate(0, options.LineHeight)
+	}
+}
+
+// The ratios approximate the underline and strikeout metrics that the default
+// face Inter declares in its post and OS/2 tables:
+// thickness/(ascender+descender) = 0.067, underline center below the
+// baseline / descender = 0.46, and strikeout center above the baseline /
+// ascender = 0.32. The rendering face's own table values are not available
+// through [text.Metrics].
+//
+// TODO: Use the rendering font's own underline and strikeout metrics once the
+// text API exposes them.
+const (
+	// decorationThicknessRatio is the thickness of underline and
+	// strikethrough lines as a ratio of the face's ascent+descent height.
+	decorationThicknessRatio = 1.0 / 14
+
+	// underlineOffsetRatio is the offset of the underline's center below the
+	// baseline as a ratio of the face's descent.
+	underlineOffsetRatio = 0.4
+
+	// strikethroughOffsetRatio is the offset of the strikethrough's center
+	// above the baseline as a ratio of the face's ascent, putting the line
+	// roughly at the middle of lowercase letters.
+	strikethroughOffsetRatio = 0.3
+)
+
+// decorationKind is the kind of line a [StyleRun] draws over its range.
+type decorationKind int
+
+const (
+	decorationKindUnderline decorationKind = iota
+	decorationKindStrikethrough
+)
+
+// enabled reports whether run carries the decoration.
+func (k decorationKind) enabled(run StyleRun) bool {
+	switch k {
+	case decorationKindUnderline:
+		return run.Underline
+	case decorationKindStrikethrough:
+		return run.Strikethrough
+	}
+	return false
+}
+
+// offsetFromBaseline returns the offset of the decoration's center from the
+// baseline, positive downwards, for a face with the metrics m.
+func (k decorationKind) offsetFromBaseline(m text.Metrics) float64 {
+	switch k {
+	case decorationKindUnderline:
+		return underlineOffsetRatio * m.HDescent
+	case decorationKindStrikethrough:
+		return -strikethroughOffsetRatio * m.HAscent
+	}
+	return 0
+}
+
+// decoration is one underline or strikethrough line, in the coordinates
+// [TextPosition] uses.
+type decoration struct {
+	X         float64
+	Y         float64
+	Width     float64
+	Thickness float64
+	Color     color.Color
+}
+
+// visualLineDecorations iterates the underline and strikethrough lines to draw
+// for the visual line whose drawn content is [lineStart, contentEnd). runs are
+// the style runs intersecting the line, sorted and disjoint, and vls the
+// visual lines the positions are resolved in, starting at byte 0 of the drawn
+// string.
+func visualLineDecorations(layoutWidth int, vls []visualLine, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions) iter.Seq[decoration] {
+	return func(yield func(decoration) bool) {
+		// Every face on a visual line is drawn on the base face's baseline
+		// (see drawStyledVisualLine), so the baseline does not depend on the
+		// faces the decorated range uses.
+		baseAscent := options.Face.TextFace().Metrics().HAscent
+		for _, kind := range [...]decorationKind{decorationKindUnderline, decorationKindStrikethrough} {
+			for i := 0; i < len(runs); {
+				if !kind.enabled(runs[i]) {
+					i++
+					continue
+				}
+				// A decorated span is the maximal contiguous byte range whose
+				// runs all carry the decoration. The runs in it can still
+				// differ in color, in which case the span is drawn as several
+				// rectangles sharing one position and thickness.
+				j := i + 1
+				for j < len(runs) && kind.enabled(runs[j]) && runs[j].Start == runs[j-1].End {
+					j++
+				}
+				span := runs[i:j]
+				i = j
+
+				spanStart := max(lineStart, span[0].Start)
+				spanEnd := min(contentEnd, span[len(span)-1].End)
+				if spanStart >= spanEnd {
+					continue
+				}
+				// The part of the span on this visual line takes its metrics
+				// from the smallest face it is drawn with: that face's line
+				// crosses the lower half of the taller faces' glyphs, while a
+				// taller face's line can miss the smaller ones entirely.
+				m := smallestFaceInRange(options.FaceRuns, options.Face, spanStart, spanEnd).TextFace().Metrics()
+				thickness := max(1, (m.HAscent+m.HDescent)*decorationThicknessRatio)
+				offset := kind.offsetFromBaseline(m)
+
+				for _, run := range span {
+					runStart := max(lineStart, run.Start)
+					runEnd := min(contentEnd, run.End)
+					if runStart >= runEnd {
+						continue
+					}
+					posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, vls, 0, runStart, runEnd, &options.Style)
+					if !ok {
+						continue
+					}
+					clr := run.Color
+					if clr == nil {
+						clr = options.TextColor
+					}
+					if !yield(decoration{
+						X:         posStart.X,
+						Y:         posStart.Top + baseAscent + offset - thickness/2,
+						Width:     posEnd.X - posStart.X,
+						Thickness: thickness,
+						Color:     clr,
+					}) {
+						return
+					}
+				}
+			}
+		}
 	}
 }
 

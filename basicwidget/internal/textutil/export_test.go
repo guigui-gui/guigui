@@ -4,8 +4,11 @@
 package textutil
 
 import (
+	"image/color"
 	"iter"
 	"slices"
+	"strings"
+	"unicode"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 )
@@ -163,4 +166,49 @@ func AdvanceWithFaces(str string, strStartInBytes, endIndexInBytes int, face fon
 
 func FaceAt(faceRuns []FaceRun, def font.Face, offset int) (font.Face, int) {
 	return faceAt(faceRuns, def, offset)
+}
+
+// The decoration metric ratios, so a test states its expectations in terms of
+// the resolved face's metrics rather than of the ratios' values.
+const (
+	DecorationThicknessRatio = decorationThicknessRatio
+	UnderlineOffsetRatio     = underlineOffsetRatio
+	StrikethroughOffsetRatio = strikethroughOffsetRatio
+)
+
+// Decoration is one underline or strikethrough line drawn for a visual line.
+type Decoration struct {
+	X         float64
+	Y         float64
+	Width     float64
+	Thickness float64
+	Color     color.Color
+}
+
+// DecorationsPerVisualLine lays str out at layoutWidth as [Draw] does and
+// returns the decorations of each visual line, in order. Ellipsis truncation
+// is not applied.
+func DecorationsPerVisualLine(layoutWidth int, str string, options *DrawOptions) [][]Decoration {
+	vls := appendDrawnVisualLines(nil, str, layoutWidth, options)
+	decorations := make([][]Decoration, 0, len(vls))
+	for _, vl := range vls {
+		start := vl.pos
+		end := start + len(vl.str)
+		vlStr := vl.str
+		if !options.KeepTailingSpace {
+			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
+		}
+		var ds []Decoration
+		for d := range visualLineDecorations(layoutWidth, vls, start, start+len(vlStr), intersectingStyleRuns(options.StyleRuns, start, end), options) {
+			ds = append(ds, Decoration{
+				X:         d.X,
+				Y:         d.Y,
+				Width:     d.Width,
+				Thickness: d.Thickness,
+				Color:     d.Color,
+			})
+		}
+		decorations = append(decorations, ds)
+	}
+	return decorations
 }
