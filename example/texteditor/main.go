@@ -26,7 +26,7 @@ type Root struct {
 	guigui.DefaultWidget
 
 	background    basicwidget.Background
-	menubar       editorMenubar
+	menubar       texteditor.Menubar
 	editor        texteditor.Editor
 	statusBar     texteditor.StatusBar
 	findDialog    texteditor.FindDialog
@@ -135,7 +135,23 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.menubar.SetCanCut(r.editor.CanCut())
 	r.menubar.SetCanCopy(r.editor.CanCopy())
 	r.menubar.SetCanPaste(r.editor.CanPaste())
-	r.menubar.SetWrapMode(r.wrapMode)
+	r.menubar.SetExtraMenus([]texteditor.ExtraMenu{
+		{
+			Text: "Format",
+			Items: []basicwidget.PopupMenuItem[string]{
+				{Text: "No Wrap", Value: "wrap-none", Checked: r.wrapMode == basicwidget.WrapModeNone},
+				{Text: "Normal Wrap", Value: "wrap-normal", Checked: r.wrapMode == basicwidget.WrapModeNormal},
+				{Text: "Wrap Anywhere", Value: "wrap-anywhere", Checked: r.wrapMode == basicwidget.WrapModeAnywhere},
+			},
+			ReservesCheckmarkSpace: true,
+		},
+		{
+			Text: "Help",
+			Items: []basicwidget.PopupMenuItem[string]{
+				{Text: "About", Value: "about"},
+			},
+		},
+	})
 
 	r.menubar.OnNew(func(context *guigui.Context) {
 		r.actionNew()
@@ -170,11 +186,17 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.menubar.OnSelectAll(func(context *guigui.Context) {
 		r.editor.SelectAll()
 	})
-	r.menubar.OnWrapModeSelected(func(context *guigui.Context, wrapMode basicwidget.WrapMode) {
-		r.wrapMode = wrapMode
-	})
-	r.menubar.OnAbout(func(context *guigui.Context) {
-		r.infoDialog.Open()
+	r.menubar.OnExtraItemSelected(func(context *guigui.Context, value string) {
+		switch value {
+		case "wrap-none":
+			r.wrapMode = basicwidget.WrapModeNone
+		case "wrap-normal":
+			r.wrapMode = basicwidget.WrapModeNormal
+		case "wrap-anywhere":
+			r.wrapMode = basicwidget.WrapModeAnywhere
+		case "about":
+			r.infoDialog.Open()
+		}
 	})
 
 	start, _ := r.editor.Selection()

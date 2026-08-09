@@ -32,7 +32,7 @@ type Root struct {
 	guigui.DefaultWidget
 
 	background    basicwidget.Background
-	menubar       editorMenubar
+	menubar       texteditor.Menubar
 	editor        texteditor.Editor
 	statusBar     texteditor.StatusBar
 	findDialog    texteditor.FindDialog
