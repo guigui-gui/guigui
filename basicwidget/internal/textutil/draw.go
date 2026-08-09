@@ -205,11 +205,18 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 	theVisualLinesBuffer = appendDrawnVisualLines(theVisualLinesBuffer, str, layoutWidth, options)
 
 	for _, vl := range theVisualLinesBuffer {
+		// scale sizes this line's box; baselineShift moves the text from the
+		// unscaled baseline to this line's, leaving the text where it is when
+		// nothing on the line is scaled.
+		scale := options.Style.visualLineScale(vl.pos, vl.pos+len(vl.str))
+		lineHeight := options.LineHeight * scale
+		baselineShift := options.Style.baselineOffset(scale) - options.Style.baselineOffset(1)
+
 		y := op.GeoM.Element(1, 2)
-		if int(math.Ceil(y+options.LineHeight)) < clip.Min.Y {
+		if int(math.Ceil(y+lineHeight)) < clip.Min.Y {
 			// Advance to the next line so the loop terminates; the bottom-of-body
 			// translation is skipped by [continue].
-			op.GeoM.Translate(0, options.LineHeight)
+			op.GeoM.Translate(0, lineHeight)
 			continue
 		}
 		if int(math.Floor(y)) >= clip.Max.Y {
@@ -284,6 +291,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		// Draw the text.
 		vlStr := vl.str
 		origGeoM := op.GeoM
+		op.GeoM.Translate(0, baselineShift)
 		if !options.KeepTailingSpace {
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
@@ -354,14 +362,14 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		op.GeoM = origGeoM
 
 		if len(lineRuns) > 0 {
-			for d := range visualLineDecorations(layoutWidth, theVisualLinesBuffer, start, start+contentLen, lineRuns, options) {
+			for d := range visualLineDecorations(layoutWidth, theVisualLinesBuffer, start, start+contentLen, lineRuns, scale, options) {
 				x := float32(d.X) + float32(bounds.Min.X)
 				y := float32(d.Y) + float32(bounds.Min.Y)
 				vector.FillRect(dst, x, y, float32(d.Width), float32(d.Thickness), d.Color, false)
 			}
 		}
 
-		op.GeoM.Translate(0, options.LineHeight)
+		op.GeoM.Translate(0, lineHeight)
 	}
 }
 
@@ -434,13 +442,15 @@ type decoration struct {
 // for the visual line whose drawn content is [lineStart, contentEnd). runs are
 // the style runs intersecting the line, sorted and disjoint, and vls the
 // visual lines the positions are resolved in, starting at byte 0 of the drawn
-// string.
-func visualLineDecorations(layoutWidth int, vls []visualLine, lineStart, contentEnd int, runs []StyleRun, options *DrawOptions) iter.Seq[decoration] {
+// string. scale is the line's height scale.
+func visualLineDecorations(layoutWidth int, vls []visualLine, lineStart, contentEnd int, runs []StyleRun, scale float64, options *DrawOptions) iter.Seq[decoration] {
 	return func(yield func(decoration) bool) {
-		// Every face on a visual line is drawn on the base face's baseline
-		// (see drawStyledVisualLine), so the baseline does not depend on the
-		// faces the decorated range uses.
-		baseAscent := options.Face.TextFace().Metrics().HAscent
+		// Every face on a visual line is drawn on the base face's baseline,
+		// scaled with the line (see drawStyledVisualLine), so the baseline
+		// does not depend on the faces the decorated range uses. The
+		// positions the decorations are offset from are the line's text top,
+		// which is scaled too.
+		baseAscent := options.Face.TextFace().Metrics().HAscent * scale
 		for _, kind := range [...]decorationKind{decorationKindUnderline, decorationKindStrikethrough} {
 			for i := 0; i < len(runs); {
 				if !kind.enabled(runs[i]) {

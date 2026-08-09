@@ -147,6 +147,12 @@ func (s *Style) visualLinePadding(scale float64) float64 {
 	return textPadding(s.Face.TextFace(), s.LineHeight) * scale
 }
 
+// baselineOffset returns the distance from the top of a visual line scaled by
+// scale to the baseline of the text on it.
+func (s *Style) baselineOffset(scale float64) float64 {
+	return (textPadding(s.Face.TextFace(), s.LineHeight) + s.Face.TextFace().Metrics().HAscent) * scale
+}
+
 // WrapMode selects how visual lines wrap when text exceeds the available
 // width. The basicwidget package mirrors this enum for its public API.
 type WrapMode int

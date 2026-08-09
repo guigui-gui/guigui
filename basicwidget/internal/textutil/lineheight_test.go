@@ -5,6 +5,7 @@ package textutil_test
 
 import (
 	"image"
+	"image/color"
 	"math"
 	"testing"
 
@@ -118,5 +119,44 @@ func TestLineHeightModeFlexibleHitTest(t *testing.T) {
 	// first line whatever the mode is.
 	if got := textutil.TextIndexFromPositionInLogicalLine(width, image.Pt(0, 12), str, 0, &style); got > 5 {
 		t.Errorf("TextIndexFromPositionInLogicalLine(y=12) = %d, want an offset in the first line", got)
+	}
+}
+
+// TestLineHeightModeFlexibleDecorationFollowsBaseline asserts that a
+// decoration on a scaled visual line tracks that line's baseline, so it keeps
+// crossing the glyphs it decorates rather than the unscaled line's.
+func TestLineHeightModeFlexibleDecorationFollowsBaseline(t *testing.T) {
+	small, large := testFaces(t)
+	const str = "abc"
+	style := textutil.Style{
+		WrapMode:       textutil.WrapModeNone,
+		Face:           small,
+		FaceRuns:       []textutil.FaceRun{{Start: 0, End: len(str), Face: large}},
+		LineHeight:     decorationLineHeight,
+		LineHeightMode: textutil.LineHeightModeFlexible,
+	}
+	options := &textutil.DrawOptions{
+		Style:     style,
+		TextColor: color.White,
+		StyleRuns: []textutil.StyleRun{{Start: 0, End: len(str), Strikethrough: true}},
+	}
+
+	const layoutWidth = 1000
+	got := textutil.DecorationsPerVisualLine(layoutWidth, str, options)
+	if len(got) != 1 || len(got[0]) != 1 {
+		t.Fatalf("got: %v, want one decoration on one visual line", got)
+	}
+
+	// The caret spans the line's content area, which is where the scaled
+	// glyphs are drawn; the strikethrough belongs in the middle of it.
+	pos, _, count := textutil.TextPositionFromIndexInLogicalLine(layoutWidth, str, 0, 0, &style)
+	if count == 0 {
+		t.Fatal("TextPositionFromIndexInLogicalLine found no position")
+	}
+	y := got[0][0].Y + got[0][0].Thickness/2
+	lo := pos.Top + 0.25*(pos.Bottom-pos.Top)
+	hi := pos.Top + 0.75*(pos.Bottom-pos.Top)
+	if y < lo || y > hi {
+		t.Errorf("strikethrough center = %v, want within [%v, %v] of the glyph band [%v, %v]", y, lo, hi, pos.Top, pos.Bottom)
 	}
 }
