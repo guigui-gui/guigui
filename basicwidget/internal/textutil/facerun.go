@@ -70,6 +70,31 @@ func smallestFaceInRange(faceRuns []FaceRun, def font.Face, start, end int) font
 	return smallest
 }
 
+// maxFaceScale returns the largest face size in the byte range [start, end)
+// divided by def's size, and never less than 1: def participates in every
+// range. faceRuns must be sorted by Start and disjoint.
+func maxFaceScale(faceRuns []FaceRun, def font.Face, start, end int) float64 {
+	defSize := def.Attributes().Size
+	if len(faceRuns) == 0 || start >= end || defSize <= 0 {
+		return 1
+	}
+	i, _ := slices.BinarySearchFunc(faceRuns, start, func(run FaceRun, start int) int {
+		switch {
+		case run.End <= start:
+			return -1
+		case run.Start > start:
+			return 1
+		default:
+			return 0
+		}
+	})
+	scale := 1.0
+	for ; i < len(faceRuns) && faceRuns[i].Start < end; i++ {
+		scale = max(scale, faceRuns[i].Face.Attributes().Size/defSize)
+	}
+	return scale
+}
+
 // advanceWithFaces is [advance] with per-range face overrides: it returns the
 // advance of str[:endIndexInBytes], splitting the prefix at tab positions
 // and face boundaries and measuring each segment standalone with its face,

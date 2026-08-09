@@ -86,7 +86,7 @@ func (t *Text) textHeight(context *guigui.Context, constraints guigui.Constraint
 		txt := t.textToDraw(context, true)
 		_, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
 		defer t.releaseFaceRuns(mark)
-		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, lineH, t.actualTabWidth(context), t.keepTailingSpace)
+		h := textutil.MeasureHeight(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, lineH, textutil.LineHeightModeFixed, t.actualTabWidth(context), t.keepTailingSpace)
 		hi = int(math.Ceil(h))
 	}
 
@@ -234,7 +234,7 @@ func (t *Text) totalRenderingMeasurement(context *guigui.Context, width int, bol
 		} else {
 			line = t.stringValueWithRange(cs, ce)
 		}
-		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, faceRuns, cs, lineH, tabW, keepTailing, ellipsisString)
+		w, h := textutil.MeasureLogicalLine(measureWidth, line, t.wrapMode, face, faceRuns, cs, lineH, textutil.LineHeightModeFixed, tabW, keepTailing, ellipsisString)
 		maxWidth = max(maxWidth, w)
 		height += h
 	}
@@ -248,7 +248,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		// A masked value is a single uniform line; measure it directly rather
 		// than through the cache, which is populated from the real text.
 		m := t.maskMappingForRendering(true)
-		w, h := textutil.Measure(math.MaxInt, m.maskStr, textutil.WrapModeNone, t.face(context, bold), nil, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, "")
+		w, h := textutil.Measure(math.MaxInt, m.maskStr, textutil.WrapModeNone, t.face(context, bold), nil, t.LineHeight(), textutil.LineHeightModeFixed, t.actualTabWidth(context), t.keepTailingSpace, "")
 		return image.Pt(max(int(math.Ceil(w)), 1), int(math.Ceil(h)))
 	}
 
@@ -282,7 +282,7 @@ func (t *Text) textSize(context *guigui.Context, constraints guigui.Constraints,
 		txt := t.textToDraw(context, true)
 		_, renderingFaceRuns, mark := t.acquireFaceRuns(context, bold, true)
 		defer t.releaseFaceRuns(mark)
-		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, t.LineHeight(), t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
+		w, h = textutil.Measure(constraintWidth, txt, t.wrapMode, t.face(context, bold), renderingFaceRuns, t.LineHeight(), textutil.LineHeightModeFixed, t.actualTabWidth(context), t.keepTailingSpace, ellipsisString)
 	}
 	// If width is 0, the text's bounds and visible bounds are empty, and nothing including its caret is rendered.
 	// Force to set a positive number as the width.

@@ -112,7 +112,12 @@ type Style struct {
 	// text with Face.
 	FaceRuns []FaceRun
 
-	LineHeight       float64
+	LineHeight float64
+
+	// LineHeightMode selects how LineHeight responds to the font sizes on a
+	// visual line.
+	LineHeightMode LineHeightMode
+
 	HorizontalAlign  HorizontalAlign
 	VerticalAlign    VerticalAlign
 	TabWidth         float64
@@ -131,6 +136,20 @@ const (
 	WrapModeNormal
 	// WrapModeAnywhere wraps at any grapheme cluster boundary.
 	WrapModeAnywhere
+)
+
+// LineHeightMode selects how a visual line's height responds to the font
+// sizes on it. The basicwidget package mirrors this enum for its public API.
+type LineHeightMode int
+
+const (
+	// LineHeightModeFixed gives every visual line the same height. Text
+	// larger than the line height overflows into the adjacent lines.
+	LineHeightModeFixed LineHeightMode = iota
+
+	// LineHeightModeFlexible scales a visual line's height and baseline by
+	// the largest font size on it, relative to the base face's size.
+	LineHeightModeFlexible
 )
 
 type HorizontalAlign int
@@ -689,11 +708,26 @@ func visualLineCount(width int, str string, wrapMode WrapMode, face font.Face, f
 // need to be computed, this avoids per-visual-line shaping calls and is
 // dramatically cheaper for very long text (e.g. a multi-megabyte editor
 // buffer).
-func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(visualLineCount(width, str, wrapMode, face, faceRuns, tabWidth, keepTailingSpace))
+func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
+	if !scalesLineHeights(lineHeightMode, faceRuns) {
+		return lineHeight * float64(visualLineCount(width, str, wrapMode, face, faceRuns, tabWidth, keepTailingSpace))
+	}
+	var height float64
+	for l := range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
+		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
+	}) {
+		height += lineHeight * maxFaceScale(faceRuns, face, l.pos, l.pos+len(l.str))
+	}
+	return height
 }
 
-func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+// scalesLineHeights reports whether line heights can differ from the base
+// line height.
+func scalesLineHeights(lineHeightMode LineHeightMode, faceRuns []FaceRun) bool {
+	return lineHeightMode == LineHeightModeFlexible && len(faceRuns) > 0
+}
+
+func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
 		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
@@ -709,7 +743,11 @@ func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns 
 		}
 		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
-		// Thus, just counting the visual line number is enough.
+		// Thus, just accumulating the visual line heights is enough.
+		if scalesLineHeights(lineHeightMode, faceRuns) {
+			height += lineHeight * maxFaceScale(faceRuns, face, l.pos, l.pos+len(l.str))
+			continue
+		}
 		height += lineHeight
 	}
 	return maxWidth, height
@@ -726,12 +764,10 @@ func textPositionYOffset(size image.Point, str string, style *Style) float64 {
 	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
-		textHeight := style.LineHeight * float64(c)
+		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		c := visualLineCount(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.TabWidth, style.KeepTailingSpace)
-		textHeight := style.LineHeight * float64(c)
+		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
 		yOffset += float64(size.Y) - textHeight
 	}
 	return yOffset

@@ -344,8 +344,16 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 // at the given width. This is the per-logical-line counterpart of
 // [MeasureHeight] and is used by virtualized layout to size lines one at a
 // time without scanning the whole document.
-func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, tabWidth float64, keepTailingSpace bool) float64 {
-	return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace))
+func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
+	if !scalesLineHeights(lineHeightMode, faceRuns) {
+		return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace))
+	}
+	var height float64
+	for vl := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
+		start := logicalLineStartInBytes + vl.pos
+		height += lineHeight * maxFaceScale(faceRuns, face, start, start+len(vl.str))
+	}
+	return height
 }
 
 // VisualLineCountForLogicalLine returns the number of visual lines one
@@ -419,7 +427,7 @@ func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode,
 
 // MeasureLogicalLine returns the rendered width and height of one logical
 // line at the given width. Per-logical-line counterpart of [Measure].
-func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
 		vlStr := l.str
@@ -432,6 +440,11 @@ func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face f
 			vlWidth = advanceWithFaces(vlStr, logicalLineStartInBytes+l.pos, len(vlStr), face, faceRuns, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
+		if scalesLineHeights(lineHeightMode, faceRuns) {
+			start := logicalLineStartInBytes + l.pos
+			height += lineHeight * maxFaceScale(faceRuns, face, start, start+len(l.str))
+			continue
+		}
 		height += lineHeight
 	}
 	return maxWidth, height

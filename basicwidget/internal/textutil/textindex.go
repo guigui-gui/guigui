@@ -87,8 +87,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedH := MeasureLogicalLineHeight(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.LineHeight, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			renderingH := MeasureLogicalLineHeight(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.LineHeight, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			committedH := MeasureLogicalLineHeight(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingH := MeasureLogicalLineHeight(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineHeightDelta = renderingH - committedH
 		}
 	}

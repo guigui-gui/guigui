@@ -40,10 +40,12 @@ type CompositionInfoParams struct {
 	CommittedSelectionLine string
 	RenderingSelectionLine string
 
-	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
-	// to [MeasureLogicalLineHeight] when WrapMode is not [WrapModeNone].
+	// Face, LineHeight, LineHeightMode, TabWidth, KeepTailingSpace are
+	// passed through to [MeasureLogicalLineHeight] when WrapMode is not
+	// [WrapModeNone].
 	Face             font.Face
 	LineHeight       float64
+	LineHeightMode   LineHeightMode
 	TabWidth         float64
 	KeepTailingSpace bool
 
@@ -115,8 +117,8 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.CommittedFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.RenderingFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.CommittedFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.RenderingFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{
