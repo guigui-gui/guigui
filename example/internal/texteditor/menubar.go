@@ -12,18 +12,19 @@ import (
 )
 
 var (
-	menubarEventNew               = guigui.GenerateEventKey()
-	menubarEventOpen              = guigui.GenerateEventKey()
-	menubarEventSave              = guigui.GenerateEventKey()
-	menubarEventSaveAs            = guigui.GenerateEventKey()
-	menubarEventUndo              = guigui.GenerateEventKey()
-	menubarEventRedo              = guigui.GenerateEventKey()
-	menubarEventCut               = guigui.GenerateEventKey()
-	menubarEventCopy              = guigui.GenerateEventKey()
-	menubarEventPaste             = guigui.GenerateEventKey()
-	menubarEventFind              = guigui.GenerateEventKey()
-	menubarEventSelectAll         = guigui.GenerateEventKey()
-	menubarEventExtraItemSelected = guigui.GenerateEventKey()
+	menubarEventNew                = guigui.GenerateEventKey()
+	menubarEventOpen               = guigui.GenerateEventKey()
+	menubarEventSave               = guigui.GenerateEventKey()
+	menubarEventSaveAs             = guigui.GenerateEventKey()
+	menubarEventPasteWithoutStyles = guigui.GenerateEventKey()
+	menubarEventUndo               = guigui.GenerateEventKey()
+	menubarEventRedo               = guigui.GenerateEventKey()
+	menubarEventCut                = guigui.GenerateEventKey()
+	menubarEventCopy               = guigui.GenerateEventKey()
+	menubarEventPaste              = guigui.GenerateEventKey()
+	menubarEventFind               = guigui.GenerateEventKey()
+	menubarEventSelectAll          = guigui.GenerateEventKey()
+	menubarEventExtraItemSelected  = guigui.GenerateEventKey()
 )
 
 // builtinMenuCount is the number of built-in menus, File and Edit, that
@@ -53,18 +54,36 @@ type Menubar struct {
 
 	menubar basicwidget.Menubar[string]
 
-	canSave    bool
-	canUndo    bool
-	canRedo    bool
-	canCut     bool
-	canCopy    bool
-	canPaste   bool
+	canSave  bool
+	canUndo  bool
+	canRedo  bool
+	canCut   bool
+	canCopy  bool
+	canPaste bool
+
+	// saveAsDisabled is inverted so that the zero value keeps the Save As
+	// item enabled.
+	saveAsDisabled bool
+
+	pasteWithoutStylesVisible bool
+
 	extraMenus []ExtraMenu
 }
 
 // SetCanSave enables or disables the Save item.
 func (m *Menubar) SetCanSave(b bool) {
 	m.canSave = b
+}
+
+// SetCanSaveAs enables or disables the Save As item.
+func (m *Menubar) SetCanSaveAs(b bool) {
+	m.saveAsDisabled = !b
+}
+
+// SetPasteWithoutStylesVisible sets whether the Edit menu has a Paste
+// Without Styles item. The item is absent by default.
+func (m *Menubar) SetPasteWithoutStylesVisible(visible bool) {
+	m.pasteWithoutStylesVisible = visible
 }
 
 // SetCanUndo enables or disables the Undo item.
@@ -144,6 +163,12 @@ func (m *Menubar) OnPaste(fn func(context *guigui.Context)) {
 	guigui.SetEventHandler(m, menubarEventPaste, fn)
 }
 
+// OnPasteWithoutStyles sets the event handler invoked when the Paste Without
+// Styles item is selected.
+func (m *Menubar) OnPasteWithoutStyles(fn func(context *guigui.Context)) {
+	guigui.SetEventHandler(m, menubarEventPasteWithoutStyles, fn)
+}
+
 // OnFind sets the event handler invoked when the Find item is selected.
 func (m *Menubar) OnFind(fn func(context *guigui.Context)) {
 	guigui.SetEventHandler(m, menubarEventFind, fn)
@@ -169,26 +194,34 @@ func (m *Menubar) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		{Text: "File"},
 		{Text: "Edit"},
 	}
+	editItems := []basicwidget.PopupMenuItem[string]{
+		{Text: "Undo", Value: "undo", KeyText: Hotkey("Z"), Disabled: !m.canUndo},
+		{Text: "Redo", Value: "redo", KeyText: HotkeyShift("Z"), Disabled: !m.canRedo},
+		{Border: true},
+		{Text: "Cut", Value: "cut", KeyText: Hotkey("X"), Disabled: !m.canCut},
+		{Text: "Copy", Value: "copy", KeyText: Hotkey("C"), Disabled: !m.canCopy},
+		{Text: "Paste", Value: "paste", KeyText: Hotkey("V"), Disabled: !m.canPaste},
+	}
+	if m.pasteWithoutStylesVisible {
+		editItems = append(editItems,
+			basicwidget.PopupMenuItem[string]{Text: "Paste Without Styles", Value: "pastewithoutstyles", KeyText: HotkeyShift("V"), Disabled: !m.canPaste},
+		)
+	}
+	editItems = append(editItems,
+		basicwidget.PopupMenuItem[string]{Border: true},
+		basicwidget.PopupMenuItem[string]{Text: "Find…", Value: "find", KeyText: Hotkey("F")},
+		basicwidget.PopupMenuItem[string]{Border: true},
+		basicwidget.PopupMenuItem[string]{Text: "Select All", Value: "selectall", KeyText: Hotkey("A")},
+	)
 	popupItems := [][]basicwidget.PopupMenuItem[string]{
 		{
 			{Text: "New", Value: "new", KeyText: Hotkey("N")},
 			{Text: "Open…", Value: "open", KeyText: Hotkey("O")},
 			{Border: true},
 			{Text: "Save", Value: "save", KeyText: Hotkey("S"), Disabled: !m.canSave},
-			{Text: "Save As…", Value: "saveas"},
+			{Text: "Save As…", Value: "saveas", Disabled: m.saveAsDisabled},
 		},
-		{
-			{Text: "Undo", Value: "undo", KeyText: Hotkey("Z"), Disabled: !m.canUndo},
-			{Text: "Redo", Value: "redo", KeyText: HotkeyShift("Z"), Disabled: !m.canRedo},
-			{Border: true},
-			{Text: "Cut", Value: "cut", KeyText: Hotkey("X"), Disabled: !m.canCut},
-			{Text: "Copy", Value: "copy", KeyText: Hotkey("C"), Disabled: !m.canCopy},
-			{Text: "Paste", Value: "paste", KeyText: Hotkey("V"), Disabled: !m.canPaste},
-			{Border: true},
-			{Text: "Find…", Value: "find", KeyText: Hotkey("F")},
-			{Border: true},
-			{Text: "Select All", Value: "selectall", KeyText: Hotkey("A")},
-		},
+		editItems,
 	}
 	for _, menu := range m.extraMenus {
 		menubarItems = append(menubarItems, basicwidget.MenubarItem{Text: menu.Text})
@@ -236,6 +269,8 @@ func (m *Menubar) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 			key = menubarEventCopy
 		case "paste":
 			key = menubarEventPaste
+		case "pastewithoutstyles":
+			key = menubarEventPasteWithoutStyles
 		case "find":
 			key = menubarEventFind
 		case "selectall":

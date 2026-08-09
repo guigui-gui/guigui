@@ -37,11 +37,20 @@ type ConfirmDialog struct {
 	// pendingResult is the result selected by the user, latched in the button
 	// OnDown before SetOpen(false). The popup's OnClose then dispatches it.
 	pendingResult ConfirmResult
+
+	// saveDisabled is inverted so that the zero value keeps the save choice
+	// enabled.
+	saveDisabled bool
 }
 
 // SetMessage sets the prompt text shown above the buttons.
 func (c *ConfirmDialog) SetMessage(message string) {
 	c.content.message.SetValue(message)
+}
+
+// SetSaveEnabled sets whether the save choice can be chosen.
+func (c *ConfirmDialog) SetSaveEnabled(enabled bool) {
+	c.saveDisabled = !enabled
 }
 
 // SetOpen shows or hides the dialog. Opening also resets the pending result
@@ -113,6 +122,7 @@ func (c *confirmDialogContent) Build(context *guigui.Context, adder *guigui.Chil
 	c.message.SetHorizontalAlign(basicwidget.HorizontalAlignCenter)
 
 	c.saveButton.SetText("Save")
+	context.SetEnabled(&c.saveButton, !c.dialog.saveDisabled)
 	c.saveButton.OnDown(func(context *guigui.Context) {
 		c.dialog.pendingResult = ConfirmResultSave
 		c.dialog.popup.SetOpen(false)
