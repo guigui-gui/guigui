@@ -185,11 +185,12 @@ type VisibleRangeInViewportParams struct {
 	// off-by-one rounding.
 	ViewportSize image.Point
 
-	// Face, LineHeight, TabWidth, KeepTailingSpace are passed through
-	// to [VisualLineCountForLogicalLine] when WrapMode is not
-	// [WrapModeNone].
+	// Face, LineHeight, LineHeightMode, TabWidth, KeepTailingSpace are
+	// passed through to [VisualLineCountForLogicalLine] when WrapMode is
+	// not [WrapModeNone].
 	Face             font.Face
 	LineHeight       float64
+	LineHeightMode   LineHeightMode
 	TabWidth         float64
 	KeepTailingSpace bool
 
@@ -241,11 +242,12 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		wrapMode:           p.WrapMode,
 		faceRuns:           p.FaceRuns,
 		lineHeight:         p.LineHeight,
+		lineHeightMode:     p.LineHeightMode,
 		composition:        p.Composition,
 	}
 
 	var lastLine int
-	if p.WrapMode == WrapModeNone {
+	if p.WrapMode == WrapModeNone && !scalesLineHeights(p.LineHeightMode, p.FaceRuns) {
 		lh := int(math.Ceil(p.LineHeight))
 		if lh <= 0 {
 			return VisibleRange{}, false

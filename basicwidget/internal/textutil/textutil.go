@@ -125,6 +125,28 @@ type Style struct {
 	EllipsisString   string
 }
 
+// visualLineScale returns the factor scaling the height and the baseline
+// offset of the visual line covering the byte range [startInBytes,
+// endInBytes) of the laid-out text. The factor is never below 1.
+func (s *Style) visualLineScale(startInBytes, endInBytes int) float64 {
+	if s.LineHeightMode != LineHeightModeFlexible {
+		return 1
+	}
+	return maxFaceScale(s.FaceRuns, s.Face, startInBytes, endInBytes)
+}
+
+// visualLineHeight returns the height of the visual line covering the byte
+// range [startInBytes, endInBytes) of the laid-out text.
+func (s *Style) visualLineHeight(startInBytes, endInBytes int) float64 {
+	return s.LineHeight * s.visualLineScale(startInBytes, endInBytes)
+}
+
+// visualLinePadding returns the gap between the top of a visual line scaled
+// by scale and the top of the text on it.
+func (s *Style) visualLinePadding(scale float64) float64 {
+	return textPadding(s.Face.TextFace(), s.LineHeight) * scale
+}
+
 // WrapMode selects how visual lines wrap when text exceeds the available
 // width. The basicwidget package mirrors this enum for its public API.
 type WrapMode int

@@ -115,6 +115,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		wrapMode:           p.Style.WrapMode,
 		faceRuns:           p.Style.FaceRuns,
 		lineHeight:         p.Style.LineHeight,
+		lineHeightMode:     p.Style.LineHeightMode,
 		composition:        compInfo,
 	}
 
@@ -194,10 +195,11 @@ func textIndexFromPositionInVisualLines(width int, position image.Point, vls ite
 	for l := range vls {
 		vlStr = l.str
 		pos = l.pos
-		if y+style.LineHeight > targetY {
+		h := style.visualLineHeight(vlsStartInBytes+l.pos, vlsStartInBytes+l.pos+len(l.str))
+		if y+h > targetY {
 			break
 		}
-		y += style.LineHeight
+		y += h
 	}
 
 	// Determine the index within the visual line.
@@ -224,10 +226,11 @@ func textIndexFromPosition(width int, position image.Point, str string, style *S
 	}) {
 		vlStr = l.str
 		pos = l.pos
-		if y+style.LineHeight > targetY {
+		h := style.visualLineHeight(l.pos, l.pos+len(l.str))
+		if y+h > targetY {
 			break
 		}
-		y += style.LineHeight
+		y += h
 	}
 
 	// Determine the index within the visual line.

@@ -149,6 +149,8 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 // count 0.
 func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vlsStartInBytes, index int, style *Style) (position0, position1 TextPosition, count int) {
 	var y, y0, y1 float64
+	// scale0/1 are the matched visual lines' height scales.
+	scale0, scale1 := 1.0, 1.0
 	// indexInVisualLine0/1 are index relative to the matched visual line's
 	// start.
 	var indexInVisualLine0, indexInVisualLine1 int
@@ -158,6 +160,7 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 	var line0, line1 string
 	var found0, found1 bool
 	for l := range vls {
+		scale := style.visualLineScale(vlsStartInBytes+l.pos, vlsStartInBytes+l.pos+len(l.str))
 		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
 		if index == l.pos+len(l.str) {
@@ -167,6 +170,7 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 				indexInVisualLine0 = index - l.pos
 				vlStartInBytes0 = vlsStartInBytes + l.pos
 				y0 = y
+				scale0 = scale
 			} else {
 				// A previous line already matched as the tail position; this line
 				// (typically an empty trailing line for a string ending in a line break)
@@ -176,6 +180,7 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 				indexInVisualLine1 = index - l.pos
 				vlStartInBytes1 = vlsStartInBytes + l.pos
 				y1 = y
+				scale1 = scale
 				break
 			}
 		} else if l.pos <= index && index < l.pos+len(l.str) {
@@ -184,34 +189,35 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 			indexInVisualLine1 = index - l.pos
 			vlStartInBytes1 = vlsStartInBytes + l.pos
 			y1 = y
+			scale1 = scale
 			break
 		}
-		y += style.LineHeight
+		y += style.LineHeight * scale
 	}
 
 	if !found0 && !found1 {
 		return TextPosition{}, TextPosition{}, 0
 	}
 
-	paddingY := textPadding(style.Face.TextFace(), style.LineHeight)
-
 	var pos0, pos1 TextPosition
 	if found0 {
 		x0 := oneLineLeft(width, line0, vlStartInBytes0, style)
 		x0 += advanceWithFaces(line0, vlStartInBytes0, indexInVisualLine0, style.Face, style.FaceRuns, style.TabWidth, true)
+		paddingY := style.visualLinePadding(scale0)
 		pos0 = TextPosition{
 			X:      x0,
 			Top:    y0 + paddingY,
-			Bottom: y0 + style.LineHeight - paddingY,
+			Bottom: y0 + style.LineHeight*scale0 - paddingY,
 		}
 	}
 	if found1 {
 		x1 := oneLineLeft(width, line1, vlStartInBytes1, style)
 		x1 += advanceWithFaces(line1, vlStartInBytes1, indexInVisualLine1, style.Face, style.FaceRuns, style.TabWidth, true)
+		paddingY := style.visualLinePadding(scale1)
 		pos1 = TextPosition{
 			X:      x1,
 			Top:    y1 + paddingY,
-			Bottom: y1 + style.LineHeight - paddingY,
+			Bottom: y1 + style.LineHeight*scale1 - paddingY,
 		}
 	}
 	if found0 && !found1 {
@@ -267,9 +273,20 @@ func AppendBoundsOfTextRange(dst []image.Rectangle, p *TextLayoutParams, start, 
 		lineRangeStart := max(start-renderingLineStart, 0)
 		lineRangeEnd := min(end-renderingLineStart, len(line))
 		dst = appendBoundsOfRangeInVisualLines(dst, p.Width, vls, renderingLineStart, yOrigin, lineRangeStart, lineRangeEnd, &p.Style)
-		yOrigin += p.Style.LineHeight * float64(len(vls))
+		yOrigin += visualLinesHeight(vls, renderingLineStart, &p.Style)
 	}
 	return dst
+}
+
+// visualLinesHeight returns the total height of vls. Each visualLine's pos is
+// relative to vls' first byte; vlsStartInBytes is the whole-text byte offset
+// of that byte.
+func visualLinesHeight(vls []visualLine, vlsStartInBytes int, style *Style) float64 {
+	var height float64
+	for _, vl := range vls {
+		height += style.visualLineHeight(vlsStartInBytes+vl.pos, vlsStartInBytes+vl.pos+len(vl.str))
+	}
+	return height
 }
 
 // appendBoundsOfRangeInVisualLines appends the rectangles covering
