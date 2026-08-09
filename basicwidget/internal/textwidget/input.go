@@ -27,8 +27,17 @@ func IsKeyRepeating(key ebiten.Key) bool {
 }
 
 // IsModifierPressed reports whether a modifier key was held at any point during
-// the current tick.
+// the current tick. A non-modifier key always reports false.
 func IsModifierPressed(key ebiten.Key) bool {
+	switch key {
+	case ebiten.KeyAlt, ebiten.KeyAltLeft, ebiten.KeyAltRight,
+		ebiten.KeyControl, ebiten.KeyControlLeft, ebiten.KeyControlRight,
+		ebiten.KeyMeta, ebiten.KeyMetaLeft, ebiten.KeyMetaRight,
+		ebiten.KeyShift, ebiten.KeyShiftLeft, ebiten.KeyShiftRight:
+	default:
+		return false
+	}
+
 	if ebiten.IsKeyPressed(key) {
 		return true
 	}
