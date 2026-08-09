@@ -168,6 +168,12 @@ func (t *TextInput) SetWrapMode(wrapMode WrapMode) {
 	t.textInput.SetWrapMode(wrapMode)
 }
 
+// SetLineHeight sets the line height at scale 1.
+// See [Text.SetLineHeight] for details.
+func (t *TextInput) SetLineHeight(lineHeight float64) {
+	t.textInput.SetLineHeight(lineHeight)
+}
+
 // SetCaretBlinking sets whether the caret blinks.
 // The default value is true.
 func (t *TextInput) SetCaretBlinking(caretBlinking bool) {
@@ -631,6 +637,10 @@ func (t *textInput) SetWrapMode(wrapMode WrapMode) {
 	t.text.Text().SetWrapMode(wrapMode)
 }
 
+func (t *textInput) SetLineHeight(lineHeight float64) {
+	t.text.Text().SetLineHeight(lineHeight)
+}
+
 func (t *textInput) SetCaretBlinking(caretBlinking bool) {
 	t.text.Text().SetCaretBlinking(caretBlinking)
 }
@@ -707,7 +717,7 @@ func (t *textInput) textInputPaddingInScrollableContent(context *guigui.Context,
 		if t.icon.HasImage() {
 			start = u / 4
 		}
-		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-float64(LineHeight(context))*t.text.Text().core.Scale()) / 2
+		y = int(float64(min(widgetBounds.Bounds().Dy(), u))-t.text.Text().scaledLineHeight(context)) / 2
 	}
 	start += t.paddingStart
 	end += t.paddingEnd

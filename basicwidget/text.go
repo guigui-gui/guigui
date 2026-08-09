@@ -218,6 +218,13 @@ func (t *Text) applyFontProperties(context *guigui.Context) {
 	t.core.SetLang(lang)
 }
 
+// scaledLineHeight returns the line height in pixels, with the text scale
+// applied.
+func (t *Text) scaledLineHeight(context *guigui.Context) float64 {
+	t.applyFontProperties(context)
+	return t.core.LineHeight()
+}
+
 // resolveTextColor returns the concrete color the value is drawn in: the
 // color of the base style, or the theme color for the enabled state, with the
 // opacity applied.
