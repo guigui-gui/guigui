@@ -27,16 +27,16 @@ type Contents struct {
 	// HTML is the UTF-8 HTML markup representation.
 	HTML []byte
 
-	// Image is the image representation, an encoded PNG stream. An image on
-	// the system clipboard in another encoding is not reported.
-	Image []byte
+	// PNG is the encoded PNG stream representation. An image on the system
+	// clipboard in another encoding is not reported.
+	PNG []byte
 }
 
 func (c Contents) clone() Contents {
 	return Contents{
-		Text:  bytes.Clone(c.Text),
-		HTML:  bytes.Clone(c.HTML),
-		Image: bytes.Clone(c.Image),
+		Text: bytes.Clone(c.Text),
+		HTML: bytes.Clone(c.HTML),
+		PNG:  bytes.Clone(c.PNG),
 	}
 }
 

@@ -106,7 +106,7 @@ func readContents() (Contents, error) {
 	if err != nil {
 		return Contents{}, err
 	}
-	contents.Image = png
+	contents.PNG = png
 
 	lastSequenceNumber = sequenceNumber
 	hasLastSequenceNumber = true
@@ -282,8 +282,8 @@ func writeContents(contents Contents) error {
 			return err
 		}
 	}
-	if contents.Image != nil {
-		if err := appendEntry(pngClipboardFormat, contents.Image); err != nil {
+	if contents.PNG != nil {
+		if err := appendEntry(pngClipboardFormat, contents.PNG); err != nil {
 			return err
 		}
 	}

@@ -80,7 +80,7 @@ func readContents() (Contents, error) {
 			case mimeHTML:
 				dst = &contents.HTML
 			case mimePNG:
-				dst = &contents.Image
+				dst = &contents.PNG
 			default:
 				continue
 			}
@@ -139,7 +139,7 @@ func writeContents(contents Contents) error {
 	}
 	setRepresentation(mimeText, contents.Text)
 	setRepresentation(mimeHTML, contents.HTML)
-	setRepresentation(mimePNG, contents.Image)
+	setRepresentation(mimePNG, contents.PNG)
 
 	clipboardItem := js.Global().Get("ClipboardItem").New(representations)
 	if _, err := await(clipboard.Call("write", []any{clipboardItem})); err != nil {
