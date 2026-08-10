@@ -470,15 +470,6 @@ func (c *x11Clipboard) read() (Contents, error) {
 		return Contents{}, nil
 	}
 
-	// The TIMESTAMP target reports when the owner acquired the selection, so
-	// an unchanged (owner, timestamp) pair means unchanged contents and the
-	// data transfers can be skipped. Owners that do not support TIMESTAMP are
-	// re-read on every poll.
-	timestamp, timestampOK := c.fetchTimestamp()
-	if timestampOK && c.hasLast && owner == c.lastOwner && timestamp == c.lastTimestamp {
-		return c.lastContents, nil
-	}
-
 	targets, err := c.fetchTargets()
 	if err != nil {
 		return Contents{}, err
@@ -486,6 +477,21 @@ func (c *x11Clipboard) read() (Contents, error) {
 	// An owner that does not answer TARGETS may still serve plain text.
 	if targets == nil {
 		targets = []uint{uint(c.atomUTF8)}
+	}
+
+	// The TIMESTAMP target reports when the owner acquired the selection, so
+	// an unchanged (owner, timestamp) pair means unchanged contents and the
+	// data transfers can be skipped. Owners that do not offer TIMESTAMP are
+	// re-read on every poll: requesting a target an owner does not advertise
+	// risks a reply that is not a timestamp at all, since some owners answer
+	// every request with the selection data.
+	var timestamp xTime
+	var timestampOK bool
+	if slices.Contains(targets, uint(c.atomTimestamp)) {
+		timestamp, timestampOK = c.fetchTimestamp()
+	}
+	if timestampOK && c.hasLast && owner == c.lastOwner && timestamp == c.lastTimestamp {
+		return c.lastContents, nil
 	}
 
 	var contents Contents
@@ -610,10 +616,11 @@ func (c *x11Clipboard) fetchData(target xAtom) ([]byte, error) {
 }
 
 // readProperty reads the entire current value of a property on c.win,
-// deleting it on completion. It loops on bytesAfter so a property whose value
-// exceeds what a single GetWindowProperty reply can carry is reassembled
-// correctly. Per X11, the server only deletes the property when the final
-// reply has bytesAfter == 0, so passing delete=true on every call is safe.
+// deleting it on completion. The returned type is None when the property does
+// not exist. It loops on bytesAfter so a property whose value exceeds what a
+// single GetWindowProperty reply can carry is reassembled correctly. Per X11,
+// the server only deletes the property when the final reply has
+// bytesAfter == 0, so passing delete=true on every call is safe.
 func (c *x11Clipboard) readProperty(property xAtom) ([]byte, xAtom, error) {
 	var value []byte
 	var typeAtom xAtom
@@ -715,9 +722,18 @@ func (c *x11Clipboard) readIncr(property xAtom) (out []byte, err error) {
 			}
 		}
 		timer.Reset(x11ReadTimeout)
-		chunk, _, err := c.readProperty(property)
+		chunk, typeAtom, err := c.readProperty(property)
 		if err != nil {
 			return nil, err
+		}
+		// A read can consume a chunk before the PropertyNewValue announcing it
+		// is processed: the INCR-typed property that starts the transfer
+		// produces one such event of its own, and the owner may write the next
+		// chunk while the previous event is still queued. An absent property
+		// is one of those already-consumed announcements; only a property that
+		// is present and empty is the end of the stream.
+		if typeAtom == xAtomNone {
+			continue
 		}
 		if len(chunk) == 0 {
 			return out, nil
