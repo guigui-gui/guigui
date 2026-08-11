@@ -36,6 +36,12 @@ func (t *Text) LineIndexFromTextIndexInBytes(textIndexInBytes int) int {
 	return t.contentCache.lineByteOffsets.LineIndexForByteOffset(textIndexInBytes)
 }
 
+// isLogicalLineHead reports whether textIndexInBytes is at the beginning of a
+// logical line.
+func (t *Text) isLogicalLineHead(textIndexInBytes int) bool {
+	return t.LineStartInBytes(t.LineIndexFromTextIndexInBytes(textIndexInBytes)) == textIndexInBytes
+}
+
 // CaretPositionAtTextIndexInBytes returns the on-screen top and bottom
 // endpoints of a caret drawn at byte offset textIndexInBytes. ok is false
 // when the offset is out of range or the caret's logical line is outside the

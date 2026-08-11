@@ -68,11 +68,11 @@ type textStore struct {
 	readRangedState func(state *piecetable.RangedState)
 
 	// textCommittedFunc, when non-nil, is invoked right after an IME commit
-	// mutates the committed text, with the start of the replaced range and
-	// the length of the replacing text in bytes. Like readRangedState, it is
+	// mutates the committed text, with the replaced byte range and the
+	// length of the replacing text in bytes. Like readRangedState, it is
 	// registered once via setTextCommittedFunc and shares the owning
 	// widget's lifetime.
-	textCommittedFunc func(startInBytes, newLenInBytes int)
+	textCommittedFunc func(startInBytes, endInBytes, newLenInBytes int)
 }
 
 // textEdit is a positional mutation of the committed text: a replacement of
@@ -177,7 +177,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	s.compositionSelEnd = 0
 	s.bumpGenerationForEdit(insStart, insEnd, len(insText))
 	if s.textCommittedFunc != nil {
-		s.textCommittedFunc(insStart, len(insText))
+		s.textCommittedFunc(insStart, insEnd, len(insText))
 	}
 }
 
@@ -197,7 +197,7 @@ func (s *textStore) commitText(text string) {
 	s.compositionSelEnd = 0
 	s.bumpGenerationForEdit(start, end, len(text))
 	if s.textCommittedFunc != nil {
-		s.textCommittedFunc(start, len(text))
+		s.textCommittedFunc(start, end, len(text))
 	}
 }
 
@@ -492,7 +492,7 @@ func (s *textStore) setRangedStateReadFunc(f func(state *piecetable.RangedState)
 
 // setTextCommittedFunc registers f to be invoked right after an IME commit
 // mutates the committed text.
-func (s *textStore) setTextCommittedFunc(f func(startInBytes, newLenInBytes int)) {
+func (s *textStore) setTextCommittedFunc(f func(startInBytes, endInBytes, newLenInBytes int)) {
 	s.textCommittedFunc = f
 }
 

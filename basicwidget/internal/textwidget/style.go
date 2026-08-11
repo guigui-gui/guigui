@@ -253,6 +253,39 @@ func (t *Text) OnInsertionStyleReset(f func(context *guigui.Context)) {
 	guigui.SetEventHandler(t, textEventInsertionStyleReset, f)
 }
 
+// adoptStylesForInsertedText applies the ranged style overrides the text
+// inserted by a mutation replacing [startInBytes, endInBytes) with
+// newLenInBytes bytes carries: the style adopted at a logical line's head,
+// and the insertion style over it.
+func (t *Text) adoptStylesForInsertedText(startInBytes, endInBytes, newLenInBytes int) {
+	t.adoptStyleAtLineHeadIfNeeded(t.ensureOverrideStyleRuns(), startInBytes, endInBytes, newLenInBytes, t.store.TextLengthInBytes())
+	t.materializeInsertionStyle(startInBytes, newLenInBytes)
+}
+
+// adoptStyleAtLineHeadIfNeeded replaces the overrides in runs that the text
+// inserted at the head of a logical line took from the byte before it with
+// those of the byte after it. [startInBytes, endInBytes) is the replaced
+// range and newLenInBytes the length of the inserted text, in the offsets of
+// the textLenInBytes-byte text runs indexes. A mutation that replaced text,
+// or one with no byte after the inserted text, keeps the overrides it took.
+func (t *Text) adoptStyleAtLineHeadIfNeeded(runs *textstyle.Runs, startInBytes, endInBytes, newLenInBytes, textLenInBytes int) {
+	if startInBytes != endInBytes || newLenInBytes <= 0 {
+		return
+	}
+	insertedEnd := startInBytes + newLenInBytes
+	if insertedEnd >= textLenInBytes {
+		return
+	}
+	if !t.isLogicalLineHead(startInBytes) {
+		return
+	}
+	style := runs.StyleAt(insertedEnd)
+	runs.Reset(startInBytes, insertedEnd)
+	if !style.IsZero() {
+		runs.ApplyStyle(startInBytes, insertedEnd, style)
+	}
+}
+
 // materializeInsertionStyle applies the insertion style as ranged overrides over
 // the inserted byte span [startInBytes, startInBytes+newLenInBytes) and
 // resets it. A mutation that inserts nothing resets the insertion style
@@ -313,15 +346,20 @@ func (t *Text) ReadEffectiveStyleRunsInRange(dst *textstyle.Runs, startInBytes, 
 
 // EffectiveStyleAt returns the effective style that text typed at
 // textIndexInBytes adopts: the resolved base style with the overrides
-// adopted from the byte right before the index merged on top.
+// adopted from the neighboring byte merged on top.
 func (t *Text) EffectiveStyleAt(textIndexInBytes int) textstyle.Style {
 	return t.resolvedBaseStyle().Merge(t.styleAtCaret(textIndexInBytes))
 }
 
 // styleAtCaret returns the ranged override style that text typed at
-// textIndexInBytes adopts: the style overriding the byte right before the
-// index, or a zero style at the start of the value.
+// textIndexInBytes adopts: the style overriding the byte at the index at a
+// logical line's head, otherwise the one overriding the byte right before
+// it. A head with no byte at the index falls back to the byte before, and
+// the start of an empty value has neither.
 func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
+	if textIndexInBytes < t.store.TextLengthInBytes() && t.isLogicalLineHead(textIndexInBytes) {
+		return t.ensureOverrideStyleRuns().StyleAt(textIndexInBytes)
+	}
 	if textIndexInBytes <= 0 {
 		return textstyle.Style{}
 	}
@@ -509,8 +547,10 @@ func (t *Text) renderingStyleRuns() *textstyle.Runs {
 		selStart, selEnd = selEnd, selStart
 	}
 	compLen := t.store.UncommittedTextLengthInBytes()
+	renderingLen := t.store.TextLengthInBytes() - (selEnd - selStart) + compLen
 	t.renderingStyleRunsBuf.CopyFrom(t.ensureOverrideStyleRuns())
 	t.renderingStyleRunsBuf.Replace(selStart, selEnd, compLen)
+	t.adoptStyleAtLineHeadIfNeeded(&t.renderingStyleRunsBuf, selStart, selEnd, compLen, renderingLen)
 	if !t.insertionStyle.IsZero() {
 		t.renderingStyleRunsBuf.ApplyStyle(selStart, selStart+compLen, t.insertionStyle)
 	}

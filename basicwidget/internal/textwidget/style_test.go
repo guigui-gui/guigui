@@ -259,7 +259,8 @@ func TestTextEffectiveStyleAt(t *testing.T) {
 	txt.SetUnderlineInRange(1, 4, true)
 
 	// The effective style at an index is the style that text typed there
-	// adopts: the style of the byte right before the index.
+	// adopts: the style of the byte right before the index, except at a
+	// logical line's head, where it is the byte at the index.
 	tests := []struct {
 		caret int
 		want  bool

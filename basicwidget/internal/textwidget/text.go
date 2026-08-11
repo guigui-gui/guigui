@@ -656,7 +656,7 @@ func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.R
 		runs.ApplyAt(styleRuns, start)
 		t.resetInsertionStyle()
 	} else {
-		t.materializeInsertionStyle(start, len(text))
+		t.adoptStylesForInsertedText(start, end, len(text))
 	}
 
 	t.resetCachedTextSize()
@@ -1084,7 +1084,7 @@ func (t *Text) ensureStoreCallbacks() {
 		return
 	}
 	t.store.setRangedStateReadFunc(t.readRangedState)
-	t.store.setTextCommittedFunc(t.materializeInsertionStyle)
+	t.store.setTextCommittedFunc(t.adoptStylesForInsertedText)
 	t.storeCallbacksSet = true
 }
 
