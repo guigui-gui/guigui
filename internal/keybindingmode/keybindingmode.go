@@ -21,8 +21,6 @@ const (
 )
 
 // SystemMode returns the mode of the current system.
-//
-// SystemMode never returns ControlEmacs: no system exposes its key theme in a way that can be read here.
 func SystemMode() Mode {
 	return systemMode()
 }
