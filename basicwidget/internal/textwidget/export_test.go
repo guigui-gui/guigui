@@ -20,6 +20,10 @@ func ShiftClickAnchor(start, end int, shiftSide SelectionSide, idx int) int {
 	return shiftClickAnchor(start, end, shiftSide, idx)
 }
 
+func (t *Text) FindWordBoundariesForDoubleClick(idx int) (start, end int) {
+	return t.findWordBoundariesForDoubleClick(idx)
+}
+
 func (t *Text) PrevWordStart(position int) int {
 	return t.prevWordStart(position)
 }

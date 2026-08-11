@@ -25,6 +25,21 @@ func (t *Text) findWordBoundaries(idx int) (start, end int) {
 	return s + lineStart, e + lineStart
 }
 
+// findWordBoundariesForDoubleClick returns the byte range a double click at idx
+// selects: the line break at idx when the logical line ends there, and the word
+// containing idx otherwise.
+func (t *Text) findWordBoundariesForDoubleClick(idx int) (start, end int) {
+	line, lineStart := t.stringValueForLineContaining(idx)
+	// A double click resolves to the offset at the line's end wherever it
+	// lands in the space after the line, so the break starting there is what
+	// the click points at.
+	if pos, l := textutil.FirstLineBreakPositionAndLen(line[idx-lineStart:]); pos == 0 {
+		return idx, idx + l
+	}
+	s, e := textutil.FindWordBoundaries(line, idx-lineStart)
+	return s + lineStart, e + lineStart
+}
+
 // prevPositionOnGraphemes returns the byte offset of the grapheme cluster
 // boundary that immediately precedes position. Grapheme breaks always
 // exist around line-break characters (UAX #29 GB4/GB5), so the previous
@@ -345,7 +360,7 @@ func (t *Text) handleClick(context *guigui.Context, textBounds image.Rectangle, 
 			}
 		}
 	case 2:
-		start, end := t.findWordBoundaries(idx)
+		start, end := t.findWordBoundariesForDoubleClick(idx)
 		t.dragState.start(cursorPosition, start, end)
 		t.setSelection(start, end, SelectionSideNone, false)
 	case 3:
