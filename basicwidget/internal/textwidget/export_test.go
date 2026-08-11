@@ -8,7 +8,6 @@ import (
 	"slices"
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
-	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/clipboard"
 )
 
@@ -85,8 +84,17 @@ func (t *Text) HandleFocusChanged(focused bool) {
 	t.handleFocusChanged(nil, focused)
 }
 
-func AppendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
-	return appendFaceRunsThroughComposition(dst, src, selStart, selEnd, compLen)
+// SetCompositionByIME replaces the active composition through the store's IME
+// composition path.
+func (t *Text) SetCompositionByIME(text string, selStartInBytes, selEndInBytes int) {
+	t.ensureStoreCallbacks()
+	t.store.setComposition(text, selStartInBytes, selEndInBytes)
+}
+
+// RenderingStyleRuns returns the ranged style overrides in rendering-text byte
+// offsets.
+func (t *Text) RenderingStyleRuns() []textstyle.Run {
+	return slices.Collect(t.renderingStyleRuns().All())
 }
 
 // SetClipboardForTest substitutes the OS clipboard access with read and

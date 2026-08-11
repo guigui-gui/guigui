@@ -102,8 +102,12 @@ func intersectingStyleRuns(runs []StyleRun, start, end int) []StyleRun {
 // byte; vlsStartInBytes is the whole-text byte offset of that byte. ok is
 // false when either endpoint cannot be resolved.
 func rangePositionsInVisualLines(layoutWidth int, vls []visualLine, vlsStartInBytes, start, end int, style *Style) (posStart, posEnd TextPosition, ok bool) {
-	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, start, style)
-	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, end, style)
+	var vlsEndInBytes int
+	if n := len(vls); n > 0 {
+		vlsEndInBytes = vlsStartInBytes + vls[n-1].pos + len(vls[n-1].str)
+	}
+	posStart0, posStart1, countStart := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, vlsEndInBytes, start, style)
+	posEnd0, _, countEnd := textPositionFromIndexInVisualLines(layoutWidth, slices.Values(vls), vlsStartInBytes, vlsEndInBytes, end, style)
 	if countStart == 0 || countEnd == 0 {
 		return TextPosition{}, TextPosition{}, false
 	}
@@ -208,7 +212,7 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 		// scale sizes this line's box; baselineShift moves the text from the
 		// unscaled baseline to this line's, leaving the text where it is when
 		// nothing on the line is scaled.
-		scale := options.Style.visualLineScale(vl.pos, vl.pos+len(vl.str))
+		scale := options.Style.visualLineScale(vl.pos, vl.str, vl.pos+len(vl.str) == len(str))
 		lineHeight := options.LineHeight * scale
 		baselineShift := options.Style.baselineOffset(scale) - options.Style.baselineOffset(1)
 

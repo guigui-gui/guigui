@@ -87,8 +87,8 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		hasComp = true
 
 		if p.Style.WrapMode != WrapModeNone {
-			committedH := MeasureLogicalLineHeight(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
-			renderingH := MeasureLogicalLineHeight(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			committedH := MeasureLogicalLineHeight(p.Width, committedSelectionLine, p.Style.WrapMode, p.Style.Face, p.CommittedFaceRuns, Insertion{}, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
+			renderingH := MeasureLogicalLineHeight(p.Width, renderingSelectionLine, p.Style.WrapMode, p.Style.Face, p.Style.FaceRuns, Insertion{}, cs, p.Style.LineHeight, p.Style.LineHeightMode, p.Style.TabWidth, p.Style.KeepTailingSpace)
 			selectionLineHeightDelta = renderingH - committedH
 		}
 	}
@@ -114,6 +114,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 		keepTailingSpace:   p.Style.KeepTailingSpace,
 		wrapMode:           p.Style.WrapMode,
 		faceRuns:           p.Style.FaceRuns,
+		insertion:          p.Style.Insertion,
 		lineHeight:         p.Style.LineHeight,
 		lineHeightMode:     p.Style.LineHeightMode,
 		composition:        compInfo,
@@ -171,7 +172,7 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 	var pos int
 	if p.Style.WrapMode != WrapModeNone && !faceRunsIntersect(p.Style.FaceRuns, renderingLineStart, renderingLineStart+len(line)) {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, vlStarts), renderingLineStart, &p.Style)
+			pos = textIndexFromPositionInVisualLines(p.Width, localPos, visualLinesFromStarts(line, vlStarts), renderingLineStart, renderingLineStart+len(line), &p.Style)
 			return renderingLineStart + pos
 		}
 	}
@@ -182,9 +183,10 @@ func TextIndexFromPosition(p *TextLayoutParams, position image.Point) int {
 // textIndexFromPositionInVisualLines returns the byte offset within a logical
 // line closest to position, given that line's visual lines. The position's Y
 // is relative to the top of the logical line. style's face runs use
-// whole-text byte offsets; vlsStartInBytes is the whole-text byte offset of
-// vls' first byte.
-func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], vlsStartInBytes int, style *Style) int {
+// whole-text byte offsets; vlsStartInBytes and vlsEndInBytes are the
+// whole-text byte offsets of vls' first byte and of the end of the text vls
+// decompose.
+func textIndexFromPositionInVisualLines(width int, position image.Point, vls iter.Seq[visualLine], vlsStartInBytes, vlsEndInBytes int, style *Style) int {
 	// Determine the visual line first.
 	padding := textPadding(style.Face.TextFace(), style.LineHeight)
 	targetY := float64(position.Y) + padding
@@ -195,7 +197,7 @@ func textIndexFromPositionInVisualLines(width int, position image.Point, vls ite
 	for l := range vls {
 		vlStr = l.str
 		pos = l.pos
-		h := style.visualLineHeight(vlsStartInBytes+l.pos, vlsStartInBytes+l.pos+len(l.str))
+		h := style.visualLineHeight(vlsStartInBytes+l.pos, l.str, vlsStartInBytes+l.pos+len(l.str) == vlsEndInBytes)
 		if y+h > targetY {
 			break
 		}
@@ -226,7 +228,7 @@ func textIndexFromPosition(width int, position image.Point, str string, style *S
 	}) {
 		vlStr = l.str
 		pos = l.pos
-		h := style.visualLineHeight(l.pos, l.pos+len(l.str))
+		h := style.visualLineHeight(l.pos, l.str, l.pos+len(l.str) == len(str))
 		if y+h > targetY {
 			break
 		}

@@ -344,14 +344,14 @@ func cachedVisualLineStarts(width int, line string, wrapMode WrapMode, face font
 // at the given width. This is the per-logical-line counterpart of
 // [MeasureHeight] and is used by virtualized layout to size lines one at a
 // time without scanning the whole document.
-func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
-	if !scalesLineHeights(lineHeightMode, faceRuns) {
+func MeasureLogicalLineHeight(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, insertion Insertion, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
+	if !scalesLineHeights(lineHeightMode, faceRuns, &insertion) {
 		return lineHeight * float64(VisualLineCountForLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace))
 	}
 	var height float64
 	for vl := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
 		start := logicalLineStartInBytes + vl.pos
-		height += lineHeight * maxFaceScale(faceRuns, face, start, start+len(vl.str))
+		height += lineHeight * visualLineScaleWithFaces(faceRuns, &insertion, face, start, vl.str, vl.pos+len(vl.str) == len(logicalLine))
 	}
 	return height
 }
@@ -427,7 +427,7 @@ func CachedVisualLineMaxCaretX(width int, logicalLine string, wrapMode WrapMode,
 
 // MeasureLogicalLine returns the rendered width and height of one logical
 // line at the given width. Per-logical-line counterpart of [Measure].
-func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, insertion Insertion, logicalLineStartInBytes int, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range visualLinesFromLogicalLine(width, logicalLine, wrapMode, face, faceRuns, logicalLineStartInBytes, tabWidth, keepTailingSpace) {
 		vlStr := l.str
@@ -440,9 +440,9 @@ func MeasureLogicalLine(width int, logicalLine string, wrapMode WrapMode, face f
 			vlWidth = advanceWithFaces(vlStr, logicalLineStartInBytes+l.pos, len(vlStr), face, faceRuns, tabWidth, false)
 		}
 		maxWidth = max(maxWidth, vlWidth)
-		if scalesLineHeights(lineHeightMode, faceRuns) {
+		if scalesLineHeights(lineHeightMode, faceRuns, &insertion) {
 			start := logicalLineStartInBytes + l.pos
-			height += lineHeight * maxFaceScale(faceRuns, face, start, start+len(l.str))
+			height += lineHeight * visualLineScaleWithFaces(faceRuns, &insertion, face, start, l.str, l.pos+len(l.str) == len(logicalLine))
 			continue
 		}
 		height += lineHeight
@@ -463,7 +463,7 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, logicalLi
 	if index < 0 || index > len(logicalLine) {
 		return TextPosition{}, TextPosition{}, 0
 	}
-	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, index, style)
+	return textPositionFromIndexInVisualLines(width, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine), index, style)
 }
 
 // TextIndexFromPositionInLogicalLine returns the byte offset within one logical line
@@ -472,5 +472,5 @@ func TextPositionFromIndexInLogicalLine(width int, logicalLine string, logicalLi
 // logicalLineStartInBytes is logicalLine's start offset in that text.
 // Counterpart of [TextIndexFromPosition].
 func TextIndexFromPositionInLogicalLine(width int, position image.Point, logicalLine string, logicalLineStartInBytes int, style *Style) int {
-	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, style)
+	return textIndexFromPositionInVisualLines(width, position, visualLinesFromLogicalLine(width, logicalLine, style.WrapMode, style.Face, style.FaceRuns, logicalLineStartInBytes, style.TabWidth, style.KeepTailingSpace), logicalLineStartInBytes, logicalLineStartInBytes+len(logicalLine), style)
 }

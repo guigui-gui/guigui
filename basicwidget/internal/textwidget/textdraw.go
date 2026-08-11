@@ -40,7 +40,7 @@ func (t *Text) textToDraw(context *guigui.Context, showComposition bool) string 
 // committedFaceRuns and renderingFaceRuns are the ranged styles' face runs
 // in committed-text and rendering-text byte offsets respectively; without an
 // active composition they are the same slice.
-func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visibleBounds image.Rectangle, committedFaceRuns, renderingFaceRuns []textutil.FaceRun) (txt string, byteStart int, yShift int, restricted bool) {
+func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visibleBounds image.Rectangle, committedFaceRuns, renderingFaceRuns []textutil.FaceRun, insertion textutil.Insertion) (txt string, byteStart int, yShift int, restricted bool) {
 	t.ensureLineByteOffsets()
 	n := t.contentCache.lineByteOffsets.LineCount()
 
@@ -145,6 +145,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 			TabWidth:         t.actualTabWidth(context),
 			KeepTailingSpace: t.keepTailingSpace,
 			FaceRuns:         renderingFaceRuns,
+			Insertion:        insertion,
 			WrapMode:         t.wrapMode,
 			Composition:      compInfo,
 		})
@@ -189,6 +190,7 @@ func (t *Text) restrictedTextToDraw(context *guigui.Context, textBounds, visible
 		TabWidth:         t.actualTabWidth(context),
 		KeepTailingSpace: t.keepTailingSpace,
 		FaceRuns:         renderingFaceRuns,
+		Insertion:        insertion,
 		WrapMode:         t.wrapMode,
 		Composition:      compInfo,
 	})
@@ -265,6 +267,8 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 	op.Style.VerticalAlign = t.baseStyle.vAlign
 	op.Style.TabWidth = t.actualTabWidth(context)
 	op.Style.KeepTailingSpace = t.keepTailingSpace
+	insertion := t.insertion(context, false)
+	op.Style.Insertion = insertion
 	op.LayoutWidth = t.LayoutWidth(textBounds)
 	if !t.editable {
 		op.Style.EllipsisString = t.ellipsisString
@@ -321,7 +325,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 		return
 	}
 
-	txt, byteStart, yShift, restricted := t.restrictedTextToDraw(context, textBounds, widgetBounds.VisibleBounds(), committedFaceRuns, renderingFaceRuns)
+	txt, byteStart, yShift, restricted := t.restrictedTextToDraw(context, textBounds, widgetBounds.VisibleBounds(), committedFaceRuns, renderingFaceRuns, insertion)
 	if restricted {
 		textBounds.Min.Y += yShift
 		// yShift already includes the alignment-specific portion of the
@@ -340,6 +344,7 @@ func (t *Text) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, 
 			op.CompositionActiveEnd -= byteStart
 		}
 	}
+	op.Style.Insertion = insertionToDraw(insertion, byteStart, len(txt))
 	t.appendFaceRunsToDraw(op, renderingFaceRuns, byteStart, len(txt))
 	t.appendStyleRunsToDraw(op, byteStart, len(txt))
 	textutil.Draw(textBounds, dst, txt, op)
@@ -363,31 +368,29 @@ func (t *Text) appendFaceRunsToDraw(op *textutil.DrawOptions, faceRuns []textuti
 	}
 }
 
+// insertionToDraw returns insertion rebased to the drawn byte window
+// [byteStart, byteStart+txtLen], or the zero value when it sits outside.
+func insertionToDraw(insertion textutil.Insertion, byteStart, txtLen int) textutil.Insertion {
+	insertion.IndexInBytes -= byteStart
+	if insertion.IndexInBytes < 0 || insertion.IndexInBytes > txtLen {
+		return textutil.Insertion{}
+	}
+	return insertion
+}
+
 // appendStyleRunsToDraw appends the ranged style overrides that intersect
 // the drawn byte window [byteStart, byteStart+txtLen) to op.StyleRuns,
-// rebased to the window. While an IME composition is active, the runs'
-// committed-text offsets are transformed to the rendering text, whose
-// composition splice replaces the selection like an edit.
+// rebased to the window. While an IME composition is active, the overrides
+// are the rendering-text ones, so the composition draws with the style it
+// will carry once committed.
 func (t *Text) appendStyleRunsToDraw(op *textutil.DrawOptions, byteStart, txtLen int) {
-	compLen := t.store.UncommittedTextLengthInBytes()
-	var selStart, selEnd int
-	if compLen > 0 {
-		selStart, selEnd = t.store.Selection()
-		if selStart > selEnd {
-			selStart, selEnd = selEnd, selStart
-		}
+	styleRuns := t.ensureOverrideStyleRuns()
+	if t.store.UncommittedTextLengthInBytes() > 0 {
+		styleRuns = t.renderingStyleRuns()
 	}
-	for run := range t.ensureOverrideStyleRuns().All() {
-		r := TextRange{StartInBytes: run.Start, EndInBytes: run.End}
-		if compLen > 0 {
-			var ok bool
-			r, ok = replaceTextRange(r, selStart, selEnd, compLen)
-			if !ok {
-				continue
-			}
-		}
-		start := r.StartInBytes - byteStart
-		end := r.EndInBytes - byteStart
+	for run := range styleRuns.All() {
+		start := run.Start - byteStart
+		end := run.End - byteStart
 		if end <= 0 || start >= txtLen {
 			continue
 		}
@@ -440,5 +443,6 @@ func (t *Text) DrawPlainString(context *guigui.Context, widgetBounds *guigui.Wid
 	op.DrawComposition = false
 	op.StyleRuns = slices.Delete(op.StyleRuns, 0, len(op.StyleRuns))
 	op.Style.FaceRuns = nil
+	op.Style.Insertion = textutil.Insertion{}
 	textutil.Draw(textBounds, dst, str, op)
 }

@@ -9,8 +9,9 @@ import (
 	"golang.org/x/text/language"
 )
 
-// Writer receives the serialized style properties of [Runs.WriteStateKey]
-// and [Runs.WriteMetricStateKey]. guigui.StateKeyWriter satisfies it.
+// Writer receives the serialized style properties of [Runs.WriteStateKey],
+// [Runs.WriteMetricStateKey] and [Style.WriteMetricStateKey].
+// guigui.StateKeyWriter satisfies it.
 type Writer interface {
 	WriteBool(v bool)
 	WriteInt(v int)
@@ -41,6 +42,11 @@ func (r *Runs) WriteMetricStateKey(w Writer) {
 		w.WriteInt(run.End)
 		run.Style.writeMetricProperties(w)
 	}
+}
+
+// WriteMetricStateKey writes the style's metric-affecting properties into w.
+func (s Style) WriteMetricStateKey(w Writer) {
+	s.writeMetricProperties(w)
 }
 
 // AffectsFaceSelection reports whether the style overrides a property that

@@ -83,17 +83,19 @@ type Text struct {
 	// [Text.textHeight] through [Text.restrictedTextToDraw]).
 	faceRunsBuf []textutil.FaceRun
 
-	// renderingFaceRunsBuf is the reusable buffer for the face runs
-	// transformed to rendering-text offsets by
-	// [appendFaceRunsThroughComposition] while an IME composition is
-	// active. Same nesting-safe truncation discipline as
-	// [Text.faceRunsBuf].
+	// renderingFaceRunsBuf is the reusable buffer for the face runs of
+	// [Text.renderingStyleRuns] while an IME composition is active. Same
+	// nesting-safe truncation discipline as [Text.faceRunsBuf].
 	renderingFaceRunsBuf []textutil.FaceRun
 
-	// lastMetricOverrideStyleRunsFingerprint is the metric style overrides'
-	// fingerprint at the last size measurement, so cached sizes reset when
-	// a metric override changes.
-	lastMetricOverrideStyleRunsFingerprint uint64
+	// renderingStyleRunsBuf is the reusable buffer for
+	// [Text.renderingStyleRuns] results.
+	renderingStyleRunsBuf textstyle.Runs
+
+	// lastMetricStyleFingerprint is the metric styles' fingerprint at the
+	// last size measurement, so cached sizes reset when a metric style
+	// changes.
+	lastMetricStyleFingerprint [16]byte
 
 	selectable bool
 	editable   bool
@@ -315,6 +317,10 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	ch := t.contentHashForStateKey()
 	_, _ = w.Write(ch[:])
 	t.ensureOverrideStyleRuns().WriteStateKey(w)
+	// Only the insertion style's metric properties are written: they size the
+	// caret and its line, while its other properties stay invisible until the
+	// style materializes on the next insertion.
+	t.insertionStyle.WriteMetricStateKey(w)
 }
 
 func (t *Text) resetCachedTextSize() {

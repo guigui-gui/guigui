@@ -328,10 +328,10 @@ func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
 	return t.ensureOverrideStyleRuns().StyleAt(textIndexInBytes - 1)
 }
 
-// metricHashWriter adapts an FNV-1a hash to [textstyle.Writer] for
+// metricHashWriter adapts an FNV-1a 128-bit hash to [textstyle.Writer] for
 // fingerprinting the metric style properties.
 type metricHashWriter struct {
-	h      hash.Hash64
+	h      hash.Hash
 	buf    [8]byte
 	strbuf []byte
 }
@@ -375,35 +375,46 @@ func (w *metricHashWriter) WriteString(v string) {
 	_, _ = w.h.Write(w.strbuf)
 }
 
-// metricOverrideStyleRunsFingerprint fingerprints the metric properties of
-// the ranged style overrides.
-func (t *Text) metricOverrideStyleRunsFingerprint() uint64 {
-	h := fnv.New64a()
+// metricStyleFingerprint fingerprints the metric properties of the ranged
+// style overrides and of the insertion point, which take part in the measured
+// size.
+func (t *Text) metricStyleFingerprint() [16]byte {
+	h := fnv.New128a()
 	w := metricHashWriter{h: h}
 	t.ensureOverrideStyleRuns().WriteMetricStateKey(&w)
-	return h.Sum64()
+	// The caret's position only takes part in the size where the text typed
+	// there would carry a style, so a caret move within unstyled text leaves
+	// the fingerprint alone.
+	start, _ := t.store.Selection()
+	if adopted := t.styleAtCaret(start); !adopted.IsZero() || !t.insertionStyle.IsZero() {
+		w.WriteInt(start)
+		adopted.WriteMetricStateKey(&w)
+		t.insertionStyle.WriteMetricStateKey(&w)
+	}
+	var fp [16]byte
+	h.Sum(fp[:0])
+	return fp
 }
 
-// invalidateSizeCacheForMetricOverrideStyleRuns resets the cached text
-// sizes when the metric style overrides have changed since the last
-// measurement.
-func (t *Text) invalidateSizeCacheForMetricOverrideStyleRuns() {
-	if fp := t.metricOverrideStyleRunsFingerprint(); fp != t.lastMetricOverrideStyleRunsFingerprint {
-		t.lastMetricOverrideStyleRunsFingerprint = fp
+// invalidateSizeCacheForMetricStyles resets the cached text sizes when the
+// metric styles have changed since the last measurement.
+func (t *Text) invalidateSizeCacheForMetricStyles() {
+	if fp := t.metricStyleFingerprint(); fp != t.lastMetricStyleFingerprint {
+		t.lastMetricStyleFingerprint = fp
 		t.resetCachedTextSize()
 	}
 }
 
-// appendFaceRunsForStyle appends the face runs derived from the ranged style
-// overrides' metric properties to runs and returns the extended slice, with
-// byte offsets into the committed text. Masked values append no face runs.
-func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.Context, forceBold bool) []textutil.FaceRun {
+// appendFaceRunsForStyle appends the face runs derived from styleRuns' metric
+// properties to runs and returns the extended slice, in styleRuns' byte
+// offsets. Masked values append no face runs.
+func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, styleRuns *textstyle.Runs, context *guigui.Context, forceBold bool) []textutil.FaceRun {
 	if t.masking() {
 		return runs
 	}
 	base := t.forceBoldedBaseStyle(forceBold)
 	liga := t.ligaturesEnabled()
-	for run := range t.ensureOverrideStyleRuns().All() {
+	for run := range styleRuns.All() {
 		if !run.Style.AffectsFaceSelection() {
 			continue
 		}
@@ -416,6 +427,44 @@ func (t *Text) appendFaceRunsForStyle(runs []textutil.FaceRun, context *guigui.C
 		})
 	}
 	return runs
+}
+
+// insertion returns the layout's insertion point: the face the text typed at
+// a collapsed caret would use, at the caret. That is the style adopted from
+// the byte before the caret with the insertion style laid over, so the caret
+// and its line take the size of the text they are about to receive. The zero
+// value means the layout has none, which is also the case while an IME
+// composition is active, as the composition text carries the insertion style
+// itself.
+func (t *Text) insertion(context *guigui.Context, forceBold bool) textutil.Insertion {
+	if !t.editable || t.masking() {
+		return textutil.Insertion{}
+	}
+	if t.store.UncommittedTextLengthInBytes() > 0 {
+		return textutil.Insertion{}
+	}
+	start, end := t.store.Selection()
+	if start < 0 || start != end {
+		return textutil.Insertion{}
+	}
+	adopted := t.styleAtCaret(start)
+	if adopted.IsZero() && t.insertionStyle.IsZero() {
+		return textutil.Insertion{}
+	}
+	base := t.forceBoldedBaseStyle(forceBold)
+	style := base.Merge(adopted).Merge(t.insertionStyle)
+	liga := t.ligaturesEnabled()
+	attrs := t.baseStyle.faceAttributes(style, liga)
+	// A face no larger than the base one leaves every line height as it is,
+	// as the base face takes part in each of them.
+	if attrs.Size <= t.baseStyle.faceAttributes(base, liga).Size {
+		return textutil.Insertion{}
+	}
+	family, _ := style.Family()
+	return textutil.Insertion{
+		Face:         font.NewFace(context, family, attrs),
+		IndexInBytes: start,
+	}
 }
 
 // faceRunsMark records the face-run buffer lengths at an
@@ -438,17 +487,34 @@ func (t *Text) acquireFaceRuns(context *guigui.Context, forceBold, showCompositi
 		committed: len(t.faceRunsBuf),
 		rendering: len(t.renderingFaceRunsBuf),
 	}
-	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, context, forceBold)
+	t.faceRunsBuf = t.appendFaceRunsForStyle(t.faceRunsBuf, t.ensureOverrideStyleRuns(), context, forceBold)
 	committed = t.faceRunsBuf[mark.committed:]
 	rendering = committed
-	if showComposition && len(committed) > 0 {
-		if compLen := t.store.UncommittedTextLengthInBytes(); compLen > 0 {
-			selStart, selEnd := t.store.Selection()
-			t.renderingFaceRunsBuf = appendFaceRunsThroughComposition(t.renderingFaceRunsBuf, committed, selStart, selEnd, compLen)
-			rendering = t.renderingFaceRunsBuf[mark.rendering:]
-		}
+	if showComposition && t.store.UncommittedTextLengthInBytes() > 0 {
+		t.renderingFaceRunsBuf = t.appendFaceRunsForStyle(t.renderingFaceRunsBuf, t.renderingStyleRuns(), context, forceBold)
+		rendering = t.renderingFaceRunsBuf[mark.rendering:]
 	}
 	return committed, rendering, mark
+}
+
+// renderingStyleRuns returns the ranged style overrides in rendering-text
+// byte offsets: the committed overrides moved through the active
+// composition's splice, with the insertion style applied over the composition
+// so it renders as the style it will carry once committed. The returned runs
+// are a buffer owned by t, valid until the next call; the caller must have an
+// active composition.
+func (t *Text) renderingStyleRuns() *textstyle.Runs {
+	selStart, selEnd := t.store.Selection()
+	if selStart > selEnd {
+		selStart, selEnd = selEnd, selStart
+	}
+	compLen := t.store.UncommittedTextLengthInBytes()
+	t.renderingStyleRunsBuf.CopyFrom(t.ensureOverrideStyleRuns())
+	t.renderingStyleRunsBuf.Replace(selStart, selEnd, compLen)
+	if !t.insertionStyle.IsZero() {
+		t.renderingStyleRunsBuf.ApplyStyle(selStart, selStart+compLen, t.insertionStyle)
+	}
+	return &t.renderingStyleRunsBuf
 }
 
 // releaseFaceRuns truncates the face-run buffers back to their lengths at
@@ -456,25 +522,4 @@ func (t *Text) acquireFaceRuns(context *guigui.Context, forceBold, showCompositi
 func (t *Text) releaseFaceRuns(mark faceRunsMark) {
 	t.faceRunsBuf = slices.Delete(t.faceRunsBuf, mark.committed, len(t.faceRunsBuf))
 	t.renderingFaceRunsBuf = slices.Delete(t.renderingFaceRunsBuf, mark.rendering, len(t.renderingFaceRunsBuf))
-}
-
-// appendFaceRunsThroughComposition appends src's committed-text face runs to
-// dst with their offsets transformed to the rendering text, whose composition
-// splice replaces the committed byte range [selStart, selEnd) with compLen
-// bytes, with the movement rules of [replaceTextRanges]. A run whose text the
-// splice fully replaces is dropped.
-func appendFaceRunsThroughComposition(dst, src []textutil.FaceRun, selStart, selEnd, compLen int) []textutil.FaceRun {
-	if selStart > selEnd {
-		selStart, selEnd = selEnd, selStart
-	}
-	for _, run := range src {
-		r, ok := replaceTextRange(TextRange{StartInBytes: run.Start, EndInBytes: run.End}, selStart, selEnd, compLen)
-		if !ok {
-			continue
-		}
-		run.Start = r.StartInBytes
-		run.End = r.EndInBytes
-		dst = append(dst, run)
-	}
-	return dst
 }

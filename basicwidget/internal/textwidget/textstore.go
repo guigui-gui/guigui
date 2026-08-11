@@ -113,14 +113,19 @@ func (s *textStore) onNewIMESession() *textinput.SessionOptions {
 }
 
 func (s *textStore) onIMEComposition(c *textinput.Composition) {
-	text := c.Text()
 	selStart, selEnd := c.SelectionRangeInBytes()
-	if s.composition == text && s.compositionSelStart == selStart && s.compositionSelEnd == selEnd {
+	s.setComposition(c.Text(), selStart, selEnd)
+}
+
+// setComposition replaces the active composition with text, selected in
+// [selStartInBytes, selEndInBytes) relative to text's start.
+func (s *textStore) setComposition(text string, selStartInBytes, selEndInBytes int) {
+	if s.composition == text && s.compositionSelStart == selStartInBytes && s.compositionSelEnd == selEndInBytes {
 		return
 	}
 	s.composition = text
-	s.compositionSelStart = selStart
-	s.compositionSelEnd = selEnd
+	s.compositionSelStart = selStartInBytes
+	s.compositionSelEnd = selEndInBytes
 	// The composition changes the rendering text only; the committed text
 	// is untouched.
 	s.bumpGenerationForEdit(0, 0, 0)

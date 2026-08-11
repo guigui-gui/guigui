@@ -32,14 +32,14 @@ func flexibleFixture(t *testing.T) (str string, width int, style textutil.Style)
 func TestLineHeightModeScalesOnlyTheLineWithTheLargerFace(t *testing.T) {
 	str, width, style := flexibleFixture(t)
 
-	fixed := textutil.MeasureHeight(width, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, textutil.LineHeightModeFixed, 0, false)
+	fixed := textutil.MeasureHeight(width, str, style.WrapMode, style.Face, style.FaceRuns, textutil.Insertion{}, style.LineHeight, textutil.LineHeightModeFixed, 0, false)
 	if want := 3 * style.LineHeight; fixed != want {
 		t.Fatalf("MeasureHeight(fixed) = %v, want %v", fixed, want)
 	}
 
 	// The middle visual line carries a face of twice the base size, so it is
 	// twice as tall; the lines around it keep the base height.
-	flexible := textutil.MeasureHeight(width, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, textutil.LineHeightModeFlexible, 0, false)
+	flexible := textutil.MeasureHeight(width, str, style.WrapMode, style.Face, style.FaceRuns, textutil.Insertion{}, style.LineHeight, textutil.LineHeightModeFlexible, 0, false)
 	if want := 4 * style.LineHeight; flexible != want {
 		t.Errorf("MeasureHeight(flexible) = %v, want %v", flexible, want)
 	}
@@ -60,8 +60,8 @@ func TestLineHeightModeFlexibleWithoutLargerFace(t *testing.T) {
 		{name: "smaller run", faceRuns: []textutil.FaceRun{{Start: 5, End: 9, Face: small}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fixed := textutil.MeasureHeight(width, str, textutil.WrapModeNormal, large, tc.faceRuns, 24, textutil.LineHeightModeFixed, 0, false)
-			flexible := textutil.MeasureHeight(width, str, textutil.WrapModeNormal, large, tc.faceRuns, 24, textutil.LineHeightModeFlexible, 0, false)
+			fixed := textutil.MeasureHeight(width, str, textutil.WrapModeNormal, large, tc.faceRuns, textutil.Insertion{}, 24, textutil.LineHeightModeFixed, 0, false)
+			flexible := textutil.MeasureHeight(width, str, textutil.WrapModeNormal, large, tc.faceRuns, textutil.Insertion{}, 24, textutil.LineHeightModeFlexible, 0, false)
 			if fixed != flexible {
 				t.Errorf("MeasureHeight(flexible) = %v, MeasureHeight(fixed) = %v", flexible, fixed)
 			}

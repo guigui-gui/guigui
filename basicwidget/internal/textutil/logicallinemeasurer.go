@@ -23,6 +23,7 @@ type logicalLineMeasurer struct {
 	keepTailingSpace   bool
 	wrapMode           WrapMode
 	faceRuns           []FaceRun
+	insertion          Insertion
 	lineHeight         float64
 	lineHeightMode     LineHeightMode
 	composition        CompositionInfo
@@ -110,6 +111,7 @@ func newLogicalLineMeasurer(p *TextLayoutParams) (*logicalLineMeasurer, bool) {
 		keepTailingSpace:               p.Style.KeepTailingSpace,
 		wrapMode:                       p.Style.WrapMode,
 		faceRuns:                       p.Style.FaceRuns,
+		insertion:                      p.Style.Insertion,
 		lineHeight:                     p.Style.LineHeight,
 		lineHeightMode:                 p.Style.LineHeightMode,
 		composition:                    compInfo,
@@ -161,12 +163,12 @@ func (m *logicalLineMeasurer) logicalLineIndexForRenderingIndex(renderingIndex i
 
 // logicalLineHeight returns the rendered height of the logical line at idx.
 func (m *logicalLineMeasurer) logicalLineHeight(idx int) float64 {
-	if !scalesLineHeights(m.lineHeightMode, m.faceRuns) {
+	if !scalesLineHeights(m.lineHeightMode, m.faceRuns, &m.insertion) {
 		return m.lineHeight * float64(m.visualLineCount(idx))
 	}
 	s, e := m.renderingRange(idx)
 	line := m.renderingTextRange(s, e)
-	return MeasureLogicalLineHeight(m.width, line, m.wrapMode, m.face, m.faceRuns, s, m.lineHeight, m.lineHeightMode, m.tabWidth, m.keepTailingSpace)
+	return MeasureLogicalLineHeight(m.width, line, m.wrapMode, m.face, m.faceRuns, m.insertion, s, m.lineHeight, m.lineHeightMode, m.tabWidth, m.keepTailingSpace)
 }
 
 // visualLineCount returns the rendering-plane visual-line count of the

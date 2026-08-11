@@ -65,11 +65,11 @@ func TestMeasureLogicalLineHeightParity(t *testing.T) {
 			t.Run(tc.name+wrapModeSuffix(wrapMode), func(t *testing.T) {
 				const width = math.MaxInt
 
-				whole := textutil.MeasureHeight(width, tc.str, wrapMode, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, false)
+				whole := textutil.MeasureHeight(width, tc.str, wrapMode, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, false)
 
 				var sum float64
 				for _, line := range logicalLineSlices(tc.str) {
-					sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, face, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
+					sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, face, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
 				}
 
 				if whole != sum {
@@ -98,11 +98,11 @@ func TestMeasureLogicalLineParity(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			const width = math.MaxInt
-			wholeW, wholeH := textutil.Measure(width, tc.str, textutil.WrapModeNone, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
+			wholeW, wholeH := textutil.Measure(width, tc.str, textutil.WrapModeNone, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
 
 			var maxW, sumH float64
 			for _, line := range logicalLineSlices(tc.str) {
-				w, h := textutil.MeasureLogicalLine(width, line, textutil.WrapModeNone, face, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
+				w, h := textutil.MeasureLogicalLine(width, line, textutil.WrapModeNone, face, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
 				maxW = max(maxW, w)
 				sumH += h
 			}
@@ -151,7 +151,7 @@ func TestCachedVisualLineMaxCaretXIncludesTrailingSpaces(t *testing.T) {
 					t.Errorf("CachedVisualLineMaxCaretX = %v, trailing caret X = %v", got, position.X)
 				}
 				if tc.name == "one trailing space" && wrapMode == textutil.WrapModeNormal {
-					rendered, _ := textutil.MeasureLogicalLine(width, tc.line, wrapMode, face, nil, 0, 0, textutil.LineHeightModeFixed, 0, false, "")
+					rendered, _ := textutil.MeasureLogicalLine(width, tc.line, wrapMode, face, nil, textutil.Insertion{}, 0, 0, textutil.LineHeightModeFixed, 0, false, "")
 					if position.X <= rendered {
 						t.Fatalf("test setup: trailing caret X = %v, rendered width = %v", position.X, rendered)
 					}
@@ -171,8 +171,8 @@ func TestCachedVisualLineMaxCaretXExcludesBreakSpace(t *testing.T) {
 
 	// Pick a width that fits "aaa" but not "aaa ", so the break space hangs
 	// past the wrapping width.
-	wordW, _ := textutil.Measure(math.MaxInt, "aaa", textutil.WrapModeNone, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
-	wordSpaceW, _ := textutil.Measure(math.MaxInt, "aaa ", textutil.WrapModeNone, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, true, "")
+	wordW, _ := textutil.Measure(math.MaxInt, "aaa", textutil.WrapModeNone, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, false, "")
+	wordSpaceW, _ := textutil.Measure(math.MaxInt, "aaa ", textutil.WrapModeNone, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, true, "")
 	width := int((wordW + wordSpaceW) / 2)
 	if float64(width) < wordW || wordSpaceW <= float64(width) {
 		t.Fatalf("test setup: width %d must satisfy %v <= width < %v", width, wordW, wordSpaceW)
@@ -246,13 +246,13 @@ func TestMeasureLogicalLineWrapVisualCount(t *testing.T) {
 		t.Fatalf("test setup: line fits in %d px (advance=%v); pick a narrower width", narrowWidth, advance(logical))
 	}
 
-	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	h := textutil.MeasureLogicalLineHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
 	if h <= lineHeight {
 		t.Errorf("MeasureLogicalLineHeight with WrapModeNormal = %v, expected > %v (single visual subline)", h, lineHeight)
 	}
 
 	// Parity with the whole-document MeasureHeight on the same single line.
-	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	whole := textutil.MeasureHeight(narrowWidth, logical, textutil.WrapModeNormal, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, false)
 	if h != whole {
 		t.Errorf("WrapModeNormal MeasureLogicalLineHeight = %v, MeasureHeight whole = %v", h, whole)
 	}
@@ -398,15 +398,15 @@ func TestLinesInLogicalLineNoTrailingEmpty(t *testing.T) {
 	face := newTestFace(t)
 
 	// "abc\n" as one logical line: should be exactly one visual subline tall.
-	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false), lineHeight; got != want {
+	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false), lineHeight; got != want {
 		t.Errorf("MeasureLogicalLineHeight(\"abc\\n\") = %v, want %v", got, want)
 	}
 	// The empty trailing line as its own logical line: also one subline.
-	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "", textutil.WrapModeNone, face, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false), lineHeight; got != want {
+	if got, want := textutil.MeasureLogicalLineHeight(math.MaxInt, "", textutil.WrapModeNone, face, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false), lineHeight; got != want {
 		t.Errorf("MeasureLogicalLineHeight(\"\") = %v, want %v", got, want)
 	}
 	// Whole-document: "abc\n" yields 2 visual sublines (incl. trailing empty).
-	if got, want := textutil.MeasureHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, lineHeight, textutil.LineHeightModeFixed, 0, false), 2*lineHeight; got != want {
+	if got, want := textutil.MeasureHeight(math.MaxInt, "abc\n", textutil.WrapModeNone, face, nil, textutil.Insertion{}, lineHeight, textutil.LineHeightModeFixed, 0, false), 2*lineHeight; got != want {
 		t.Errorf("MeasureHeight(\"abc\\n\") = %v, want %v", got, want)
 	}
 }

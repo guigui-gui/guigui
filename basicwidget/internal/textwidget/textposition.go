@@ -161,6 +161,7 @@ func (t *Text) textIndexFromPosition(context *guigui.Context, textBounds image.R
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
+		Insertion:        t.insertion(context, false),
 		LineHeight:       t.LineHeight(),
 		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
@@ -234,6 +235,7 @@ func (t *Text) textPosition(context *guigui.Context, bounds image.Rectangle, ind
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
+		Insertion:        t.insertion(context, false),
 		LineHeight:       t.LineHeight(),
 		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
@@ -350,6 +352,7 @@ func (t *Text) caretPositionWithinLine(context *guigui.Context, bounds image.Rec
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
 		FaceRuns:         renderingFaceRuns,
+		Insertion:        t.insertion(context, false),
 		LineHeight:       t.LineHeight(),
 		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,
@@ -534,7 +537,7 @@ func (t *Text) LogicalLineHeight(context *guigui.Context, lineIndex, wrapWidth i
 	line := t.stringValueWithRange(start, end)
 	committedFaceRuns, _, mark := t.acquireFaceRuns(context, false, false)
 	defer t.releaseFaceRuns(mark)
-	return textutil.MeasureLogicalLineHeight(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, start, t.LineHeight(), t.baseStyle.lineHeightMode, t.actualTabWidth(context), t.keepTailingSpace)
+	return textutil.MeasureLogicalLineHeight(wrapWidth, line, t.wrapMode, t.face(context, false), committedFaceRuns, t.insertion(context, false), start, t.LineHeight(), t.baseStyle.lineHeightMode, t.actualTabWidth(context), t.keepTailingSpace)
 }
 
 // MaxCaretXOfLogicalLine returns the maximum caret X coordinate over the
@@ -571,6 +574,7 @@ func (t *Text) AppendBoundsOfTextRange(dst []image.Rectangle, context *guigui.Co
 		WrapMode:         t.wrapMode,
 		Face:             t.face(context, false),
 		FaceRuns:         committedFaceRuns,
+		Insertion:        t.insertion(context, false),
 		LineHeight:       t.LineHeight(),
 		LineHeightMode:   t.baseStyle.lineHeightMode,
 		HorizontalAlign:  t.baseStyle.hAlign,

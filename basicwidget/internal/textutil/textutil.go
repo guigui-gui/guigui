@@ -112,6 +112,10 @@ type Style struct {
 	// text with Face.
 	FaceRuns []FaceRun
 
+	// Insertion is the pending insertion point of the laid-out text. The
+	// zero value means there is none.
+	Insertion Insertion
+
 	LineHeight float64
 
 	// LineHeightMode selects how LineHeight responds to the font sizes on a
@@ -126,19 +130,29 @@ type Style struct {
 }
 
 // visualLineScale returns the factor scaling the height and the baseline
-// offset of the visual line covering the byte range [startInBytes,
-// endInBytes) of the laid-out text. The factor is never below 1.
-func (s *Style) visualLineScale(startInBytes, endInBytes int) float64 {
+// offset of the visual line holding lineStr, which starts at
+// lineStartInBytes in the laid-out text. endsText reports whether the line is
+// that text's last one. The factor is never below 1.
+func (s *Style) visualLineScale(lineStartInBytes int, lineStr string, endsText bool) float64 {
 	if s.LineHeightMode != LineHeightModeFlexible {
 		return 1
 	}
-	return maxFaceScale(s.FaceRuns, s.Face, startInBytes, endInBytes)
+	return visualLineScaleWithFaces(s.FaceRuns, &s.Insertion, s.Face, lineStartInBytes, lineStr, endsText)
 }
 
-// visualLineHeight returns the height of the visual line covering the byte
-// range [startInBytes, endInBytes) of the laid-out text.
-func (s *Style) visualLineHeight(startInBytes, endInBytes int) float64 {
-	return s.LineHeight * s.visualLineScale(startInBytes, endInBytes)
+// visualLineScaleWithFaces is [Style.visualLineScale] for the callers holding
+// the faces of the laid-out text without a [Style]. It leaves the line height
+// mode to the caller.
+func visualLineScaleWithFaces(faceRuns []FaceRun, insertion *Insertion, def font.Face, lineStartInBytes int, lineStr string, endsText bool) float64 {
+	scale := maxFaceScale(faceRuns, def, lineStartInBytes, lineStartInBytes+len(lineStr))
+	return max(scale, insertion.scaleOnVisualLine(def, lineStartInBytes, lineStr, endsText))
+}
+
+// visualLineHeight returns the height of the visual line holding lineStr,
+// which starts at lineStartInBytes in the laid-out text. endsText reports
+// whether the line is that text's last one.
+func (s *Style) visualLineHeight(lineStartInBytes int, lineStr string, endsText bool) float64 {
+	return s.LineHeight * s.visualLineScale(lineStartInBytes, lineStr, endsText)
 }
 
 // visualLinePadding returns the gap between the top of a visual line scaled
@@ -736,26 +750,26 @@ func visualLineCount(width int, str string, wrapMode WrapMode, face font.Face, f
 // need to be computed, this avoids per-visual-line shaping calls and is
 // dramatically cheaper for very long text (e.g. a multi-megabyte editor
 // buffer).
-func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
-	if !scalesLineHeights(lineHeightMode, faceRuns) {
+func MeasureHeight(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, insertion Insertion, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool) float64 {
+	if !scalesLineHeights(lineHeightMode, faceRuns, &insertion) {
 		return lineHeight * float64(visualLineCount(width, str, wrapMode, face, faceRuns, tabWidth, keepTailingSpace))
 	}
 	var height float64
 	for l := range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
 		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
 	}) {
-		height += lineHeight * maxFaceScale(faceRuns, face, l.pos, l.pos+len(l.str))
+		height += lineHeight * visualLineScaleWithFaces(faceRuns, &insertion, face, l.pos, l.str, l.pos+len(l.str) == len(str))
 	}
 	return height
 }
 
 // scalesLineHeights reports whether line heights can differ from the base
 // line height.
-func scalesLineHeights(lineHeightMode LineHeightMode, faceRuns []FaceRun) bool {
-	return lineHeightMode == LineHeightModeFlexible && len(faceRuns) > 0
+func scalesLineHeights(lineHeightMode LineHeightMode, faceRuns []FaceRun, insertion *Insertion) bool {
+	return lineHeightMode == LineHeightModeFlexible && (len(faceRuns) > 0 || !insertion.isZero())
 }
 
-func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
+func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns []FaceRun, insertion Insertion, lineHeight float64, lineHeightMode LineHeightMode, tabWidth float64, keepTailingSpace bool, ellipsisString string) (float64, float64) {
 	var maxWidth, height float64
 	for l := range visualLines(width, str, wrapMode, func(str string, strStartInBytes, endIndexInBytes int) float64 {
 		return advanceWithFaces(str, strStartInBytes, endIndexInBytes, face, faceRuns, tabWidth, keepTailingSpace)
@@ -772,8 +786,8 @@ func Measure(width int, str string, wrapMode WrapMode, face font.Face, faceRuns 
 		maxWidth = max(maxWidth, vlWidth)
 		// The text is already shifted by (lineHeight - (m.HAscent + m.Descent)) / 2.
 		// Thus, just accumulating the visual line heights is enough.
-		if scalesLineHeights(lineHeightMode, faceRuns) {
-			height += lineHeight * maxFaceScale(faceRuns, face, l.pos, l.pos+len(l.str))
+		if scalesLineHeights(lineHeightMode, faceRuns, &insertion) {
+			height += lineHeight * visualLineScaleWithFaces(faceRuns, &insertion, face, l.pos, l.str, l.pos+len(l.str) == len(str))
 			continue
 		}
 		height += lineHeight
@@ -792,10 +806,10 @@ func textPositionYOffset(size image.Point, str string, style *Style) float64 {
 	switch style.VerticalAlign {
 	case VerticalAlignTop:
 	case VerticalAlignMiddle:
-		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
+		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.Insertion, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
 		yOffset += (float64(size.Y) - textHeight) / 2
 	case VerticalAlignBottom:
-		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
+		textHeight := MeasureHeight(size.X, str, style.WrapMode, style.Face, style.FaceRuns, style.Insertion, style.LineHeight, style.LineHeightMode, style.TabWidth, style.KeepTailingSpace)
 		yOffset += float64(size.Y) - textHeight
 	}
 	return yOffset

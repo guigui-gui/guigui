@@ -214,11 +214,11 @@ func TestFaceRunsMeasureHeightParity(t *testing.T) {
 		for _, wrapMode := range []textutil.WrapMode{textutil.WrapModeNone, textutil.WrapModeNormal, textutil.WrapModeAnywhere} {
 			for _, width := range []int{math.MaxInt, 80} {
 				t.Run(fmt.Sprintf("width=%d%s%s", width, wrapModeSuffix(wrapMode), lineHeightModeSuffix(lineHeightMode)), func(t *testing.T) {
-					whole := textutil.MeasureHeight(width, str, wrapMode, small, faceRuns, lineHeight, lineHeightMode, 0, false)
+					whole := textutil.MeasureHeight(width, str, wrapMode, small, faceRuns, textutil.Insertion{}, lineHeight, lineHeightMode, 0, false)
 					var sum float64
 					var start int
 					for _, line := range strings.SplitAfter(str, "\n") {
-						sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, small, faceRuns, start, lineHeight, lineHeightMode, 0, false)
+						sum += textutil.MeasureLogicalLineHeight(width, line, wrapMode, small, faceRuns, textutil.Insertion{}, start, lineHeight, lineHeightMode, 0, false)
 						start += len(line)
 					}
 					if sum != whole {
@@ -380,16 +380,16 @@ func TestComputeCompositionInfoFaceRuns(t *testing.T) {
 	if !ok {
 		t.Fatal("ComputeCompositionInfo: ok = false, want true")
 	}
-	committedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, committedFaceRuns, lineStart, lineHeight, textutil.LineHeightModeFixed, 0, false)
-	renderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, renderingFaceRuns, lineStart, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	committedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, committedFaceRuns, textutil.Insertion{}, lineStart, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	renderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, renderingFaceRuns, textutil.Insertion{}, lineStart, lineHeight, textutil.LineHeightModeFixed, 0, false)
 	want := int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	if info.RenderingYShift != want {
 		t.Errorf("RenderingYShift = %d, want %d", info.RenderingYShift, want)
 	}
 	// Guard that the assertion has teeth: the same delta measured without
 	// face runs must differ, or the run plumbing is unobservable here.
-	runlessCommittedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
-	runlessRenderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, nil, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	runlessCommittedH := textutil.MeasureLogicalLineHeight(width, committedLine, textutil.WrapModeNormal, small, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
+	runlessRenderingH := textutil.MeasureLogicalLineHeight(width, renderingLine, textutil.WrapModeNormal, small, nil, textutil.Insertion{}, 0, lineHeight, textutil.LineHeightModeFixed, 0, false)
 	if runless := int(math.Ceil(runlessRenderingH)) - int(math.Ceil(runlessCommittedH)); runless == want {
 		t.Fatalf("test data has no teeth: run-aware and runless deltas are both %d", want)
 	}

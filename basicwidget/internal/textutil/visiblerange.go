@@ -117,8 +117,8 @@ func ComputeCompositionInfo(p *CompositionInfoParams) (CompositionInfo, bool) {
 		if measureWidth <= 0 {
 			measureWidth = math.MaxInt
 		}
-		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.CommittedFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
-		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.RenderingFaceRuns, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
+		committedH := MeasureLogicalLineHeight(measureWidth, p.CommittedSelectionLine, p.WrapMode, p.Face, p.CommittedFaceRuns, Insertion{}, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
+		renderingH := MeasureLogicalLineHeight(measureWidth, p.RenderingSelectionLine, p.WrapMode, p.Face, p.RenderingFaceRuns, Insertion{}, p.SelectionLineStartInBytes, p.LineHeight, p.LineHeightMode, p.TabWidth, p.KeepTailingSpace)
 		yDelta = int(math.Ceil(renderingH)) - int(math.Ceil(committedH))
 	}
 	return CompositionInfo{
@@ -198,6 +198,10 @@ type VisibleRangeInViewportParams struct {
 	// sorted by Start and disjoint.
 	FaceRuns []FaceRun
 
+	// Insertion is the pending insertion point of the rendering text. The
+	// zero value means there is none.
+	Insertion Insertion
+
 	// WrapMode toggles between a per-line shaping walk (any wrapping
 	// mode) and a flat LineHeight*idx arithmetic ([WrapModeNone]).
 	WrapMode WrapMode
@@ -241,13 +245,14 @@ func VisibleRangeInViewport(p *VisibleRangeInViewportParams) (VisibleRange, bool
 		keepTailingSpace:   p.KeepTailingSpace,
 		wrapMode:           p.WrapMode,
 		faceRuns:           p.FaceRuns,
+		insertion:          p.Insertion,
 		lineHeight:         p.LineHeight,
 		lineHeightMode:     p.LineHeightMode,
 		composition:        p.Composition,
 	}
 
 	var lastLine int
-	if p.WrapMode == WrapModeNone && !scalesLineHeights(p.LineHeightMode, p.FaceRuns) {
+	if p.WrapMode == WrapModeNone && !scalesLineHeights(p.LineHeightMode, p.FaceRuns, &p.Insertion) {
 		lh := int(math.Ceil(p.LineHeight))
 		if lh <= 0 {
 			return VisibleRange{}, false

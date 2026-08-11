@@ -31,7 +31,7 @@ func logicalLineAndCaretPosition(m *logicalLineMeasurer, p *TextLayoutParams, in
 
 	if p.Style.WrapMode != WrapModeNone && !faceRunsIntersect(p.Style.FaceRuns, renderingLineStart, renderingLineStart+len(line)) {
 		if vlStarts, ok := cachedVisualLineStarts(p.Width, line, p.Style.WrapMode, p.Style.Face, p.Style.TabWidth, p.Style.KeepTailingSpace); ok {
-			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, vlStarts), renderingLineStart, indexInLine, &p.Style)
+			pos0, pos1, count = textPositionFromIndexInVisualLines(p.Width, visualLinesFromStarts(line, vlStarts), renderingLineStart, renderingLineStart+len(line), indexInLine, &p.Style)
 			if count == 0 {
 				return 0, 0, TextPosition{}, TextPosition{}, 0
 			}
@@ -77,7 +77,7 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 		vls := visualLines(p.Width, str, p.Style.WrapMode, func(s string, strStartInBytes, endIndexInBytes int) float64 {
 			return advanceWithFaces(s, strStartInBytes, endIndexInBytes, p.Style.Face, p.Style.FaceRuns, p.Style.TabWidth, p.Style.KeepTailingSpace)
 		})
-		return textPositionFromIndexInVisualLines(p.Width, vls, 0, index, &p.Style)
+		return textPositionFromIndexInVisualLines(p.Width, vls, 0, len(str), index, &p.Style)
 	}
 
 	logicalLineIdx, indexInLine, pos0, pos1, c := logicalLineAndCaretPosition(m, p, index)
@@ -146,8 +146,9 @@ func TextPositionFromIndex(p *TextLayoutParams, index int) (position0, position1
 // offsets for the face-run lookups. count is 1, or 2 when index lands on a
 // line-break boundary, in which case position0 is the tail of one visual
 // line and position1 the head of the next. An out-of-range index yields
-// count 0.
-func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vlsStartInBytes, index int, style *Style) (position0, position1 TextPosition, count int) {
+// count 0. vlsEndInBytes is the whole-text byte offset of the end of the
+// text vls decompose.
+func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vlsStartInBytes, vlsEndInBytes, index int, style *Style) (position0, position1 TextPosition, count int) {
 	var y, y0, y1 float64
 	// scale0/1 are the matched visual lines' height scales.
 	scale0, scale1 := 1.0, 1.0
@@ -160,7 +161,7 @@ func textPositionFromIndexInVisualLines(width int, vls iter.Seq[visualLine], vls
 	var line0, line1 string
 	var found0, found1 bool
 	for l := range vls {
-		scale := style.visualLineScale(vlsStartInBytes+l.pos, vlsStartInBytes+l.pos+len(l.str))
+		scale := style.visualLineScale(vlsStartInBytes+l.pos, l.str, vlsStartInBytes+l.pos+len(l.str) == vlsEndInBytes)
 		// When auto wrap is on or the string ends with a line break, there can be two positions:
 		// one in the tail of the previous line and one in the head of the next line.
 		if index == l.pos+len(l.str) {
@@ -283,8 +284,8 @@ func AppendBoundsOfTextRange(dst []image.Rectangle, p *TextLayoutParams, start, 
 // of that byte.
 func visualLinesHeight(vls []visualLine, vlsStartInBytes int, style *Style) float64 {
 	var height float64
-	for _, vl := range vls {
-		height += style.visualLineHeight(vlsStartInBytes+vl.pos, vlsStartInBytes+vl.pos+len(vl.str))
+	for i, vl := range vls {
+		height += style.visualLineHeight(vlsStartInBytes+vl.pos, vl.str, i == len(vls)-1)
 	}
 	return height
 }

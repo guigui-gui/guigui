@@ -13,7 +13,6 @@ import (
 
 	"github.com/guigui-gui/guigui/basicwidget/internal/font"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
-	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
 
@@ -292,68 +291,136 @@ func TestTextEffectiveStyleAt(t *testing.T) {
 	}
 }
 
-func TestAppendFaceRunsThroughComposition(t *testing.T) {
-	src := []textutil.FaceRun{
-		{Start: 5, End: 10},
-		{Start: 20, End: 25},
-	}
+// TestRenderingStyleRunsThroughComposition asserts that the committed
+// overrides move with the composition splice, so the rendering text keeps
+// carrying them.
+func TestRenderingStyleRunsThroughComposition(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
 	tests := []struct {
 		name             string
 		selStart, selEnd int
-		compLen          int
-		want             []textutil.FaceRun
+		composition      string
+		wantStarts       []int
+		wantEnds         []int
 	}{
 		{
-			name:     "insertion before the runs shifts them",
-			selStart: 2, selEnd: 2, compLen: 3,
-			want: []textutil.FaceRun{{Start: 8, End: 13}, {Start: 23, End: 28}},
+			name:     "composition before the runs shifts them",
+			selStart: 2, selEnd: 2, composition: "abc",
+			wantStarts: []int{8, 23}, wantEnds: []int{13, 28},
 		},
 		{
-			name:     "insertion at a run start shifts the run",
-			selStart: 5, selEnd: 5, compLen: 3,
-			want: []textutil.FaceRun{{Start: 8, End: 13}, {Start: 23, End: 28}},
+			name:     "composition at a run start shifts the run",
+			selStart: 5, selEnd: 5, composition: "abc",
+			wantStarts: []int{8, 23}, wantEnds: []int{13, 28},
 		},
 		{
-			name:     "insertion inside a run extends it",
-			selStart: 7, selEnd: 7, compLen: 3,
-			want: []textutil.FaceRun{{Start: 5, End: 13}, {Start: 23, End: 28}},
+			name:     "composition inside a run extends it",
+			selStart: 7, selEnd: 7, composition: "abc",
+			wantStarts: []int{5, 23}, wantEnds: []int{13, 28},
 		},
 		{
-			name:     "insertion at a run end extends it",
-			selStart: 10, selEnd: 10, compLen: 3,
-			want: []textutil.FaceRun{{Start: 5, End: 13}, {Start: 23, End: 28}},
+			name:     "composition at a run end extends it",
+			selStart: 10, selEnd: 10, composition: "abc",
+			wantStarts: []int{5, 23}, wantEnds: []int{13, 28},
 		},
 		{
-			name:     "insertion between the runs",
-			selStart: 15, selEnd: 15, compLen: 3,
-			want: []textutil.FaceRun{{Start: 5, End: 10}, {Start: 23, End: 28}},
+			name:     "composition between the runs",
+			selStart: 15, selEnd: 15, composition: "abc",
+			wantStarts: []int{5, 23}, wantEnds: []int{10, 28},
 		},
 		{
-			name:     "replacement covering a run drops it",
-			selStart: 4, selEnd: 11, compLen: 2,
-			want: []textutil.FaceRun{{Start: 15, End: 20}},
+			name:     "composition replacing a run drops it",
+			selStart: 4, selEnd: 11, composition: "ab",
+			wantStarts: []int{15}, wantEnds: []int{20},
 		},
 		{
-			name:     "replacement starting inside a run stays part of it",
-			selStart: 8, selEnd: 12, compLen: 4,
-			want: []textutil.FaceRun{{Start: 5, End: 12}, {Start: 20, End: 25}},
-		},
-		{
-			name:     "inverted selection is normalized",
-			selStart: 12, selEnd: 8, compLen: 4,
-			want: []textutil.FaceRun{{Start: 5, End: 12}, {Start: 20, End: 25}},
+			name:     "composition starting inside a run stays part of it",
+			selStart: 8, selEnd: 12, composition: "abcd",
+			wantStarts: []int{5, 20}, wantEnds: []int{12, 25},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := textwidget.AppendFaceRunsThroughComposition(nil, src, tt.selStart, tt.selEnd, tt.compLen)
-			if !slices.EqualFunc(got, tt.want, func(x, y textutil.FaceRun) bool {
-				return x.Start == y.Start && x.End == y.End
-			}) {
-				t.Errorf("got: %+v, want: %+v", got, tt.want)
+			var txt textwidget.Text
+			txt.SetEditable(true)
+			txt.ForceSetValue(strings.Repeat("a", 30))
+			txt.SetColorInRange(5, 10, red)
+			txt.SetColorInRange(20, 25, red)
+			txt.HandleFocusChanged(true)
+			txt.SetSelection(tt.selStart, tt.selEnd)
+			txt.SetCompositionByIME(tt.composition, 0, len(tt.composition))
+
+			var wantRuns textstyle.Runs
+			for i := range tt.wantStarts {
+				wantRuns.SetColor(tt.wantStarts[i], tt.wantEnds[i], red)
+			}
+			if got := txt.RenderingStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+				t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 			}
 		})
 	}
+}
+
+// TestRenderingStyleRunsApplyInsertionStyle asserts that the composition
+// renders with the insertion style it will carry once committed, on top of
+// the style it adopts from the text around it.
+func TestRenderingStyleRunsApplyInsertionStyle(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	t.Run("without committed overrides", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.HandleFocusChanged(true)
+		txt.SetSelection(3, 3)
+		txt.SetInsertionStyle(textstyle.Style{}.WithColor(red))
+		txt.SetCompositionByIME("abc", 0, 3)
+
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(3, 6, red)
+		if got := txt.RenderingStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+			t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+		}
+	})
+
+	t.Run("over an adopted override", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue(strings.Repeat("a", 30))
+		txt.SetColorInRange(5, 10, red)
+		txt.HandleFocusChanged(true)
+		txt.SetSelection(7, 7)
+		txt.SetInsertionStyle(textstyle.Style{}.WithUnderline(true))
+		txt.SetCompositionByIME("abc", 0, 3)
+
+		// The composition adopts the run it is typed into and carries the
+		// insertion style on top of it.
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(5, 13, red)
+		wantRuns.SetUnderline(7, 10, true)
+		if got := txt.RenderingStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+			t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+		}
+	})
+
+	t.Run("committing keeps the style", func(t *testing.T) {
+		var txt textwidget.Text
+		txt.SetEditable(true)
+		txt.ForceSetValue("hello")
+		txt.HandleFocusChanged(true)
+		txt.SetSelection(3, 3)
+		txt.SetInsertionStyle(textstyle.Style{}.WithColor(red))
+		txt.SetCompositionByIME("abc", 0, 3)
+		txt.SetCompositionByIME("", 0, 0)
+		txt.CommitTextByIME("abc")
+
+		var wantRuns textstyle.Runs
+		wantRuns.SetColor(3, 6, red)
+		if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+			t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+		}
+	})
 }
 
 func TestOverrideStyleRunsRoundTrip(t *testing.T) {

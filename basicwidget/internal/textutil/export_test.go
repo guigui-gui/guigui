@@ -199,7 +199,7 @@ func DecorationsPerVisualLine(layoutWidth int, str string, options *DrawOptions)
 			vlStr = strings.TrimRightFunc(vlStr, unicode.IsSpace)
 		}
 		var ds []Decoration
-		scale := options.Style.visualLineScale(start, end)
+		scale := options.Style.visualLineScale(start, vl.str, end == len(str))
 		for d := range visualLineDecorations(layoutWidth, vls, start, start+len(vlStr), intersectingStyleRuns(options.StyleRuns, start, end), scale, options) {
 			ds = append(ds, Decoration{
 				X:         d.X,
