@@ -41,6 +41,84 @@ func wantStrikethrough(base, face font.Face, visualLineIndex int) (y, thickness 
 	return y, thickness
 }
 
+// backgroundDrawOptions returns the options a background test draws with. The
+// tab width is nonzero, as a widget's is, so that a line break is laid out
+// with a space's advance.
+func backgroundDrawOptions(face font.Face, runs []textutil.StyleRun) *textutil.DrawOptions {
+	return &textutil.DrawOptions{
+		Style: textutil.Style{
+			WrapMode:         textutil.WrapModeNone,
+			Face:             face,
+			LineHeight:       decorationLineHeight,
+			TabWidth:         advanceOf("    ", face),
+			KeepTailingSpace: true,
+		},
+		TextColor: color.White,
+		StyleRuns: runs,
+	}
+}
+
+// TestBackgroundStopsAtLineBreak asserts that a background covering a line
+// break stops at the last character of the line, not over the space-wide
+// advance the line break is laid out with.
+func TestBackgroundStopsAtLineBreak(t *testing.T) {
+	small, _ := testFaces(t)
+	const str = "ab\ncd"
+	yellow := color.RGBA{R: 0xff, G: 0xff, A: 0xff}
+	options := backgroundDrawOptions(small, []textutil.StyleRun{{Start: 0, End: len(str), BackgroundColor: yellow}})
+
+	got := textutil.BackgroundsPerVisualLine(1000, str, options)
+	if len(got) != 2 || len(got[0]) != 1 || len(got[1]) != 1 {
+		t.Fatalf("got: %v, want one background on each of two visual lines", got)
+	}
+
+	if wantWidth := advanceOf("ab", small); math.Abs(got[0][0].Width-wantWidth) > 1e-9 {
+		t.Errorf("width: got: %f, want: %f (the line break's advance is %f)", got[0][0].Width, wantWidth, advanceOf(" ", small))
+	}
+	if wantWidth := advanceOf("cd", small); math.Abs(got[1][0].Width-wantWidth) > 1e-9 {
+		t.Errorf("width of the last line: got: %f, want: %f", got[1][0].Width, wantWidth)
+	}
+}
+
+// TestBackgroundOfLineBreakOnly asserts that a background covering nothing but
+// a line break is not drawn at all.
+func TestBackgroundOfLineBreakOnly(t *testing.T) {
+	small, _ := testFaces(t)
+	const str = "ab\ncd"
+	yellow := color.RGBA{R: 0xff, G: 0xff, A: 0xff}
+	options := backgroundDrawOptions(small, []textutil.StyleRun{{Start: 2, End: 3, BackgroundColor: yellow}})
+
+	got := textutil.BackgroundsPerVisualLine(1000, str, options)
+	if len(got) != 2 {
+		t.Fatalf("got: %v, want two visual lines", got)
+	}
+	for i, bs := range got {
+		if len(bs) != 0 {
+			t.Errorf("visual line %d: got: %v, want no background", i, bs)
+		}
+	}
+}
+
+// TestBackgroundStopsAtLineBreakWhenWrapped asserts that the rule holds for the
+// last visual line of a wrapped logical line too.
+func TestBackgroundStopsAtLineBreakWhenWrapped(t *testing.T) {
+	small, _ := testFaces(t)
+	const str = "AAAA BB\ncd"
+	yellow := color.RGBA{R: 0xff, G: 0xff, A: 0xff}
+	options := backgroundDrawOptions(small, []textutil.StyleRun{{Start: 0, End: len(str), BackgroundColor: yellow}})
+	options.Style.WrapMode = textutil.WrapModeNormal
+	layoutWidth := int(math.Ceil(advanceOf("AAAA ", small))) + 1
+
+	got := textutil.BackgroundsPerVisualLine(layoutWidth, str, options)
+	if len(got) != 3 || len(got[1]) != 1 {
+		t.Fatalf("got: %v, want one background on the second of three visual lines", got)
+	}
+
+	if wantWidth := advanceOf("BB", small); math.Abs(got[1][0].Width-wantWidth) > 1e-9 {
+		t.Errorf("width: got: %f, want: %f (the line break's advance is %f)", got[1][0].Width, wantWidth, advanceOf(" ", small))
+	}
+}
+
 // TestDecorationInsideLargerFaceRun asserts that a decoration covering only
 // bytes drawn with a larger face takes its metrics from that face, not from
 // the widget's base face.

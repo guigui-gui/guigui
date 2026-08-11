@@ -176,6 +176,37 @@ const (
 	StrikethroughOffsetRatio = strikethroughOffsetRatio
 )
 
+// Background is one background rectangle drawn for a visual line.
+type Background struct {
+	X      float64
+	Y      float64
+	Width  float64
+	Height float64
+	Color  color.Color
+}
+
+// BackgroundsPerVisualLine lays str out at layoutWidth as [Draw] does and
+// returns the background rectangles of each visual line, in order.
+func BackgroundsPerVisualLine(layoutWidth int, str string, options *DrawOptions) [][]Background {
+	vls := appendDrawnVisualLines(nil, str, layoutWidth, options)
+	backgrounds := make([][]Background, 0, len(vls))
+	for _, vl := range vls {
+		runs := intersectingStyleRuns(options.StyleRuns, vl.pos, vl.pos+len(vl.str))
+		var bs []Background
+		for b := range visualLineBackgrounds(layoutWidth, vls, vl, runs, &options.Style) {
+			bs = append(bs, Background{
+				X:      b.X,
+				Y:      b.Y,
+				Width:  b.Width,
+				Height: b.Height,
+				Color:  b.Color,
+			})
+		}
+		backgrounds = append(backgrounds, bs)
+	}
+	return backgrounds
+}
+
 // Decoration is one underline or strikethrough line drawn for a visual line.
 type Decoration struct {
 	X         float64

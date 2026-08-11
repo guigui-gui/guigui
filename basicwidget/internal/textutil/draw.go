@@ -232,19 +232,10 @@ func Draw(bounds image.Rectangle, dst *ebiten.Image, str string, options *DrawOp
 
 		lineRuns := intersectingStyleRuns(options.StyleRuns, start, end)
 
-		for _, run := range lineRuns {
-			if run.BackgroundColor == nil {
-				continue
-			}
-			runStart := max(start, run.Start)
-			runEnd := min(end, run.End)
-			if posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, theVisualLinesBuffer, 0, runStart, runEnd, &options.Style); ok {
-				x := float32(posStart.X) + float32(bounds.Min.X)
-				y := float32(posStart.Top) + float32(bounds.Min.Y)
-				w := float32(posEnd.X - posStart.X)
-				h := float32(posStart.Bottom - posStart.Top)
-				vector.FillRect(dst, x, y, w, h, run.BackgroundColor, false)
-			}
+		for b := range visualLineBackgrounds(layoutWidth, theVisualLinesBuffer, vl, lineRuns, &options.Style) {
+			x := float32(b.X) + float32(bounds.Min.X)
+			y := float32(b.Y) + float32(bounds.Min.Y)
+			vector.FillRect(dst, x, y, float32(b.Width), float32(b.Height), b.Color, false)
 		}
 
 		if options.DrawSelection {
@@ -400,6 +391,53 @@ const (
 	// roughly at the middle of lowercase letters.
 	strikethroughOffsetRatio = 0.3
 )
+
+// background is one background rectangle, in the coordinates [TextPosition]
+// uses.
+type background struct {
+	X      float64
+	Y      float64
+	Width  float64
+	Height float64
+	Color  color.Color
+}
+
+// visualLineBackgrounds iterates the background rectangles to draw for the
+// visual line vl. runs are the style runs intersecting the line, sorted and
+// disjoint, and vls the visual lines the positions are resolved in, starting
+// at byte 0 of the drawn string.
+func visualLineBackgrounds(layoutWidth int, vls []visualLine, vl visualLine, runs []StyleRun, style *Style) iter.Seq[background] {
+	return func(yield func(background) bool) {
+		lineStart := vl.pos
+		// A trailing line break is laid out with a space's advance so that a
+		// caret or a selection can show it. That advance is not text, so no
+		// background is painted over it.
+		lineEnd := lineStart + len(vl.str) - tailingLineBreakLen(vl.str)
+		for _, run := range runs {
+			if run.BackgroundColor == nil {
+				continue
+			}
+			runStart := max(lineStart, run.Start)
+			runEnd := min(lineEnd, run.End)
+			if runStart >= runEnd {
+				continue
+			}
+			posStart, posEnd, ok := rangePositionsInVisualLines(layoutWidth, vls, 0, runStart, runEnd, style)
+			if !ok {
+				continue
+			}
+			if !yield(background{
+				X:      posStart.X,
+				Y:      posStart.Top,
+				Width:  posEnd.X - posStart.X,
+				Height: posStart.Bottom - posStart.Top,
+				Color:  run.BackgroundColor,
+			}) {
+				return
+			}
+		}
+	}
+}
 
 // decorationKind is the kind of line a [StyleRun] draws over its range.
 type decorationKind int
