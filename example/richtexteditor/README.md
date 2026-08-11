@@ -4,10 +4,9 @@ A rich text editor example: a multiline text input with a toolbar that
 applies ranged style overrides interactively, wrapped in the shared editor
 chrome (menu bar, status bar, and file dialogs).
 
-* Bold, italic, underline, and strikethrough toggles (also Cmd/Ctrl+B/I/U
-  and the Format menu). A button lights up when the property is uniformly
-  on across the selection. With no selection, a toggle applies to the text
-  typed next.
+* Bold, italic, underline, and strikethrough toggles (also in the Format
+  menu). A button lights up when the property is uniformly on across the
+  selection. With no selection, a toggle applies to the text typed next.
 * Text color and highlight palettes with a default entry that restores the
   base style.
 * Font size stepping through a fixed scale ladder.

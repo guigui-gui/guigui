@@ -212,9 +212,9 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 		{
 			Text: "Format",
 			Items: []basicwidget.PopupMenuItem[string]{
-				{Text: "Bold", Value: "bold", KeyText: texteditor.Hotkey("B")},
-				{Text: "Italic", Value: "italic", KeyText: texteditor.Hotkey("I")},
-				{Text: "Underline", Value: "underline", KeyText: texteditor.Hotkey("U")},
+				{Text: "Bold", Value: "bold"},
+				{Text: "Italic", Value: "italic"},
+				{Text: "Underline", Value: "underline"},
 				{Text: "Strikethrough", Value: "strikethrough"},
 				{Border: true},
 				{Text: "Clear Styles", Value: "clearstyles"},
@@ -780,12 +780,6 @@ func (r *Root) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		// The find dialog closes itself on Cmd/Ctrl+F, and its query input
 		// gets the key first while it is open, so this only ever opens.
 		r.findDialog.SetOpen(true)
-	case inpututil.IsKeyJustPressed(ebiten.KeyB):
-		r.toggleBold(context)
-	case inpututil.IsKeyJustPressed(ebiten.KeyI):
-		r.toggleItalic(context)
-	case inpututil.IsKeyJustPressed(ebiten.KeyU):
-		r.toggleUnderline(context)
 	default:
 		return guigui.HandleInputResult{}
 	}
