@@ -256,55 +256,44 @@ func (t *Text) OnInsertionStyleReset(f func(context *guigui.Context)) {
 // adoptStylesForInsertedText applies the ranged style overrides insertedText,
 // which a mutation put in place of [startInBytes, endInBytes), carries: the
 // style its position gives it in place of the one it took from the byte
-// before it, and the insertion style over it.
+// before it, the style of the empty line a break opens, and the insertion
+// style over it.
 func (t *Text) adoptStylesForInsertedText(startInBytes, endInBytes int, insertedText string) {
 	if startInBytes == endInBytes && len(insertedText) > 0 {
 		switch {
 		case t.isLogicalLineHead(startInBytes):
 			t.adoptStyleAtLineHeadIfNeeded(t.ensureOverrideStyleRuns(), startInBytes, len(insertedText), t.store.TextLengthInBytes())
 		case isLineBreak(insertedText):
-			t.styleLineBreakAtLineEndIfNeeded(startInBytes, len(insertedText))
+			t.adoptStyleForNewEmptyLineIfNeeded(startInBytes, len(insertedText))
 		}
 	}
 	t.materializeInsertionStyle(startInBytes, len(insertedText))
 }
 
-// styleLineBreakAtLineEndIfNeeded styles the line break inserted at
-// [startInBytes, startInBytes+lenInBytes) at the end of its line, which
-// leaves an empty line after it, with the style of the break that ended that
-// line, so the empty line carries it. A break with no style of its own takes
-// the style typed at the caret, and takes it on both breaks, so the empty
-// line matches the styled text it came from. A break inserted with text after
-// it on the same line styles nothing.
-func (t *Text) styleLineBreakAtLineEndIfNeeded(startInBytes, lenInBytes int) {
+// adoptStyleForNewEmptyLineIfNeeded gives the break ending the empty line
+// that the line break inserted at [startInBytes, startInBytes+lenInBytes)
+// opens the style of the character before it, replacing whatever style that
+// break had, so the empty line carries what the line it was split from shows.
+// A break inserted with text after it on the same line, which opens no empty
+// line, styles nothing. startInBytes must not be at a logical line head.
+func (t *Text) adoptStyleForNewEmptyLineIfNeeded(startInBytes, lenInBytes int) {
 	insertedEnd := startInBytes + lenInBytes
-	markStart, markEnd, hasMark := t.trailingLineBreakRange(insertedEnd)
 	// The caret sat at the line's end, leaving an empty line after the
-	// inserted break, only when what follows it is the line's own break or
-	// the end of the value.
-	atLineEnd := insertedEnd == t.store.TextLengthInBytes()
-	if hasMark {
-		atLineEnd = markStart == insertedEnd
-	}
-	if !atLineEnd {
+	// inserted break, only when the line's own break follows it directly. A
+	// line ending the value has no break to carry the empty line's style.
+	breakStart, breakEnd, ok := t.trailingLineBreakRange(insertedEnd)
+	if !ok || breakStart != insertedEnd {
 		return
 	}
 	runs := t.ensureOverrideStyleRuns()
-	var style textstyle.Style
-	if hasMark {
-		style = runs.StyleAt(markStart)
-	}
-	if style.IsZero() && startInBytes > 0 {
-		style = runs.StyleAt(startInBytes - 1)
-	}
-	runs.Reset(startInBytes, insertedEnd)
+	// The inserted break already carries the style of the character before
+	// it, as any inserted byte does, so only the break after it is left.
+	style := runs.StyleAt(startInBytes - 1)
+	runs.Reset(breakStart, breakEnd)
 	if style.IsZero() {
 		return
 	}
-	runs.ApplyStyle(startInBytes, insertedEnd, style)
-	if hasMark {
-		runs.ApplyStyle(markStart, markEnd, style)
-	}
+	runs.ApplyStyle(breakStart, breakEnd, style)
 }
 
 // adoptStyleAtLineHeadIfNeeded replaces the overrides in runs that the text
