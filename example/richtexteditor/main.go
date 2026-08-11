@@ -768,7 +768,7 @@ func (r *Root) actionSaveAs() {
 // root rather than on the editor so that they keep working regardless of
 // which widget within the focused path receives the raw key input first.
 func (r *Root) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if !texteditor.CmdPressed() {
+	if !texteditor.ShortcutModifierPressed(context) {
 		return guigui.HandleInputResult{}
 	}
 	switch {

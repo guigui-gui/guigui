@@ -48,12 +48,13 @@ type Context struct {
 	app     *app
 	inBuild bool
 
-	appScaleMinus1       float64
-	defaultColorWarnOnce sync.Once
-	locales              []language.Tag
-	allLocales           []language.Tag
-	frontLayer           int64
-	envSource            EnvSource
+	appScaleMinus1          float64
+	defaultColorWarnOnce    sync.Once
+	locales                 []language.Tag
+	allLocales              []language.Tag
+	frontLayer              int64
+	envSource               EnvSource
+	preferredKeyBindingMode KeyBindingMode
 
 	defaultTickMethodCalled bool
 }
@@ -113,6 +114,39 @@ func (c *Context) SetPreferredColorMode(mode ebiten.ColorMode) {
 	}
 	ebiten.SetPreferredColorMode(mode)
 	c.app.requestRebuildAndRedrawScreen(requestRedrawReasonColorMode)
+}
+
+// KeyBindingMode returns the resolved key binding mode.
+// The effective mode is determined by the mode set by [Context.SetPreferredKeyBindingMode],
+// the environment variable GUIGUI_KEY_BINDING_MODE, and the system, in that priority order.
+//
+// KeyBindingMode never returns [KeyBindingModeUnknown].
+func (c *Context) KeyBindingMode() KeyBindingMode {
+	if c.preferredKeyBindingMode != KeyBindingModeUnknown {
+		return c.preferredKeyBindingMode
+	}
+	if envKeyBindingMode != KeyBindingModeUnknown {
+		return envKeyBindingMode
+	}
+	return systemKeyBindingMode()
+}
+
+// PreferredKeyBindingMode returns the key binding mode set by SetPreferredKeyBindingMode.
+//
+// PreferredKeyBindingMode might return [KeyBindingModeUnknown] if the mode is not set.
+func (c *Context) PreferredKeyBindingMode() KeyBindingMode {
+	return c.preferredKeyBindingMode
+}
+
+// SetPreferredKeyBindingMode sets the preferred key binding mode.
+//
+// If mode is [KeyBindingModeUnknown], SetPreferredKeyBindingMode specifies the default mode.
+func (c *Context) SetPreferredKeyBindingMode(mode KeyBindingMode) {
+	if c.preferredKeyBindingMode == mode {
+		return
+	}
+	c.preferredKeyBindingMode = mode
+	c.app.requestRebuildAndRedrawScreen(requestRedrawReasonKeyBindingMode)
 }
 
 var (

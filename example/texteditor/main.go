@@ -440,7 +440,7 @@ func (r *Root) actionSaveAs() {
 // root rather than on the editor so that they keep working while the focus is
 // on another widget, such as the find dialog's query input.
 func (r *Root) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if !texteditor.CmdPressed() {
+	if !texteditor.ShortcutModifierPressed(context) {
 		return guigui.HandleInputResult{}
 	}
 	switch {

@@ -48,10 +48,6 @@ func MoveItemsInSlice[T any](slice []T, from int, count int, to int) int {
 	return to
 }
 
-func isDarwin() bool {
-	return textwidget.IsDarwin()
-}
-
 func isKeyRepeating(key ebiten.Key) bool {
 	return textwidget.IsKeyRepeating(key)
 }

@@ -57,6 +57,10 @@
 // list of BCP 47 language tags. The effective locales are determined by the app locales,
 // GUIGUI_LOCALES, and the system locales, in that priority order.
 //
+// The environment variable GUIGUI_KEY_BINDING_MODE specifies the preferred key binding mode.
+// Its value is either command, control-default, or control-emacs.
+// [Context.SetPreferredKeyBindingMode] overrides it.
+//
 // # Debugging
 //
 // The environment variable GUIGUI_DEBUG enables debugging features. Its value is a

@@ -1135,7 +1135,7 @@ func (t *textInputText) HandleButtonInput(context *guigui.Context, widgetBounds 
 	// On macOS, Home/End scroll to the text edges without moving the caret. The
 	// focused Text handles every selection-changing key (including
 	// Shift+Home/End) and declines plain Home/End, which then bubble up here.
-	if !isDarwin() || ebiten.IsKeyPressed(ebiten.KeyShift) || t.panel == nil {
+	if context.KeyBindingMode() != guigui.KeyBindingModeCommand || ebiten.IsKeyPressed(ebiten.KeyShift) || t.panel == nil {
 		return guigui.HandleInputResult{}
 	}
 	switch {

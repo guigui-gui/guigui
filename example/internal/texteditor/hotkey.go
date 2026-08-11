@@ -4,33 +4,29 @@
 package texteditor
 
 import (
-	"runtime"
-
 	"github.com/hajimehoshi/ebiten/v2"
+
+	"github.com/guigui-gui/guigui"
 )
 
-// CmdPressed reports whether the platform's primary command modifier is
-// pressed: Command on macOS, Control elsewhere.
-func CmdPressed() bool {
-	if runtime.GOOS == "darwin" {
-		return ebiten.IsKeyPressed(ebiten.KeyMeta)
-	}
-	return ebiten.IsKeyPressed(ebiten.KeyControl)
+// ShortcutModifierPressed reports whether the modifier key that carries
+// application shortcuts is pressed.
+func ShortcutModifierPressed(context *guigui.Context) bool {
+	return ebiten.IsKeyPressed(context.KeyBindingMode().ShortcutModifierKey())
 }
 
-// Hotkey returns the platform-conventional display label of a shortcut with
-// the primary command modifier.
-func Hotkey(key string) string {
-	if runtime.GOOS == "darwin" {
+// Hotkey returns the display label of a shortcut with the shortcut modifier.
+func Hotkey(context *guigui.Context, key string) string {
+	if context.KeyBindingMode() == guigui.KeyBindingModeCommand {
 		return "⌘" + key
 	}
 	return "Ctrl+" + key
 }
 
-// HotkeyShift returns the platform-conventional display label of a shortcut
-// with the Shift and primary command modifiers.
-func HotkeyShift(key string) string {
-	if runtime.GOOS == "darwin" {
+// HotkeyShift returns the display label of a shortcut with the Shift and the
+// shortcut modifier.
+func HotkeyShift(context *guigui.Context, key string) string {
+	if context.KeyBindingMode() == guigui.KeyBindingModeCommand {
 		return "⇧⌘" + key
 	}
 	return "Ctrl+Shift+" + key

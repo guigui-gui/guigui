@@ -195,30 +195,30 @@ func (m *Menubar) Build(context *guigui.Context, adder *guigui.ChildAdder) error
 		{Text: "Edit"},
 	}
 	editItems := []basicwidget.PopupMenuItem[string]{
-		{Text: "Undo", Value: "undo", KeyText: Hotkey("Z"), Disabled: !m.canUndo},
-		{Text: "Redo", Value: "redo", KeyText: HotkeyShift("Z"), Disabled: !m.canRedo},
+		{Text: "Undo", Value: "undo", KeyText: Hotkey(context, "Z"), Disabled: !m.canUndo},
+		{Text: "Redo", Value: "redo", KeyText: HotkeyShift(context, "Z"), Disabled: !m.canRedo},
 		{Border: true},
-		{Text: "Cut", Value: "cut", KeyText: Hotkey("X"), Disabled: !m.canCut},
-		{Text: "Copy", Value: "copy", KeyText: Hotkey("C"), Disabled: !m.canCopy},
-		{Text: "Paste", Value: "paste", KeyText: Hotkey("V"), Disabled: !m.canPaste},
+		{Text: "Cut", Value: "cut", KeyText: Hotkey(context, "X"), Disabled: !m.canCut},
+		{Text: "Copy", Value: "copy", KeyText: Hotkey(context, "C"), Disabled: !m.canCopy},
+		{Text: "Paste", Value: "paste", KeyText: Hotkey(context, "V"), Disabled: !m.canPaste},
 	}
 	if m.pasteWithoutStylesVisible {
 		editItems = append(editItems,
-			basicwidget.PopupMenuItem[string]{Text: "Paste Without Styles", Value: "pastewithoutstyles", KeyText: HotkeyShift("V"), Disabled: !m.canPaste},
+			basicwidget.PopupMenuItem[string]{Text: "Paste Without Styles", Value: "pastewithoutstyles", KeyText: HotkeyShift(context, "V"), Disabled: !m.canPaste},
 		)
 	}
 	editItems = append(editItems,
 		basicwidget.PopupMenuItem[string]{Border: true},
-		basicwidget.PopupMenuItem[string]{Text: "Find…", Value: "find", KeyText: Hotkey("F")},
+		basicwidget.PopupMenuItem[string]{Text: "Find…", Value: "find", KeyText: Hotkey(context, "F")},
 		basicwidget.PopupMenuItem[string]{Border: true},
-		basicwidget.PopupMenuItem[string]{Text: "Select All", Value: "selectall", KeyText: Hotkey("A")},
+		basicwidget.PopupMenuItem[string]{Text: "Select All", Value: "selectall", KeyText: Hotkey(context, "A")},
 	)
 	popupItems := [][]basicwidget.PopupMenuItem[string]{
 		{
-			{Text: "New", Value: "new", KeyText: Hotkey("N")},
-			{Text: "Open…", Value: "open", KeyText: Hotkey("O")},
+			{Text: "New", Value: "new", KeyText: Hotkey(context, "N")},
+			{Text: "Open…", Value: "open", KeyText: Hotkey(context, "O")},
 			{Border: true},
-			{Text: "Save", Value: "save", KeyText: Hotkey("S"), Disabled: !m.canSave},
+			{Text: "Save", Value: "save", KeyText: Hotkey(context, "S"), Disabled: !m.canSave},
 			{Text: "Save As…", Value: "saveas", Disabled: m.saveAsDisabled},
 		},
 		editItems,

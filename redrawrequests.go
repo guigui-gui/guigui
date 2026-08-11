@@ -46,6 +46,7 @@ const (
 	requestRedrawReasonAppScale
 	requestRedrawReasonColorMode
 	requestRedrawReasonLocale
+	requestRedrawReasonKeyBindingMode
 )
 
 func (r requestRedrawReason) String() string {
@@ -72,6 +73,8 @@ func (r requestRedrawReason) String() string {
 		return "color mode"
 	case requestRedrawReasonLocale:
 		return "locale"
+	case requestRedrawReasonKeyBindingMode:
+		return "key binding mode"
 	default:
 		return "unknown"
 	}

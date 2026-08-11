@@ -237,7 +237,7 @@ func (c *findDialogContent) Build(context *guigui.Context, adder *guigui.ChildAd
 		}
 		// Cmd/Ctrl+F toggles: when the popup is already open, treat the same
 		// shortcut as a close.
-		if CmdPressed() && inpututil.IsKeyJustPressed(ebiten.KeyF) {
+		if ShortcutModifierPressed(context) && inpututil.IsKeyJustPressed(ebiten.KeyF) {
 			c.dialog.popup.SetOpen(false)
 			return guigui.HandleInputByWidget(&c.queryInput)
 		}

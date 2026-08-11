@@ -415,6 +415,13 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		return guigui.HandleInputResult{}
 	}
 
+	mode := context.KeyBindingMode()
+	// commandMode also selects the navigation layout: Command and Option with the
+	// arrow keys, and Home and End that scroll without moving the caret.
+	commandMode := mode == guigui.KeyBindingModeCommand
+	shortcutModifierPressed := ebiten.IsKeyPressed(mode.ShortcutModifierKey())
+	emacsKeymap := mode.UsesEmacsKeymap()
+
 	if t.editable {
 		if t.updateIMEComposer(context, widgetBounds) {
 			return guigui.HandleInputByWidget(t)
@@ -437,7 +444,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 			return guigui.HandleInputByWidget(t)
 		case IsKeyRepeating(ebiten.KeyBackspace) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyH):
+			emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyH):
 			start, end := t.store.Selection()
 			if start != end {
 				t.replaceTextAtSelection("")
@@ -446,13 +453,12 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAt("", pos, start, nil)
 			}
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyD) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyD):
+		case ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyD):
 			// Delete
 			start, end := t.store.Selection()
 			if start != end {
 				t.replaceTextAtSelection("")
-			} else if IsDarwin() && end < t.store.TextLengthInBytes() {
+			} else if emacsKeymap && end < t.store.TextLengthInBytes() {
 				pos := t.nextPositionOnGraphemes(end)
 				t.replaceTextAt("", start, pos, nil)
 			}
@@ -464,26 +470,24 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAt("", start, pos, nil)
 			}
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyX) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyX):
+		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyX):
 			t.Cut()
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV):
+		case shortcutModifierPressed && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV):
 			// Paste without styles. An additionally held Option also lands
 			// here, covering the macOS Paste and Match Style chord.
 			t.PasteWithoutStyles()
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyV) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyV):
+		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyV):
 			t.Paste()
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyZ):
+		// Where the Emacs keymap is in effect, Control+Y is a yank, so redo is
+		// Shift and the shortcut modifier with Z instead.
+		case emacsKeymap && shortcutModifierPressed && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyZ) ||
+			!emacsKeymap && shortcutModifierPressed && IsKeyRepeating(ebiten.KeyY):
 			t.Redo()
 			return guigui.HandleInputByWidget(t)
-		case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyZ) ||
-			IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyZ):
+		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyZ):
 			t.Undo()
 			return guigui.HandleInputByWidget(t)
 		}
@@ -492,42 +496,42 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	switch {
 	// macOS: Command+Arrow moves to a visual-line or document extreme;
 	// Option+Arrow moves by word or paragraph. Shift extends the selection.
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyLeft):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyLeft):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.visualLineStart(context, widgetBounds, position)
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyRight):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyRight):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.visualLineEnd(context, widgetBounds, position)
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyUp):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyUp):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
 			return 0, true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyDown):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyDown):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
 			return t.store.TextLengthInBytes(), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyLeft):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyLeft):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.prevWordStart(position), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyRight):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyRight):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.nextWordEnd(position), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyUp):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyUp):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.paragraphStart(position), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyDown):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyDown):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.paragraphEnd(position), true
 		})
@@ -535,50 +539,50 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	// macOS: Shift+Home/End extend the selection to the start/end of the text.
 	// Plain Home/End scroll without moving the caret; they are left unhandled
 	// here and handled by the virtualizing parent after bubbling up.
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyHome):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyHome):
 		t.navigateBackward(true, func(int) (int, bool) {
 			return 0, true
 		})
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyEnd):
+	case commandMode && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyEnd):
 		t.navigateForward(true, func(int) (int, bool) {
 			return t.store.TextLengthInBytes(), true
 		})
 		return guigui.HandleInputByWidget(t)
 	// Windows/Linux: Ctrl+Arrow moves by word, Home/End to line head/tail,
 	// Ctrl+Home/End to document head/tail. Shift extends the selection.
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyLeft):
+	case !commandMode && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyLeft):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.prevWordStart(position), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyRight):
+	case !commandMode && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyRight):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.nextWordStart(position), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyHome):
+	case !commandMode && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyHome):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
 			return 0, true
 		})
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyEnd):
+	case !commandMode && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyEnd):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(int) (int, bool) {
 			return t.store.TextLengthInBytes(), true
 		})
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && IsKeyRepeating(ebiten.KeyHome):
+	case !commandMode && IsKeyRepeating(ebiten.KeyHome):
 		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.visualLineStart(context, widgetBounds, position)
 		})
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && IsKeyRepeating(ebiten.KeyEnd):
+	case !commandMode && IsKeyRepeating(ebiten.KeyEnd):
 		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
 			return t.visualLineEnd(context, widgetBounds, position)
 		})
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyLeft) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyB):
+		emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyB):
 		start, end := t.store.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.shiftSelectionSide == SelectionSideEnd {
@@ -598,7 +602,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyRight) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyF):
+		emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyF):
 		start, end := t.store.Selection()
 		if ebiten.IsKeyPressed(ebiten.KeyShift) {
 			if t.shiftSelectionSide == SelectionSideStart {
@@ -618,7 +622,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyUp) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyP):
+		emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyP):
 		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
 		var moveEnd bool
 		start, end := t.store.Selection()
@@ -649,7 +653,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		}
 		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyDown) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyN):
+		emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyN):
 		shift := ebiten.IsKeyPressed(ebiten.KeyShift)
 		var moveStart bool
 		start, end := t.store.Selection()
@@ -679,7 +683,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			}
 		}
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyA):
+	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyA):
 		idx := 0
 		start, end := t.store.Selection()
 		if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, start)); i >= 0 {
@@ -691,7 +695,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			t.setSelection(idx, idx, SelectionSideNone, true)
 		}
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyE):
+	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyE):
 		idx := t.store.TextLengthInBytes()
 		start, end := t.store.Selection()
 		if i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(end, -1)); i >= 0 {
@@ -703,16 +707,16 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			t.setSelection(idx, idx, SelectionSideNone, true)
 		}
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyA) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyA):
+	// Where the Emacs keymap shares the shortcut modifier with Control, its
+	// beginning-of-line binding above takes Control+A and select all has no chord.
+	case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyA):
 		t.doSelectAll()
 		return guigui.HandleInputByWidget(t)
-	case !IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyC) ||
-		IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) && IsKeyRepeating(ebiten.KeyC):
+	case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyC):
 		// Copy
 		t.Copy()
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyK):
+	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyK):
 		// 'Kill' the text after the caret or the selection.
 		start, end := t.store.Selection()
 		if start == end {
@@ -728,7 +732,7 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		t.tmpClipboard = t.stringValueWithRange(start, end)
 		t.replaceTextAt("", start, end, nil)
 		return guigui.HandleInputByWidget(t)
-	case IsDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY):
+	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY):
 		// 'Yank' the killed text.
 		if t.tmpClipboard != "" {
 			t.replaceTextAtSelection(t.tmpClipboard)

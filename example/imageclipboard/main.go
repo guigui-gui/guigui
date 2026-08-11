@@ -10,7 +10,6 @@ import (
 	"image/png"
 	"log/slog"
 	"os"
-	"runtime"
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
@@ -21,10 +20,12 @@ import (
 	"github.com/guigui-gui/guigui/clipboard"
 )
 
-var placeholderMessage = fmt.Sprintf("No image yet.\n\n"+
-	"Copy an image, then press %s or the Paste button.\n\n"+
-	"The clipboard image is read as PNG. Most apps offer their image as PNG, such as a screenshot copied on macOS or Copy Image in a browser. "+
-	"An app that offers an image only in another format, such as TIFF or a bitmap, has nothing to show here.", hotkey("V"))
+func placeholderMessage(context *guigui.Context) string {
+	return fmt.Sprintf("No image yet.\n\n"+
+		"Copy an image, then press %s or the Paste button.\n\n"+
+		"The clipboard image is read as PNG. Most apps offer their image as PNG, such as a screenshot copied on macOS or Copy Image in a browser. "+
+		"An app that offers an image only in another format, such as TIFF or a bitmap, has nothing to show here.", hotkey(context, "V"))
+}
 
 type Root struct {
 	guigui.DefaultWidget
@@ -59,7 +60,7 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	r.placeholder.SetWrapMode(basicwidget.WrapModeNormal)
 	r.placeholder.SetHorizontalAlign(basicwidget.HorizontalAlignCenter)
 	r.placeholder.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
-	r.placeholder.SetValue(placeholderMessage)
+	r.placeholder.SetValue(placeholderMessage(context))
 
 	r.status.SetVerticalAlign(basicwidget.VerticalAlignMiddle)
 	r.status.SetValue(r.statusText)
@@ -124,7 +125,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 // HandleButtonInput handles the paste shortcut. It lives on the root so that
 // it works wherever the focus is.
 func (r *Root) HandleButtonInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-	if !cmdPressed() || !inpututil.IsKeyJustPressed(ebiten.KeyV) {
+	if !shortcutModifierPressed(context) || !inpututil.IsKeyJustPressed(ebiten.KeyV) {
 		return guigui.HandleInputResult{}
 	}
 	r.paste()
@@ -155,19 +156,15 @@ func (r *Root) paste() {
 	r.statusText = fmt.Sprintf("Pasted a %d×%d image.", size.X, size.Y)
 }
 
-// cmdPressed reports whether the platform's primary command modifier is
-// pressed: Command on macOS, Control elsewhere.
-func cmdPressed() bool {
-	if runtime.GOOS == "darwin" {
-		return ebiten.IsKeyPressed(ebiten.KeyMeta)
-	}
-	return ebiten.IsKeyPressed(ebiten.KeyControl)
+// shortcutModifierPressed reports whether the modifier key that carries
+// application shortcuts is pressed.
+func shortcutModifierPressed(context *guigui.Context) bool {
+	return ebiten.IsKeyPressed(context.KeyBindingMode().ShortcutModifierKey())
 }
 
-// hotkey returns the platform-conventional display label of a shortcut with
-// the primary command modifier.
-func hotkey(key string) string {
-	if runtime.GOOS == "darwin" {
+// hotkey returns the display label of a shortcut with the shortcut modifier.
+func hotkey(context *guigui.Context, key string) string {
+	if context.KeyBindingMode() == guigui.KeyBindingModeCommand {
 		return "⌘" + key
 	}
 	return "Ctrl+" + key

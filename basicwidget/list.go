@@ -2115,8 +2115,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() {
 				if ebiten.IsKeyPressed(ebiten.KeyShift) {
 					l.extendItemSelectionByIndex(index, false)
-				} else if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
-					isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+				} else if ebiten.IsKeyPressed(context.KeyBindingMode().ShortcutModifierKey()) {
 					l.toggleItemSelectionByIndex(index, false)
 				} else if !l.abstractList.IsSelectedItemIndex(index) {
 					l.selectItemByIndex(index, false)
@@ -2143,8 +2142,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			if ebiten.IsKeyPressed(ebiten.KeyShift) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
-			if !isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl) ||
-				isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta) {
+			if ebiten.IsKeyPressed(context.KeyBindingMode().ShortcutModifierKey()) {
 				return guigui.AbortHandlingInputByWidget(l)
 			}
 			if l.startPressingIndexPlus1 == 0 {
@@ -2189,8 +2187,7 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 			// For the multi selection, the index is updated when the user releases the mouse button.
 			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() && l.startPressingIndexPlus1 > 0 && l.dragSrcIndexPlus1 == 0 {
 				if !ebiten.IsKeyPressed(ebiten.KeyShift) &&
-					!(!isDarwin() && ebiten.IsKeyPressed(ebiten.KeyControl)) &&
-					!(isDarwin() && ebiten.IsKeyPressed(ebiten.KeyMeta)) {
+					!ebiten.IsKeyPressed(context.KeyBindingMode().ShortcutModifierKey()) {
 					l.selectItemByIndex(l.startPressingIndexPlus1-1, false)
 					l.pressStartPlus1 = image.Point{}
 					l.startPressingIndexPlus1 = 0
