@@ -41,12 +41,12 @@ type textContentCache struct {
 
 	// hasher is a reusable streaming hasher used by contentHash to
 	// fingerprint the current content.
-	hasher hash.Hash
+	hasher hash.Hash64
 
 	// hashCache memoizes the most recently computed hash, keyed by
 	// [textStore.Generation]. While the store has not been mutated, repeated
 	// contentHash calls return the cached value without re-hashing.
-	hashCache      [16]byte
+	hashCache      uint64
 	hashGeneration int64
 
 	// lineByteOffsets holds the byte offset of each logical line start in the
@@ -118,21 +118,19 @@ func (c *textContentCache) stringWithRange(store *textStore, start, end int, for
 	return str
 }
 
-// contentHash returns a 128-bit fingerprint of the store's rendering text
+// contentHash returns a 64-bit fingerprint of the store's rendering text
 // (matching what drawing and measuring see).
-func (c *textContentCache) contentHash(store *textStore) [16]byte {
+func (c *textContentCache) contentHash(store *textStore) uint64 {
 	generation := store.Generation()
 	if generation == c.hashGeneration {
 		return c.hashCache
 	}
 	if c.hasher == nil {
-		c.hasher = fnv.New128a()
+		c.hasher = fnv.New64a()
 	}
 	c.hasher.Reset()
 	_, _ = store.WriteTextForRenderingTo(c.hasher)
-	var ch [16]byte
-	c.hasher.Sum(ch[:0])
-	c.hashCache = ch
+	c.hashCache = c.hasher.Sum64()
 	c.hashGeneration = generation
 	return c.hashCache
 }

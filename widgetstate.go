@@ -160,7 +160,7 @@ type widgetState struct {
 	// The empty set (the zero value) means the widget is clean.
 	redrawReasons requestRedrawReasons
 
-	capturedStateKey         [16]byte
+	capturedStateKey         uint64
 	capturedInternalStateKey widgetInternalStateKey
 
 	// redrawRequestedAt records the call site of the last RequestRedraw, for debug logging only.

@@ -153,11 +153,11 @@ type app struct {
 }
 
 // widgetStateKey runs widget.WriteStateKey into the shared writer and returns
-// the resulting 128-bit hash. The writer is reset before the call.
-func (a *app) widgetStateKey(widget Widget) [16]byte {
+// the resulting 64-bit hash. The writer is reset before the call.
+func (a *app) widgetStateKey(widget Widget) uint64 {
 	a.stateKeyWriter.reset()
 	widget.WriteStateKey(&a.context, &a.stateKeyWriter)
-	return a.stateKeyWriter.sum128()
+	return a.stateKeyWriter.sum64()
 }
 
 var theApp app

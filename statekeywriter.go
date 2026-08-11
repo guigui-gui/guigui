@@ -19,7 +19,7 @@ import (
 // StateKeyWriter implements [io.Writer] as an escape hatch for variable-length
 // byte content.
 type StateKeyWriter struct {
-	h      hash.Hash // FNV-1a 128-bit, lazily created.
+	h      hash.Hash64 // FNV-1a 64-bit, lazily created.
 	buf    [8]byte
 	strbuf []byte
 }
@@ -28,15 +28,13 @@ var _ io.Writer = (*StateKeyWriter)(nil)
 
 func (w *StateKeyWriter) reset() {
 	if w.h == nil {
-		w.h = fnv.New128a()
+		w.h = fnv.New64a()
 	}
 	w.h.Reset()
 }
 
-func (w *StateKeyWriter) sum128() [16]byte {
-	var key [16]byte
-	w.h.Sum(key[:0])
-	return key
+func (w *StateKeyWriter) sum64() uint64 {
+	return w.h.Sum64()
 }
 
 // Write implements [io.Writer].

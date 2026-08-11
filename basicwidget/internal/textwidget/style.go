@@ -399,10 +399,10 @@ func (t *Text) styleAtCaret(textIndexInBytes int) textstyle.Style {
 	return t.ensureOverrideStyleRuns().StyleAt(textIndexInBytes - 1)
 }
 
-// metricHashWriter adapts an FNV-1a 128-bit hash to [textstyle.Writer] for
+// metricHashWriter adapts an FNV-1a 64-bit hash to [textstyle.Writer] for
 // fingerprinting the metric style properties.
 type metricHashWriter struct {
-	h      hash.Hash
+	h      hash.Hash64
 	buf    [8]byte
 	strbuf []byte
 }
@@ -449,8 +449,8 @@ func (w *metricHashWriter) WriteString(v string) {
 // metricStyleFingerprint fingerprints the metric properties of the ranged
 // style overrides and of the insertion point, which take part in the measured
 // size.
-func (t *Text) metricStyleFingerprint() [16]byte {
-	h := fnv.New128a()
+func (t *Text) metricStyleFingerprint() uint64 {
+	h := fnv.New64a()
 	w := metricHashWriter{h: h}
 	t.ensureOverrideStyleRuns().WriteMetricStateKey(&w)
 	// The caret's position only takes part in the size where the text typed
@@ -462,9 +462,7 @@ func (t *Text) metricStyleFingerprint() [16]byte {
 		adopted.WriteMetricStateKey(&w)
 		t.insertionStyle.WriteMetricStateKey(&w)
 	}
-	var fp [16]byte
-	h.Sum(fp[:0])
-	return fp
+	return h.Sum64()
 }
 
 // invalidateSizeCacheForMetricStyles resets the cached text sizes when the

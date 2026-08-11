@@ -95,7 +95,7 @@ type Text struct {
 	// lastMetricStyleFingerprint is the metric styles' fingerprint at the
 	// last size measurement, so cached sizes reset when a metric style
 	// changes.
-	lastMetricStyleFingerprint [16]byte
+	lastMetricStyleFingerprint uint64
 
 	selectable bool
 	editable   bool
@@ -256,10 +256,10 @@ func (t *Text) OnScrollIntoView(f func(context *guigui.Context, start, end Caret
 	guigui.SetEventHandler(t, textEventScrollIntoView, f)
 }
 
-// contentHashForStateKey returns a 128-bit fingerprint of the current field
+// contentHashForStateKey returns a 64-bit fingerprint of the current field
 // contents, including the active IME composition (matching what [Text.Draw]
 // and [Text.Measure] see).
-func (t *Text) contentHashForStateKey() [16]byte {
+func (t *Text) contentHashForStateKey() uint64 {
 	return t.contentCache.contentHash(&t.store)
 }
 
@@ -314,8 +314,7 @@ func (t *Text) WriteStateKey(context *guigui.Context, w *guigui.StateKeyWriter) 
 	w.WriteInt(selEnd)
 	w.WriteBool(t.store.IsFocused())
 	w.WriteUint64(t.fontFamilyID())
-	ch := t.contentHashForStateKey()
-	_, _ = w.Write(ch[:])
+	w.WriteUint64(t.contentHashForStateKey())
 	t.ensureOverrideStyleRuns().WriteStateKey(w)
 	// Only the insertion style's metric properties are written: they size the
 	// caret and its line, while its other properties stay invisible until the
