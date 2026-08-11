@@ -69,10 +69,9 @@ type textStore struct {
 
 	// textCommittedFunc, when non-nil, is invoked right after an IME commit
 	// mutates the committed text, with the replaced byte range and the
-	// length of the replacing text in bytes. Like readRangedState, it is
-	// registered once via setTextCommittedFunc and shares the owning
-	// widget's lifetime.
-	textCommittedFunc func(startInBytes, endInBytes, newLenInBytes int)
+	// replacing text. Like readRangedState, it is registered once via
+	// setTextCommittedFunc and shares the owning widget's lifetime.
+	textCommittedFunc func(startInBytes, endInBytes int, insertedText string)
 }
 
 // textEdit is a positional mutation of the committed text: a replacement of
@@ -177,7 +176,7 @@ func (s *textStore) onIMECommit(c *textinput.Commit) {
 	s.compositionSelEnd = 0
 	s.bumpGenerationForEdit(insStart, insEnd, len(insText))
 	if s.textCommittedFunc != nil {
-		s.textCommittedFunc(insStart, insEnd, len(insText))
+		s.textCommittedFunc(insStart, insEnd, insText)
 	}
 }
 
@@ -197,7 +196,7 @@ func (s *textStore) commitText(text string) {
 	s.compositionSelEnd = 0
 	s.bumpGenerationForEdit(start, end, len(text))
 	if s.textCommittedFunc != nil {
-		s.textCommittedFunc(start, end, len(text))
+		s.textCommittedFunc(start, end, text)
 	}
 }
 
@@ -371,6 +370,15 @@ func (s *textStore) TextLengthInBytes() int {
 	return s.pieceTable.Len()
 }
 
+// UncommittedText returns the active composition when the store is focused,
+// and the empty string otherwise.
+func (s *textStore) UncommittedText() string {
+	if s.focused {
+		return s.composition
+	}
+	return ""
+}
+
 // UncommittedTextLengthInBytes returns the active composition length in
 // bytes when the store is focused. Returns 0 otherwise.
 func (s *textStore) UncommittedTextLengthInBytes() int {
@@ -492,7 +500,7 @@ func (s *textStore) setRangedStateReadFunc(f func(state *piecetable.RangedState)
 
 // setTextCommittedFunc registers f to be invoked right after an IME commit
 // mutates the committed text.
-func (s *textStore) setTextCommittedFunc(f func(startInBytes, endInBytes, newLenInBytes int)) {
+func (s *textStore) setTextCommittedFunc(f func(startInBytes, endInBytes int, insertedText string)) {
 	s.textCommittedFunc = f
 }
 

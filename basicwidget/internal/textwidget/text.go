@@ -656,7 +656,7 @@ func (t *Text) replaceTextAt(text string, start, end int, styleRuns *textstyle.R
 		runs.ApplyAt(styleRuns, start)
 		t.resetInsertionStyle()
 	} else {
-		t.adoptStylesForInsertedText(start, end, len(text))
+		t.adoptStylesForInsertedText(start, end, text)
 	}
 
 	t.resetCachedTextSize()

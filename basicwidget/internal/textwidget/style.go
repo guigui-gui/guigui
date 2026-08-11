@@ -253,23 +253,67 @@ func (t *Text) OnInsertionStyleReset(f func(context *guigui.Context)) {
 	guigui.SetEventHandler(t, textEventInsertionStyleReset, f)
 }
 
-// adoptStylesForInsertedText applies the ranged style overrides the text
-// inserted by a mutation replacing [startInBytes, endInBytes) with
-// newLenInBytes bytes carries: the style adopted at a logical line's head,
-// and the insertion style over it.
-func (t *Text) adoptStylesForInsertedText(startInBytes, endInBytes, newLenInBytes int) {
-	t.adoptStyleAtLineHeadIfNeeded(t.ensureOverrideStyleRuns(), startInBytes, endInBytes, newLenInBytes, t.store.TextLengthInBytes())
-	t.materializeInsertionStyle(startInBytes, newLenInBytes)
+// adoptStylesForInsertedText applies the ranged style overrides insertedText,
+// which a mutation put in place of [startInBytes, endInBytes), carries: the
+// style its position gives it in place of the one it took from the byte
+// before it, and the insertion style over it.
+func (t *Text) adoptStylesForInsertedText(startInBytes, endInBytes int, insertedText string) {
+	if startInBytes == endInBytes && len(insertedText) > 0 {
+		switch {
+		case t.isLogicalLineHead(startInBytes):
+			t.adoptStyleAtLineHeadIfNeeded(t.ensureOverrideStyleRuns(), startInBytes, len(insertedText), t.store.TextLengthInBytes())
+		case isLineBreak(insertedText):
+			t.styleLineBreakAtLineEndIfNeeded(startInBytes, len(insertedText))
+		}
+	}
+	t.materializeInsertionStyle(startInBytes, len(insertedText))
+}
+
+// styleLineBreakAtLineEndIfNeeded styles the line break inserted at
+// [startInBytes, startInBytes+lenInBytes) at the end of its line, which
+// leaves an empty line after it, with the style of the break that ended that
+// line, so the empty line carries it. A break with no style of its own takes
+// the style typed at the caret, and takes it on both breaks, so the empty
+// line matches the styled text it came from. A break inserted with text after
+// it on the same line styles nothing.
+func (t *Text) styleLineBreakAtLineEndIfNeeded(startInBytes, lenInBytes int) {
+	insertedEnd := startInBytes + lenInBytes
+	markStart, markEnd, hasMark := t.trailingLineBreakRange(insertedEnd)
+	// The caret sat at the line's end, leaving an empty line after the
+	// inserted break, only when what follows it is the line's own break or
+	// the end of the value.
+	atLineEnd := insertedEnd == t.store.TextLengthInBytes()
+	if hasMark {
+		atLineEnd = markStart == insertedEnd
+	}
+	if !atLineEnd {
+		return
+	}
+	runs := t.ensureOverrideStyleRuns()
+	var style textstyle.Style
+	if hasMark {
+		style = runs.StyleAt(markStart)
+	}
+	if style.IsZero() && startInBytes > 0 {
+		style = runs.StyleAt(startInBytes - 1)
+	}
+	runs.Reset(startInBytes, insertedEnd)
+	if style.IsZero() {
+		return
+	}
+	runs.ApplyStyle(startInBytes, insertedEnd, style)
+	if hasMark {
+		runs.ApplyStyle(markStart, markEnd, style)
+	}
 }
 
 // adoptStyleAtLineHeadIfNeeded replaces the overrides in runs that the text
 // inserted at the head of a logical line took from the byte before it with
-// those of the byte after it. [startInBytes, endInBytes) is the replaced
-// range and newLenInBytes the length of the inserted text, in the offsets of
-// the textLenInBytes-byte text runs indexes. A mutation that replaced text,
-// or one with no byte after the inserted text, keeps the overrides it took.
-func (t *Text) adoptStyleAtLineHeadIfNeeded(runs *textstyle.Runs, startInBytes, endInBytes, newLenInBytes, textLenInBytes int) {
-	if startInBytes != endInBytes || newLenInBytes <= 0 {
+// those of the byte after it. newLenInBytes is the length of the inserted
+// text, in the offsets of the textLenInBytes-byte text runs indexes. An
+// insertion with no byte after it keeps the overrides it took.
+func (t *Text) adoptStyleAtLineHeadIfNeeded(runs *textstyle.Runs, startInBytes, newLenInBytes, textLenInBytes int) {
+	if newLenInBytes <= 0 {
 		return
 	}
 	insertedEnd := startInBytes + newLenInBytes
@@ -546,13 +590,15 @@ func (t *Text) renderingStyleRuns() *textstyle.Runs {
 	if selStart > selEnd {
 		selStart, selEnd = selEnd, selStart
 	}
-	compLen := t.store.UncommittedTextLengthInBytes()
-	renderingLen := t.store.TextLengthInBytes() - (selEnd - selStart) + compLen
+	comp := t.store.UncommittedText()
+	renderingLen := t.store.TextLengthInBytes() - (selEnd - selStart) + len(comp)
 	t.renderingStyleRunsBuf.CopyFrom(t.ensureOverrideStyleRuns())
-	t.renderingStyleRunsBuf.Replace(selStart, selEnd, compLen)
-	t.adoptStyleAtLineHeadIfNeeded(&t.renderingStyleRunsBuf, selStart, selEnd, compLen, renderingLen)
+	t.renderingStyleRunsBuf.Replace(selStart, selEnd, len(comp))
+	if selStart == selEnd {
+		t.adoptStyleAtLineHeadIfNeeded(&t.renderingStyleRunsBuf, selStart, len(comp), renderingLen)
+	}
 	if !t.insertionStyle.IsZero() {
-		t.renderingStyleRunsBuf.ApplyStyle(selStart, selStart+compLen, t.insertionStyle)
+		t.renderingStyleRunsBuf.ApplyStyle(selStart, selStart+len(comp), t.insertionStyle)
 	}
 	return &t.renderingStyleRunsBuf
 }

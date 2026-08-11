@@ -11,10 +11,10 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textwidget"
 )
 
-// TestTextEnterAtLineEndKeepsTheBreakStyle asserts that splitting a line at
-// its end moves the line's own break, and its style, onto the new empty line,
-// whose head the caret then reads.
-func TestTextEnterAtLineEndKeepsTheBreakStyle(t *testing.T) {
+// TestTextEnterAtLineEndCopiesTheBreakStyle asserts that splitting a line at
+// its end gives both halves a break of the style the line's own break had,
+// rather than letting the new one take the text before it.
+func TestTextEnterAtLineEndCopiesTheBreakStyle(t *testing.T) {
 	red := color.RGBA{R: 0xff, A: 0xff}
 
 	var txt textwidget.Text
@@ -33,8 +33,8 @@ func TestTextEnterAtLineEndKeepsTheBreakStyle(t *testing.T) {
 		t.Fatalf("Value(): got: %q, want: %q", got, "Foo\n\nBar")
 	}
 	var wantRuns textstyle.Runs
-	wantRuns.SetUnderline(0, 4, true)
-	wantRuns.SetColor(4, 5, red)
+	wantRuns.SetUnderline(0, 3, true)
+	wantRuns.SetColor(3, 5, red)
 	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
 		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
 	}
@@ -46,6 +46,69 @@ func TestTextEnterAtLineEndKeepsTheBreakStyle(t *testing.T) {
 	}
 	if underline, _ := txt.EffectiveStyleAt(4).Underline(); underline {
 		t.Error("EffectiveStyleAt(4).Underline(): got: true, want: false")
+	}
+}
+
+// TestTextEnterInsideALineStylesNothing asserts that a split leaving text on
+// both sides copies no style: the break it inserts keeps what the text around
+// it gives it, and the line's own break is left alone.
+func TestTextEnterInsideALineStylesNothing(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+	blue := color.RGBA{B: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.SetMultiline(true)
+	txt.ForceSetValue("ab\ncd")
+	var runs textstyle.Runs
+	runs.SetColor(0, 2, blue)
+	runs.SetColor(2, 3, red)
+	txt.CopyOverrideStyleRunsFrom(&runs, false)
+	txt.SetSelection(1, 1)
+
+	txt.ReplaceTextAt("\n", 1, 1, nil)
+
+	if got := txt.Value(); got != "a\nb\ncd" {
+		t.Fatalf("Value(): got: %q, want: %q", got, "a\nb\ncd")
+	}
+	// The break takes the blue text around it, as any inserted byte does, and
+	// the red mark stays where it was.
+	var wantRuns textstyle.Runs
+	wantRuns.SetColor(0, 3, blue)
+	wantRuns.SetColor(3, 4, red)
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+	}
+}
+
+// TestTextEnterSplitsStyledLineOntoBothHalves asserts that splitting a line
+// whose break carries no style of its own styles both halves' breaks with the
+// style typed at the caret, so the new empty line matches the line it came
+// from.
+func TestTextEnterSplitsStyledLineOntoBothHalves(t *testing.T) {
+	red := color.RGBA{R: 0xff, A: 0xff}
+
+	var txt textwidget.Text
+	txt.SetEditable(true)
+	txt.SetMultiline(true)
+	txt.ForceSetValue("Foo\nBar")
+	// Only the text of the first line is styled, not its break.
+	var runs textstyle.Runs
+	runs.SetColor(0, 3, red)
+	txt.CopyOverrideStyleRunsFrom(&runs, false)
+	txt.SetSelection(3, 3)
+
+	txt.ReplaceTextAt("\n", 3, 3, nil)
+
+	// The break ending the new empty line carries the style too, so the line
+	// keeps the height and the typing style of the one it was split from.
+	var wantRuns textstyle.Runs
+	wantRuns.SetColor(0, 5, red)
+	if got := txt.OverrideStyleRuns(); !equalStyleRuns(got, runsSlice(&wantRuns)) {
+		t.Errorf("got: %+v, want: %+v", got, runsSlice(&wantRuns))
+	}
+	if clr, ok := txt.EffectiveStyleAt(4).Color(); !ok || clr != color.Color(red) {
+		t.Errorf("EffectiveStyleAt(4).Color(): got: %v, %t, want: %v, true", clr, ok, red)
 	}
 }
 

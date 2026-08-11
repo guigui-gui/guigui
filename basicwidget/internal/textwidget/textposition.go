@@ -42,6 +42,17 @@ func (t *Text) isLogicalLineHead(textIndexInBytes int) bool {
 	return t.LineStartInBytes(t.LineIndexFromTextIndexInBytes(textIndexInBytes)) == textIndexInBytes
 }
 
+// trailingLineBreakRange returns the byte range of the line break ending the
+// logical line holding textIndexInBytes. ok is false for a line that ends the
+// value.
+func (t *Text) trailingLineBreakRange(textIndexInBytes int) (startInBytes, endInBytes int, ok bool) {
+	lineIndex := t.LineIndexFromTextIndexInBytes(textIndexInBytes)
+	if lineIndex+1 >= t.LineCount() {
+		return 0, 0, false
+	}
+	return t.logicalLineContentEnd(lineIndex), t.LineStartInBytes(lineIndex + 1), true
+}
+
 // CaretPositionAtTextIndexInBytes returns the on-screen top and bottom
 // endpoints of a caret drawn at byte offset textIndexInBytes. ok is false
 // when the offset is out of range or the caret's logical line is outside the

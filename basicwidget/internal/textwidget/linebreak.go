@@ -9,6 +9,12 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
+// isLineBreak reports whether text is a single line break.
+func isLineBreak(text string) bool {
+	pos, l := textutil.FirstLineBreakPositionAndLen(text)
+	return pos == 0 && l == len(text) && l > 0
+}
+
 // replaceNewLinesWithSpace returns text with every line break replaced by a
 // single space, along with the byte offsets start and end remapped to the
 // replaced text.
