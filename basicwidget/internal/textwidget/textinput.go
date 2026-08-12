@@ -12,6 +12,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
 
 	"github.com/guigui-gui/guigui"
+	"github.com/guigui-gui/guigui/basicwidget/internal/textstyle"
 	"github.com/guigui-gui/guigui/basicwidget/internal/textutil"
 )
 
@@ -170,6 +171,34 @@ func (t *Text) nextWordStart(position int) int {
 		position = next
 	}
 	return total
+}
+
+// isLineBreakAt reports whether [start, end) is a line break.
+func (t *Text) isLineBreakAt(start, end int) bool {
+	i, _ := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(start, end))
+	return i == 0
+}
+
+// transposableClusters returns the byte offsets a, b, and c of the two adjacent
+// grapheme clusters [a, b) and [b, c) that a transpose at position swaps, and
+// reports whether such a pair exists. Neither cluster is ever a line break.
+func (t *Text) transposableClusters(position int) (a, b, c int, ok bool) {
+	b = position
+	c = t.nextPositionOnGraphemes(position)
+	// The caret at a line end has no cluster to its right, so the two clusters
+	// before it are swapped instead.
+	if c <= position || t.isLineBreakAt(position, c) {
+		c = position
+		b = t.prevPositionOnGraphemes(c)
+	}
+	if b <= 0 {
+		return 0, 0, 0, false
+	}
+	a = t.prevPositionOnGraphemes(b)
+	if a >= b || t.isLineBreakAt(a, b) || t.isLineBreakAt(b, c) {
+		return 0, 0, 0, false
+	}
+	return a, b, c, true
 }
 
 // visualLineStart returns the byte offset of the first index on the visual
@@ -491,6 +520,22 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				}
 			}
 			t.replaceTextAt("", start, end, nil)
+			return guigui.HandleInputByWidget(t)
+		// The macOS text system transposes the two clusters around the caret with
+		// Control+T. The Emacs key theme leaves the chord unbound, so ControlEmacs
+		// does not take it.
+		case commandMode && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyT):
+			if start, end := t.store.Selection(); start == end {
+				if a, b, c, ok := t.transposableClusters(start); ok {
+					// The clusters carry their styles across the swap, which the
+					// overrides of the replaced span would otherwise not follow.
+					overrides := t.ensureOverrideStyleRuns()
+					var runs textstyle.Runs
+					runs.ApplyStyle(0, c-b, overrides.StyleAt(b))
+					runs.ApplyStyle(c-b, c-a, overrides.StyleAt(a))
+					t.replaceTextAt(t.stringValueWithRange(b, c)+t.stringValueWithRange(a, b), a, c, &runs)
+				}
+			}
 			return guigui.HandleInputByWidget(t)
 		case IsKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster

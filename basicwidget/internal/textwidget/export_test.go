@@ -35,6 +35,10 @@ func (t *Text) NextWordStart(position int) int {
 	return t.nextWordStart(position)
 }
 
+func (t *Text) TransposableClusters(position int) (a, b, c int, ok bool) {
+	return t.transposableClusters(position)
+}
+
 func (t *Text) ParagraphStart(position int) int {
 	return t.paragraphStart(position)
 }

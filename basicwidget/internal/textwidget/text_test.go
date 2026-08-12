@@ -51,6 +51,46 @@ func TestTextWordNavigation(t *testing.T) {
 	}
 }
 
+func TestTextTransposableClusters(t *testing.T) {
+	// "a🇯🇵e\u0301\nあb": the clusters "a" [0,1), the flag [1,9), "e\u0301"
+	// [9,12), the line break [12,13), "あ" [13,16), and "b" [16,17). The flag
+	// is two regional indicators and "e\u0301" is an e with a combining acute,
+	// so a swap moving either must move all of its bytes.
+	txt := newMultilineText("a🇯🇵e\u0301\nあb")
+
+	cases := []struct {
+		position int
+		a, b, c  int
+		ok       bool
+	}{
+		// No cluster precedes the head of the text.
+		{position: 0},
+		{position: 1, a: 0, b: 1, c: 9, ok: true},
+		{position: 9, a: 1, b: 9, c: 12, ok: true},
+		// A caret at a line end swaps the two clusters before it.
+		{position: 12, a: 1, b: 9, c: 12, ok: true},
+		// A caret at a line head has only the break to its left.
+		{position: 13},
+		{position: 16, a: 13, b: 16, c: 17, ok: true},
+		// A caret at the end of the text behaves as one at a line end.
+		{position: 17, a: 13, b: 16, c: 17, ok: true},
+	}
+	for _, tc := range cases {
+		a, b, c, ok := txt.TransposableClusters(tc.position)
+		if ok != tc.ok || ok && (a != tc.a || b != tc.b || c != tc.c) {
+			t.Errorf("TransposableClusters(%d) = (%d, %d, %d, %t), want (%d, %d, %d, %t)", tc.position, a, b, c, ok, tc.a, tc.b, tc.c, tc.ok)
+		}
+	}
+
+	// An empty line offers no pair on either side of its break.
+	empty := newMultilineText("a\n\nb")
+	for _, position := range []int{2, 3} {
+		if _, _, _, ok := empty.TransposableClusters(position); ok {
+			t.Errorf("TransposableClusters(%d) on an empty line = ok, want not ok", position)
+		}
+	}
+}
+
 // TestTextDoubleClickWordBoundaries covers the double click at the end of a
 // line: the click resolves to the line's end wherever it lands in the space
 // after the line, and takes the line break there instead of the word before
