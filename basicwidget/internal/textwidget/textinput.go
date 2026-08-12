@@ -584,6 +584,24 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			return t.visualLineEnd(context, widgetBounds, position)
 		})
 		return guigui.HandleInputByWidget(t)
+	// The Emacs key theme moves by word with Alt and B or F, while the macOS text
+	// system places the same motion on Alt and Control. Both cases precede the
+	// character motion below, whose guard does not test Alt and would otherwise
+	// take the chord first.
+	case mode == guigui.KeyBindingModeControlEmacs && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyB) ||
+		commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyB):
+		t.navigateBackward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.prevWordStart(position), true
+		})
+		return guigui.HandleInputByWidget(t)
+	// Both keymaps stop at the word end, where Control with an arrow key stops at
+	// the next word start.
+	case mode == guigui.KeyBindingModeControlEmacs && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyF) ||
+		commandMode && ebiten.IsKeyPressed(ebiten.KeyAlt) && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyF):
+		t.navigateForward(ebiten.IsKeyPressed(ebiten.KeyShift), func(position int) (int, bool) {
+			return t.nextWordEnd(position), true
+		})
+		return guigui.HandleInputByWidget(t)
 	case IsKeyRepeating(ebiten.KeyLeft) ||
 		emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyB):
 		start, end := t.store.Selection()
