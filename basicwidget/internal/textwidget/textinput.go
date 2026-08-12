@@ -470,7 +470,10 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAt("", start, pos, nil)
 			}
 			return guigui.HandleInputByWidget(t)
-		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyX):
+		// The Emacs key theme binds Control+W to a cut as well. The macOS text
+		// system leaves Control+W unbound, so Command mode does not take it.
+		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyX) ||
+			mode == guigui.KeyBindingModeControlEmacs && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyW):
 			t.Cut()
 			return guigui.HandleInputByWidget(t)
 		case shortcutModifierPressed && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyV):
