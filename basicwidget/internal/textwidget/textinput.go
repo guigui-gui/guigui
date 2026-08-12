@@ -463,6 +463,16 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAt("", start, pos, nil)
 			}
 			return guigui.HandleInputByWidget(t)
+		// The Emacs key theme deletes the next word with Alt and D. The macOS text
+		// system leaves the chord unbound, so Command mode does not take it.
+		case mode == guigui.KeyBindingModeControlEmacs && ebiten.IsKeyPressed(ebiten.KeyAlt) && IsKeyRepeating(ebiten.KeyD):
+			start, end := t.store.Selection()
+			if start != end {
+				t.replaceTextAtSelection("")
+			} else if end < t.store.TextLengthInBytes() {
+				t.replaceTextAt("", start, t.nextWordEnd(end), nil)
+			}
+			return guigui.HandleInputByWidget(t)
 		case IsKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if start, end := t.store.Selection(); end < t.store.TextLengthInBytes() {
