@@ -482,8 +482,8 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 			t.Paste()
 			return guigui.HandleInputByWidget(t)
 		// Where the Emacs keymap is in effect, Control+Y is a yank, so redo is
-		// Shift and the shortcut modifier with Z instead.
-		case emacsKeymap && shortcutModifierPressed && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyZ) ||
+		// only Shift and the shortcut modifier with Z.
+		case shortcutModifierPressed && ebiten.IsKeyPressed(ebiten.KeyShift) && IsKeyRepeating(ebiten.KeyZ) ||
 			!emacsKeymap && shortcutModifierPressed && IsKeyRepeating(ebiten.KeyY):
 			t.Redo()
 			return guigui.HandleInputByWidget(t)
