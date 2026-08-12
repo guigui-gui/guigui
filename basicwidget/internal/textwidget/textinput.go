@@ -473,6 +473,25 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 				t.replaceTextAt("", start, t.nextWordEnd(end), nil)
 			}
 			return guigui.HandleInputByWidget(t)
+		// The Emacs key theme deletes back to the line head with Control+U. The
+		// macOS text system leaves the chord unbound, so Command mode does not
+		// take it.
+		case mode == guigui.KeyBindingModeControlEmacs && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyU):
+			start, end := t.store.Selection()
+			if start == end {
+				start = 0
+				if i, l := textutil.LastLineBreakPositionAndLen(t.stringValueWithRange(0, end)); i >= 0 {
+					// A caret already at the line head takes the break itself, as
+					// Control+K takes the break at a line end.
+					if i+l == end {
+						start = i
+					} else {
+						start = i + l
+					}
+				}
+			}
+			t.replaceTextAt("", start, end, nil)
+			return guigui.HandleInputByWidget(t)
 		case IsKeyRepeating(ebiten.KeyDelete):
 			// Delete one cluster
 			if start, end := t.store.Selection(); end < t.store.TextLengthInBytes() {
