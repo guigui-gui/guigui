@@ -567,6 +567,28 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 		case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyZ):
 			t.Undo()
 			return guigui.HandleInputByWidget(t)
+		case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyK):
+			// 'Kill' the text after the caret or the selection.
+			start, end := t.store.Selection()
+			if start == end {
+				i, l := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(start, -1))
+				if i < 0 {
+					end = t.store.TextLengthInBytes()
+				} else if i == 0 {
+					end = start + l
+				} else {
+					end = start + i
+				}
+			}
+			t.tmpClipboard = t.stringValueWithRange(start, end)
+			t.replaceTextAt("", start, end, nil)
+			return guigui.HandleInputByWidget(t)
+		case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY):
+			// 'Yank' the killed text.
+			if t.tmpClipboard != "" {
+				t.replaceTextAtSelection(t.tmpClipboard)
+			}
+			return guigui.HandleInputByWidget(t)
 		}
 	}
 
@@ -810,28 +832,6 @@ func (t *Text) handleButtonInput(context *guigui.Context, widgetBounds *guigui.W
 	case shortcutModifierPressed && IsKeyRepeating(ebiten.KeyC):
 		// Copy
 		t.Copy()
-		return guigui.HandleInputByWidget(t)
-	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyK):
-		// 'Kill' the text after the caret or the selection.
-		start, end := t.store.Selection()
-		if start == end {
-			i, l := textutil.FirstLineBreakPositionAndLen(t.stringValueWithRange(start, -1))
-			if i < 0 {
-				end = t.store.TextLengthInBytes()
-			} else if i == 0 {
-				end = start + l
-			} else {
-				end = start + i
-			}
-		}
-		t.tmpClipboard = t.stringValueWithRange(start, end)
-		t.replaceTextAt("", start, end, nil)
-		return guigui.HandleInputByWidget(t)
-	case emacsKeymap && ebiten.IsKeyPressed(ebiten.KeyControl) && IsKeyRepeating(ebiten.KeyY):
-		// 'Yank' the killed text.
-		if t.tmpClipboard != "" {
-			t.replaceTextAtSelection(t.tmpClipboard)
-		}
 		return guigui.HandleInputByWidget(t)
 	}
 
