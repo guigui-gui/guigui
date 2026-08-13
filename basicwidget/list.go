@@ -617,6 +617,7 @@ type listItemWidget[T comparable] struct {
 	resolvedTextColor color.Color
 
 	layout             guigui.LinearLayout
+	scaleForLayout     float64
 	layoutItems        []guigui.LinearLayoutItem
 	wrapperLayoutItems []guigui.LinearLayoutItem
 
@@ -717,9 +718,11 @@ func (l *listItemWidget[T]) resetLayout() {
 }
 
 func (l *listItemWidget[T]) ensureLayout(context *guigui.Context) guigui.LinearLayout {
-	if len(l.layout.Items) > 0 {
+	if len(l.layout.Items) > 0 && l.scaleForLayout == context.Scale() {
 		return l.layout
 	}
+	l.resetLayout()
+	l.scaleForLayout = context.Scale()
 
 	layout := guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionHorizontal,
@@ -929,6 +932,7 @@ type listContent[T comparable] struct {
 	startPressingIndexPlus1   int
 	contentWidthPlus1         int
 	widthForCachedHeight      int
+	scaleForCachedHeight      float64
 	cachedHeight              int
 
 	itemBoundsForLayoutFromIndex []image.Rectangle
@@ -1508,7 +1512,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 	// Use the cached height if possible.
 	// This can return an inaccurate height if the content widgets change, but this is very unlikely.
 	// If a widget size is changed, widgets' Layout should be called soon anyway.
-	if width > 0 && width == l.widthForCachedHeight {
+	if width > 0 && width == l.widthForCachedHeight && context.Scale() == l.scaleForCachedHeight {
 		return image.Pt(width, l.cachedHeight)
 	}
 
@@ -1556,6 +1560,7 @@ func (l *listContent[T]) Measure(context *guigui.Context, constraints guigui.Con
 		// Don't cache height during animation since it changes every tick.
 		if !l.isExpandAnimating() {
 			l.widthForCachedHeight = width
+			l.scaleForCachedHeight = context.Scale()
 			l.cachedHeight = h
 		}
 	}
