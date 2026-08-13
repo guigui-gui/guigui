@@ -1291,12 +1291,12 @@ func (l *listContent[T]) layoutItems(context *guigui.Context, widgetBounds *guig
 	// Clear the per-Layout content height cache.
 	clear(l.measuredContentHeights)
 
-	// Build a mapping from available-item order to real index.
+	// Build a mapping from available-item order to real index. A list without
+	// available items still runs through layoutTopItem below, which resets the
+	// panel's scroll state and marks it as scrolled to the end, so that the
+	// panel does not claim wheel input an ancestor scroll panel should get.
 	l.tmpAvailableIndices = l.appendAvailableIndices(l.tmpAvailableIndices[:0])
 	availableIndices := l.tmpAvailableIndices
-	if len(availableIndices) == 0 {
-		return
-	}
 
 	baseX := bounds.Min.X + RoundedCornerRadius(context)
 	viewportTop := bounds.Min.Y
