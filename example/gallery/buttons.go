@@ -14,6 +14,7 @@ import (
 type Buttons struct {
 	guigui.DefaultWidget
 
+	buttonsFormPanel    basicwidget.Panel
 	buttonsForm         basicwidget.Form
 	buttonText          basicwidget.Text
 	button              basicwidget.Button
@@ -38,8 +39,12 @@ type Buttons struct {
 }
 
 func (b *Buttons) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&b.buttonsForm)
+	adder.AddWidget(&b.buttonsFormPanel)
 	adder.AddWidget(&b.configForm)
+
+	b.buttonsFormPanel.SetContent(&b.buttonsForm)
+	b.buttonsFormPanel.SetAutoBorder(true)
+	b.buttonsFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(b, modelKeyModel)
 	if !ok {
@@ -148,10 +153,8 @@ func (b *Buttons) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
 	b.layoutItems = append(b.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &b.buttonsForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &b.buttonsFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &b.configForm,

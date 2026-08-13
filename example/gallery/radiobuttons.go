@@ -13,8 +13,10 @@ import (
 type RadioButtons struct {
 	guigui.DefaultWidget
 
-	radioButtonsForm1 basicwidget.Form
-	radioButtonsForm2 basicwidget.Form
+	radioButtonsFormsPanel basicwidget.Panel
+	radioButtonsForms      verticalStack
+	radioButtonsForm1      basicwidget.Form
+	radioButtonsForm2      basicwidget.Form
 
 	radioButtonGroup1 basicwidget.RadioButtonGroup[int]
 	radioButtonTexts1 [3]basicwidget.Text
@@ -32,13 +34,18 @@ type RadioButtons struct {
 }
 
 func (r *RadioButtons) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&r.radioButtonsForm1)
+	adder.AddWidget(&r.radioButtonsFormsPanel)
 	adder.AddWidget(&r.radioButtonGroup1)
-
-	adder.AddWidget(&r.radioButtonsForm2)
 	adder.AddWidget(&r.radioButtonGroup2)
-
 	adder.AddWidget(&r.configForm)
+
+	r.radioButtonsForms.SetWidgets([]guigui.Widget{
+		&r.radioButtonsForm1,
+		&r.radioButtonsForm2,
+	})
+	r.radioButtonsFormsPanel.SetContent(&r.radioButtonsForms)
+	r.radioButtonsFormsPanel.SetAutoBorder(true)
+	r.radioButtonsFormsPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(r, modelKeyModel)
 	if !ok {
@@ -127,13 +134,8 @@ func (r *RadioButtons) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	r.layoutItems = slices.Delete(r.layoutItems, 0, len(r.layoutItems))
 	r.layoutItems = append(r.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &r.radioButtonsForm1,
-		},
-		guigui.LinearLayoutItem{
-			Widget: &r.radioButtonsForm2,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &r.radioButtonsFormsPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &r.configForm,

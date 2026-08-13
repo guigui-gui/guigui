@@ -151,10 +151,7 @@ func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	t.layoutItems = append(t.layoutItems,
 		guigui.LinearLayoutItem{
 			Widget: &t.table,
-			Size:   guigui.FixedSize(12 * u),
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &t.configForm,
@@ -163,6 +160,7 @@ func (t *Tables) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items:     t.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

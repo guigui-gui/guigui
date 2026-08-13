@@ -13,7 +13,9 @@ import (
 type Sliders struct {
 	guigui.DefaultWidget
 
-	sliderForm                       basicwidget.Form
+	sliderFormPanel basicwidget.Panel
+	sliderForm      basicwidget.Form
+
 	sliderText                       basicwidget.Text
 	slider                           guigui.WidgetWithSize[*basicwidget.Slider]
 	sliderWithoutRangeText           basicwidget.Text
@@ -31,8 +33,12 @@ type Sliders struct {
 }
 
 func (s *Sliders) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&s.sliderForm)
+	adder.AddWidget(&s.sliderFormPanel)
 	adder.AddWidget(&s.configForm)
+
+	s.sliderFormPanel.SetContent(&s.sliderForm)
+	s.sliderFormPanel.SetAutoBorder(true)
+	s.sliderFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(s, modelKeyModel)
 	if !ok {
@@ -121,10 +127,8 @@ func (s *Sliders) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &s.sliderForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &s.sliderFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &s.configForm,

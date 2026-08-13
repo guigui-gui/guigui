@@ -13,7 +13,9 @@ import (
 type Comboboxes struct {
 	guigui.DefaultWidget
 
+	listFormPanel basicwidget.Panel
 	listForm      basicwidget.Form
+
 	combobox1Text basicwidget.Text
 	combobox1     basicwidget.Combobox
 	combobox2Text basicwidget.Text
@@ -27,8 +29,12 @@ type Comboboxes struct {
 }
 
 func (c *Comboboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&c.listForm)
+	adder.AddWidget(&c.listFormPanel)
 	adder.AddWidget(&c.configForm)
+
+	c.listFormPanel.SetContent(&c.listForm)
+	c.listFormPanel.SetAutoBorder(true)
+	c.listFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(c, modelKeyModel)
 	if !ok {
@@ -81,10 +87,8 @@ func (c *Comboboxes) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 	c.layoutItems = slices.Delete(c.layoutItems, 0, len(c.layoutItems))
 	c.layoutItems = append(c.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &c.listForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &c.listFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &c.configForm,
@@ -93,6 +97,7 @@ func (c *Comboboxes) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items:     c.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

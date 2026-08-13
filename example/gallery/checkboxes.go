@@ -13,7 +13,8 @@ import (
 type Checkboxes struct {
 	guigui.DefaultWidget
 
-	checkboxesForm basicwidget.Form
+	checkboxesFormPanel basicwidget.Panel
+	checkboxesForm      basicwidget.Form
 
 	checkbox1Text basicwidget.Text
 	checkbox1     basicwidget.Checkbox
@@ -30,8 +31,12 @@ type Checkboxes struct {
 }
 
 func (c *Checkboxes) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&c.checkboxesForm)
+	adder.AddWidget(&c.checkboxesFormPanel)
 	adder.AddWidget(&c.configForm)
+
+	c.checkboxesFormPanel.SetContent(&c.checkboxesForm)
+	c.checkboxesFormPanel.SetAutoBorder(true)
+	c.checkboxesFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(c, modelKeyModel)
 	if !ok {
@@ -96,10 +101,8 @@ func (c *Checkboxes) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 	c.layoutItems = slices.Delete(c.layoutItems, 0, len(c.layoutItems))
 	c.layoutItems = append(c.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &c.checkboxesForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &c.checkboxesFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &c.configForm,

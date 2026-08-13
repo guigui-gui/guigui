@@ -14,6 +14,7 @@ import (
 type Basic struct {
 	guigui.DefaultWidget
 
+	formPanel        basicwidget.Panel
 	form             basicwidget.Form
 	buttonText       basicwidget.Text
 	button           basicwidget.Button
@@ -38,7 +39,11 @@ type Basic struct {
 }
 
 func (b *Basic) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&b.form)
+	adder.AddWidget(&b.formPanel)
+
+	b.formPanel.SetContent(&b.form)
+	b.formPanel.SetAutoBorder(true)
+	b.formPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	b.buttonText.SetValue("Button")
 	b.button.SetText("Click me!")
@@ -105,7 +110,8 @@ func (b *Basic) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBound
 	b.layoutItems = slices.Delete(b.layoutItems, 0, len(b.layoutItems))
 	b.layoutItems = append(b.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &b.form,
+			Widget: &b.formPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 	)
 	(guigui.LinearLayout{

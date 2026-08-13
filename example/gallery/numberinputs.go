@@ -15,7 +15,9 @@ import (
 type NumberInputs struct {
 	guigui.DefaultWidget
 
-	numberInputForm  basicwidget.Form
+	numberInputFormPanel basicwidget.Panel
+	numberInputForm      basicwidget.Form
+
 	numberInput1Text basicwidget.Text
 	numberInput1     guigui.WidgetWithSize[*basicwidget.NumberInput]
 	numberInput2Text basicwidget.Text
@@ -32,8 +34,12 @@ type NumberInputs struct {
 }
 
 func (n *NumberInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&n.numberInputForm)
+	adder.AddWidget(&n.numberInputFormPanel)
 	adder.AddWidget(&n.configForm)
+
+	n.numberInputFormPanel.SetContent(&n.numberInputForm)
+	n.numberInputFormPanel.SetAutoBorder(true)
+	n.numberInputFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(n, modelKeyModel)
 	if !ok {
@@ -134,10 +140,8 @@ func (n *NumberInputs) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	n.layoutItems = slices.Delete(n.layoutItems, 0, len(n.layoutItems))
 	n.layoutItems = append(n.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &n.numberInputForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &n.numberInputFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &n.configForm,

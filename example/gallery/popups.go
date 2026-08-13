@@ -14,6 +14,8 @@ import (
 type Popups struct {
 	guigui.DefaultWidget
 
+	formsPanel                   basicwidget.Panel
+	formStack                    verticalStack
 	forms                        [2]basicwidget.Form
 	darkenBackgroundText         basicwidget.Text
 	darkenBackgroundToggle       basicwidget.Toggle
@@ -43,10 +45,16 @@ func (p *Popups) Build(context *guigui.Context, adder *guigui.ChildAdder) error 
 	}
 	model := v.(*Model)
 
-	for i := range p.forms {
-		adder.AddWidget(&p.forms[i])
-	}
+	adder.AddWidget(&p.formsPanel)
 	adder.AddWidget(&p.simplePopup)
+
+	p.formStack.SetWidgets([]guigui.Widget{
+		&p.forms[0],
+		&p.forms[1],
+	})
+	p.formsPanel.SetContent(&p.formStack)
+	p.formsPanel.SetAutoBorder(true)
+	p.formsPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	p.darkenBackgroundText.SetValue("Darken the background")
 	p.blurBackgroundText.SetValue("Blur the background")
@@ -160,10 +168,8 @@ func (p *Popups) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBoun
 	p.layoutItems = slices.Delete(p.layoutItems, 0, len(p.layoutItems))
 	p.layoutItems = append(p.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &p.forms[0],
-		},
-		guigui.LinearLayoutItem{
-			Widget: &p.forms[1],
+			Widget: &p.formsPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 	)
 	(guigui.LinearLayout{

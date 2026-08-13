@@ -15,6 +15,7 @@ import (
 type TextInputs struct {
 	guigui.DefaultWidget
 
+	textInputFormPanel          basicwidget.Panel
 	textInputForm               basicwidget.Form
 	singleLineText              basicwidget.Text
 	singleLineTextInput         guigui.WidgetWithSize[*textInputContainer]
@@ -49,8 +50,12 @@ type TextInputs struct {
 }
 
 func (t *TextInputs) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&t.textInputForm)
+	adder.AddWidget(&t.textInputFormPanel)
 	adder.AddWidget(&t.configForm)
+
+	t.textInputFormPanel.SetContent(&t.textInputForm)
+	t.textInputFormPanel.SetAutoBorder(true)
+	t.textInputFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(t, modelKeyModel)
 	if !ok {
@@ -355,10 +360,8 @@ func (t *TextInputs) Layout(context *guigui.Context, widgetBounds *guigui.Widget
 	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
 	t.layoutItems = append(t.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &t.textInputForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &t.textInputFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &t.configForm,

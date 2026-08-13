@@ -13,7 +13,9 @@ import (
 type ProgressBars struct {
 	guigui.DefaultWidget
 
-	progressBarForm             basicwidget.Form
+	progressBarFormPanel basicwidget.Panel
+	progressBarForm      basicwidget.Form
+
 	progressBarText             basicwidget.Text
 	progressBar                 guigui.WidgetWithSize[*basicwidget.ProgressBar]
 	progressBarWithoutRangeText basicwidget.Text
@@ -29,8 +31,12 @@ type ProgressBars struct {
 }
 
 func (p *ProgressBars) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&p.progressBarForm)
+	adder.AddWidget(&p.progressBarFormPanel)
 	adder.AddWidget(&p.configForm)
+
+	p.progressBarFormPanel.SetContent(&p.progressBarForm)
+	p.progressBarFormPanel.SetAutoBorder(true)
+	p.progressBarFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(p, modelKeyModel)
 	if !ok {
@@ -103,10 +109,8 @@ func (p *ProgressBars) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	p.layoutItems = slices.Delete(p.layoutItems, 0, len(p.layoutItems))
 	p.layoutItems = append(p.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &p.progressBarForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &p.progressBarFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &p.configForm,

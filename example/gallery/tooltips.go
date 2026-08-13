@@ -14,16 +14,85 @@ import (
 type TooltipAreas struct {
 	guigui.DefaultWidget
 
+	contentPanel basicwidget.Panel
+	content      tooltipAreasContent
+
+	popup        basicwidget.Popup
+	popupContent guigui.WidgetWithSize[*tooltipPopupContent]
+
+	layoutItems []guigui.LinearLayoutItem
+}
+
+func (t *TooltipAreas) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+	adder.AddWidget(&t.contentPanel)
+	adder.AddWidget(&t.popup)
+
+	t.content.SetPopup(&t.popup)
+	t.contentPanel.SetContent(&t.content)
+	t.contentPanel.SetAutoBorder(true)
+	t.contentPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
+
+	t.popupContent.Widget().SetPopup(&t.popup)
+	t.popup.SetContent(&t.popupContent)
+	t.popup.SetCloseByClickingOutside(true)
+	t.popup.SetAnimated(true)
+	t.popupContent.SetFixedSize(t.popupContentSize(context))
+
+	return nil
+}
+
+func (t *TooltipAreas) popupContentSize(context *guigui.Context) image.Point {
+	u := basicwidget.UnitSize(context)
+	return image.Pt(int(12*u), int(6*u))
+}
+
+func (t *TooltipAreas) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	u := basicwidget.UnitSize(context)
+	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
+	t.layoutItems = append(t.layoutItems,
+		guigui.LinearLayoutItem{
+			Widget: &t.contentPanel,
+			Size:   guigui.FlexibleSize(1),
+		},
+	)
+	(guigui.LinearLayout{
+		Direction: guigui.LayoutDirectionVertical,
+		Items:     t.layoutItems,
+		Gap:       u / 2,
+		Padding: guigui.Padding{
+			Start:  u / 2,
+			Top:    u / 2,
+			End:    u / 2,
+			Bottom: u / 2,
+		},
+	}).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+
+	appBounds := context.AppBounds()
+	t.popup.SetBackgroundBounds(appBounds)
+	contentSize := t.popupContentSize(context)
+	center := image.Point{
+		X: appBounds.Min.X + (appBounds.Dx()-contentSize.X)/2,
+		Y: appBounds.Min.Y + (appBounds.Dy()-contentSize.Y)/2,
+	}
+	layouter.LayoutWidget(&t.popup, image.Rectangle{
+		Min: center,
+		Max: center.Add(contentSize),
+	})
+}
+
+// tooltipAreasContent is the scrollable content of the tooltip areas page.
+type tooltipAreasContent struct {
+	guigui.DefaultWidget
+
+	popup *basicwidget.Popup
+
 	button       basicwidget.Button
 	text         basicwidget.Text
 	selectWidget basicwidget.Select[int]
+	popupButton  basicwidget.Button
 	tooltipArea1 basicwidget.TooltipArea
 	tooltipArea2 basicwidget.TooltipArea
 	tooltipArea3 basicwidget.TooltipArea
-
-	popupButton  basicwidget.Button
-	popup        basicwidget.Popup
-	popupContent guigui.WidgetWithSize[*tooltipPopupContent]
 
 	layoutItems     []guigui.LinearLayoutItem
 	selectRowItems  []guigui.LinearLayoutItem
@@ -31,13 +100,18 @@ type TooltipAreas struct {
 	itemBoundsArr   []image.Rectangle
 }
 
-func (t *TooltipAreas) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
+func (t *tooltipAreasContent) SetPopup(popup *basicwidget.Popup) {
+	t.popup = popup
+}
+
+func (t *tooltipAreasContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&t.button)
 	adder.AddWidget(&t.tooltipArea1)
 	adder.AddWidget(&t.text)
 	adder.AddWidget(&t.tooltipArea2)
 	adder.AddWidget(&t.selectWidget)
 	adder.AddWidget(&t.tooltipArea3)
+	adder.AddWidget(&t.popupButton)
 
 	t.button.SetText("Hover me")
 	t.tooltipArea1.SetText("This is a button tooltip")
@@ -62,29 +136,15 @@ func (t *TooltipAreas) Build(context *guigui.Context, adder *guigui.ChildAdder) 
 	}
 	t.tooltipArea3.SetText("This is a select tooltip")
 
-	adder.AddWidget(&t.popupButton)
-	adder.AddWidget(&t.popup)
-
 	t.popupButton.SetText("Show a popup with a tooltip")
 	t.popupButton.OnUp(func(context *guigui.Context) {
 		t.popup.SetOpen(true)
 	})
 
-	t.popupContent.Widget().SetPopup(&t.popup)
-	t.popup.SetContent(&t.popupContent)
-	t.popup.SetCloseByClickingOutside(true)
-	t.popup.SetAnimated(true)
-	t.popupContent.SetFixedSize(t.popupContentSize(context))
-
 	return nil
 }
 
-func (t *TooltipAreas) popupContentSize(context *guigui.Context) image.Point {
-	u := basicwidget.UnitSize(context)
-	return image.Pt(int(12*u), int(6*u))
-}
-
-func (t *TooltipAreas) layout(context *guigui.Context) guigui.LinearLayout {
+func (t *tooltipAreasContent) buildLayout(context *guigui.Context) guigui.LinearLayout {
 	u := basicwidget.UnitSize(context)
 
 	t.selectRowItems = slices.Delete(t.selectRowItems, 0, len(t.selectRowItems))
@@ -120,17 +180,11 @@ func (t *TooltipAreas) layout(context *guigui.Context) guigui.LinearLayout {
 		Direction: guigui.LayoutDirectionVertical,
 		Items:     t.layoutItems,
 		Gap:       u / 2,
-		Padding: guigui.Padding{
-			Start:  u / 2,
-			Top:    u / 2,
-			End:    u / 2,
-			Bottom: u / 2,
-		},
 	}
 }
 
-func (t *TooltipAreas) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
-	layout := t.layout(context)
+func (t *tooltipAreasContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	layout := t.buildLayout(context)
 	layout.LayoutWidgets(context, widgetBounds.Bounds(), layouter)
 
 	t.itemBoundsArr = layout.AppendItemBounds(t.itemBoundsArr[:0], context, widgetBounds.Bounds())
@@ -138,18 +192,10 @@ func (t *TooltipAreas) Layout(context *guigui.Context, widgetBounds *guigui.Widg
 	layouter.LayoutWidget(&t.tooltipArea2, t.itemBoundsArr[1])
 	selectBounds := t.selectRowLayout.ItemBoundsAt(0, context, t.itemBoundsArr[2])
 	layouter.LayoutWidget(&t.tooltipArea3, selectBounds)
+}
 
-	appBounds := context.AppBounds()
-	t.popup.SetBackgroundBounds(appBounds)
-	contentSize := t.popupContentSize(context)
-	center := image.Point{
-		X: appBounds.Min.X + (appBounds.Dx()-contentSize.X)/2,
-		Y: appBounds.Min.Y + (appBounds.Dy()-contentSize.Y)/2,
-	}
-	layouter.LayoutWidget(&t.popup, image.Rectangle{
-		Min: center,
-		Max: center.Add(contentSize),
-	})
+func (t *tooltipAreasContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
+	return t.buildLayout(context).Measure(context, constraints)
 }
 
 // tooltipPopupContent is the content of a popup that itself contains a tooltip area,

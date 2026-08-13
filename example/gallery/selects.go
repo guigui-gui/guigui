@@ -16,7 +16,9 @@ import (
 type Selects struct {
 	guigui.DefaultWidget
 
-	listForm    basicwidget.Form
+	listFormPanel basicwidget.Panel
+	listForm      basicwidget.Form
+
 	select1Text basicwidget.Text
 	select1     basicwidget.Select[int]
 	select2Text basicwidget.Text
@@ -34,8 +36,12 @@ type Selects struct {
 }
 
 func (s *Selects) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&s.listForm)
+	adder.AddWidget(&s.listFormPanel)
 	adder.AddWidget(&s.configForm)
+
+	s.listFormPanel.SetContent(&s.listForm)
+	s.listFormPanel.SetAutoBorder(true)
+	s.listFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(s, modelKeyModel)
 	if !ok {
@@ -127,10 +133,8 @@ func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &s.listForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &s.listFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &s.configForm,
@@ -139,6 +143,7 @@ func (s *Selects) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBou
 	(guigui.LinearLayout{
 		Direction: guigui.LayoutDirectionVertical,
 		Items:     s.layoutItems,
+		Gap:       u / 2,
 		Padding: guigui.Padding{
 			Start:  u / 2,
 			Top:    u / 2,

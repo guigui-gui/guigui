@@ -52,6 +52,10 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&l.jumpForm)
 	adder.AddWidget(&l.configForm)
 
+	l.listFormPanel.SetContent(&l.listForm)
+	l.listFormPanel.SetAutoBorder(true)
+	l.listFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
+
 	v, ok := context.Env(l, modelKeyModel)
 	if !ok {
 		return nil
@@ -222,9 +226,6 @@ func (l *Lists) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 			SecondaryWidget: &l.enabledToggle,
 		},
 	})
-	l.listFormPanel.SetContent(&l.listForm)
-	l.listFormPanel.SetAutoBorder(true)
-	l.listFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	return nil
 }

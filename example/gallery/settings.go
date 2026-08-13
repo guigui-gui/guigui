@@ -17,6 +17,7 @@ import (
 type Settings struct {
 	guigui.DefaultWidget
 
+	formPanel                 basicwidget.Panel
 	form                      basicwidget.Form
 	colorModeText             basicwidget.Text
 	colorModeSegmentedControl basicwidget.SegmentedControl[string]
@@ -31,7 +32,11 @@ type Settings struct {
 var hongKongChinese = language.MustParse("zh-HK")
 
 func (s *Settings) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&s.form)
+	adder.AddWidget(&s.formPanel)
+
+	s.formPanel.SetContent(&s.form)
+	s.formPanel.SetAutoBorder(true)
+	s.formPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	lightModeImg, err := theImageLoader.MonochromeImage("light_mode", context.ColorMode())
 	if err != nil {
@@ -182,7 +187,8 @@ func (s *Settings) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &s.form,
+			Widget: &s.formPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 	)
 	(guigui.LinearLayout{

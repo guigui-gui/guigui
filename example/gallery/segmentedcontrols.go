@@ -13,7 +13,9 @@ import (
 type SegmentedControls struct {
 	guigui.DefaultWidget
 
-	segmentedControlsForm basicwidget.Form
+	segmentedControlsFormPanel basicwidget.Panel
+	segmentedControlsForm      basicwidget.Form
+
 	segmentedControlHText basicwidget.Text
 	segmentedControlH     basicwidget.SegmentedControl[int]
 	segmentedControlVText basicwidget.Text
@@ -29,8 +31,12 @@ type SegmentedControls struct {
 }
 
 func (s *SegmentedControls) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	adder.AddWidget(&s.segmentedControlsForm)
+	adder.AddWidget(&s.segmentedControlsFormPanel)
 	adder.AddWidget(&s.configForm)
+
+	s.segmentedControlsFormPanel.SetContent(&s.segmentedControlsForm)
+	s.segmentedControlsFormPanel.SetAutoBorder(true)
+	s.segmentedControlsFormPanel.SetContentConstraints(basicwidget.PanelContentConstraintsFixedWidth)
 
 	v, ok := context.Env(s, modelKeyModel)
 	if !ok {
@@ -120,10 +126,8 @@ func (s *SegmentedControls) Layout(context *guigui.Context, widgetBounds *guigui
 	s.layoutItems = slices.Delete(s.layoutItems, 0, len(s.layoutItems))
 	s.layoutItems = append(s.layoutItems,
 		guigui.LinearLayoutItem{
-			Widget: &s.segmentedControlsForm,
-		},
-		guigui.LinearLayoutItem{
-			Size: guigui.FlexibleSize(1),
+			Widget: &s.segmentedControlsFormPanel,
+			Size:   guigui.FlexibleSize(1),
 		},
 		guigui.LinearLayoutItem{
 			Widget: &s.configForm,
