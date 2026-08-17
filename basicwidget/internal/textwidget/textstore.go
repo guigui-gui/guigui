@@ -35,6 +35,11 @@ type textStore struct {
 	composer       textinput.Composer
 	composerInited bool
 
+	// inputEndedByUser records that the user ended text inputting from the
+	// platform side, e.g. by dismissing the virtual keyboard. It is reset by
+	// ConsumeInputEndedByUser.
+	inputEndedByUser bool
+
 	// composition holds the active preedit reported by the IME. composition
 	// is the empty string when no composition is in progress.
 	composition         string
@@ -97,6 +102,7 @@ func (s *textStore) ensureComposerInited() {
 	s.composer.OnNewSession = s.onNewIMESession
 	s.composer.OnComposition = s.onIMEComposition
 	s.composer.OnCommit = s.onIMECommit
+	s.composer.OnEndByUser = s.onIMEEndByUser
 	s.composerInited = true
 }
 
@@ -128,6 +134,18 @@ func (s *textStore) setComposition(text string, selStartInBytes, selEndInBytes i
 	// The composition changes the rendering text only; the committed text
 	// is untouched.
 	s.bumpGenerationForEdit(0, 0, 0)
+}
+
+func (s *textStore) onIMEEndByUser() {
+	s.inputEndedByUser = true
+}
+
+// ConsumeInputEndedByUser reports whether the user ended text inputting from
+// the platform side since the last call, and resets the state.
+func (s *textStore) ConsumeInputEndedByUser() bool {
+	ended := s.inputEndedByUser
+	s.inputEndedByUser = false
+	return ended
 }
 
 func (s *textStore) onIMECommit(c *textinput.Commit) {

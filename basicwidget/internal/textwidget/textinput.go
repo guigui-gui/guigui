@@ -430,6 +430,12 @@ func (t *Text) updateIMEComposer(context *guigui.Context, widgetBounds *guigui.W
 		t.resetCachedTextSize()
 		t.dispatchValueChanged(false, false)
 	}
+	if t.store.ConsumeInputEndedByUser() {
+		// The user ended text inputting from the platform side, e.g. by
+		// dismissing the virtual keyboard. Blur the field so a new IME
+		// session does not bring the virtual keyboard back.
+		context.SetFocused(t, false)
+	}
 	return processed
 }
 
