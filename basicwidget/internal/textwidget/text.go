@@ -583,6 +583,10 @@ func (t *Text) Selection() (start, end int) {
 	return t.store.Selection()
 }
 
+// SetSelection sets the selection to [start, end) in bytes. Offsets inside a
+// UTF-8 sequence are snapped to rune boundaries: an empty selection moves to
+// the start of the rune containing it, and a non-empty one expands to cover
+// whole runes.
 func (t *Text) SetSelection(start, end int) {
 	t.setSelection(start, end, SelectionSideNone, true)
 }
@@ -612,8 +616,9 @@ func (t *Text) setSelection(start, end int, shiftSide SelectionSide, adjustScrol
 	t.resetInsertionStyle()
 
 	if !adjustScroll {
-		t.prevStart = start
-		t.prevEnd = end
+		// The store snaps the selection to rune boundaries, so read the
+		// resulting range back rather than reusing the arguments.
+		t.prevStart, t.prevEnd = t.store.Selection()
 	}
 
 	return true

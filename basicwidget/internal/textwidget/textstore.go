@@ -9,6 +9,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/hajimehoshi/ebiten/v2/exp/textinput"
 
@@ -450,17 +451,67 @@ func (s *textStore) WriteTextForRenderingRangeTo(w io.Writer, startInBytes, endI
 	return s.pieceTable.WriteRangeTo(w, startInBytes, endInBytes)
 }
 
-// SetSelection sets the selection range, clamped to the current text length.
+// SetSelection sets the selection to [startInBytes, endInBytes), clamped to
+// the text and snapped to rune boundaries: an empty selection moves to the
+// start of the rune containing it, and a non-empty one expands to cover whole
+// runes.
 func (s *textStore) SetSelection(startInBytes, endInBytes int) {
 	s.cleanUp()
 	l := s.pieceTable.Len()
-	newStart := min(max(startInBytes, 0), l)
-	newEnd := min(max(endInBytes, 0), l)
+	start := min(max(startInBytes, 0), l)
+	end := min(max(endInBytes, 0), l)
+	newStart := s.prevRuneBoundary(start)
+	newEnd := newStart
+	if end != start {
+		newEnd = s.nextRuneBoundary(end)
+	}
 	if newStart == s.selectionStartInBytes && newEnd == s.selectionEndInBytes {
 		return
 	}
 	s.selectionStartInBytes = newStart
 	s.selectionEndInBytes = newEnd
+}
+
+// prevRuneBoundary returns the largest offset at or before positionInBytes
+// that is not inside a UTF-8 sequence, or positionInBytes when no rune start
+// is within a sequence's reach.
+func (s *textStore) prevRuneBoundary(positionInBytes int) int {
+	if positionInBytes <= 0 || positionInBytes >= s.pieceTable.Len() {
+		return positionInBytes
+	}
+	start := max(positionInBytes-(utf8.UTFMax-1), 0)
+	var sb strings.Builder
+	_, _ = s.pieceTable.WriteRangeTo(&sb, start, positionInBytes+1)
+	str := sb.String()
+	for i := positionInBytes - start; i >= 0; i-- {
+		if utf8.RuneStart(str[i]) {
+			return start + i
+		}
+	}
+	return positionInBytes
+}
+
+// nextRuneBoundary mirrors [textStore.prevRuneBoundary] in the forward
+// direction.
+func (s *textStore) nextRuneBoundary(positionInBytes int) int {
+	l := s.pieceTable.Len()
+	if positionInBytes <= 0 || positionInBytes >= l {
+		return positionInBytes
+	}
+	end := min(positionInBytes+utf8.UTFMax, l)
+	var sb strings.Builder
+	_, _ = s.pieceTable.WriteRangeTo(&sb, positionInBytes, end)
+	str := sb.String()
+	for i := range len(str) {
+		if utf8.RuneStart(str[i]) {
+			return positionInBytes + i
+		}
+	}
+	// The text ends inside the sequence, so its end is the next boundary.
+	if end == l {
+		return l
+	}
+	return positionInBytes
 }
 
 // ResetText resets the text and clears the undo history.
