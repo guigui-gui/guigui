@@ -680,6 +680,31 @@ drift from an alpha API. Before considering a change done:
 - **Build and vet.** `go build ./...` and `go vet ./...`. Guigui code that
   misuses the lifecycle often still compiles, so also run the program (or the
   relevant `example/`) and confirm it renders and reacts.
+- **Prefer driving it headlessly.** A headless run is the better default even
+  when a display is right there: it opens no window and never steals the
+  keyboard focus, and the same script reruns identically. A Guigui app is an
+  `ebiten.Game` — `guigui.Run` hands the root tree to
+  `ebiten.RunGameWithOptions` — so the **`run-ebitengine-app-headless`** skill
+  applies to it unchanged: it builds the app with `-tags ebitenginevm`, runs it
+  as an `exp/vmhost` guest, steps ticks, injects pointer and keyboard input, and
+  reads rendered frames back as pixels or PNGs. That skill lives in the
+  Ebitengine repository (`skills/run-ebitengine-app-headless/`), so invoking it
+  by name works only where it is installed. Use it for screenshots, golden-image
+  diffs of a rendering change, and deterministic multi-tick repros.
+  Guigui specifics to script around (`doc.go` documents every environment
+  variable):
+  - Pin what the host platform would otherwise decide, so two runs are
+    comparable: `GUIGUI_COLOR_MODE` (`light`/`dark`),
+    `GUIGUI_KEY_BINDING_MODE` (`command`/`control-default`/`control-emacs`),
+    and `GUIGUI_DEBUG=devicescale=1`.
+  - Injected runes do **not** reach a text input: text arrives through
+    `exp/textinput` IME sessions, not `ebiten.AppendInputChars`. Seed text by
+    pasting instead — `GUIGUI_DEBUG=emulateclipboard` plus
+    `GUIGUI_DEBUG_CLIPBOARD_TEXT` gives the app an in-process clipboard.
+  - Shortcut modifiers are read as the virtual `ebiten.KeyMeta`/`KeyControl`,
+    which register only when a physical key such as `KeyMetaLeft` is injected.
+  - `GUIGUI_DEBUG=showbuildlogs,showinputlogs` turns a silent "nothing happened"
+    into a log of what rebuilt and which widget consumed the input.
 - **Sanity-check the lifecycle, not just the compile.** If a change does not
   show up, re-read "State changes and when the screen updates" — a clean build
   with a stale screen is the signature of a missing rebuild trigger.
