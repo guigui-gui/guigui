@@ -799,8 +799,8 @@ const (
 )
 
 func (a *app) handleInputWidget(typ handleInputType) HandleInputResult {
-	for i := len(a.layers) - 1; i >= 0; i-- {
-		layer := a.layers[i]
+	for _, layer := range slices.Backward(a.layers) {
+
 		if r := a.doHandleInputWidget(typ, a.root, layer, false); r.IsHandled() {
 			return r
 		}
@@ -831,8 +831,8 @@ func (a *app) doHandleInputWidget(typ handleInputType, widget Widget, layerToHan
 	if !prunedForButtonInput || widgetState.buttonInputReceptiveOrHasReceptiveDescendant {
 		// Iterate the children in the reverse order of rendering.
 		focused := a.context.IsFocused(widget)
-		for i := len(widgetState.children) - 1; i >= 0; i-- {
-			child := widgetState.children[i]
+		for _, child := range slices.Backward(widgetState.children) {
+
 			if r := a.doHandleInputWidget(typ, child, layerToHandle, hasFocusedAncestor || focused); r.IsHandled() {
 				return r
 			}
@@ -1110,8 +1110,8 @@ func (a *app) appendWidgetsAt(widgets []widgetAndLayer, point image.Point, widge
 	}
 
 	children := widgetState.children
-	for i := len(children) - 1; i >= 0; i-- {
-		child := children[i]
+	for _, child := range slices.Backward(children) {
+
 		widgets = a.appendWidgetsAt(widgets, point, child, childrenParentHit)
 	}
 

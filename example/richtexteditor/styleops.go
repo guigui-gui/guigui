@@ -4,6 +4,8 @@
 package main
 
 import (
+	"slices"
+
 	"github.com/hajimehoshi/ebiten/v2/text/v2"
 )
 
@@ -66,8 +68,8 @@ func scaleDown(scale float64, uniform bool) float64 {
 	if !uniform {
 		scale = 1
 	}
-	for i := len(scaleLadder) - 1; i >= 0; i-- {
-		if s := scaleLadder[i]; s < scale-scaleEpsilon {
+	for _, s := range slices.Backward(scaleLadder) {
+		if s < scale-scaleEpsilon {
 			return s
 		}
 	}
