@@ -281,6 +281,62 @@ When replacing a subtree or switching records, commit or deliberately discard
 active edits before resetting the widget. Otherwise the model and the retained
 editing buffer can silently diverge.
 
+### Custom list item content must color itself
+
+`basicwidget.ListItem[T].Content` takes any widget, which is how a row gets an
+icon, several columns, or an editable field. Setting `Content` replaces the
+item's built-in text widget, so the list stops coloring anything inside the row.
+It still paints the selection highlight behind the row, so a custom row that
+ignores its state keeps its default text color and turns unreadable on the
+accent background.
+
+The list publishes each row's state as a `basicwidget.ListItemColorType` under
+`basicwidget.EnvKeyListItemColorType` (`Default`, `Highlighted`,
+`SelectedInUnfocusedList`, `Hovered`, `ItemDisabled`, `ListDisabled`). Read it
+and apply `TextColor(context)`:
+
+```go
+func (r *row) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
+	colorType := basicwidget.ListItemColorTypeDefault
+	if v, ok := context.Env(r, basicwidget.EnvKeyListItemColorType); ok {
+		if ct, ok := v.(basicwidget.ListItemColorType); ok {
+			colorType = ct
+		}
+	}
+	var style basicwidget.TextStyle
+	style.SetColor(colorType.TextColor(context))
+	r.text.SetBaseStyle(&style)
+
+	r.layout(context).LayoutWidgets(context, widgetBounds.Bounds(), layouter)
+}
+```
+
+What that shape encodes:
+
+- **Read it in `Layout` (or `Draw`), not `Build`.** This is the deliberate
+  exception to "setters belong in `Build`": the value comes from the list's own
+  content widget, so it exists only after the build phase.
+- **Guard the lookup *and* the type assertion.** A missing value is normal, not
+  an error: the lookup returns `(nil, false)` for a row scrolled out of the
+  viewport and for the same widget used outside any list. `basicwidget.Popup`
+  additionally returns `(nil, true)` to stop a row's color type from leaking
+  into popup content, so `ok` alone does not mean you got a
+  `ListItemColorType` — always use the comma-ok form, never a bare
+  `v.(basicwidget.ListItemColorType)`.
+- **Falling back to `Default` is the simplest correct choice**; it maps to the
+  ordinary text color. Leaving the color `nil` and not touching the style also
+  works, and suits a widget that has its own palette when used outside a list.
+- **The color type drives more than text.** `BackgroundColor(context)` returns
+  the matching fill (`nil` for `Default`), and `Draw` can branch on
+  `Highlighted` to swap a border or fill. A monochrome icon needs re-rendering
+  with `ebiten.ColorModeDark` on a highlighted row, because the accent
+  background wants a light foreground.
+
+Use `basicwidget.ListItemTextPadding(context)` as the row's padding so custom
+content lines up with ordinary text items. `example/gallery/selects.go`
+(`selectItem`: icon + text) and `example/biglist` (`itemWidget`: variable row
+heights) are the in-tree implementations to copy.
+
 For the full list and runnable demos, read `basicwidget/` and the programs under
 `example/` (start with `example/counter` and `example/todo`; `example/gallery`
 exercises most widgets).
@@ -321,12 +377,11 @@ until one returns `true`. Use it for app-wide models / view-state; use explicit
 fields and setters for parent→direct-child wiring.
 
 `Env` is not only for your own values — `basicwidget` itself uses it to push
-presentation state down to descendant widgets. For example a `List` advertises
-its item color scheme through `basicwidget.EnvKeyListItemColorType`, and a row
-inside the list reads it with `context.Env(self, basicwidget.EnvKeyListItemColorType)`
-to draw itself correctly. So when composing a custom widget that lives inside a
-built-in container, check whether that container exposes an `EnvKey…` you should
-honor.
+presentation state down to descendant widgets. A `List` advertises each row's
+state through `basicwidget.EnvKeyListItemColorType` so that custom row content
+can color itself (see "Custom list item content must color itself"). So when
+composing a custom widget that lives inside a built-in container, check whether
+that container exposes an `EnvKey…` you should honor.
 
 ### Env lookups on a just-created widget silently find nothing
 
@@ -675,8 +730,9 @@ drift from an alpha API. Before considering a change done:
   package: `rg -n "func \\(.*Button\\)" basicwidget/`. The catalog here is
   intentionally not exhaustive.
 - **Copy from a working example.** `example/counter` (state + buttons),
-  `example/todo` (Env, events, dynamic list), and `example/gallery` (most
-  widgets) are canonical, compiling usage. Prefer adapting them to inventing.
+  `example/todo` (Env, events, dynamic list), `example/gallery` (most widgets),
+  and `example/biglist` (custom list item content) are canonical, compiling
+  usage. Prefer adapting them to inventing.
 - **Build and vet.** `go build ./...` and `go vet ./...`. Guigui code that
   misuses the lifecycle often still compiles, so also run the program (or the
   relevant `example/`) and confirm it renders and reacts.
@@ -743,6 +799,11 @@ drift from an alpha API. Before considering a change done:
   normal model synchronization and force only explicit resets.
 - **Letting decorative content consume its container's click.** Mark rich
   button/list content passthrough so the interactive ancestor handles input.
+- **Leaving custom list item content its default text color.** A
+  `ListItem[T].Content` widget replaces the item's built-in text, so nothing
+  recolors it and a highlighted row goes unreadable. Read
+  `basicwidget.EnvKeyListItemColorType` in `Layout` (see "Custom list item
+  content must color itself").
 - **Resolving env through a widget that was just created.** A widget nobody has
   built yet has no parent, so the lookup silently returns `(nil, false)` and code
   assuming a non-nil value crashes. Resolve shared state through the widget whose
