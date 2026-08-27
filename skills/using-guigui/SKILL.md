@@ -656,12 +656,16 @@ with **no** `WriteStateKey` whose own `Draw` renders fields that a parent's
 `Build` pushes into it via setters each rebuild.
 
 The rebuild side works fine — the parent re-runs, calls the setters, the
-widget holds the new values. But a rebuild repaints nothing by itself, and the
-post-build snapshot that turns "this widget's state changed during the build"
-into a repaint of its region works by comparing `WriteStateKey` hashes. A
-widget that writes no key always hashes the same, so the framework never
-notices, and the screen keeps the old pixels while the struct holds the new
-state. Children configured by that widget's `Build` are unaffected (their own
+widget holds the new values. And a rebuild does repaint what it *visibly*
+changes: after build+layout the framework diffs each widget's children and
+their bounds against the previous frame and repaints any difference, which is
+why structural changes (a popup opening, a child appearing, anything moving)
+need no key. But a value-only change reproduces an identical tree with
+identical bounds, so that diff sees nothing; the only remaining bridge from
+"this widget's state changed during the build" to a repaint of its region is
+the post-build snapshot comparing `WriteStateKey` hashes. A widget that
+writes no key always hashes the same, so the framework never notices, and the
+screen keeps the old pixels while the struct holds the new state. Children configured by that widget's `Build` are unaffected (their own
 keys change), which makes the failure look absurd: the `Text` next to the
 thumbnail updates while the thumbnail itself does not.
 
@@ -852,8 +856,9 @@ drift from an alpha API. Before considering a change done:
   state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (or
   just `RequestRedraw` if the change is paint-only).
 - **A custom `Draw` on a widget with no `WriteStateKey`.** Fields the parent's
-  `Build` hands it arrive, but the region is never repainted — the post-build
-  repaint compares key hashes, and a keyless widget always hashes the same.
+  `Build` hands it arrive, but when neither the tree nor any bounds changed,
+  the region is never repainted — the value-only repaint compares key hashes,
+  and a keyless widget always hashes the same.
   The staleness is intermittent because any focus change repaints the whole
   screen (see "A keyless widget drawing state its parent's Build hands it").
 - **Allocating a fresh items slice every `Layout`.** Reuse with
