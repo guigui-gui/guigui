@@ -649,6 +649,68 @@ The ladder, in order: `WriteStateKey` by default; `RequestRedraw` for
 paint-only state; `RequestRebuild` only when the key mechanism structurally
 cannot observe the change.
 
+### A keyless widget drawing state its parent's Build hands it
+
+The subtlest gap in the ladder, and the inverse of the caveat above: a widget
+with **no** `WriteStateKey` whose own `Draw` renders fields that a parent's
+`Build` pushes into it via setters each rebuild.
+
+The rebuild side works fine — the parent re-runs, calls the setters, the
+widget holds the new values. But a rebuild repaints nothing by itself, and the
+post-build snapshot that turns "this widget's state changed during the build"
+into a repaint of its region works by comparing `WriteStateKey` hashes. A
+widget that writes no key always hashes the same, so the framework never
+notices, and the screen keeps the old pixels while the struct holds the new
+state. Children configured by that widget's `Build` are unaffected (their own
+keys change), which makes the failure look absurd: the `Text` next to the
+thumbnail updates while the thumbnail itself does not.
+
+The symptom is a stale region that heals on its own. A focus change repaints
+the whole screen, so clicking anywhere that moves focus fixes it; only
+focus-preserving mutations leave it visible — arrow-key or key-repeat value
+changes in a focused input, undo/redo shortcuts, results applied from a
+goroutine. One stale region with correct neighbors, fixed by the next click,
+is this bug's signature.
+
+The fix is a `WriteStateKey` hashing exactly what `Draw` reads. When `Draw`
+also renders shared data reached via `Env` (a document, a map, a model), hash
+that model's generation counter too, so edits to it repaint the widget as
+well.
+
+### Auditing a widget for missing key coverage
+
+When reviewing a widget (or hunting a stale-screen bug), the defect pattern
+is: a setter stores a field on the widget; the field reaches the screen
+through the widget's own `Build`/`Layout`/`Measure`/`Draw` (directly or via
+helpers they call); and the field is neither written into `WriteStateKey` nor
+accompanied by `RequestRebuild`/`RequestRedraw` at the mutation site. There
+are two flavors: a `Build`-read field misses its **rebuild** when set outside
+a build pass, while a `Draw`-read field misses its **repaint** even when set
+during one (previous section).
+
+Before flagging one, rule out what is safe by construction:
+
+- **The setter forwards to a child widget's own setter** (`w.text.SetValue(v)`)
+  instead of storing the value — the child's key covers it.
+- **The mutation happens in a `DispatchEvent` handler or in an input handler
+  that returns `HandleInputByWidget`** — both force a whole-tree rebuild, which
+  is why most callback-driven state needs no key. (Handlers that mutate and
+  return an empty `HandleInputResult{}` get no such rebuild.)
+- **The field is read only inside `On…` callbacks** — that is behavior, not
+  screen state; whatever the callback changes triggers its own update.
+- **The field is read only in `CursorShape`** — the cursor shape is
+  re-evaluated every frame without any rebuild.
+- **The value is derived from `Env` or other widgets' state during `Build`** —
+  it can only change during a build pass anyway.
+
+One clearing argument deserves suspicion: "safe because every caller also
+flips something else that rebuilds at the same time" — sets a field right
+before opening a popup (`Popup.SetOpen` requests a rebuild itself), or only
+ever together with a sibling field that *is* in the key. Such coupling works
+but is invisible at the widget itself and breaks silently when a future call
+site changes the setter's company. When you find yourself relying on it,
+prefer adding the field to the key — hashing one more int is cheap insurance.
+
 ## Context utilities
 
 `*guigui.Context` (passed to most methods) also exposes per-widget state setters,
@@ -719,6 +781,10 @@ or global shortcut handlers behind it.
    `WriteStateKey` (preferred) or call `RequestRebuild` when you mutate it —
    unless the change is paint-only (unchanged bounds and children), in which
    case keep it out of the key and call `RequestRedraw` alone.
+7. If the widget has its own `Draw`, put every field `Draw` reads into
+   `WriteStateKey` even when only an ancestor's `Build` ever sets them — a
+   keyless widget is rebuilt but never repainted (see "A keyless widget
+   drawing state its parent's Build hands it").
 
 ## Verify your work — do not trust this file alone
 
@@ -785,6 +851,11 @@ drift from an alpha API. Before considering a change done:
 - **Expecting a field write to repaint.** Only handler-driven or
   state-key-driven changes auto-rebuild; otherwise call `RequestRebuild` (or
   just `RequestRedraw` if the change is paint-only).
+- **A custom `Draw` on a widget with no `WriteStateKey`.** Fields the parent's
+  `Build` hands it arrive, but the region is never repainted — the post-build
+  repaint compares key hashes, and a keyless widget always hashes the same.
+  The staleness is intermittent because any focus change repaints the whole
+  screen (see "A keyless widget drawing state its parent's Build hands it").
 - **Allocating a fresh items slice every `Layout`.** Reuse with
   `slices.Delete(s, 0, len(s))`; `Layout` runs frequently.
 - **Hard-coded pixel sizes.** Use `basicwidget.UnitSize(context)` so layouts
