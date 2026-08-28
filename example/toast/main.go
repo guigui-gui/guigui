@@ -202,8 +202,8 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	adder.AddWidget(&r.background)
 	adder.AddWidget(&r.tintControl)
 	adder.AddWidget(&r.showToastButton)
-	for i := range r.toasts.Len() {
-		adder.AddWidget(r.toasts.At(i))
+	for _, t := range r.toasts.All() {
+		adder.AddWidget(t)
 	}
 
 	r.tintControl.SetItems([]basicwidget.SegmentedControlItem[color.Color]{
@@ -273,8 +273,7 @@ func (r *Root) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds
 
 	var bottomOffset int
 	allClosed := true
-	for i := range r.toasts.Len() {
-		t := r.toasts.At(i)
+	for _, t := range r.toasts.All() {
 		contentSize := t.Measure(context, guigui.Constraints{})
 		if t.IsOpen() {
 			allClosed = false

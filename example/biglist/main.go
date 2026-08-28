@@ -144,12 +144,11 @@ func (r *Root) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	// In usual cases, List.SetItems should be called every Build for simplicity.
 	// However, this might be a bottleneck when the number of items is huge, so only call it when necessary in this example.
 	if len(r.items) == 0 {
-		for i := range itemCount {
+		for i, w := range r.itemWidgets.All() {
 			scale := r.itemHeightScales[i]
 			if scale == 0 {
 				scale = 1
 			}
-			w := r.itemWidgets.At(i)
 			w.SetValue(fmt.Sprintf("Item %d", i+1))
 			w.SetHeight(u * scale)
 			r.items = append(r.items, basicwidget.ListItem[int]{

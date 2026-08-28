@@ -43,13 +43,13 @@ func (p *palettePopupContent) OnSelected(f func(context *guigui.Context, clr col
 func (p *palettePopupContent) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
 	p.colorButtons.SetLen(len(p.colors))
 	p.colorSamples.SetLen(len(p.colors))
-	for i := range len(p.colors) {
-		adder.AddWidget(p.colorButtons.At(i))
+	for _, button := range p.colorButtons.All() {
+		adder.AddWidget(button)
 	}
 	adder.AddWidget(&p.defaultButton)
 
-	for i, clr := range p.colors {
-		button := p.colorButtons.At(i)
+	for i, button := range p.colorButtons.All() {
+		clr := p.colors[i]
 		content := p.colorSamples.At(i)
 		content.SetColor(clr)
 		context.SetPassthrough(content, true)
@@ -71,9 +71,9 @@ func (p *palettePopupContent) layout(context *guigui.Context) guigui.LinearLayou
 	u := basicwidget.UnitSize(context)
 
 	p.layoutItems = slices.Delete(p.layoutItems, 0, len(p.layoutItems))
-	for i := range p.colorButtons.Len() {
+	for _, button := range p.colorButtons.All() {
 		p.layoutItems = append(p.layoutItems, guigui.LinearLayoutItem{
-			Widget: p.colorButtons.At(i),
+			Widget: button,
 			Size:   guigui.FixedSize(u),
 		})
 	}

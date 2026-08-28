@@ -209,16 +209,16 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 	model := v.(*Model)
 
 	t.taskWidgets.SetLen(model.TaskCount())
-	for i := range t.taskWidgets.Len() {
-		adder.AddWidget(t.taskWidgets.At(i))
+	for _, w := range t.taskWidgets.All() {
+		adder.AddWidget(w)
 	}
 
-	for i := range model.TaskCount() {
+	for i, w := range t.taskWidgets.All() {
 		task := model.TaskByIndex(i)
-		t.taskWidgets.At(i).OnDoneButtonPressed(func(context *guigui.Context) {
+		w.OnDoneButtonPressed(func(context *guigui.Context) {
 			guigui.DispatchEvent(t, tasksPanelContentEventDeleted, task.ID)
 		})
-		t.taskWidgets.At(i).SetText(task.Text)
+		w.SetText(task.Text)
 	}
 	return nil
 }
@@ -226,11 +226,11 @@ func (t *tasksPanelContent) Build(context *guigui.Context, adder *guigui.ChildAd
 func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui.WidgetBounds, layouter *guigui.ChildLayouter) {
 	u := basicwidget.UnitSize(context)
 	t.layoutItems = slices.Delete(t.layoutItems, 0, len(t.layoutItems))
-	for i := range t.taskWidgets.Len() {
-		w := widgetBounds.Bounds().Dx()
-		h := t.taskWidgets.At(i).Measure(context, guigui.FixedWidthConstraints(w)).Y
+	width := widgetBounds.Bounds().Dx()
+	for _, w := range t.taskWidgets.All() {
+		h := w.Measure(context, guigui.FixedWidthConstraints(width)).Y
 		t.layoutItems = append(t.layoutItems, guigui.LinearLayoutItem{
-			Widget: t.taskWidgets.At(i),
+			Widget: w,
 			Size:   guigui.FixedSize(h),
 		})
 	}
@@ -244,8 +244,8 @@ func (t *tasksPanelContent) Layout(context *guigui.Context, widgetBounds *guigui
 func (t *tasksPanelContent) Measure(context *guigui.Context, constraints guigui.Constraints) image.Point {
 	u := basicwidget.UnitSize(context)
 	var h int
-	for i := range t.taskWidgets.Len() {
-		h += t.taskWidgets.At(i).Measure(context, constraints).Y
+	for _, w := range t.taskWidgets.All() {
+		h += w.Measure(context, constraints).Y
 		h += int(u / 4)
 	}
 	w := t.DefaultWidget.Measure(context, constraints).X
