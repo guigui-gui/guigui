@@ -3,7 +3,10 @@
 
 package guigui
 
-import "slices"
+import (
+	"iter"
+	"slices"
+)
 
 // WidgetSlice is a collection of widgets.
 //
@@ -16,6 +19,17 @@ type WidgetSlice[T Widget] struct {
 // At returns the widget at the specified index.
 func (w *WidgetSlice[T]) At(index int) T {
 	return w.s[index].Widget()
+}
+
+// All returns an iterator over index-widget pairs in the slice.
+func (w *WidgetSlice[T]) All() iter.Seq2[int, T] {
+	return func(yield func(int, T) bool) {
+		for i := range w.s {
+			if !yield(i, w.s[i].Widget()) {
+				return
+			}
+		}
+	}
 }
 
 // Len returns the number of widgets.

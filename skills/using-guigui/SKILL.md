@@ -471,19 +471,19 @@ receiver or `Env` when the event actually runs.
 ## Dynamic lists of children
 
 For a variable number of children, use `guigui.WidgetSlice[*T]`: set its length
-to match the data, then add and configure each element.
+to match the data, then add and configure each element. `All()` iterates over
+index-widget pairs; `At(i)` gives random access.
 
 ```go
 func (l *List) Build(context *guigui.Context, adder *guigui.ChildAdder) error {
-	n := l.model.Count()
-	l.rows.SetLen(n)
-	for i := range n {
-		adder.AddWidget(l.rows.At(i))
+	l.rows.SetLen(l.model.Count())
+	for _, row := range l.rows.All() {
+		adder.AddWidget(row)
 	}
-	for i := range n {
+	for i, row := range l.rows.All() {
 		item := l.model.At(i)
-		l.rows.At(i).SetText(item.Text)
-		l.rows.At(i).OnActivated(func(context *guigui.Context) {
+		row.SetText(item.Text)
+		row.OnActivated(func(context *guigui.Context) {
 			l.model.Activate(item.ID)
 		})
 	}
