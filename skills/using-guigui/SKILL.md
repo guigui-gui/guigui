@@ -511,6 +511,48 @@ per-item state by a stable item value/key, reconfigure every slot from current
 data in `Build`, and validate the selection after deletion. A row index can
 start referring to a different item after a rebuild.
 
+### Add only the items in view
+
+A tree costs what it holds, not what it shows. A rebuild re-runs `Build` on
+every widget in it, a layout pass re-runs `Layout` on every widget, and every
+widget's `WriteStateKey` is re-hashed whenever the framework checks for
+changes; only `Draw` skips what is off screen. A collection that puts one
+widget per data item in the tree is therefore charged for the entire data set
+on every frame while a screenful is visible — and each item usually brings
+children of its own. A few hundred items is enough to make scrolling, or a
+popup's open animation, stutter.
+
+`basicwidget.List[T]` / `Table[T]` already add only the items around the
+viewport, which is another reason to prefer them. Hand-roll the same shape when
+they do not fit (a grid of thumbnails, say):
+
+- **Derive the visible range in `Layout`, store it, and hash it.** `Build`
+  cannot read bounds, so `Layout` computes the range from
+  `widgetBounds.VisibleBounds()` and keeps it in a field that `WriteStateKey`
+  writes. Scrolling changes the range, the changed key triggers a rebuild, and
+  that `Build` adds the new range — no scroll callback needed. Extend the range
+  by one row on each side so a scroll shorter than a row cannot expose a gap.
+- **Position the range the last `Build` added, not the one just derived.** Keep
+  that range in a second field, assigned in `Build`. `Layout` runs before the
+  rebuild its freshly derived range asks for, so the two disagree in between;
+  positioning the newly derived range there leaves the items actually in the
+  tree unpositioned, holding the empty bounds every layout pass resets them to.
+- **Keep `Measure` covering every item.** The scroll extent comes from the full
+  content size; measuring only the added range shrinks the content, and the
+  visible range with it.
+
+The test is not "is this item on screen" but "does anything under it still need
+to be in the tree". A widget stays in the tree only while *every* ancestor keeps
+adding it, and a popup is drawn on its own layer, independently of where its
+parent sits — so a popup opened from an item remains on screen after that item
+scrolls out of the viewport, but only while the whole chain from the root down
+to it is still added. Skip one link and the entire subtree goes, popup included.
+Widen the added range to keep such a chain intact. `basicwidget` makes this
+exception for layout only: a list item skips its own `Layout` while out of view
+unless it has a content widget, which may hold something visible. Its container
+windows the tree by height alone, so an item scrolled far enough out is dropped
+whatever it holds — a popup opened from inside a list item disappears with it.
+
 ## Resetting a widget's cached state
 
 A widget accumulates state that is *not* re-derived from its inputs each Build —
@@ -868,6 +910,9 @@ drift from an alpha API. Before considering a change done:
 - **Holding children in a plain value slice.** `append` to a `[]Row` moves its
   elements, which churns widget identity or panics. Use `guigui.WidgetSlice[*T]`
   for a variable number of children (see "Dynamic lists of children").
+- **One widget per item for a large collection.** Everything in the tree is
+  built, laid out and re-hashed every frame, on screen or not. Add only the
+  range in view (see "Add only the items in view").
 - **Reusing one widget in multiple containers.** A widget has one parent chain.
   Use distinct widget instances backed by shared data.
 - **Forcing a text input's value on every Build.** `ForceSetValue` overwrites an
