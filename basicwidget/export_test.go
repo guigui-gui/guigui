@@ -5,6 +5,8 @@ package basicwidget
 
 import "image"
 
+type AbstractNumberInput = abstractNumberInput
+
 func TopItemAfterPixelScroll(measure func(index int) int, totalCount, startIndex, startOffset, deltaPx int) (int, int) {
 	return topItemAfterPixelScroll(measure, totalCount, startIndex, startOffset, deltaPx)
 }

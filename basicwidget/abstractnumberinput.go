@@ -133,7 +133,7 @@ func (a *abstractNumberInput) SetValue(value int, committed bool) {
 }
 
 func (a *abstractNumberInput) SetValueBigInt(value *big.Int, committed bool) {
-	a.setValue(value, false, committed)
+	a.setValue((&big.Int{}).Set(value), false, committed)
 }
 
 func (a *abstractNumberInput) SetValueInt64(value int64, committed bool) {
@@ -149,7 +149,7 @@ func (a *abstractNumberInput) ForceSetValue(value int, committed bool) {
 }
 
 func (a *abstractNumberInput) ForceSetValueBigInt(value *big.Int, committed bool) {
-	a.setValue(value, true, committed)
+	a.setValue((&big.Int{}).Set(value), true, committed)
 }
 
 func (a *abstractNumberInput) ForceSetValueInt64(value int64, committed bool) {
