@@ -51,9 +51,11 @@ type NumberInput struct {
 	onValueChangedUint64 func(value uint64, committed bool)
 	onValueChangedString func(value string, force bool)
 
-	onTextInputValueChanged func(context *guigui.Context, value string, committed bool)
-	onUpButtonDown          func(context *guigui.Context)
-	onDownButtonDown        func(context *guigui.Context)
+	onTextInputValueChanged      func(context *guigui.Context, value string, committed bool)
+	onTextInputHandleButtonInput func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
+	onHandleButtonInput          func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult
+	onUpButtonDown               func(context *guigui.Context)
+	onDownButtonDown             func(context *guigui.Context)
 }
 
 func (n *NumberInput) IsEditable() bool {
@@ -104,7 +106,7 @@ func (n *NumberInput) OnValueChangedUint64(f func(context *guigui.Context, value
 }
 
 func (n *NumberInput) OnHandleButtonInput(f func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult) {
-	n.textInput.OnHandleButtonInput(f)
+	n.onHandleButtonInput = f
 }
 
 func (n *NumberInput) Value() int {
@@ -220,17 +222,25 @@ func (n *NumberInput) Build(context *guigui.Context, adder *guigui.ChildAdder) e
 	adder.AddWidget(&n.upButton)
 	adder.AddWidget(&n.downButton)
 
-	n.textInput.OnHandleButtonInput(func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
-		if isKeyRepeating(ebiten.KeyUp) {
-			n.increment()
-			return guigui.HandleInputByWidget(n)
+	if n.onTextInputHandleButtonInput == nil {
+		n.onTextInputHandleButtonInput = func(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+			if n.onHandleButtonInput != nil {
+				if r := n.onHandleButtonInput(context, widgetBounds); r.IsHandled() {
+					return r
+				}
+			}
+			if isKeyRepeating(ebiten.KeyUp) {
+				n.increment()
+				return guigui.HandleInputByWidget(n)
+			}
+			if isKeyRepeating(ebiten.KeyDown) {
+				n.decrement()
+				return guigui.HandleInputByWidget(n)
+			}
+			return guigui.HandleInputResult{}
 		}
-		if isKeyRepeating(ebiten.KeyDown) {
-			n.decrement()
-			return guigui.HandleInputByWidget(n)
-		}
-		return guigui.HandleInputResult{}
-	})
+	}
+	n.textInput.OnHandleButtonInput(n.onTextInputHandleButtonInput)
 
 	if n.onValueChanged == nil {
 		n.onValueChanged = func(value int, committed bool) {
