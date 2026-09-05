@@ -166,7 +166,7 @@ func (s *Slider) SetSnapOnly(snapOnly bool) {
 }
 
 func (s *Slider) hasSnaps() bool {
-	return s.abstractNumberInput.stepSet
+	return s.abstractNumberInput.stepSet && s.abstractNumberInput.step.Sign() > 0
 }
 
 // roundDivBigInt sets z = round(x / y) with half-away-from-zero rounding.
@@ -287,7 +287,7 @@ func (s *Slider) setValue(context *guigui.Context, widgetBounds *guigui.WidgetBo
 	c := image.Pt(ebiten.CursorPosition())
 
 	var v big.Int
-	if s.snapOnly && s.hasSnaps() && s.abstractNumberInput.step.Sign() > 0 {
+	if s.snapOnly && s.hasSnaps() {
 		// Pick the snap whose tick is nearest the cursor.
 		step := &s.abstractNumberInput.step
 		var num, tmp big.Int
