@@ -853,7 +853,7 @@ drift from an alpha API. Before considering a change done:
   keyboard focus, and the same script reruns identically. A Guigui app is an
   `ebiten.Game` — `guigui.Run` hands the root tree to
   `ebiten.RunGameWithOptions` — so the **`run-ebitengine-app-headless`** skill
-  applies to it unchanged: it builds the app with `-tags ebitenginevm`, runs it
+  applies to it unchanged: it builds the app with `-tags ebitenginevmguest`, runs it
   as an `exp/vmhost` guest, steps ticks, injects pointer and keyboard input, and
   reads rendered frames back as pixels or PNGs. That skill lives in the
   Ebitengine repository (`skills/run-ebitengine-app-headless/`), so invoking it

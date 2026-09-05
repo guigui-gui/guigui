@@ -218,7 +218,7 @@ func (r *Root) startBuild(pkg string) {
 		bin += ".exe"
 	}
 	go func() {
-		// The ebitenginevm build tag makes the guest dial EBITENGINE_VM_ENDPOINT instead of opening a
+		// The ebitenginevmguest build tag makes the guest dial EBITENGINE_VM_ENDPOINT instead of opening a
 		// window.
 		err := buildGuest(r.dir, bin, pkg)
 		r.buildResults <- buildResult{pkg: pkg, bin: bin, err: err}

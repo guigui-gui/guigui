@@ -7,7 +7,7 @@
 // exp/vmhost package: the guest runs in its own process, and the widget forwards the window's input to
 // it, composites its rendered frames into the widget's area, and plays its audio.
 //
-// The guest binary must be built with the "ebitenginevm" build tag and against the same Ebitengine
+// The guest binary must be built with the "ebitenginevmguest" build tag and against the same Ebitengine
 // version as the host, since the two speak a version-locked protocol. This package depends on the
 // experimental exp/vmhost, whose API may change.
 package ebitenginewidget

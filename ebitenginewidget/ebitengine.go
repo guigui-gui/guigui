@@ -33,7 +33,7 @@ var (
 
 // GuestNotConnectedError is reported to the OnError handler when the launched binary did not connect
 // to the widget as a virtualization guest, typically because it is not an Ebitengine program built
-// with the "ebitenginevm" build tag.
+// with the "ebitenginevmguest" build tag.
 type GuestNotConnectedError struct {
 	// BinaryPath is the path of the launched binary.
 	BinaryPath string
@@ -43,7 +43,7 @@ type GuestNotConnectedError struct {
 }
 
 func (e *GuestNotConnectedError) Error() string {
-	return fmt.Sprintf("ebitenginewidget: %s did not connect as a guest (is it built with -tags ebitenginevm?): %v", e.BinaryPath, e.Err)
+	return fmt.Sprintf("ebitenginewidget: %s did not connect as a guest (is it built with -tags ebitenginevmguest?): %v", e.BinaryPath, e.Err)
 }
 
 func (e *GuestNotConnectedError) Unwrap() error {
@@ -185,7 +185,7 @@ type Ebitengine struct {
 }
 
 // SetBinaryPath sets the path to the guest binary to run. The binary must be an Ebitengine program
-// built with the "ebitenginevm" build tag, against the host's Ebitengine version. Changing the path
+// built with the "ebitenginevmguest" build tag, against the host's Ebitengine version. Changing the path
 // launches the guest, and an empty path stops the running guest; setting the current value again has
 // no effect.
 func (e *Ebitengine) SetBinaryPath(path string) {
