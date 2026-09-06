@@ -6,7 +6,7 @@
 > **This project is an alpha version, and everything may change in the future.**
 
 > [!WARNING]
-> Except for minor changes like typo fixes, we have not yet established a development policy for accepting changes. For new features, please [file an issue](https://github.com/guigui-gui/guigui/issues/new) or make your proposal in [Discussion](https://github.com/guigui-gui/guigui/discussions/13).
+> Pull requests for new widgets or features are not accepted. Only small changes like typo fixes and bug fixes are considered. For new widgets or features, please [file an issue](https://github.com/guigui-gui/guigui/issues/new) or make your proposal in [Discussion](https://github.com/guigui-gui/guigui/discussions/13).
 
 > [!NOTE]
 > AI is used in the development of this project, but all changes are reviewed by the committer before committing.
