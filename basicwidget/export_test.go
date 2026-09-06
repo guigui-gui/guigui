@@ -3,7 +3,29 @@
 
 package basicwidget
 
-import "image"
+import (
+	"image"
+
+	"github.com/guigui-gui/guigui"
+)
+
+type PopupState struct {
+	popup
+}
+
+func (p *PopupState) Advance() error {
+	var context guigui.Context
+	return p.popup.Tick(&context, nil)
+}
+
+func (p *PopupState) CloseByClickingOutside() {
+	var context guigui.Context
+	p.close(&context, PopupCloseReasonClickOutside)
+}
+
+func (p *PopupState) Passthrough() bool {
+	return p.passthrough()
+}
 
 type AbstractNumberInput = abstractNumberInput
 

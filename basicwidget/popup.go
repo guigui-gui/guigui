@@ -459,13 +459,14 @@ func (p *popup) SetOpen(open bool) {
 		return
 	}
 
-	toOpen := open
-	toClose := !open
-	if p.toOpen == toOpen && p.toClose == toClose {
+	if p.requestedOpen() == open {
 		return
 	}
-	p.toOpen = toOpen
-	p.toClose = toClose
+	p.toOpen = open
+	p.toClose = !open
+	if !open {
+		p.openAfterClose = false
+	}
 	if open {
 		// Record the open tick that subordinate popups compare their trigger against.
 		if _, ok := openPopups[p]; !ok && !p.isSubordinate() {
@@ -487,6 +488,16 @@ func (p *popup) SetOpen(open bool) {
 	// Request a whole-tree rebuild so the open/close is reflected; the popup's
 	// region (and the area it vacates) is repainted as the tree diff changes.
 	guigui.RequestRebuild()
+}
+
+func (p *popup) requestedOpen() bool {
+	if p.toOpen || p.openAfterClose {
+		return true
+	}
+	if p.toClose || p.hiding {
+		return false
+	}
+	return p.showing || p.openingCount > 0
 }
 
 func (p *popup) setCloseReason(reason PopupCloseReason) {
@@ -533,15 +544,13 @@ func (p *popup) canUpdateContent() bool {
 
 func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds) error {
 	if p.toOpen {
-		if !p.showing {
-			if p.openingCount > 0 {
-				p.close(context, PopupCloseReasonReopen)
-				p.openAfterClose = true
-			} else {
-				guigui.DispatchEvent(p, popupEventOpen)
-				p.showing = true
-				p.hiding = false
-			}
+		if p.hiding {
+			p.close(context, PopupCloseReasonReopen)
+			p.openAfterClose = true
+		} else if p.openingCount == 0 {
+			guigui.DispatchEvent(p, popupEventOpen)
+			p.showing = true
+			p.hiding = false
 		}
 	} else if p.toClose {
 		p.close(context, PopupCloseReasonFuncCall)
@@ -590,8 +599,8 @@ func (p *popup) Tick(context *guigui.Context, widgetBounds *guigui.WidgetBounds)
 					p.contentPosition = p.nextContentPosition
 					p.hasNextContentPosition = false
 				}
-				p.SetOpen(true)
 				p.openAfterClose = false
+				p.SetOpen(true)
 			}
 		}
 	}
