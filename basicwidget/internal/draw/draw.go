@@ -152,6 +152,7 @@ func AppendNinePatchVertices(vertices []ebiten.Vertex, indices []uint32, dstBoun
 	return vertices, indices
 }
 
+//ebitengine:shadersource
 const maskShaderSource = `//kage:unit pixels
 
 package main

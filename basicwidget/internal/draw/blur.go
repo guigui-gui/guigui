@@ -12,6 +12,7 @@ import (
 	"github.com/guigui-gui/guigui"
 )
 
+//ebitengine:shadersource
 const blurShaderSourceTmpl = `//kage:unit pixels
 
 package main
