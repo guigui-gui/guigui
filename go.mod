@@ -1,19 +1,19 @@
 module github.com/guigui-gui/guigui
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/ebitengine/purego v0.11.0
 	github.com/go-text/typesetting v0.3.5
 	github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198
 	github.com/hajimehoshi/ebiten/v2 v2.10.1-0.20260908182740-58cc8fe07711
-	github.com/hajimehoshi/iro v0.4.0-alpha.0.20260802170616-edef5c559e51
+	github.com/hajimehoshi/iro v0.4.0
 	github.com/jeandeaual/go-locale v0.0.0-20250612000132-0ef82f21eade
 	github.com/kisielk/errcheck v1.20.0
-	golang.org/x/image v0.45.0
-	golang.org/x/sys v0.47.0
-	golang.org/x/text v0.41.0
-	golang.org/x/tools v0.49.0
+	golang.org/x/image v0.46.0
+	golang.org/x/sys v0.48.0
+	golang.org/x/text v0.42.0
+	golang.org/x/tools v0.50.0
 	howett.net/plist v1.0.1
 )
 
@@ -23,6 +23,6 @@ require (
 	github.com/ebitengine/oto/v3 v3.5.0 // indirect
 	github.com/jfreymuth/pulse v0.1.3 // indirect
 	github.com/srwiley/rasterx v0.0.0-20220730225603-2ab79fcdd4ef // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
 )
