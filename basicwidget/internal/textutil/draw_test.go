@@ -46,15 +46,13 @@ func wantStrikethrough(base, face font.Face, visualLineIndex int) (y, thickness 
 // with a space's advance.
 func backgroundDrawOptions(face font.Face, runs []textutil.StyleRun) *textutil.DrawOptions {
 	return &textutil.DrawOptions{
-		Style: textutil.Style{
-			WrapMode:         textutil.WrapModeNone,
-			Face:             face,
-			LineHeight:       decorationLineHeight,
-			TabWidth:         advanceOf("    ", face),
-			KeepTailingSpace: true,
-		},
-		TextColor: color.White,
-		StyleRuns: runs,
+		WrapMode:         textutil.WrapModeNone,
+		Face:             face,
+		LineHeight:       decorationLineHeight,
+		TabWidth:         advanceOf("    ", face),
+		KeepTailingSpace: true,
+		TextColor:        color.White,
+		StyleRuns:        runs,
 	}
 }
 
@@ -127,14 +125,12 @@ func TestDecorationInsideLargerFaceRun(t *testing.T) {
 	const str = "abcdef"
 	// "cdef" is drawn with the large face and struck through.
 	options := &textutil.DrawOptions{
-		Style: textutil.Style{
-			WrapMode:   textutil.WrapModeNone,
-			Face:       small,
-			FaceRuns:   []textutil.FaceRun{{Start: 2, End: 6, Face: large}},
-			LineHeight: decorationLineHeight,
-		},
-		TextColor: color.White,
-		StyleRuns: []textutil.StyleRun{{Start: 2, End: 6, Strikethrough: true}},
+		WrapMode:   textutil.WrapModeNone,
+		Face:       small,
+		FaceRuns:   []textutil.FaceRun{{Start: 2, End: 6, Face: large}},
+		LineHeight: decorationLineHeight,
+		TextColor:  color.White,
+		StyleRuns:  []textutil.StyleRun{{Start: 2, End: 6, Strikethrough: true}},
 	}
 
 	got := textutil.DecorationsPerVisualLine(1000, str, options)
@@ -170,13 +166,11 @@ func TestDecorationSpanningMixedFaceSizes(t *testing.T) {
 	// "def" is drawn with the large face, and the underline over "abcdef"
 	// changes color at "d".
 	options := &textutil.DrawOptions{
-		Style: textutil.Style{
-			WrapMode:   textutil.WrapModeNone,
-			Face:       small,
-			FaceRuns:   []textutil.FaceRun{{Start: 3, End: 6, Face: large}},
-			LineHeight: decorationLineHeight,
-		},
-		TextColor: color.White,
+		WrapMode:   textutil.WrapModeNone,
+		Face:       small,
+		FaceRuns:   []textutil.FaceRun{{Start: 3, End: 6, Face: large}},
+		LineHeight: decorationLineHeight,
+		TextColor:  color.White,
 		StyleRuns: []textutil.StyleRun{
 			{Start: 0, End: 3, Underline: true, Color: red},
 			{Start: 3, End: 6, Underline: true, Color: blue},
@@ -213,14 +207,12 @@ func TestDecorationWrappedSpanResolvesPerVisualLine(t *testing.T) {
 	// "AAAA " is drawn with the large face and wraps onto its own visual
 	// line; "BBBB" is drawn with the base face.
 	options := &textutil.DrawOptions{
-		Style: textutil.Style{
-			WrapMode:   textutil.WrapModeNormal,
-			Face:       small,
-			FaceRuns:   []textutil.FaceRun{{Start: 0, End: 5, Face: large}},
-			LineHeight: decorationLineHeight,
-		},
-		TextColor: color.White,
-		StyleRuns: []textutil.StyleRun{{Start: 0, End: len(str), Underline: true}},
+		WrapMode:   textutil.WrapModeNormal,
+		Face:       small,
+		FaceRuns:   []textutil.FaceRun{{Start: 0, End: 5, Face: large}},
+		LineHeight: decorationLineHeight,
+		TextColor:  color.White,
+		StyleRuns:  []textutil.StyleRun{{Start: 0, End: len(str), Underline: true}},
 	}
 	layoutWidth := int(math.Ceil(advanceOf("AAAA", large))) + 1
 

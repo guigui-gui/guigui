@@ -79,10 +79,8 @@ const testFaceID = 1
 // Touch looks up text, inserting a one-element visual-line-starts slice on a miss.
 func (l *LayoutCacheForTest) Touch(text string) {
 	k := layoutKey{
-		text: text,
-		layoutStyleKey: layoutStyleKey{
-			faceID: testFaceID,
-		},
+		text:   text,
+		faceID: testFaceID,
 	}
 	if _, _, ok := l.c.get(k); ok {
 		return
@@ -96,10 +94,8 @@ func (l *LayoutCacheForTest) Len() int {
 
 func (l *LayoutCacheForTest) Has(text string) bool {
 	_, ok := l.c.entries[layoutKey{
-		text: text,
-		layoutStyleKey: layoutStyleKey{
-			faceID: testFaceID,
-		},
+		text:   text,
+		faceID: testFaceID,
 	}]
 	return ok
 }

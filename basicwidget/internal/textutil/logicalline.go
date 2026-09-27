@@ -311,14 +311,12 @@ func appendAdvanceUpTo(dst []float64, line string, face text.Face) []float64 {
 // (non-zero ID).
 func cachedVisualLineLayout(width int, line string, wrapMode WrapMode, face font.Face, tabWidth float64, keepTailingSpace bool) (vlStarts []int, maxCaretX float64, ok bool) {
 	k := layoutKey{
-		text: line,
-		layoutStyleKey: layoutStyleKey{
-			faceID:           face.ID(),
-			width:            width,
-			wrapMode:         wrapMode,
-			tabWidth:         tabWidth,
-			keepTailingSpace: keepTailingSpace,
-		},
+		text:             line,
+		faceID:           face.ID(),
+		width:            width,
+		wrapMode:         wrapMode,
+		tabWidth:         tabWidth,
+		keepTailingSpace: keepTailingSpace,
 	}
 	if k.faceID == 0 {
 		panic("textutil: cachedVisualLineLayout requires a resolved face (face ID 0)")
