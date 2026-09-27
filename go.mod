@@ -3,7 +3,7 @@ module github.com/guigui-gui/guigui
 go 1.26.0
 
 require (
-	github.com/ebitengine/purego v0.11.0
+	github.com/ebitengine/purego v0.11.1
 	github.com/go-text/typesetting v0.3.5
 	github.com/hajimehoshi/dialog v0.0.0-20260703050910-dfca0e7cf198
 	github.com/hajimehoshi/ebiten/v2 v2.10.4
