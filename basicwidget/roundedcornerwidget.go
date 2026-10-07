@@ -69,23 +69,7 @@ func (r *roundedCornerWidget[T]) Draw(context *guigui.Context, widgetBounds *gui
 	if !r.needsToRenderCorners(context, widgetBounds) {
 		return
 	}
-
-	if r.corners.image != nil {
-		if !dst.Bounds().In(r.corners.image.Bounds()) {
-			r.corners.image.Deallocate()
-			r.corners.image = nil
-		}
-	}
-	if r.corners.image == nil {
-		r.corners.image = ebiten.NewImageWithOptions(dst.Bounds(), nil)
-	}
-
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
-	op.Blend = ebiten.BlendCopy
-	dstSub := r.corners.image.RecyclableSubImage(dst.Bounds())
-	defer dstSub.Recycle()
-	dstSub.DrawImage(dst, op)
+	r.corners.copyCorners(context, dst)
 }
 
 type roundedCornerWidgetCorners struct {
@@ -99,6 +83,20 @@ func (r *roundedCornerWidgetCorners) setRenderingBounds(bounds image.Rectangle) 
 	r.renderingBounds = bounds
 }
 
+// copyCorners saves the pixels of src at the corners of the rendering bounds for Draw to restore.
+func (r *roundedCornerWidgetCorners) copyCorners(context *guigui.Context, src *ebiten.Image) {
+	radius := RoundedCornerRadius(context)
+	size := image.Pt(2*radius, 2*radius)
+	if r.image != nil && r.image.Bounds().Size() != size {
+		r.image.Deallocate()
+		r.image = nil
+	}
+	if r.image == nil {
+		r.image = ebiten.NewImage(size.X, size.Y)
+	}
+	draw.CopyRoundedCorners(r.image, src, r.renderingBounds, radius)
+}
+
 func (r *roundedCornerWidgetCorners) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
 	if r.image == nil {
 		return
@@ -106,11 +104,7 @@ func (r *roundedCornerWidgetCorners) Draw(context *guigui.Context, widgetBounds 
 	if r.renderingBounds.Empty() {
 		return
 	}
-	// TODO: This rendering is not efficient. Improve the performance.
-	op := &ebiten.DrawImageOptions{}
-	op.GeoM.Translate(float64(dst.Bounds().Min.X), float64(dst.Bounds().Min.Y))
-	op.Blend = ebiten.BlendCopy
-	draw.DrawRoundedCorners(dst, r.image.SubImage(dst.Bounds()).(*ebiten.Image), r.renderingBounds, RoundedCornerRadius(context), op)
+	draw.DrawRoundedCorners(dst, r.image, r.renderingBounds, RoundedCornerRadius(context))
 }
 
 type lazyWidget[T guigui.Widget] struct {

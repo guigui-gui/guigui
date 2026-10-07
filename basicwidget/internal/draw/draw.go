@@ -21,6 +21,9 @@ const (
 var (
 	theNinePatchVertices []ebiten.Vertex
 	theNinePatchIndices  []uint32
+
+	theRoundedCornersVertices []ebiten.Vertex
+	theRoundedCornersIndices  []uint32
 )
 
 func DrawNinePatch(dst *ebiten.Image, bounds image.Rectangle, src *ebiten.Image, clr1, clr2 color.Color) {
@@ -193,17 +196,81 @@ func adjustRadius(radius int, bounds image.Rectangle) int {
 	return min(radius, bounds.Dx()/2, bounds.Dy()/2)
 }
 
-func DrawRoundedCorners(dst *ebiten.Image, src *ebiten.Image, bounds image.Rectangle, radius int, op *ebiten.DrawImageOptions) {
-	radius = adjustRadius(radius, bounds)
-	sOp := &ebiten.DrawRectShaderOptions{}
-	if op != nil {
-		sOp.GeoM = op.GeoM
-		sOp.ColorScale = op.ColorScale
-		sOp.CompositeMode = op.CompositeMode
-		sOp.Blend = op.Blend
+// roundedCornerRects returns the squares at the top-left, top-right, bottom-left, and bottom-right corners of bounds.
+// radius must already be adjusted to bounds.
+func roundedCornerRects(bounds image.Rectangle, radius int) [4]image.Rectangle {
+	return [4]image.Rectangle{
+		image.Rect(bounds.Min.X, bounds.Min.Y, bounds.Min.X+radius, bounds.Min.Y+radius),
+		image.Rect(bounds.Max.X-radius, bounds.Min.Y, bounds.Max.X, bounds.Min.Y+radius),
+		image.Rect(bounds.Min.X, bounds.Max.Y-radius, bounds.Min.X+radius, bounds.Max.Y),
+		image.Rect(bounds.Max.X-radius, bounds.Max.Y-radius, bounds.Max.X, bounds.Max.Y),
 	}
-	sOp.Images[0] = src
-	sOp.Uniforms = map[string]any{
+}
+
+// savedRoundedCornerOrigin returns the position of the i-th square of roundedCornerRects
+// in an image that CopyRoundedCorners writes to.
+func savedRoundedCornerOrigin(i int, radius int) image.Point {
+	return image.Pt(i%2, i/2).Mul(radius)
+}
+
+// CopyRoundedCorners copies the pixels of src in the corners of bounds into dst for DrawRoundedCorners.
+// dst must be at least 2*radius pixels wide and high.
+func CopyRoundedCorners(dst *ebiten.Image, src *ebiten.Image, bounds image.Rectangle, radius int) {
+	radius = adjustRadius(radius, bounds)
+	op := &ebiten.DrawImageOptions{}
+	op.Blend = ebiten.BlendCopy
+	for i, rect := range roundedCornerRects(bounds, radius) {
+		r := rect.Intersect(src.Bounds())
+		if r.Empty() {
+			continue
+		}
+		pos := savedRoundedCornerOrigin(i, radius).Add(r.Min.Sub(rect.Min))
+		op.GeoM.Reset()
+		op.GeoM.Translate(float64(pos.X), float64(pos.Y))
+		srcSub := src.RecyclableSubImage(r)
+		dst.DrawImage(srcSub, op)
+		srcSub.Recycle()
+	}
+}
+
+func appendRoundedCornersVertices(vertices []ebiten.Vertex, indices []uint32, dstBounds image.Rectangle, bounds image.Rectangle, radius int) ([]ebiten.Vertex, []uint32) {
+	for i, rect := range roundedCornerRects(bounds, radius) {
+		if !rect.Overlaps(dstBounds) {
+			continue
+		}
+		srcMin := savedRoundedCornerOrigin(i, radius)
+		base := uint32(len(vertices))
+		for j := range 4 {
+			offset := image.Pt(j%2, j/2).Mul(radius)
+			vertices = append(vertices, ebiten.Vertex{
+				DstX:   float32(rect.Min.X + offset.X),
+				DstY:   float32(rect.Min.Y + offset.Y),
+				SrcX:   float32(srcMin.X + offset.X),
+				SrcY:   float32(srcMin.Y + offset.Y),
+				ColorR: 1,
+				ColorG: 1,
+				ColorB: 1,
+				ColorA: 1,
+			})
+		}
+		indices = append(indices, base+0, base+1, base+2, base+1, base+2, base+3)
+	}
+	return vertices, indices
+}
+
+// DrawRoundedCorners draws the pixels in src back onto dst outside the rounded corners of bounds.
+// src must be an image that CopyRoundedCorners copied into with the same bounds and radius.
+func DrawRoundedCorners(dst *ebiten.Image, src *ebiten.Image, bounds image.Rectangle, radius int) {
+	radius = adjustRadius(radius, bounds)
+	theRoundedCornersVertices, theRoundedCornersIndices = appendRoundedCornersVertices(theRoundedCornersVertices[:0], theRoundedCornersIndices[:0], dst.Bounds(), bounds, radius)
+	if len(theRoundedCornersIndices) == 0 {
+		return
+	}
+
+	op := &ebiten.DrawTrianglesShaderOptions{}
+	op.Blend = ebiten.BlendCopy
+	op.Images[0] = src
+	op.Uniforms = map[string]any{
 		"DstOrigin": []float32{
 			float32(dst.Bounds().Min.X),
 			float32(dst.Bounds().Min.Y),
@@ -216,7 +283,7 @@ func DrawRoundedCorners(dst *ebiten.Image, src *ebiten.Image, bounds image.Recta
 		},
 		"Radius": float32(radius),
 	}
-	dst.DrawRectShader(src.Bounds().Dx(), src.Bounds().Dy(), maskShader, sOp)
+	dst.DrawTrianglesShader32(theRoundedCornersVertices, theRoundedCornersIndices, maskShader, op)
 }
 
 func OverlapsWithRoundedCorner(bounds image.Rectangle, radius int, srcBounds image.Rectangle) bool {
