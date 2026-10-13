@@ -1613,10 +1613,8 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 
 	// Detect collapse state changes and start animation.
 	// Also update each entry's generation to mark it as current.
-	// Also precompute item availability based on collapsed ancestors.
 	// Also recompute whether any item is checked.
 	l.hasCheckedItem = false
-	var lastCollapsedIndentLevel int
 	for i, item := range items {
 		if item.Checked {
 			l.hasCheckedItem = true
@@ -1639,22 +1637,26 @@ func (l *listContent[T]) SetItems(items []abstractListItem[T]) {
 			collapsed:  item.Collapsed,
 			generation: gen,
 		}
+	}
 
+	// Precompute item availability based on collapsed ancestors.
+	// The animating item counts as expanded, so that the descendants visible in its expanded state
+	// take part in the animation in both directions, while nested collapsed items still hide theirs.
+	var lastCollapsedIndentLevel int
+	for i, item := range items {
 		if lastCollapsedIndentLevel > 0 && item.IndentLevel > lastCollapsedIndentLevel {
-			// During a collapse animation, treat children of the animating item as available
-			// so they remain visible and can animate out.
-			if l.isExpandAnimating() && l.isChildOfExpandAnimatingItem(i) {
-				items[i].available = true
-			} else {
-				items[i].available = false
-			}
+			items[i].available = false
+			continue
+		}
+		items[i].available = true
+		collapsed := item.Collapsed
+		if l.isExpandAnimating() && i == l.expandAnimatingIndexPlus1-1 {
+			collapsed = false
+		}
+		if collapsed {
+			lastCollapsedIndentLevel = item.IndentLevel
 		} else {
-			items[i].available = true
-			if item.Collapsed {
-				lastCollapsedIndentLevel = item.IndentLevel
-			} else {
-				lastCollapsedIndentLevel = 0
-			}
+			lastCollapsedIndentLevel = 0
 		}
 	}
 
