@@ -466,16 +466,14 @@ func (p *virtualScrollPanel) HandlePointingInput(context *guigui.Context, widget
 		return guigui.HandleInputResult{}
 	}
 
-	wheelX, wheelY := adjustedWheel()
-	if wheelX == 0 && wheelY == 0 {
+	dx, dy := scrollDelta(context)
+	if dx == 0 && dy == 0 {
 		p.lastWheelX = 0
 		p.lastWheelY = 0
 		return guigui.HandleInputResult{}
 	}
 
 	bounds := widgetBounds.Bounds()
-	dx := wheelX * scrollWheelSpeed(context)
-	dy := wheelY * scrollWheelSpeed(context)
 
 	// Horizontal scroll is pixel-based; clamp against the content width as
 	// Layout does to learn whether the offset would move.
@@ -499,13 +497,13 @@ func (p *virtualScrollPanel) HandlePointingInput(context *guigui.Context, widget
 	// Report scrolling only on an axis that actually moved, so a stale axis
 	// does not keep its scroll bar visible.
 	if scrollX {
-		p.lastWheelX = wheelX
+		p.lastWheelX = dx
 	} else {
 		p.lastWheelX = 0
 		dx = 0
 	}
 	if scrollY {
-		p.lastWheelY = wheelY
+		p.lastWheelY = dy
 	} else {
 		p.lastWheelY = 0
 		dy = 0
@@ -1004,7 +1002,7 @@ func (s *virtualScrollVBar) HandlePointingInput(context *guigui.Context, widgetB
 		}
 	}
 
-	if wheelX, wheelY := adjustedWheel(); wheelX != 0 || wheelY != 0 {
+	if dx, dy := scrollDelta(context); dx != 0 || dy != 0 {
 		s.dragging = false
 	}
 

@@ -5,7 +5,6 @@ package basicwidget
 
 import (
 	"image"
-	"runtime"
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/inpututil"
@@ -14,18 +13,13 @@ import (
 	"github.com/guigui-gui/guigui/basicwidget/internal/draw"
 )
 
-func adjustedWheel() (float64, float64) {
-	x, y := ebiten.Wheel()
-	switch runtime.GOOS {
-	case "darwin":
-		x *= 2
-		y *= 2
-	case "js":
-	default:
-		x *= 10
-		y *= 10
-	}
-	return x, y
+// scrollDelta returns the scrolling amounts of the current tick in physical pixels.
+func scrollDelta(context *guigui.Context) (float64, float64) {
+	// The amounts are not scaled by the application scale, so the content moves
+	// the same physical distance as the scrolling gesture.
+	x, y := ebiten.ScrollDelta()
+	s := context.DeviceScale()
+	return x * s, y * s
 }
 
 func scrollBarFadingInTime() int {
@@ -81,10 +75,6 @@ func startShowingBarCount(count int) int {
 		// Hidden — start a full fade-in.
 		return scrollBarMaxCount()
 	}
-}
-
-func scrollWheelSpeed(context *guigui.Context) float64 {
-	return 4 * context.Scale()
 }
 
 func scrollBarAreaSize(context *guigui.Context) int {
@@ -166,8 +156,8 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 		return guigui.HandleInputResult{}
 	}
 
-	wheelX, wheelY := adjustedWheel()
-	if wheelX == 0 && wheelY == 0 {
+	dx, dy := scrollDelta(context)
+	if dx == 0 && dy == 0 {
 		s.lastWheelX = 0
 		s.lastWheelY = 0
 		return guigui.HandleInputResult{}
@@ -179,18 +169,18 @@ func (s *scrollWheel) HandlePointingInput(context *guigui.Context, widgetBounds 
 	// wheel would move the content.
 	minX := float64(min(bounds.Dx()-s.contentSize.X, 0))
 	minY := float64(min(bounds.Dy()-s.contentSize.Y, 0))
-	newX := min(max(offsetX+wheelX*scrollWheelSpeed(context), minX), 0)
-	newY := min(max(offsetY+wheelY*scrollWheelSpeed(context), minY), 0)
+	newX := min(max(offsetX+dx, minX), 0)
+	newY := min(max(offsetY+dy, minY), 0)
 
 	// Report scrolling only on an axis that actually moved, so a stale axis
 	// does not keep its scroll bar visible.
 	if newX != offsetX {
-		s.lastWheelX = wheelX
+		s.lastWheelX = dx
 	} else {
 		s.lastWheelX = 0
 	}
 	if newY != offsetY {
-		s.lastWheelY = wheelY
+		s.lastWheelY = dy
 	} else {
 		s.lastWheelY = 0
 	}
@@ -319,7 +309,7 @@ func (s *scrollBar) HandlePointingInput(context *guigui.Context, widgetBounds *g
 		}
 	}
 
-	if wheelX, wheelY := adjustedWheel(); wheelX != 0 || wheelY != 0 {
+	if dx, dy := scrollDelta(context); dx != 0 || dy != 0 {
 		s.dragging = false
 	}
 

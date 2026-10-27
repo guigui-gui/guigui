@@ -12,7 +12,8 @@ type inputState struct {
 	touchIDs         []ebiten.TouchID
 	anyMousePressed  bool
 	anyTouch         bool
-	wheelX, wheelY   float64
+	scrollDeltaX     float64
+	scrollDeltaY     float64
 	cursorX, cursorY int
 	pressedKeys      []ebiten.Key
 	justReleasedKeys []ebiten.Key
@@ -33,7 +34,7 @@ func (s *inputState) update() {
 		ebiten.IsMouseButtonPressed(ebiten.MouseButtonMiddle)
 	s.touchIDs = ebiten.AppendTouchIDs(s.touchIDs[:0])
 	s.anyTouch = len(s.touchIDs) > 0
-	s.wheelX, s.wheelY = ebiten.Wheel()
+	s.scrollDeltaX, s.scrollDeltaY = ebiten.ScrollDelta()
 	s.cursorX, s.cursorY = ebiten.CursorPosition()
 	s.pressedKeys = inpututil.AppendPressedKeys(s.pressedKeys[:0])
 	s.justReleasedKeys = inpututil.AppendJustReleasedKeys(s.justReleasedKeys[:0])
@@ -50,5 +51,5 @@ func (s *inputState) isPointingActive(layoutChanged bool) bool {
 		(!s.anyMousePressed && s.prevAnyMousePressed) ||
 		s.anyTouch ||
 		(!s.anyTouch && s.prevAnyTouch) ||
-		s.wheelX != 0 || s.wheelY != 0
+		s.scrollDeltaX != 0 || s.scrollDeltaY != 0
 }

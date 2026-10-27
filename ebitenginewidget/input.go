@@ -95,6 +95,15 @@ func (e *Ebitengine) forwardInput(context *guigui.Context, widgetBounds *guigui.
 		if wx, wy := ebiten.Wheel(); wx != 0 || wy != 0 {
 			s.ScrollWheel(wx, wy)
 		}
+		// A guest device-independent pixel is AppScale of the window's device-independent pixels. Dividing
+		// by AppScale makes the guest content move the same physical distance as the scrolling gesture.
+		if dx, dy := ebiten.ScrollDelta(); dx != 0 || dy != 0 {
+			appScale := context.AppScale()
+			if appScale <= 0 {
+				appScale = 1
+			}
+			s.ScrollBy(dx/appScale, dy/appScale)
+		}
 	}
 
 	// A touch that begins over the game is forwarded, then tracked so its moves and release follow even
