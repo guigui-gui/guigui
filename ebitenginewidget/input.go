@@ -104,6 +104,13 @@ func (e *Ebitengine) forwardInput(context *guigui.Context, widgetBounds *guigui.
 			}
 			s.ScrollBy(dx/appScale, dy/appScale)
 		}
+		// A pinch is a unitless ratio and a rotation is in radians, so neither depends on the scale.
+		if d := ebiten.PinchDelta(); d != 0 {
+			s.PinchBy(d)
+		}
+		if a := ebiten.RotationDelta(); a != 0 {
+			s.RotateBy(a)
+		}
 	}
 
 	// A touch that begins over the game is forwarded, then tracked so its moves and release follow even
