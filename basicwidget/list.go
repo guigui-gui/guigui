@@ -585,6 +585,11 @@ func (l *List[T]) setButtonInputReceptiveWhileUnfocused(receptive bool) {
 	l.content.buttonInputReceptiveWhileUnfocused = receptive
 }
 
+// focus focuses the list without changing the selection.
+func (l *List[T]) focus(context *guigui.Context) {
+	context.SetFocused(&l.content, true)
+}
+
 func (l *List[T]) scrollOffset() (float64, float64) {
 	return l.inner.Widget().panel.scrollOffset()
 }
@@ -2094,7 +2099,19 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 		switch {
 		case (left || right):
 			item, _ := l.abstractList.ItemByIndex(index)
-			if c.X < l.itemBoundsForLayoutFromIndex[index].Min.X {
+			onExpander := c.X < l.itemBoundsForLayoutFromIndex[index].Min.X
+
+			// A modeless list (e.g. a popup menu) should not take focus.
+			// For example, a context menu for a text field should not take a focus from the text field.
+			if !l.modeless {
+				if onExpander || item.Unselectable {
+					context.SetFocused(l, true)
+				} else {
+					context.SetFocused(item.Content, true)
+				}
+			}
+
+			if onExpander {
 				if left {
 					expanded := !item.Collapsed
 					guigui.DispatchEvent(l, listEventItemExpanderToggled, index, !expanded)
@@ -2107,16 +2124,6 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 				l.pressStartPlus1 = image.Point{}
 				l.startPressingIndexPlus1 = 0
 				return guigui.AbortHandlingInputByWidget(l)
-			}
-
-			// A modeless list (e.g. a popup menu) should not take focus.
-			// For example, a context menu for a text field should not take a focus from the text field.
-			if !l.modeless {
-				if item, ok := l.abstractList.ItemByIndex(index); ok {
-					context.SetFocused(item.Content, true)
-				} else {
-					context.SetFocused(l, true)
-				}
 			}
 
 			if !l.multiSelectionClickDisabled && l.abstractList.MultiSelection() {
@@ -2209,6 +2216,18 @@ func (l *listContent[T]) HandlePointingInput(context *guigui.Context, widgetBoun
 
 	l.dragSrcIndexPlus1 = 0
 	l.pressStartPlus1 = image.Point{}
+
+	// A press on no item still focuses the list, and keeps the selection.
+	if !l.modeless && widgetBounds.IsHitAtCursor() {
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			context.SetFocused(l, true)
+			return guigui.HandleInputByWidget(l)
+		}
+		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+			// Give a chance to a parent widget to handle the right click e.g. to open a context menu.
+			context.SetFocused(l, true)
+		}
+	}
 	return guigui.HandleInputResult{}
 }
 

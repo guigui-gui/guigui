@@ -9,6 +9,7 @@ import (
 	"slices"
 
 	"github.com/hajimehoshi/ebiten/v2"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 	"github.com/hajimehoshi/ebiten/v2/vector"
 
 	"github.com/guigui-gui/guigui"
@@ -517,6 +518,25 @@ func (t *tableHeader[T]) Layout(context *guigui.Context, widgetBounds *guigui.Wi
 		layouter.LayoutWidget(t.columnTexts.At(i), textBounds)
 		pt.X += t.table.columnWidthsInPixels[i]
 	}
+}
+
+func (t *tableHeader[T]) HandlePointingInput(context *guigui.Context, widgetBounds *guigui.WidgetBounds) guigui.HandleInputResult {
+	if !widgetBounds.IsHitAtCursor() {
+		return guigui.HandleInputResult{}
+	}
+	// The bounds cover the whole table. Only the header strip is handled here.
+	if _, y := ebiten.CursorPosition(); y >= widgetBounds.Bounds().Min.Y+tableHeaderHeight(context) {
+		return guigui.HandleInputResult{}
+	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		t.table.list.focus(context)
+		return guigui.HandleInputByWidget(t)
+	}
+	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		// Give a chance to a parent widget to handle the right click e.g. to open a context menu.
+		t.table.list.focus(context)
+	}
+	return guigui.HandleInputResult{}
 }
 
 func (t *tableHeader[T]) Draw(context *guigui.Context, widgetBounds *guigui.WidgetBounds, dst *ebiten.Image) {
